@@ -64,10 +64,14 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// When VITE_API_URL is set, the frontend talks to a separate backend (e.g., Railway)
+// Otherwise, it uses the same origin (single-process deployment)
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: `${API_BASE}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {

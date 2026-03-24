@@ -383,3 +383,15 @@
 
 ## Documentation
 - [x] Write comprehensive README.md for the project
+
+## Feature: Vercel + Railway Split Deployment
+- [x] Add VITE_API_URL env var for frontend to point to backend
+- [x] Update tRPC client to use VITE_API_URL when set
+- [x] Add CORS to Express server for cross-origin requests
+- [x] Add vercel.json for SPA routing
+- [x] Update vite build to output standalone frontend (build:frontend script)
+- [x] Provide Vercel deployment guide (user will deploy via dashboard)
+- [x] Write Dockerfile for Railway backend
+- [x] Write railway.toml configuration
+- [x] Write full Vercel + Railway deployment guide (DEPLOYMENT_GUIDE.md)
+- [x] Add environment variable documentation for split deployment
