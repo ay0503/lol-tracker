@@ -1,6 +1,7 @@
 /*
  * Portfolio: Personal portfolio page with holdings, P&L, returns, and transaction history.
- * Robinhood-style layout.
+ * Now wired to live backend prices via trpc.prices.etfPrices.
+ * Supports short positions and all trade types (buy, sell, short, cover, dividend).
  */
 import { useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -18,10 +19,12 @@ import {
   PieChart,
   History,
   DollarSign,
-  Filter,
+  ArrowDownUp,
+  Repeat,
+  Gift,
 } from "lucide-react";
 import { Link } from "wouter";
-import { TICKERS, LP_HISTORY, totalLPToPrice, getETFPrice } from "@/lib/playerData";
+import { TICKERS } from "@/lib/playerData";
 
 function getTickerColor(ticker: string): string {
   return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
@@ -37,46 +40,95 @@ function formatTime(date: Date | string): string {
   });
 }
 
+type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend";
+
+const TRADE_FILTERS: { id: TradeFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "buy", label: "Buy" },
+  { id: "sell", label: "Sell" },
+  { id: "short", label: "Short" },
+  { id: "cover", label: "Cover" },
+  { id: "dividend", label: "Dividend" },
+];
+
+function getTradeTypeStyle(type: string) {
+  switch (type) {
+    case "buy":
+      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: "Buy", sign: "-" };
+    case "sell":
+      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: "Sell", sign: "+" };
+    case "short":
+      return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: "Short", sign: "+" };
+    case "cover":
+      return { icon: Repeat, color: "#3b82f6", bg: "bg-blue-500/15", label: "Cover", sign: "-" };
+    case "dividend":
+      return { icon: Gift, color: "#facc15", bg: "bg-yellow-500/15", label: "Dividend", sign: "+" };
+    default:
+      return { icon: DollarSign, color: "#fff", bg: "bg-secondary", label: type, sign: "" };
+  }
+}
+
 export default function Portfolio() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [filter, setFilter] = useState<"all" | "buy" | "sell">("all");
+  const [filter, setFilter] = useState<TradeFilter>("all");
 
   const { data: portfolio, isLoading: portfolioLoading } = trpc.trading.portfolio.useQuery(
     undefined,
-    { enabled: isAuthenticated }
+    { enabled: isAuthenticated, refetchInterval: 60_000 }
   );
   const { data: tradeHistory, isLoading: historyLoading } = trpc.trading.history.useQuery(
     { limit: 200 },
     { enabled: isAuthenticated }
   );
 
-  // Current DORI price from LP data
-  const currentDORIPrice = useMemo(() => {
-    const last = LP_HISTORY[LP_HISTORY.length - 1];
-    return last ? totalLPToPrice(last.totalLP) : 50;
-  }, []);
+  // ─── Live prices from backend ───
+  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
 
-  const previousDORIPrice = useMemo(() => {
-    const prev = LP_HISTORY.length > 1 ? LP_HISTORY[LP_HISTORY.length - 2] : LP_HISTORY[LP_HISTORY.length - 1];
-    return prev ? totalLPToPrice(prev.totalLP) : currentDORIPrice;
-  }, [currentDORIPrice]);
+  const getLivePrice = (ticker: string): number => {
+    if (!etfPrices) return 0;
+    const found = etfPrices.find(e => e.ticker === ticker);
+    return found ? found.price : 0;
+  };
 
-  // Calculate portfolio metrics
+  // Calculate portfolio metrics using live prices
   const metrics = useMemo(() => {
-    if (!portfolio) return null;
+    if (!portfolio || !etfPrices) return null;
 
     let totalHoldingsValue = 0;
+    let totalShortPnl = 0;
     const holdingsWithValue = portfolio.holdings.map(h => {
-      const etfPrice = getETFPrice(h.ticker, currentDORIPrice, previousDORIPrice);
+      const etfPrice = getLivePrice(h.ticker);
       const currentValue = h.shares * etfPrice;
       const costBasis = h.shares * h.avgCostBasis;
       const pnl = currentValue - costBasis;
       const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
       totalHoldingsValue += currentValue;
-      return { ...h, currentPrice: etfPrice, currentValue, costBasis, pnl, pnlPct };
+
+      // Short position P&L
+      const shortValue = h.shortShares * etfPrice;
+      const shortCostBasis = h.shortShares * h.shortAvgPrice;
+      const shortPnl = shortCostBasis - shortValue; // profit when price drops
+      const shortPnlPct = shortCostBasis > 0 ? (shortPnl / shortCostBasis) * 100 : 0;
+      totalShortPnl += shortPnl;
+
+      return {
+        ...h,
+        currentPrice: etfPrice,
+        currentValue,
+        costBasis,
+        pnl,
+        pnlPct,
+        shortValue,
+        shortCostBasis,
+        shortPnl,
+        shortPnlPct,
+      };
     });
 
-    const totalValue = portfolio.cashBalance + totalHoldingsValue;
+    const totalValue = portfolio.cashBalance + totalHoldingsValue + totalShortPnl;
     const totalPnl = totalValue - 200; // Starting balance was $200
     const totalPnlPct = (totalPnl / 200) * 100;
 
@@ -84,11 +136,13 @@ export default function Portfolio() {
       cashBalance: portfolio.cashBalance,
       totalValue,
       totalHoldingsValue,
+      totalShortPnl,
       totalPnl,
       totalPnlPct,
+      totalDividends: portfolio.totalDividends,
       holdings: holdingsWithValue,
     };
-  }, [portfolio, currentDORIPrice, previousDORIPrice]);
+  }, [portfolio, etfPrices]);
 
   // Filter trades
   const filteredTrades = useMemo(() => {
@@ -96,6 +150,16 @@ export default function Portfolio() {
     if (filter === "all") return tradeHistory;
     return tradeHistory.filter(t => t.type === filter);
   }, [tradeHistory, filter]);
+
+  // Count trades by type for filter badges
+  const tradeCounts = useMemo(() => {
+    if (!tradeHistory) return {};
+    const counts: Record<string, number> = {};
+    for (const t of tradeHistory) {
+      counts[t.type] = (counts[t.type] || 0) + 1;
+    }
+    return counts;
+  }, [tradeHistory]);
 
   // Not authenticated
   if (!authLoading && !isAuthenticated) {
@@ -184,7 +248,7 @@ export default function Portfolio() {
               </div>
 
               {/* Breakdown */}
-              <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                 <div className="bg-secondary/50 rounded-lg p-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Cash</p>
                   <p className="text-lg font-bold text-white font-[var(--font-mono)]">
@@ -198,18 +262,24 @@ export default function Portfolio() {
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total P&L</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Short P&L</p>
                   <p
                     className="text-lg font-bold font-[var(--font-mono)]"
-                    style={{ color: metrics.totalPnl >= 0 ? "#00C805" : "#FF5252" }}
+                    style={{ color: metrics.totalShortPnl >= 0 ? "#00C805" : "#FF5252" }}
                   >
-                    {metrics.totalPnl >= 0 ? "+" : ""}${metrics.totalPnl.toFixed(2)}
+                    {metrics.totalShortPnl >= 0 ? "+" : ""}${metrics.totalShortPnl.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-secondary/50 rounded-lg p-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Dividends</p>
+                  <p className="text-lg font-bold text-[#facc15] font-[var(--font-mono)]">
+                    +${metrics.totalDividends.toFixed(2)}
                   </p>
                 </div>
               </div>
             </motion.div>
 
-            {/* Holdings */}
+            {/* Long Holdings */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -219,7 +289,7 @@ export default function Portfolio() {
               <div className="flex items-center gap-2 mb-4">
                 <PieChart className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
-                  Holdings
+                  Long Holdings
                 </h3>
               </div>
 
@@ -292,13 +362,96 @@ export default function Portfolio() {
               ) : (
                 <div className="text-center py-8">
                   <PieChart className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">No holdings yet</p>
+                  <p className="text-sm text-muted-foreground">No long holdings yet</p>
                   <p className="text-xs text-muted-foreground/60 mt-1">
                     Buy some $DORI to get started!
                   </p>
                 </div>
               )}
             </motion.div>
+
+            {/* Short Positions */}
+            {metrics.holdings.some(h => h.shortShares > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="bg-card border border-purple-500/30 rounded-xl p-6 mb-6"
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <ArrowDownUp className="w-4 h-4 text-purple-400" />
+                  <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+                    Short Positions
+                  </h3>
+                </div>
+
+                <div className="space-y-2">
+                  {/* Header */}
+                  <div className="grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                    <div className="col-span-2">Ticker</div>
+                    <div className="col-span-2 text-right">Shares</div>
+                    <div className="col-span-2 text-right">Entry Price</div>
+                    <div className="col-span-2 text-right">Current</div>
+                    <div className="col-span-2 text-right">Liability</div>
+                    <div className="col-span-2 text-right">P&L</div>
+                  </div>
+
+                  {metrics.holdings
+                    .filter(h => h.shortShares > 0)
+                    .map((h) => (
+                      <div
+                        key={`short-${h.ticker}`}
+                        className="grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-purple-500/5 hover:bg-purple-500/10 transition-colors"
+                      >
+                        <div className="col-span-2">
+                          <span
+                            className="text-sm font-bold font-[var(--font-mono)]"
+                            style={{ color: getTickerColor(h.ticker) }}
+                          >
+                            ${h.ticker}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-sm text-purple-300 font-[var(--font-mono)]">
+                            {h.shortShares.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">
+                            ${h.shortAvgPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-sm text-white font-[var(--font-mono)]">
+                            ${h.currentPrice.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-sm text-white font-semibold font-[var(--font-mono)]">
+                            ${h.shortValue.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <div>
+                            <span
+                              className="text-sm font-semibold font-[var(--font-mono)]"
+                              style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}
+                            >
+                              {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)}
+                            </span>
+                            <p
+                              className="text-[10px] font-[var(--font-mono)]"
+                              style={{ color: h.shortPnlPct >= 0 ? "#00C805" : "#FF5252" }}
+                            >
+                              {h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </motion.div>
+            )}
 
             {/* Transaction History */}
             <motion.div
@@ -319,20 +472,24 @@ export default function Portfolio() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
-                  {(["all", "buy", "sell"] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setFilter(f)}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all capitalize ${
-                        filter === f
-                          ? "bg-primary text-black"
-                          : "text-muted-foreground hover:text-white"
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5 flex-wrap">
+                  {TRADE_FILTERS.map(f => {
+                    const count = f.id === "all" ? tradeHistory?.length ?? 0 : tradeCounts[f.id] ?? 0;
+                    if (f.id !== "all" && count === 0) return null;
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => setFilter(f.id)}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all capitalize ${
+                          filter === f.id
+                            ? "bg-primary text-black"
+                            : "text-muted-foreground hover:text-white"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -344,52 +501,46 @@ export default function Portfolio() {
                 </div>
               ) : filteredTrades.length > 0 ? (
                 <div className="space-y-1.5">
-                  {filteredTrades.map((trade, i) => (
-                    <div
-                      key={trade.id}
-                      className="flex items-center justify-between py-3 px-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            trade.type === "buy"
-                              ? "bg-[#00C805]/15"
-                              : "bg-[#FF5252]/15"
-                          }`}
-                        >
-                          {trade.type === "buy" ? (
-                            <ArrowUpRight className="w-4 h-4 text-[#00C805]" />
-                          ) : (
-                            <ArrowDownRight className="w-4 h-4 text-[#FF5252]" />
-                          )}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-white capitalize">
-                              {trade.type}
-                            </span>
-                            <span
-                              className="text-xs font-bold font-[var(--font-mono)]"
-                              style={{ color: getTickerColor(trade.ticker) }}
-                            >
-                              ${trade.ticker}
-                            </span>
+                  {filteredTrades.map((trade) => {
+                    const style = getTradeTypeStyle(trade.type);
+                    const Icon = style.icon;
+                    return (
+                      <div
+                        key={trade.id}
+                        className="flex items-center justify-between py-3 px-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${style.bg}`}>
+                            <Icon className="w-4 h-4" style={{ color: style.color }} />
                           </div>
-                          <p className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
-                            {trade.shares.toFixed(2)} shares @ ${trade.pricePerShare.toFixed(2)}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-white capitalize">
+                                {style.label}
+                              </span>
+                              <span
+                                className="text-xs font-bold font-[var(--font-mono)]"
+                                style={{ color: getTickerColor(trade.ticker) }}
+                              >
+                                ${trade.ticker}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
+                              {trade.shares.toFixed(2)} shares @ ${trade.pricePerShare.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-white font-[var(--font-mono)]">
+                            {style.sign}${trade.totalAmount.toFixed(2)}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {formatTime(trade.createdAt)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-white font-[var(--font-mono)]">
-                          {trade.type === "buy" ? "-" : "+"}${trade.totalAmount.toFixed(2)}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {formatTime(trade.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">

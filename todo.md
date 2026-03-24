@@ -183,3 +183,13 @@
 ## Bug Fix: Mel Champion Image Broken
 - [x] Investigate why Mel's champion image URL is invalid on Data Dragon CDN
 - [x] Fix champion image URL mapping for newer champions like Mel
+
+## Audit: Transaction Features End-to-End
+- [x] Audit backend: trading (buy/sell), limit orders, stop-losses, short selling endpoints
+- [x] Audit backend: portfolio, holdings, dividends, P&L calculations
+- [x] Audit frontend: trading panel UI and tRPC wiring — fixed static prices to use trpc.prices.etfPrices
+- [x] Audit frontend: limit order/stop-loss UI and tRPC wiring
+- [x] Audit frontend: short selling UI and tRPC wiring
+- [x] Audit frontend: portfolio page and tRPC wiring — fixed static prices, added short positions display, added all trade type filters
+- [x] Test all transaction flows in browser (market buy, limit buy, short sell all passed)
+- [x] Fix issues: TradingPanel & Portfolio now use live backend prices instead of static LP_HISTORY
