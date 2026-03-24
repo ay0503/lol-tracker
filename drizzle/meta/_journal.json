@@ -43,6 +43,13 @@
       "when": 1774332395976,
       "tag": "0005_superb_clint_barton",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1774375498404,
+      "tag": "0006_rare_nico_minoru",
+      "breakpoints": true
     }
   ]
 }

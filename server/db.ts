@@ -55,6 +55,33 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createLocalUser(data: {
+  email: string;
+  passwordHash: string;
+  displayName: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Generate a unique openId for local users (prefix with 'local_' to distinguish)
+  const openId = `local_${crypto.randomUUID()}`;
+  await db.insert(users).values({
+    openId,
+    email: data.email,
+    passwordHash: data.passwordHash,
+    displayName: data.displayName,
+    name: data.displayName,
+    loginMethod: "email",
+    lastSignedIn: new Date(),
+  });
+}
+
 // ─── Portfolio Helpers ───
 
 export async function getOrCreatePortfolio(userId: number) {

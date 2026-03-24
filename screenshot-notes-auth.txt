@@ -1,0 +1,11 @@
+Auth Test Results:
+1. Registration page renders correctly in Korean (회원가입)
+2. All form fields present: 표시 이름, 이메일, 비밀번호, 비밀번호 확인
+3. Registration with test@example.com / password123 SUCCEEDED
+4. Redirected to home page after registration
+5. User shows as "테스트유저" in the nav bar (top right)
+6. Full site accessible after registration - trading panel, chart, all sections visible
+7. Light theme is active (white background with green accents)
+8. Chart X-axis dates showing in Korean format (2월 22일, 3월 4일, etc.)
+9. All Korean translations working in nav, stats, sections
+10. Trading panel shows $200 cash balance for new user

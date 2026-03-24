@@ -270,8 +270,13 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
+    // If user not in DB, try to sync from OAuth server (for Manus OAuth users)
+    // For local email/password users, they should already be in the DB
     if (!user) {
+      // Check if this is a local user (openId starts with 'local_')
+      if (sessionUserId.startsWith('local_')) {
+        throw ForbiddenError("User not found");
+      }
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({

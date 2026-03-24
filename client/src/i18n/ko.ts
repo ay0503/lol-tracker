@@ -406,4 +406,26 @@ export const ko: TranslationKeys = {
     goHome: "홈으로",
     goBack: "뒤로 가기",
   },
+
+  // ─── 인증 ───
+  auth: {
+    loginTitle: "로그인",
+    loginDescription: "포트폴리오에 접근하려면 로그인하세요",
+    registerTitle: "회원가입",
+    registerDescription: "DORI LP 트레이딩 커뮤니티에 참여하세요",
+    email: "이메일",
+    password: "비밀번호",
+    confirmPassword: "비밀번호 확인",
+    displayName: "표시 이름",
+    signIn: "로그인",
+    signUp: "회원가입",
+    noAccount: "계정이 없으신가요?",
+    hasAccount: "이미 계정이 있으신가요?",
+    invalidCredentials: "이메일 또는 비밀번호가 올바르지 않습니다",
+    emailTaken: "이미 등록된 이메일입니다",
+    passwordMismatch: "비밀번호가 일치하지 않습니다",
+    passwordTooShort: "비밀번호는 6자 이상이어야 합니다",
+    signingIn: "로그인 중...",
+    creatingAccount: "계정 생성 중...",
+  },
 } as const;

@@ -296,3 +296,21 @@
 - [x] Investigated: all 36 price history records had identical price ($57.925), no variation for ETF compounding
 - [x] Fixed by seeding historical price data from static LP history (182 data points from Sep 2025 - Mar 2026)
 - [x] Verified: DORI=$57.92, DDRI=$81.97 (2x leveraged), TDRI (3x), SDRI=$17.29 (2x inverse), XDRI (3x inverse)
+
+## Bug Fix: tRPC API Returning HTML Instead of JSON
+- [x] Investigated: 502 proxy error (PROXY_SANDBOX_NOT_FOUND) during sandbox hibernation at 09:21:03
+- [x] Root cause: transient infrastructure issue, not a code bug — sandbox proxy returned HTML error page
+- [x] Verified: all API calls returning 200 OK with valid JSON after sandbox resumed
+
+## Feature: Replace Manus OAuth with Email+Password Auth
+- [x] Add passwordHash column to users table in drizzle schema
+- [x] Install bcryptjs for password hashing (pure JS, no native deps)
+- [x] Create register tRPC endpoint (email + password + displayName)
+- [x] Create login tRPC endpoint (email + password → JWT session cookie)
+- [x] Build Login page with email/password form (Korean/English i18n)
+- [x] Build Register page with email/password/displayName form (Korean/English i18n)
+- [x] Update auth redirect logic to use /login instead of Manus OAuth
+- [x] Keep Manus OAuth callback as optional fallback (backward compatible)
+- [x] Update getLoginUrl() to point to local /login page
+- [x] Test full register → login → protected routes → logout flow — VERIFIED in browser
+- [x] Add 11 vitest tests for local auth (password hashing, user lookup, registration, login)

@@ -405,6 +405,28 @@ export const en = {
     goHome: "Go Home",
     goBack: "Go Back",
   },
+
+  // ─── Auth ───
+  auth: {
+    loginTitle: "Sign In",
+    loginDescription: "Enter your credentials to access your portfolio",
+    registerTitle: "Create Account",
+    registerDescription: "Join the DORI LP trading community",
+    email: "Email",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+    displayName: "Display Name",
+    signIn: "Sign In",
+    signUp: "Sign Up",
+    noAccount: "Don't have an account?",
+    hasAccount: "Already have an account?",
+    invalidCredentials: "Invalid email or password",
+    emailTaken: "Email already registered",
+    passwordMismatch: "Passwords do not match",
+    passwordTooShort: "Password must be at least 6 characters",
+    signingIn: "Signing in...",
+    creatingAccount: "Creating account...",
+  },
 } as const;
 
 // Deep type that converts all leaf values to string (so Korean translations can use different strings)

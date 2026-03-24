@@ -1,8 +1,11 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { sdk } from "./_core/sdk";
 import {
   getOrCreatePortfolio, getUserHoldings, executeTrade, getUserTrades,
   getAllTrades, getPriceHistory, getLatestPrice, addPriceSnapshot,
@@ -12,6 +15,7 @@ import {
   getAllMatchesFromDB, getMatchesSince,
   getPortfolioHistory, getUserNotifications, getUnreadNotificationCount,
   markNotificationRead, markAllNotificationsRead,
+  getUserByEmail, createLocalUser,
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
@@ -28,6 +32,59 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    register: publicProcedure
+      .input(z.object({
+        email: z.string().email().max(320),
+        password: z.string().min(6).max(128),
+        displayName: z.string().min(1).max(50),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if email already exists
+        const existing = await getUserByEmail(input.email);
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "Email already registered" });
+        }
+        // Hash password and create user
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        await createLocalUser({
+          email: input.email,
+          passwordHash,
+          displayName: input.displayName,
+        });
+        // Auto-login after registration
+        const user = await getUserByEmail(input.email);
+        if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user" });
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.displayName || user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return { success: true };
+      }),
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await getUserByEmail(input.email);
+        if (!user || !user.passwordHash) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+        }
+        const valid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!valid) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+        }
+        // Create session token and set cookie
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.displayName || user.name || "",
+          expiresInMs: ONE_YEAR_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return { success: true };
+      }),
     updateDisplayName: protectedProcedure
       .input(z.object({ displayName: z.string().min(1).max(50) }))
       .mutation(async ({ ctx, input }) => {
