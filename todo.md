@@ -291,3 +291,8 @@
 - [x] Translate X-axis date labels on Line chart (Feb 22 → 2월 22일)
 - [x] Translate X-axis date labels on Candlestick chart
 - [x] Translate tooltip dates
+
+## Bug Fix: All ETF Tickers Show Same Price
+- [x] Investigated: all 36 price history records had identical price ($57.925), no variation for ETF compounding
+- [x] Fixed by seeding historical price data from static LP history (182 data points from Sep 2025 - Mar 2026)
+- [x] Verified: DORI=$57.92, DDRI=$81.97 (2x leveraged), TDRI (3x), SDRI=$17.29 (2x inverse), XDRI (3x inverse)

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT COUNT(*) as total, MIN(price) as min_price, MAX(price) as max_price, MIN(timestamp) as earliest, MAX(timestamp) as latest FROM price_history;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4RDapMJqQiukiqZ.root --database EqpY4GjGxu3PtSNi8r37GF --execute SELECT COUNT(*) as total, MIN(price) as min_price, MAX(price) as max_price, MIN(timestamp) as earliest, MAX(timestamp) as latest FROM price_history;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'eqpy4gjgxu3ptsni8r37gf.price_history' doesn't exist"
+  ]
+}

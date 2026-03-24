@@ -1,0 +1,14 @@
+Screenshot observations after seeding price history:
+
+1. The page is now in LIGHT theme with white background - looks good!
+2. Korean translations are working: 거래장부, 리더보드, 뉴스, 시장심리, 포트폴리오
+3. The chart X-axis now shows Korean dates: 2월 22일, 2월 24일, etc.
+4. The trading panel shows the ticker selector with $DORI selected
+5. Need to scroll up to see the current price in the trading panel
+6. The Price → Rank Legend shows $57.92 correctly
+7. Stats cards show Korean: 솔로/듀오, 자유 랭크, 총게임 수, 평균 KDA
+8. Rank names are translated: 에메랄드 2, 다이아몬드 4
+9. W/L labels are translated: 113승 110패
+10. 7일 성적 section shows Korean labels
+11. 승/패 연속 section shows Korean labels
+12. Need to check the trading panel price for each ticker to confirm different prices

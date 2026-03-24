@@ -1,0 +1,60 @@
+{
+  "query": "SELECT price, timestamp, FROM_UNIXTIME(timestamp/1000) as datetime FROM priceHistory ORDER BY timestamp LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4RDapMJqQiukiqZ.root --database EqpY4GjGxu3PtSNi8r37GF --execute SELECT price, timestamp, FROM_UNIXTIME(timestamp/1000) as datetime FROM priceHistory ORDER BY timestamp LIMIT 10;",
+  "rows": [
+    {
+      "price": "57.9250",
+      "timestamp": "1774328787064",
+      "datetime": "2026-03-24 05:06:27.0640"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774329194636",
+      "datetime": "2026-03-24 05:13:14.6360"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774329236328",
+      "datetime": "2026-03-24 05:13:56.3280"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774329681298",
+      "datetime": "2026-03-24 05:21:21.2980"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774330436292",
+      "datetime": "2026-03-24 05:33:56.2920"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774330464502",
+      "datetime": "2026-03-24 05:34:24.5020"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774330656595",
+      "datetime": "2026-03-24 05:37:36.5950"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774331668775",
+      "datetime": "2026-03-24 05:54:28.7750"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774332051147",
+      "datetime": "2026-03-24 06:00:51.1470"
+    },
+    {
+      "price": "57.9250",
+      "timestamp": "1774332385501",
+      "datetime": "2026-03-24 06:06:25.5010"
+    }
+  ],
+  "messages": [],
+  "stdout": "price\ttimestamp\tdatetime\n57.9250\t1774328787064\t2026-03-24 05:06:27.0640\n57.9250\t1774329194636\t2026-03-24 05:13:14.6360\n57.9250\t1774329236328\t2026-03-24 05:13:56.3280\n57.9250\t1774329681298\t2026-03-24 05:21:21.2980\n57.9250\t1774330436292\t2026-03-24 05:33:56.2920\n57.9250\t1774330464502\t2026-03-24 05:34:24.5020\n57.9250\t1774330656595\t2026-03-24 05:37:36.5950\n57.9250\t1774331668775\t2026-03-24 05:54:28.7750\n57.9250\t1774332051147\t2026-03-24 06:00:51.1470\n57.9250\t1774332385501\t2026-03-24 06:06:25.5010\n",
+  "stderr": "",
+  "execution_time_ms": 70
+}

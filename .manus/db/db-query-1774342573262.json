@@ -1,0 +1,52 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4RDapMJqQiukiqZ.root --database EqpY4GjGxu3PtSNi8r37GF --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "comments"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "dividends"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "holdings"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "marketStatus"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "matches"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "news"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "notifications"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "orders"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "portfolioSnapshots"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "portfolios"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "priceHistory"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "trades"
+    },
+    {
+      "Tables_in_EqpY4GjGxu3PtSNi8r37GF": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_EqpY4GjGxu3PtSNi8r37GF\n__drizzle_migrations\ncomments\ndividends\nholdings\nmarketStatus\nmatches\nnews\nnotifications\norders\nportfolioSnapshots\nportfolios\npriceHistory\ntrades\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}
