@@ -3,7 +3,7 @@
  * Now wired to live backend prices via trpc.prices.etfPrices.
  * Supports short positions and all trade types (buy, sell, short, cover, dividend).
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -22,6 +22,7 @@ import {
   ArrowDownUp,
   Repeat,
   Gift,
+  LineChart,
 } from "lucide-react";
 import { Link } from "wouter";
 import { TICKERS } from "@/lib/playerData";
@@ -66,6 +67,202 @@ function getTradeTypeStyle(type: string) {
     default:
       return { icon: DollarSign, color: "#fff", bg: "bg-secondary", label: type, sign: "" };
   }
+}
+
+type PnlTimeRange = "1W" | "1M" | "3M" | "ALL";
+const PNL_RANGES: { id: PnlTimeRange; label: string; ms: number }[] = [
+  { id: "1W", label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
+  { id: "1M", label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
+  { id: "3M", label: "3M", ms: 90 * 24 * 60 * 60 * 1000 },
+  { id: "ALL", label: "All", ms: 0 },
+];
+
+function PortfolioPnlChart() {
+  const { isAuthenticated } = useAuth();
+  const [range, setRange] = useState<PnlTimeRange>("ALL");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const since = range === "ALL" ? undefined : Date.now() - (PNL_RANGES.find(r => r.id === range)?.ms ?? 0);
+
+  const { data: snapshots } = trpc.portfolioHistory.history.useQuery(
+    { since },
+    { enabled: isAuthenticated, refetchInterval: 120_000 }
+  );
+
+  useEffect(() => {
+    if (!canvasRef.current || !snapshots || snapshots.length === 0) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const W = rect.width;
+    const H = rect.height;
+
+    const values = snapshots.map(s => s.totalValue);
+    const timestamps = snapshots.map(s => s.timestamp);
+    const minVal = Math.min(...values) * 0.98;
+    const maxVal = Math.max(...values) * 1.02;
+    const valRange = maxVal - minVal || 1;
+
+    // Clear
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw baseline at $200
+    const baselineY = H - ((200 - minVal) / valRange) * H;
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, baselineY);
+    ctx.lineTo(W, baselineY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw $200 label
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.font = "10px JetBrains Mono, monospace";
+    ctx.fillText("$200", 4, baselineY - 4);
+
+    // Determine color based on final value
+    const finalVal = values[values.length - 1];
+    const isProfit = finalVal >= 200;
+    const lineColor = isProfit ? "#00C805" : "#FF5252";
+    const gradientColor = isProfit ? "rgba(0, 200, 5, 0.15)" : "rgba(255, 82, 82, 0.15)";
+
+    // Draw area fill
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, gradientColor);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+    ctx.beginPath();
+    for (let i = 0; i < values.length; i++) {
+      const x = (i / (values.length - 1)) * W;
+      const y = H - ((values[i] - minVal) / valRange) * H;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Draw line
+    ctx.beginPath();
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = "round";
+    for (let i = 0; i < values.length; i++) {
+      const x = (i / (values.length - 1)) * W;
+      const y = H - ((values[i] - minVal) / valRange) * H;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Draw current value label
+    const lastX = W - 4;
+    const lastY = H - ((finalVal - minVal) / valRange) * H;
+    ctx.fillStyle = lineColor;
+    ctx.font = "bold 11px JetBrains Mono, monospace";
+    ctx.textAlign = "right";
+    ctx.fillText(`$${finalVal.toFixed(2)}`, lastX, lastY - 8);
+    ctx.textAlign = "left";
+
+    // Draw time labels
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.font = "9px JetBrains Mono, monospace";
+    if (timestamps.length > 1) {
+      const first = new Date(timestamps[0]);
+      const last = new Date(timestamps[timestamps.length - 1]);
+      ctx.fillText(first.toLocaleDateString("en-US", { month: "short", day: "numeric" }), 4, H - 4);
+      ctx.textAlign = "right";
+      ctx.fillText(last.toLocaleDateString("en-US", { month: "short", day: "numeric" }), W - 4, H - 4);
+      ctx.textAlign = "left";
+    }
+  }, [snapshots]);
+
+  if (!snapshots || snapshots.length < 2) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="bg-card border border-border rounded-xl p-6 mb-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <LineChart className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+            Portfolio Performance
+          </h3>
+        </div>
+        <div className="text-center py-8">
+          <LineChart className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Not enough data yet</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Portfolio snapshots are recorded every 20 minutes during polling
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const firstVal = snapshots[0].totalValue;
+  const lastVal = snapshots[snapshots.length - 1].totalValue;
+  const change = lastVal - firstVal;
+  const changePct = firstVal > 0 ? (change / firstVal) * 100 : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 }}
+      className="bg-card border border-border rounded-xl p-6 mb-6"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <LineChart className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+            Portfolio Performance
+          </h3>
+          <span
+            className="text-xs font-semibold font-[var(--font-mono)] px-2 py-0.5 rounded"
+            style={{
+              color: change >= 0 ? "#00C805" : "#FF5252",
+              backgroundColor: change >= 0 ? "rgba(0,200,5,0.12)" : "rgba(255,82,82,0.12)",
+            }}
+          >
+            {change >= 0 ? "+" : ""}{changePct.toFixed(1)}%
+          </span>
+        </div>
+        <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
+          {PNL_RANGES.map(r => (
+            <button
+              key={r.id}
+              onClick={() => setRange(r.id)}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                range === r.id
+                  ? "bg-primary text-black"
+                  : "text-muted-foreground hover:text-white"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <canvas
+        ref={canvasRef}
+        className="w-full"
+        style={{ height: "180px" }}
+      />
+    </motion.div>
+  );
 }
 
 export default function Portfolio() {
@@ -278,6 +475,9 @@ export default function Portfolio() {
                 </div>
               </div>
             </motion.div>
+
+            {/* P&L Chart */}
+            <PortfolioPnlChart />
 
             {/* Long Holdings */}
             <motion.div

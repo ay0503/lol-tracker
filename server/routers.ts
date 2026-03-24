@@ -10,6 +10,8 @@ import {
   executeShort, executeCover, postComment, getComments, getNews,
   getUserDividends, getMarketStatus, getLeaderboard, getRecentMatchesFromDB,
   getAllMatchesFromDB, getMatchesSince,
+  getPortfolioHistory, getUserNotifications, getUnreadNotificationCount,
+  markNotificationRead, markAllNotificationsRead,
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
@@ -493,6 +495,44 @@ export const appRouter = router({
       rankings.sort((a, b) => b.totalValue - a.totalValue);
 
       return rankings;
+    }),
+  }),
+
+  // ─── Portfolio History (P&L Chart) ───
+  portfolioHistory: router({
+    history: protectedProcedure
+      .input(z.object({ since: z.number().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const raw = await getPortfolioHistory(ctx.user.id, input?.since);
+        return raw.map(s => ({
+          totalValue: parseFloat(s.totalValue),
+          cashBalance: parseFloat(s.cashBalance),
+          holdingsValue: parseFloat(s.holdingsValue),
+          shortPnl: parseFloat(s.shortPnl),
+          timestamp: Number(s.timestamp),
+        }));
+      }),
+  }),
+
+  // ─── Notifications ───
+  notifications: router({
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
+      .query(async ({ ctx, input }) => {
+        return getUserNotifications(ctx.user.id, input?.limit ?? 50);
+      }),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      return getUnreadNotificationCount(ctx.user.id);
+    }),
+    markRead: protectedProcedure
+      .input(z.object({ notificationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await markNotificationRead(input.notificationId, ctx.user.id);
+        return { success: true };
+      }),
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await markAllNotificationsRead(ctx.user.id);
+      return { success: true };
     }),
   }),
 

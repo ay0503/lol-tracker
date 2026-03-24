@@ -17,6 +17,7 @@ import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
+import NotificationBell from "@/components/NotificationBell";
 import {
   CHAMPION_STATS,
   MATCH_HISTORY,
@@ -508,6 +509,8 @@ export default function Home() {
                     </>
                   )}
                 </div>
+                {/* Notification bell */}
+                <NotificationBell />
                 {/* Mobile nav links */}
                 <div className="flex sm:hidden items-center gap-1">
                   <Link

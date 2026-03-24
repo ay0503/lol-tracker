@@ -193,3 +193,24 @@
 - [x] Audit frontend: portfolio page and tRPC wiring — fixed static prices, added short positions display, added all trade type filters
 - [x] Test all transaction flows in browser (market buy, limit buy, short sell all passed)
 - [x] Fix issues: TradingPanel & Portfolio now use live backend prices instead of static LP_HISTORY
+
+## Feature: Portfolio P&L Chart
+- [x] Add DB table (portfolioSnapshots) to track portfolio value snapshots over time
+- [x] Create tRPC endpoint (portfolioHistory.history) to return portfolio value history
+- [x] Build line chart component on Portfolio page showing value over time
+- [x] Auto-record portfolio snapshots during each poll cycle
+
+## Feature: Order Fill Notifications
+- [x] Add notifications table to DB schema (userId, message, type, read, createdAt)
+- [x] Create notification when limit order or stop-loss is filled in polling engine
+- [x] Add tRPC endpoints: list notifications, mark as read, unread count
+- [x] Build notification bell icon in nav with unread badge
+- [x] Build notification dropdown/panel with notification list
+- [x] Show toast notification for recently filled orders
+
+## Feature: Trade Confirmation Dialog
+- [x] Add confirmation dialog component for trades over $50
+- [x] Show trade summary (ticker, type, amount, shares, price) before execution
+- [x] Add confirm/cancel buttons with clear labeling
+- [x] Apply to all trade types: market buy/sell, short sell, cover
+- [x] Write vitest tests for portfolio history, notifications, and confirmation threshold (12 tests)

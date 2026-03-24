@@ -225,3 +225,39 @@ export const priceHistory = mysqlTable("priceHistory", {
 
 export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = typeof priceHistory.$inferInsert;
+
+/**
+ * Portfolio snapshots - records portfolio value over time for P&L charting.
+ * Recorded during each poll cycle for every user with a portfolio.
+ */
+export const portfolioSnapshots = mysqlTable("portfolioSnapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  totalValue: decimal("totalValue", { precision: 12, scale: 2 }).notNull(),
+  cashBalance: decimal("cashBalance", { precision: 12, scale: 2 }).notNull(),
+  holdingsValue: decimal("holdingsValue", { precision: 12, scale: 2 }).notNull(),
+  shortPnl: decimal("shortPnl", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  timestamp: bigint("timestamp", { mode: "number" }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PortfolioSnapshot = typeof portfolioSnapshots.$inferSelect;
+export type InsertPortfolioSnapshot = typeof portfolioSnapshots.$inferInsert;
+
+/**
+ * Notifications table - tracks order fills, dividends, and other events.
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["order_filled", "stop_loss_triggered", "dividend_received", "system"]).notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  /** Related entity ID (orderId, dividendId, etc.) */
+  relatedId: int("relatedId"),
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

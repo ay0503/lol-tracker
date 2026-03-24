@@ -16,7 +16,7 @@ import {
   addPriceSnapshot, getProcessedMatchIds, addMatch, markMatchDividendsPaid,
   markMatchNewsGenerated, distributeDividends, addNews, getPendingOrders,
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
-  executeShort, executeCover
+  executeShort, executeCover, recordPortfolioSnapshots, createNotification
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 
@@ -220,13 +220,36 @@ export async function pollNow(): Promise<PollResult> {
           }
           await fillOrder(order.id, etfPrice);
           result.ordersExecuted++;
+
+          // Create notification for order fill
+          const notifType = order.orderType === "stop_loss" ? "stop_loss_triggered" as const : "order_filled" as const;
+          const orderLabel = order.orderType === "limit_buy" ? "Limit Buy" : order.orderType === "limit_sell" ? "Limit Sell" : "Stop-Loss";
+          await createNotification({
+            userId: order.userId,
+            type: notifType,
+            title: `${orderLabel} Filled: $${orderTicker}`,
+            message: `Your ${orderLabel.toLowerCase()} order for ${orderShares.toFixed(2)} shares of $${orderTicker} was filled at $${etfPrice.toFixed(2)}.`,
+            relatedId: order.id,
+          });
         } catch (err: any) {
           result.errors.push(`Order ${order.id} execution error: ${err.message}`);
         }
       }
     }
 
-    // 7. Update market status based on recent activity
+    // 7. Record portfolio snapshots for P&L charting
+    try {
+      const tickerPrices: Record<string, number> = {};
+      for (const t of TICKERS) {
+        tickerPrices[t] = getETFPrice(t, price, prevPrice);
+      }
+      await recordPortfolioSnapshots(tickerPrices);
+      console.log("[Poll] Portfolio snapshots recorded");
+    } catch (err: any) {
+      result.errors.push(`Portfolio snapshot error: ${err.message}`);
+    }
+
+    // 8. Update market status based on recent activity
     const hasRecentGame = recentMatches.some(m => {
       const endTime = m.info.gameEndTimestamp || (m.info.gameCreation + m.info.gameDuration * 1000);
       return Date.now() - endTime < 60 * 60 * 1000; // within last hour

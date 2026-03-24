@@ -540,3 +540,112 @@ export async function getMatchesSince(sinceTimestamp: number) {
     .where(sql`${matches.gameCreation} >= ${sinceTimestamp}`)
     .orderBy(sql`${matches.gameCreation} DESC`);
 }
+
+// ─── Portfolio Snapshots ───
+
+import { portfolioSnapshots, notifications } from "../drizzle/schema";
+
+export async function recordPortfolioSnapshots(
+  tickerPrices: Record<string, number>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Get all users with portfolios
+  const allPortfolios = await db.select().from(portfolios);
+  const allHoldingsData = await db.select().from(holdings);
+  const now = Date.now();
+
+  for (const p of allPortfolios) {
+    const cash = parseFloat(p.cashBalance);
+    const userHoldings = allHoldingsData.filter(h => h.userId === p.userId);
+
+    let holdingsValue = 0;
+    let shortPnl = 0;
+    for (const h of userHoldings) {
+      const shares = parseFloat(h.shares);
+      const shortShares = parseFloat(h.shortShares);
+      const shortAvg = parseFloat(h.shortAvgPrice);
+      const price = tickerPrices[h.ticker] || 0;
+      holdingsValue += shares * price;
+      shortPnl += shortShares * (shortAvg - price);
+    }
+
+    const totalValue = cash + holdingsValue + shortPnl;
+
+    await db.insert(portfolioSnapshots).values({
+      userId: p.userId,
+      totalValue: totalValue.toFixed(2),
+      cashBalance: cash.toFixed(2),
+      holdingsValue: holdingsValue.toFixed(2),
+      shortPnl: shortPnl.toFixed(2),
+      timestamp: now,
+    });
+  }
+}
+
+export async function getPortfolioHistory(userId: number, since?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (since) {
+    return db.select().from(portfolioSnapshots)
+      .where(and(eq(portfolioSnapshots.userId, userId), sql`${portfolioSnapshots.timestamp} >= ${since}`))
+      .orderBy(portfolioSnapshots.timestamp);
+  }
+  return db.select().from(portfolioSnapshots)
+    .where(eq(portfolioSnapshots.userId, userId))
+    .orderBy(portfolioSnapshots.timestamp);
+}
+
+// ─── Notifications ───
+
+export async function createNotification(data: {
+  userId: number;
+  type: "order_filled" | "stop_loss_triggered" | "dividend_received" | "system";
+  title: string;
+  message: string;
+  relatedId?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(notifications).values({
+    userId: data.userId,
+    type: data.type,
+    title: data.title,
+    message: data.message,
+    relatedId: data.relatedId ?? null,
+    read: false,
+  });
+}
+
+export async function getUserNotifications(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.select({ count: sql<number>`COUNT(*)` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+  return result[0]?.count ?? 0;
+}
+
+export async function markNotificationRead(notificationId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(notifications).set({ read: true })
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(notifications).set({ read: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+}

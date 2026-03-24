@@ -13,9 +13,25 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TICKERS } from "@/lib/playerData";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type TickerSymbol = (typeof TICKERS)[number]["symbol"];
 type OrderTab = "market" | "limit" | "stop_loss" | "short";
+
+/** Threshold above which we show a confirmation dialog */
+const CONFIRM_THRESHOLD = 50;
+
+interface PendingConfirmation {
+  action: () => void;
+  type: string; // "Buy" | "Sell" | "Short" | "Cover" | "Limit Buy" | "Limit Sell" | "Stop-Loss"
+  ticker: string;
+  amount: string;
+  shares: string;
+  price: string;
+}
 
 /** Get the icon and color for each trade type */
 function getTradeTypeStyle(type: string) {
@@ -44,6 +60,7 @@ export default function TradingPanel() {
   const [showHistory, setShowHistory] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
   const [showTickerDropdown, setShowTickerDropdown] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmation | null>(null);
 
   // ─── Live prices from backend ───
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
@@ -156,12 +173,36 @@ export default function TradingPanel() {
   const pnl = useMemo(() => totalValue - 200, [totalValue]);
   const isMarketOpen = marketStatus?.isOpen ?? true;
 
+  /** Wraps a trade action with confirmation if amount >= threshold */
+  const confirmOrExecute = (
+    action: () => void,
+    type: string,
+    ticker: string,
+    dollarAmount: number,
+    shareCount: number,
+    price: number,
+  ) => {
+    if (dollarAmount >= CONFIRM_THRESHOLD) {
+      setPendingConfirm({
+        action,
+        type,
+        ticker,
+        amount: `$${dollarAmount.toFixed(2)}`,
+        shares: shareCount.toFixed(4),
+        price: `$${price.toFixed(2)}`,
+      });
+    } else {
+      action();
+    }
+  };
+
   const handleMarketTrade = () => {
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error("Enter a valid positive dollar amount"); return; }
     if (tickerPrice <= 0) { toast.error("Price data not available yet"); return; }
     if (shares <= 0) { toast.error("Trade amount too small"); return; }
-    tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice });
+    const execute = () => tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice });
+    confirmOrExecute(execute, tradeType === "buy" ? "Buy" : "Sell", selectedTicker, val, shares, tickerPrice);
   };
 
   const handleShort = () => {
@@ -169,7 +210,8 @@ export default function TradingPanel() {
     if (isNaN(val) || val <= 0) { toast.error("Enter a valid positive dollar amount"); return; }
     if (tickerPrice <= 0) { toast.error("Price data not available yet"); return; }
     if (shares <= 0) { toast.error("Trade amount too small"); return; }
-    shortMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+    const execute = () => shortMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+    confirmOrExecute(execute, "Short", selectedTicker, val, shares, tickerPrice);
   };
 
   const handleCover = () => {
@@ -177,7 +219,8 @@ export default function TradingPanel() {
     if (isNaN(val) || val <= 0) { toast.error("Enter a valid positive dollar amount"); return; }
     if (tickerPrice <= 0) { toast.error("Price data not available yet"); return; }
     if (shares <= 0) { toast.error("Trade amount too small"); return; }
-    coverMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+    const execute = () => coverMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+    confirmOrExecute(execute, "Cover", selectedTicker, val, shares, tickerPrice);
   };
 
   const handleLimitOrder = () => {
@@ -186,12 +229,13 @@ export default function TradingPanel() {
     if (isNaN(val) || val <= 0) { toast.error("Enter a valid amount"); return; }
     if (isNaN(tp) || tp <= 0) { toast.error("Enter a valid target price"); return; }
     const orderShares = val / tp;
-    createOrderMutation.mutate({
+    const execute = () => createOrderMutation.mutate({
       ticker: selectedTicker,
       orderType: tradeType === "buy" ? "limit_buy" : "limit_sell",
       shares: orderShares,
       targetPrice: tp,
     });
+    confirmOrExecute(execute, tradeType === "buy" ? "Limit Buy" : "Limit Sell", selectedTicker, val, orderShares, tp);
   };
 
   const handleStopLoss = () => {
@@ -200,9 +244,10 @@ export default function TradingPanel() {
     if (isNaN(val) || val <= 0) { toast.error("Enter a valid amount"); return; }
     if (isNaN(tp) || tp <= 0) { toast.error("Enter a valid stop price"); return; }
     const orderShares = val / tp;
-    createOrderMutation.mutate({
+    const execute = () => createOrderMutation.mutate({
       ticker: selectedTicker, orderType: "stop_loss", shares: orderShares, targetPrice: tp,
     });
+    confirmOrExecute(execute, "Stop-Loss", selectedTicker, val, orderShares, tp);
   };
 
   const ORDER_TABS: { id: OrderTab; label: string; icon: any }[] = [
@@ -218,6 +263,7 @@ export default function TradingPanel() {
   const priceLoading = !etfPrices;
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -559,5 +605,59 @@ export default function TradingPanel() {
         </div>
       </div>
     </motion.div>
+
+    {/* Trade Confirmation Dialog */}
+    <AlertDialog open={!!pendingConfirm} onOpenChange={(open) => { if (!open) setPendingConfirm(null); }}>
+      <AlertDialogContent className="bg-card border-border">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white font-[var(--font-heading)]">
+            Confirm {pendingConfirm?.type} Order
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground">
+            <div className="space-y-3 mt-2">
+              <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Action</span>
+                  <span className="text-xs font-bold text-white">{pendingConfirm?.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Ticker</span>
+                  <span className="text-xs font-bold text-primary font-[var(--font-mono)]">${pendingConfirm?.ticker}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Amount</span>
+                  <span className="text-xs font-bold text-white font-[var(--font-mono)]">{pendingConfirm?.amount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Shares</span>
+                  <span className="text-xs font-bold text-white font-[var(--font-mono)]">{pendingConfirm?.shares}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-muted-foreground">Price</span>
+                  <span className="text-xs font-bold text-white font-[var(--font-mono)]">{pendingConfirm?.price}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-yellow-500">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>This trade exceeds ${CONFIRM_THRESHOLD}. Please confirm.</span>
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="bg-secondary text-white border-border hover:bg-secondary/80">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-primary text-black hover:bg-primary/90 font-bold"
+            onClick={() => {
+              pendingConfirm?.action();
+              setPendingConfirm(null);
+            }}
+          >
+            Confirm {pendingConfirm?.type}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
