@@ -6,7 +6,10 @@
 import axios from "axios";
 import { ENV } from "./_core/env";
 
-const RIOT_API_KEY = process.env.RIOT_API_KEY || "";
+// Read API key dynamically so it picks up env changes without restart
+function getRiotApiKey() {
+  return process.env.RIOT_API_KEY || "";
+}
 
 // Base URLs
 const AMERICAS_URL = "https://americas.api.riotgames.com";
@@ -14,7 +17,7 @@ const NA1_URL = "https://na1.api.riotgames.com";
 
 // Default headers
 function headers() {
-  return { "X-Riot-Token": RIOT_API_KEY };
+  return { "X-Riot-Token": getRiotApiKey() };
 }
 
 // ─── Types ───
@@ -121,12 +124,12 @@ export async function getSummonerByPuuid(puuid: string): Promise<Summoner> {
 }
 
 /**
- * Step 3: Get ranked entries for a summoner
+ * Step 3: Get ranked entries for a player (by PUUID)
  */
 export async function getLeagueEntries(
-  summonerId: string
+  puuid: string
 ): Promise<LeagueEntry[]> {
-  const url = `${NA1_URL}/lol/league/v4/entries/by-summoner/${summonerId}`;
+  const url = `${NA1_URL}/lol/league/v4/entries/by-puuid/${puuid}`;
   const res = await axios.get<LeagueEntry[]>(url, { headers: headers() });
   return res.data;
 }
@@ -273,8 +276,8 @@ export async function fetchFullPlayerData(gameName: string, tagLine: string) {
   // 2. Get summoner info
   const summoner = await getSummonerByPuuid(account.puuid);
 
-  // 3. Get ranked entries
-  const leagueEntries = await getLeagueEntries(summoner.id);
+  // 3. Get ranked entries (using PUUID directly)
+  const leagueEntries = await getLeagueEntries(account.puuid);
 
   // Find solo/duo and flex entries
   const soloEntry = leagueEntries.find(

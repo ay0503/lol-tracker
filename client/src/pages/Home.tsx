@@ -1,8 +1,9 @@
 /*
  * $DORI LP Tracker — Main page with Robinhood-style fintech UI.
  * Navigation to Ledger and Portfolio pages.
+ * All stat components now wired to live backend data with static fallbacks.
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -11,11 +12,18 @@ import PlayerHeader from "@/components/PlayerHeader";
 import LPChart from "@/components/LPChart";
 import StreakBar from "@/components/StreakBar";
 import ChampionCard from "@/components/ChampionCard";
+import type { ChampionStatData } from "@/components/ChampionCard";
 import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
-import { CHAMPION_STATS, MATCH_HISTORY, RANKED_SOLO, RANKED_FLEX, type MatchResult } from "@/lib/playerData";
+import {
+  CHAMPION_STATS,
+  MATCH_HISTORY,
+  RANKED_SOLO,
+  RANKED_FLEX,
+  type MatchResult,
+} from "@/lib/playerData";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -47,10 +55,12 @@ function SectionHeader({
   icon: Icon,
   title,
   subtitle,
+  isLive,
 }: {
   icon: any;
   title: string;
   subtitle?: string;
+  isLive?: boolean;
 }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
@@ -58,9 +68,17 @@ function SectionHeader({
         <Icon className="w-4 h-4 text-muted-foreground" />
       </div>
       <div>
-        <h2 className="text-base font-bold text-white font-[var(--font-heading)]">
-          {title}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-bold text-white font-[var(--font-heading)]">
+            {title}
+          </h2>
+          {isLive && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+              <Activity className="w-2.5 h-2.5" />
+              LIVE
+            </span>
+          )}
+        </div>
         {subtitle && (
           <p className="text-xs text-muted-foreground">{subtitle}</p>
         )}
@@ -74,15 +92,24 @@ function StatCard({
   value,
   subValue,
   color,
+  isLive,
 }: {
   label: string;
   value: string;
   subValue?: string;
   color?: string;
+  isLive?: boolean;
 }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        {isLive && (
+          <span className="flex items-center gap-0.5 text-[9px] font-semibold text-primary">
+            <Activity className="w-2 h-2" />
+          </span>
+        )}
+      </div>
       <p
         className="text-xl font-bold font-[var(--font-mono)]"
         style={{ color: color || "white" }}
@@ -107,7 +134,10 @@ function MatchHistorySection() {
 
   // Convert DB matches to MatchResult format for MatchRow
   const dbMatches: MatchResult[] = (liveMatches ?? []).map((m, i) => {
-    const kda = m.deaths === 0 ? "Perfect" : ((m.kills + m.assists) / m.deaths).toFixed(2);
+    const kda =
+      m.deaths === 0
+        ? "Perfect"
+        : ((m.kills + m.assists) / m.deaths).toFixed(2);
     const mins = Math.floor(m.gameDuration / 60);
     const secs = m.gameDuration % 60;
     const duration = `${mins}m ${secs}s`;
@@ -115,14 +145,15 @@ function MatchHistorySection() {
     const diff = now - m.gameCreation;
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
-    const timeAgo = days > 0 ? `${days}d ago` : hours > 0 ? `${hours}h ago` : "just now";
+    const timeAgo =
+      days > 0 ? `${days}d ago` : hours > 0 ? `${hours}h ago` : "just now";
     const champKey = m.champion;
     const championImage = `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${champKey}.png`;
 
     return {
       id: m.id,
       timeAgo,
-      result: m.win ? "Victory" as const : "Defeat" as const,
+      result: m.win ? ("Victory" as const) : ("Defeat" as const),
       duration,
       champion: m.champion,
       championImage,
@@ -161,7 +192,9 @@ function MatchHistorySection() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isLive ? "Auto-updated from Riot API" : "Recent ranked games"}
+              {isLive
+                ? "Auto-updated from Riot API"
+                : "Recent ranked games"}
             </p>
           </div>
         </div>
@@ -172,6 +205,145 @@ function MatchHistorySection() {
       <div className="space-y-1.5">
         {matchesToShow.map((match, i) => (
           <MatchRow key={match.id} match={match} index={i} />
+        ))}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Stats grid that uses live data from backend with static fallback.
+ */
+function StatsGrid() {
+  const { data: livePlayer } = trpc.player.current.useQuery(undefined, {
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const { data: avgKda } = trpc.stats.avgKda.useQuery(
+    { count: 20 },
+    { refetchInterval: 60_000, staleTime: 30_000 }
+  );
+
+  const hasLivePlayer = !!livePlayer?.solo;
+  const hasLiveKda = !!avgKda;
+
+  // Solo/Duo stats
+  const soloTier = livePlayer?.solo?.tier ?? RANKED_SOLO.tier;
+  const soloRank = livePlayer?.solo?.rank ?? String(RANKED_SOLO.division);
+  const soloLP = livePlayer?.solo?.lp ?? RANKED_SOLO.lp;
+  const soloWins = livePlayer?.solo?.wins ?? RANKED_SOLO.wins;
+  const soloLosses = livePlayer?.solo?.losses ?? RANKED_SOLO.losses;
+  const soloWR =
+    soloWins + soloLosses > 0
+      ? Math.round((soloWins / (soloWins + soloLosses)) * 100)
+      : 0;
+
+  // Flex stats
+  const flexTier = livePlayer?.flex?.tier ?? RANKED_FLEX.tier;
+  const flexRank = livePlayer?.flex?.rank ?? String(RANKED_FLEX.division);
+  const flexLP = livePlayer?.flex?.lp ?? RANKED_FLEX.lp;
+  const flexWins = livePlayer?.flex?.wins ?? RANKED_FLEX.wins;
+  const flexLosses = livePlayer?.flex?.losses ?? RANKED_FLEX.losses;
+  const flexWR =
+    flexWins + flexLosses > 0
+      ? Math.round((flexWins / (flexWins + flexLosses)) * 100)
+      : 0;
+
+  // Format tier name
+  const formatTier = (tier: string) =>
+    tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
+  const formatDiv = (rank: string) => {
+    const map: Record<string, string> = { I: "1", II: "2", III: "3", IV: "4" };
+    return map[rank] || rank;
+  };
+
+  // KDA stats
+  const kdaRatio = avgKda?.kdaRatio ?? 2.23;
+  const kdaStr = avgKda
+    ? `${avgKda.avgKills} / ${avgKda.avgDeaths} / ${avgKda.avgAssists}`
+    : "6.3 / 6.3 / 7.7";
+  const kdaGames = avgKda?.gamesAnalyzed ?? 20;
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <StatCard
+        label="Solo/Duo"
+        value={`${formatTier(soloTier)} ${formatDiv(soloRank)}`}
+        subValue={`${soloLP} LP · ${soloWR}% WR`}
+        color="#00C805"
+        isLive={hasLivePlayer}
+      />
+      <StatCard
+        label="Flex Queue"
+        value={`${formatTier(flexTier)} ${formatDiv(flexRank)}`}
+        subValue={`${flexLP} LP · ${flexWR}% WR`}
+        color="#B9F2FF"
+        isLive={hasLivePlayer}
+      />
+      <StatCard
+        label="Total Games"
+        value={(soloWins + soloLosses).toString()}
+        subValue={`${soloWins}W ${soloLosses}L`}
+        isLive={hasLivePlayer}
+      />
+      <StatCard
+        label={`Avg KDA (${kdaGames}G)`}
+        value={kdaRatio.toFixed(2)}
+        subValue={kdaStr}
+        color="#FFD54F"
+        isLive={hasLiveKda}
+      />
+    </div>
+  );
+}
+
+/**
+ * Champion pool section wired to live data.
+ */
+function ChampionPoolSection() {
+  const { data: liveChampions } = trpc.stats.championPool.useQuery(undefined, {
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
+  // Map live data to ChampionStatData, or fall back to static
+  const isLive = !!(liveChampions && liveChampions.length > 0);
+
+  const champions: ChampionStatData[] = useMemo(() => {
+    if (liveChampions && liveChampions.length > 0) {
+      return liveChampions.map((c) => ({
+        name: c.name,
+        image: c.image,
+        games: c.games,
+        winRate: c.winRate,
+        kdaRatio: c.kdaRatio,
+        kda: c.kda,
+        cs: c.cs,
+      }));
+    }
+    // Fallback to static data
+    return CHAMPION_STATS.map((c) => ({
+      name: c.name,
+      image: c.image,
+      games: c.games,
+      winRate: c.winRate,
+      kdaRatio: c.kdaRatio,
+      kda: c.kda,
+      cs: c.cs,
+    }));
+  }, [liveChampions]);
+
+  return (
+    <>
+      <SectionHeader
+        icon={Shield}
+        title="Champion Pool"
+        subtitle={isLive ? "Computed from polled match data" : "Season 2026 Ranked Solo/Duo"}
+        isLive={isLive}
+      />
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
+        {champions.map((champ, i) => (
+          <ChampionCard key={champ.name} champion={champ} index={i} />
         ))}
       </div>
     </>
@@ -212,7 +384,10 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Link
+              href="/"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
               <BarChart3 className="w-5 h-5 text-primary" />
               <span className="text-sm font-bold text-white font-[var(--font-heading)]">
                 $DORI
@@ -285,7 +460,9 @@ export default function Home() {
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && editName.trim()) {
-                            updateNameMutation.mutate({ displayName: editName.trim() });
+                            updateNameMutation.mutate({
+                              displayName: editName.trim(),
+                            });
                           } else if (e.key === "Escape") {
                             setIsEditingName(false);
                           }
@@ -294,7 +471,9 @@ export default function Home() {
                       <button
                         onClick={() => {
                           if (editName.trim()) {
-                            updateNameMutation.mutate({ displayName: editName.trim() });
+                            updateNameMutation.mutate({
+                              displayName: editName.trim(),
+                            });
                           }
                         }}
                         className="p-0.5 text-[#00C805] hover:bg-secondary rounded"
@@ -316,7 +495,9 @@ export default function Home() {
                       </span>
                       <button
                         onClick={() => {
-                          setEditName((user as any)?.displayName || user?.name || "");
+                          setEditName(
+                            (user as any)?.displayName || user?.name || ""
+                          );
                           setIsEditingName(true);
                         }}
                         className="p-0.5 text-muted-foreground hover:text-white rounded"
@@ -381,33 +562,9 @@ export default function Home() {
           </section>
         )}
 
-        {/* Stats grid */}
+        {/* Stats grid — now live */}
         <section className="mt-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard
-              label="Solo/Duo"
-              value={`${RANKED_SOLO.tier} ${RANKED_SOLO.division}`}
-              subValue={`${RANKED_SOLO.lp} LP · ${RANKED_SOLO.winRate}% WR`}
-              color="#00C805"
-            />
-            <StatCard
-              label="Flex Queue"
-              value={`${RANKED_FLEX.tier} ${RANKED_FLEX.division}`}
-              subValue={`${RANKED_FLEX.lp} LP · ${RANKED_FLEX.winRate}% WR`}
-              color="#B9F2FF"
-            />
-            <StatCard
-              label="Total Games"
-              value={(RANKED_SOLO.wins + RANKED_SOLO.losses).toString()}
-              subValue={`${RANKED_SOLO.wins}W ${RANKED_SOLO.losses}L`}
-            />
-            <StatCard
-              label="Avg KDA (20G)"
-              value="2.23"
-              subValue="6.3 / 6.3 / 7.7"
-              color="#FFD54F"
-            />
-          </div>
+          <StatsGrid />
         </section>
 
         {/* Two-column layout: Streaks + Recent Performance */}
@@ -441,18 +598,9 @@ export default function Home() {
           </motion.div>
         </section>
 
-        {/* Champion stats */}
+        {/* Champion stats — now live */}
         <section className="mt-8">
-          <SectionHeader
-            icon={Shield}
-            title="Champion Pool"
-            subtitle="Season 2026 Ranked Solo/Duo"
-          />
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
-            {CHAMPION_STATS.map((champ, i) => (
-              <ChampionCard key={champ.name} champion={champ} index={i} />
-            ))}
-          </div>
+          <ChampionPoolSection />
         </section>
 
         {/* Season history */}

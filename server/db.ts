@@ -518,3 +518,25 @@ export async function getLatestPrice() {
   const result = await db.select().from(priceHistory).orderBy(desc(priceHistory.timestamp)).limit(1);
   return result.length > 0 ? result[0] : null;
 }
+
+// ─── Live Stats (computed from stored matches) ───
+
+/**
+ * Get all matches for computing stats (all stored matches, ordered newest first).
+ */
+export async function getAllMatchesFromDB() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(matches).orderBy(sql`${matches.gameCreation} DESC`);
+}
+
+/**
+ * Get matches from the last N days.
+ */
+export async function getMatchesSince(sinceTimestamp: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(matches)
+    .where(sql`${matches.gameCreation} >= ${sinceTimestamp}`)
+    .orderBy(sql`${matches.gameCreation} DESC`);
+}

@@ -2,11 +2,20 @@
  * Design: Compact card showing champion stats in a trading-card style.
  * Win rate shown as a progress bar. KDA and games prominently displayed.
  */
-import type { ChampionStat } from "@/lib/playerData";
 import { motion } from "framer-motion";
 
+export interface ChampionStatData {
+  name: string;
+  image: string;
+  games: number;
+  winRate: number;
+  kdaRatio: number;
+  kda: string;
+  cs?: string;
+}
+
 interface Props {
-  champion: ChampionStat;
+  champion: ChampionStatData;
   index: number;
 }
 

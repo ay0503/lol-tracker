@@ -1,13 +1,29 @@
 /*
  * Design: Horizontal streak visualization like a trading volume bar.
  * Green blocks for wins, red for losses. Current streak highlighted.
+ * Now wired to live data from the backend stats endpoint.
  */
-import { WIN_LOSS_SEQUENCE, calculateStreaks } from "@/lib/playerData";
+import { calculateStreaks, WIN_LOSS_SEQUENCE } from "@/lib/playerData";
+import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
+import { Activity } from "lucide-react";
 
 export default function StreakBar() {
-  const streaks = calculateStreaks(WIN_LOSS_SEQUENCE);
+  const { data: liveStreaks } = trpc.stats.streaks.useQuery(undefined, {
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
+  // Use live data if available, otherwise fall back to static
+  const sequence = liveStreaks && liveStreaks.sequence.length > 0
+    ? liveStreaks.sequence
+    : WIN_LOSS_SEQUENCE;
+  const isLive = !!(liveStreaks && liveStreaks.sequence.length > 0);
+
+  const streaks = calculateStreaks(sequence);
   const currentStreak = streaks[0];
+
+  if (!currentStreak) return null;
 
   return (
     <div>
@@ -40,13 +56,19 @@ export default function StreakBar() {
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          Last {WIN_LOSS_SEQUENCE.length} games
+          Last {sequence.length} games
         </span>
+        {isLive && (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+            <Activity className="w-2.5 h-2.5" />
+            LIVE
+          </span>
+        )}
       </div>
 
       {/* Streak blocks */}
       <div className="flex gap-[3px] items-end h-10">
-        {WIN_LOSS_SEQUENCE.map((result, i) => {
+        {sequence.map((result, i) => {
           const isWin = result === "W";
           const isCurrent = i < currentStreak.count;
           return (
@@ -59,7 +81,7 @@ export default function StreakBar() {
               className={`flex-1 rounded-sm transition-all duration-200 ${
                 isCurrent ? "h-10" : "h-7"
               }`}
-              title={`Game ${WIN_LOSS_SEQUENCE.length - i}: ${isWin ? "Win" : "Loss"}`}
+              title={`Game ${sequence.length - i}: ${isWin ? "Win" : "Loss"}`}
             >
               <div
                 className="w-full h-full rounded-sm"

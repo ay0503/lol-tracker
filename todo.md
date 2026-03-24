@@ -159,3 +159,23 @@
 - [x] Store match results in DB during each poll cycle
 - [x] Replace static MATCH_HISTORY with API-fetched data
 - [x] Update match history section to show loading state and auto-refresh
+
+## Bug Fix: Match History Not Updated
+- [ ] Check if Riot API key is working
+- [ ] Fetch latest matches (including Mel game)
+- [ ] Update match history to show most recent games
+
+## Feature: Real-Time Stats from API Polling
+- [x] Backend: Add endpoint for live player stats (rank, LP, wins, losses, win rate)
+- [x] Backend: Add endpoint for champion stats computed from stored matches
+- [x] Backend: Add endpoint for win/loss streaks computed from stored matches
+- [x] Backend: Add endpoint for 7-day performance computed from stored matches
+- [x] Backend: Add endpoint for current stock price from latest price snapshot
+- [x] Frontend: Wire PlayerHeader to use live rank/LP/price data
+- [x] Frontend: Wire stat cards (Solo/Duo, Flex, Total Games, Avg KDA) to live data
+- [x] Frontend: Wire StreakBar to use live match data
+- [x] Frontend: Wire RecentPerformance (7-day) to use live match data
+- [x] Frontend: Wire ChampionCard pool to use live match data
+- [x] Frontend: Wire MatchRow history to use live match data (already done)
+- [x] Frontend: Add auto-refresh (refetchInterval) to all live queries
+- [x] Write vitest tests for stats endpoints (championPool, streaks, recentPerformance, avgKda)

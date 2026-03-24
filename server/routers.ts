@@ -9,6 +9,7 @@ import {
   updateDisplayName, createOrder, getUserOrders, cancelOrder,
   executeShort, executeCover, postComment, getComments, getNews,
   getUserDividends, getMarketStatus, getLeaderboard, getRecentMatchesFromDB,
+  getAllMatchesFromDB, getMatchesSince,
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
@@ -111,6 +112,105 @@ export const appRouter = router({
             };
           });
         } catch (err: any) { return []; }
+      }),
+  }),
+
+  // ─── Live Stats (computed from stored matches) ───
+  stats: router({
+    /** All-time champion pool stats computed from stored matches */
+    championPool: publicProcedure.query(async () => {
+      try {
+        const allMatches = await getAllMatchesFromDB();
+        if (allMatches.length === 0) return [];
+        const champMap = new Map<string, { wins: number; losses: number; kills: number; deaths: number; assists: number; cs: number; games: number }>();
+        for (const m of allMatches) {
+          const existing = champMap.get(m.champion) || { wins: 0, losses: 0, kills: 0, deaths: 0, assists: 0, cs: 0, games: 0 };
+          existing.games++;
+          if (m.win) existing.wins++; else existing.losses++;
+          existing.kills += m.kills;
+          existing.deaths += m.deaths;
+          existing.assists += m.assists;
+          existing.cs += m.cs;
+          champMap.set(m.champion, existing);
+        }
+        return Array.from(champMap.entries())
+          .map(([name, s]) => ({
+            name,
+            image: `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${name}.png`,
+            games: s.games,
+            wins: s.wins,
+            losses: s.losses,
+            winRate: s.games > 0 ? Math.round((s.wins / s.games) * 100) : 0,
+            kills: +(s.kills / s.games).toFixed(1),
+            deaths: +(s.deaths / s.games).toFixed(1),
+            assists: +(s.assists / s.games).toFixed(1),
+            kdaRatio: s.deaths > 0 ? +((s.kills + s.assists) / s.deaths).toFixed(2) : +(s.kills + s.assists).toFixed(2),
+            kda: `${(s.kills / s.games).toFixed(1)} / ${(s.deaths / s.games).toFixed(1)} / ${(s.assists / s.games).toFixed(1)}`,
+            cs: `${Math.round(s.cs / s.games)}`,
+          }))
+          .sort((a, b) => b.games - a.games);
+      } catch { return []; }
+    }),
+
+    /** Win/loss streak sequence from stored matches (newest first) */
+    streaks: publicProcedure.query(async () => {
+      try {
+        const allMatches = await getAllMatchesFromDB(); // already ordered newest first
+        const sequence = allMatches.map(m => m.win ? "W" : "L");
+        return { sequence, totalGames: allMatches.length };
+      } catch { return { sequence: [] as string[], totalGames: 0 }; }
+    }),
+
+    /** 7-day champion performance */
+    recentPerformance: publicProcedure.query(async () => {
+      try {
+        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const recentMatches = await getMatchesSince(sevenDaysAgo);
+        if (recentMatches.length === 0) return [];
+        const champMap = new Map<string, { wins: number; losses: number }>();
+        for (const m of recentMatches) {
+          const existing = champMap.get(m.champion) || { wins: 0, losses: 0 };
+          if (m.win) existing.wins++; else existing.losses++;
+          champMap.set(m.champion, existing);
+        }
+        return Array.from(champMap.entries())
+          .map(([champion, s]) => ({
+            champion,
+            image: `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${champion}.png`,
+            wins: s.wins,
+            losses: s.losses,
+            winRate: (s.wins + s.losses) > 0 ? Math.round((s.wins / (s.wins + s.losses)) * 100) : 0,
+          }))
+          .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses));
+      } catch { return []; }
+    }),
+
+    /** Aggregate KDA from recent N matches */
+    avgKda: publicProcedure
+      .input(z.object({ count: z.number().min(1).max(50).default(20) }).optional())
+      .query(async ({ input }) => {
+        try {
+          const allMatches = await getRecentMatchesFromDB(input?.count ?? 20);
+          if (allMatches.length === 0) return null;
+          let totalK = 0, totalD = 0, totalA = 0;
+          for (const m of allMatches) {
+            totalK += m.kills;
+            totalD += m.deaths;
+            totalA += m.assists;
+          }
+          const n = allMatches.length;
+          const avgK = totalK / n;
+          const avgD = totalD / n;
+          const avgA = totalA / n;
+          const kdaRatio = totalD > 0 ? (totalK + totalA) / totalD : totalK + totalA;
+          return {
+            avgKills: +avgK.toFixed(1),
+            avgDeaths: +avgD.toFixed(1),
+            avgAssists: +avgA.toFixed(1),
+            kdaRatio: +kdaRatio.toFixed(2),
+            gamesAnalyzed: n,
+          };
+        } catch { return null; }
       }),
   }),
 
