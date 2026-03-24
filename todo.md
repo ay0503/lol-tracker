@@ -147,3 +147,15 @@
 - [x] Rank by total portfolio value, daily P&L, best trade
 - [x] Frontend: leaderboard page with filters (daily/weekly/all-time)
 - [x] Show rank badges or trophies for top traders
+
+## UI: Emphasize Stock Price Over LP/Rank
+- [x] Make stock price ($62.28) the dominant hero element — large, bold, Robinhood-style
+- [x] Move LP and rank to secondary/subtitle position below price
+- [x] Show price change amount and percentage prominently next to price
+- [x] Keep player name and rank badge but de-emphasize them
+
+## Feature: Live Match History Updates
+- [x] Wire match history display to use data from DB (populated by polling engine)
+- [x] Store match results in DB during each poll cycle
+- [x] Replace static MATCH_HISTORY with API-fetched data
+- [x] Update match history section to show loading state and auto-refresh

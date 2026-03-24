@@ -422,6 +422,12 @@ export async function markMatchNewsGenerated(matchId: string) {
   await db.update(matches).set({ newsGenerated: true }).where(eq(matches.matchId, matchId));
 }
 
+export async function getRecentMatchesFromDB(limit: number = 20) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.select().from(matches).orderBy(sql`${matches.gameCreation} DESC`).limit(limit);
+}
+
 export async function getUnprocessedMatches() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

@@ -8,7 +8,7 @@ import {
   getAllTrades, getPriceHistory, getLatestPrice, addPriceSnapshot,
   updateDisplayName, createOrder, getUserOrders, cancelOrder,
   executeShort, executeCover, postComment, getComments, getNews,
-  getUserDividends, getMarketStatus, getLeaderboard,
+  getUserDividends, getMarketStatus, getLeaderboard, getRecentMatchesFromDB,
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
@@ -111,6 +111,34 @@ export const appRouter = router({
             };
           });
         } catch (err: any) { return []; }
+      }),
+  }),
+
+  // ─── Stored Match History (from DB, updated by polling) ───
+  matches: router({
+    stored: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+      .query(async ({ input }) => {
+        try {
+          const raw = await getRecentMatchesFromDB(input?.limit ?? 20);
+          return raw.map((m) => ({
+            id: m.id,
+            matchId: m.matchId,
+            win: m.win,
+            champion: m.champion,
+            kills: m.kills,
+            deaths: m.deaths,
+            assists: m.assists,
+            cs: m.cs,
+            position: m.position,
+            gameDuration: m.gameDuration,
+            gameCreation: Number(m.gameCreation),
+            priceBefore: m.priceBefore ? parseFloat(m.priceBefore) : null,
+            priceAfter: m.priceAfter ? parseFloat(m.priceAfter) : null,
+          }));
+        } catch {
+          return [];
+        }
       }),
   }),
 

@@ -15,7 +15,7 @@ import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
-import { CHAMPION_STATS, MATCH_HISTORY, RANKED_SOLO, RANKED_FLEX } from "@/lib/playerData";
+import { CHAMPION_STATS, MATCH_HISTORY, RANKED_SOLO, RANKED_FLEX, type MatchResult } from "@/lib/playerData";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -36,6 +36,7 @@ import {
   MessageCircle,
   Crown,
   Clock,
+  Activity,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -92,6 +93,88 @@ function StatCard({
         <p className="text-xs text-muted-foreground mt-0.5">{subValue}</p>
       )}
     </div>
+  );
+}
+
+/**
+ * Match history section that pulls from DB (live polling data) with static fallback.
+ */
+function MatchHistorySection() {
+  const { data: liveMatches, isLoading } = trpc.matches.stored.useQuery(
+    { limit: 20 },
+    { refetchInterval: 60_000, staleTime: 30_000 }
+  );
+
+  // Convert DB matches to MatchResult format for MatchRow
+  const dbMatches: MatchResult[] = (liveMatches ?? []).map((m, i) => {
+    const kda = m.deaths === 0 ? "Perfect" : ((m.kills + m.assists) / m.deaths).toFixed(2);
+    const mins = Math.floor(m.gameDuration / 60);
+    const secs = m.gameDuration % 60;
+    const duration = `${mins}m ${secs}s`;
+    const now = Date.now();
+    const diff = now - m.gameCreation;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    const timeAgo = days > 0 ? `${days}d ago` : hours > 0 ? `${hours}h ago` : "just now";
+    const champKey = m.champion;
+    const championImage = `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${champKey}.png`;
+
+    return {
+      id: m.id,
+      timeAgo,
+      result: m.win ? "Victory" as const : "Defeat" as const,
+      duration,
+      champion: m.champion,
+      championImage,
+      kills: m.kills,
+      deaths: m.deaths,
+      assists: m.assists,
+      kdaRatio: kda,
+      cs: `${m.cs}`,
+      tier: "",
+      tags: [],
+      queueType: "Ranked Solo",
+    };
+  });
+
+  // Use DB matches if available, otherwise fall back to static data
+  const matchesToShow = dbMatches.length > 0 ? dbMatches : MATCH_HISTORY;
+  const isLive = dbMatches.length > 0;
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-secondary">
+            <History className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-white font-[var(--font-heading)]">
+                Match History
+              </h2>
+              {isLive && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+                  <Activity className="w-2.5 h-2.5" />
+                  LIVE
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isLive ? "Auto-updated from Riot API" : "Recent ranked games"}
+            </p>
+          </div>
+        </div>
+        {isLoading && (
+          <Clock className="w-4 h-4 text-muted-foreground animate-spin" />
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {matchesToShow.map((match, i) => (
+          <MatchRow key={match.id} match={match} index={i} />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -391,16 +474,7 @@ export default function Home() {
 
         {/* Match history */}
         <section className="mt-8">
-          <SectionHeader
-            icon={History}
-            title="Match History"
-            subtitle="Recent ranked games"
-          />
-          <div className="space-y-1.5">
-            {MATCH_HISTORY.map((match, i) => (
-              <MatchRow key={match.id} match={match} index={i} />
-            ))}
-          </div>
+          <MatchHistorySection />
         </section>
 
         {/* Footer */}
