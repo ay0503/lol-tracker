@@ -32,6 +32,10 @@ import {
   Pencil,
   Check,
   X,
+  Newspaper,
+  MessageCircle,
+  Crown,
+  Clock,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -138,6 +142,27 @@ export default function Home() {
               >
                 <BookOpen className="w-3.5 h-3.5" />
                 Ledger
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+              >
+                <Crown className="w-3.5 h-3.5" />
+                Leaderboard
+              </Link>
+              <Link
+                href="/news"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+              >
+                <Newspaper className="w-3.5 h-3.5" />
+                News
+              </Link>
+              <Link
+                href="/sentiment"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                Sentiment
               </Link>
               {isAuthenticated && (
                 <Link

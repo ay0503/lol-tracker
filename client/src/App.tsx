@@ -7,6 +7,9 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Ledger from "./pages/Ledger";
 import Portfolio from "./pages/Portfolio";
+import Leaderboard from "./pages/Leaderboard";
+import NewsFeed from "./pages/NewsFeed";
+import Sentiment from "./pages/Sentiment";
 
 function Router() {
   return (
@@ -14,6 +17,9 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/ledger"} component={Ledger} />
       <Route path={"/portfolio"} component={Portfolio} />
+      <Route path={"/leaderboard"} component={Leaderboard} />
+      <Route path={"/news"} component={NewsFeed} />
+      <Route path={"/sentiment"} component={Sentiment} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -95,3 +95,55 @@
 ## Bug Fix: Prevent Negative Trade Amounts
 - [x] Add frontend validation to prevent negative or zero amounts
 - [x] Backend validation z.number().positive() already in place - confirmed working
+
+## Feature: Live LP Polling (20 min)
+- [x] Create server-side polling job that runs every 20 minutes
+- [x] Fetch current LP from Riot API and store price snapshot in DB
+- [x] Auto-execute pending limit orders and stop-losses on price change
+- [x] Auto-distribute dividends on wins
+- [x] Generate AI meme news headlines on match results
+
+## Feature: Limit Orders & Stop-Losses
+- [x] Add orders table to DB schema (type: limit_buy, limit_sell, stop_loss; status: pending, filled, cancelled)
+- [x] Build API endpoints: create order, cancel order, list orders
+- [x] Order execution engine: check pending orders against current price on each poll
+- [x] Frontend UI: order form with price target, pending orders list, order history
+
+## Feature: Market Hours / Trading Sessions
+- [x] Define market hours logic (e.g., trading open when player recently played or during set hours)
+- [x] Add market status indicator to UI (Market Open / Market Closed)
+- [x] Block trades during market closed hours (with override for limit orders)
+
+## Feature: Short Selling
+- [x] Add short positions tracking to holdings (negative shares or separate short table)
+- [x] Implement borrow-and-sell flow: user borrows shares, sells at current price
+- [x] Implement cover flow: user buys back shares to close short position
+- [x] Calculate short P&L (profit when price drops)
+- [x] Frontend UI: short sell button, short positions display
+
+## Feature: Trade Comments / Sentiment Feed
+- [x] Add comments table to DB schema (userId, text, ticker, sentiment, createdAt)
+- [x] Build API endpoints: post comment, list comments
+- [x] Frontend: StockTwits-style feed with bullish/bearish sentiment tags
+- [x] Show on home page or dedicated feed tab
+
+## Feature: AI Meme News Feed
+- [x] Store match results in DB when polling
+- [x] Use LLM to generate funny/memey news headlines from match data
+- [x] Add news table to DB schema (headline, body, matchId, createdAt)
+- [x] Frontend: scrolling news ticker and news feed section
+- [x] Headlines should be absurdly funny (e.g. "BREAKING: $DORI CEO spotted inting bot lane")
+
+## Feature: Dividend System
+- [x] Add dividends table to DB (userId, amount, reason, createdAt)
+- [x] On player win: distribute dividend to all DORI/DDRI/TDRI holders proportional to shares
+- [x] On player loss: inverse ETF holders (SDRI/XDRI) get dividends
+- [x] High dividend rates to punish inverse holders when player wins
+- [x] Frontend: dividend history in portfolio, dividend announcements
+- [x] Show dividend yield on ticker cards
+
+## Feature: Trader Leaderboard
+- [x] Build API endpoint to calculate all users' portfolio values
+- [x] Rank by total portfolio value, daily P&L, best trade
+- [x] Frontend: leaderboard page with filters (daily/weekly/all-time)
+- [x] Show rank badges or trophies for top traders

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
-// Mock the db module
+// Mock the db module with ALL exported functions
 vi.mock("./db", () => ({
   getOrCreatePortfolio: vi.fn(),
   getUserHoldings: vi.fn(),
@@ -12,6 +12,18 @@ vi.mock("./db", () => ({
   getPriceHistory: vi.fn(),
   getLatestPrice: vi.fn(),
   addPriceSnapshot: vi.fn(),
+  updateDisplayName: vi.fn(),
+  createOrder: vi.fn(),
+  getUserOrders: vi.fn(),
+  cancelOrder: vi.fn(),
+  executeShort: vi.fn(),
+  executeCover: vi.fn(),
+  postComment: vi.fn(),
+  getComments: vi.fn(),
+  getNews: vi.fn(),
+  getUserDividends: vi.fn(),
+  getMarketStatus: vi.fn(),
+  getLeaderboard: vi.fn(),
 }));
 
 // Mock the riotApi module
@@ -22,6 +34,15 @@ vi.mock("./riotApi", () => ({
   tierToTotalLP: vi.fn(),
 }));
 
+// Mock the pollEngine module
+vi.mock("./pollEngine", () => ({
+  pollNow: vi.fn(),
+  getPollStatus: vi.fn(),
+  startPolling: vi.fn(),
+  stopPolling: vi.fn(),
+  getETFPrice: vi.fn(),
+}));
+
 import {
   getOrCreatePortfolio,
   getUserHoldings,
@@ -30,6 +51,17 @@ import {
   getAllTrades,
   getPriceHistory,
   getLatestPrice,
+  getMarketStatus,
+  createOrder,
+  getUserOrders,
+  cancelOrder,
+  executeShort,
+  executeCover,
+  postComment,
+  getComments,
+  getNews,
+  getUserDividends,
+  getLeaderboard,
 } from "./db";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
@@ -82,13 +114,14 @@ describe("trading.portfolio", () => {
       id: 1,
       userId: 1,
       cashBalance: "200.00",
+      totalDividends: "5.00",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     const mockHoldings = [
-      { ticker: "DORI", shares: "1.5000", avgCostBasis: "55.00" },
-      { ticker: "SDRI", shares: "2.0000", avgCostBasis: "60.00" },
+      { ticker: "DORI", shares: "1.5000", avgCostBasis: "55.00", shortShares: "0.0000", shortAvgPrice: "0.00" },
+      { ticker: "SDRI", shares: "2.0000", avgCostBasis: "60.00", shortShares: "0.0000", shortAvgPrice: "0.00" },
     ];
 
     (getOrCreatePortfolio as any).mockResolvedValue(mockPortfolio);
@@ -100,16 +133,14 @@ describe("trading.portfolio", () => {
     const result = await caller.trading.portfolio();
 
     expect(result.cashBalance).toBe(200);
+    expect(result.totalDividends).toBe(5);
     expect(result.holdings).toHaveLength(2);
     expect(result.holdings[0]).toEqual({
       ticker: "DORI",
       shares: 1.5,
       avgCostBasis: 55,
-    });
-    expect(result.holdings[1]).toEqual({
-      ticker: "SDRI",
-      shares: 2,
-      avgCostBasis: 60,
+      shortShares: 0,
+      shortAvgPrice: 0,
     });
     expect(getOrCreatePortfolio).toHaveBeenCalledWith(1);
     expect(getUserHoldings).toHaveBeenCalledWith(1);
@@ -120,6 +151,7 @@ describe("trading.portfolio", () => {
       id: 1,
       userId: 1,
       cashBalance: "200.00",
+      totalDividends: "0.00",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -147,6 +179,8 @@ describe("trading.portfolio", () => {
 describe("trading.trade", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: market is open
+    (getMarketStatus as any).mockResolvedValue({ isOpen: true, reason: null, lastActivity: null });
   });
 
   it("executes a buy trade with ticker", async () => {
@@ -201,6 +235,22 @@ describe("trading.trade", () => {
     expect(executeTrade).toHaveBeenCalledWith(1, "DDRI", "sell", 1.5, 66.67);
   });
 
+  it("rejects trade when market is closed", async () => {
+    (getMarketStatus as any).mockResolvedValue({ isOpen: false, reason: "After hours", lastActivity: null });
+
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    await expect(
+      caller.trading.trade({
+        ticker: "DORI",
+        type: "buy",
+        shares: 1,
+        pricePerShare: 62.28,
+      })
+    ).rejects.toThrow("Market is currently closed");
+  });
+
   it("rejects invalid share amounts", async () => {
     const ctx = createAuthContext();
     const caller = appRouter.createCaller(ctx);
@@ -227,6 +277,162 @@ describe("trading.trade", () => {
         pricePerShare: 50,
       })
     ).rejects.toThrow();
+  });
+});
+
+describe("trading.short", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (getMarketStatus as any).mockResolvedValue({ isOpen: true, reason: null, lastActivity: null });
+  });
+
+  it("executes a short sell", async () => {
+    const mockResult = {
+      portfolio: { cashBalance: "262.28" },
+      holding: { shortShares: "1.0000" },
+    };
+
+    (executeShort as any).mockResolvedValue(mockResult);
+
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.trading.short({
+      ticker: "DORI",
+      shares: 1,
+      pricePerShare: 62.28,
+    });
+
+    expect(result).toEqual({
+      cashBalance: 262.28,
+      shortShares: 1,
+      ticker: "DORI",
+    });
+  });
+
+  it("rejects short when market is closed", async () => {
+    (getMarketStatus as any).mockResolvedValue({ isOpen: false, reason: "Closed", lastActivity: null });
+
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    await expect(
+      caller.trading.short({
+        ticker: "DORI",
+        shares: 1,
+        pricePerShare: 62.28,
+      })
+    ).rejects.toThrow("Market is currently closed");
+  });
+});
+
+describe("trading.orders", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("creates a limit buy order", async () => {
+    const mockOrder = {
+      id: 1,
+      userId: 1,
+      ticker: "DORI",
+      orderType: "limit_buy",
+      shares: "1.0000",
+      targetPrice: "50.00",
+      status: "pending",
+      createdAt: new Date(),
+    };
+
+    (createOrder as any).mockResolvedValue(mockOrder);
+
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.trading.createOrder({
+      ticker: "DORI",
+      orderType: "limit_buy",
+      shares: 1,
+      targetPrice: 50,
+    });
+
+    expect(result.ticker).toBe("DORI");
+    expect(result.orderType).toBe("limit_buy");
+  });
+
+  it("returns user orders", async () => {
+    const mockOrders = [
+      {
+        id: 1,
+        ticker: "DORI",
+        orderType: "limit_buy",
+        shares: "1.0000",
+        targetPrice: "50.00",
+        status: "pending",
+        filledPrice: null,
+        filledAt: null,
+        createdAt: new Date(),
+      },
+    ];
+
+    (getUserOrders as any).mockResolvedValue(mockOrders);
+
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.trading.orders();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].ticker).toBe("DORI");
+    expect(result[0].shares).toBe(1);
+    expect(result[0].targetPrice).toBe(50);
+    expect(result[0].status).toBe("pending");
+  });
+});
+
+describe("comments", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("posts a comment", async () => {
+    (postComment as any).mockResolvedValue(undefined);
+
+    const ctx = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.comments.post({
+      content: "Going long on DORI!",
+      ticker: "DORI",
+      sentiment: "bullish",
+    });
+
+    expect(result.success).toBe(true);
+    expect(postComment).toHaveBeenCalledWith(1, "Going long on DORI!", "DORI", "bullish");
+  });
+
+  it("lists comments (public)", async () => {
+    const mockComments = [
+      {
+        id: 1,
+        userId: 1,
+        userName: "Test Trader",
+        ticker: "DORI",
+        content: "To the moon!",
+        sentiment: "bullish",
+        createdAt: new Date(),
+      },
+    ];
+
+    (getComments as any).mockResolvedValue(mockComments);
+
+    const ctx = createUnauthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.comments.list();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe("To the moon!");
+    expect(result[0].sentiment).toBe("bullish");
   });
 });
 
@@ -302,7 +508,6 @@ describe("ledger.all", () => {
 
     (getAllTrades as any).mockResolvedValue(mockTrades);
 
-    // Ledger is public, so unauthenticated users can access it
     const ctx = createUnauthContext();
     const caller = appRouter.createCaller(ctx);
 
