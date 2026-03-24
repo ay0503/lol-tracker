@@ -1,0 +1,14 @@
+Screenshot 2 observations:
+- Page is still in DARK theme (because localStorage has "dark" persisted from switchable mode)
+- Language is KR but many strings still show in English:
+  - Nav: "Ledger", "Leaderboard", "News", "Sentiment", "Portfolio" - these should be Korean
+  - "Live" should be "실시간"
+  - "Rank", "Record", "Win Rate", "Peak", "Ladder" - should be Korean
+  - "Emerald II" should be "에메랄드 II"
+  - "past 2 weeks" should be "최근 2주"
+  - Ticker descriptions "1x LP Tracker", "2x Leveraged LP" etc. still English
+  - "Line", "Candles" buttons still English
+
+Wait - the language toggle shows "KR" which means current language is "en" (clicking KR would switch to Korean).
+The user previously set it to KR. The page reload from HMR may have reset the language to default "en".
+Need to check what the default language is in the LanguageContext.

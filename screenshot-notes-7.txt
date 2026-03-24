@@ -1,0 +1,14 @@
+Light theme match history and season history observations:
+- Season history section: "시즌 기록" / "과거 랭크 배치" - translated
+- Season ranks: "에메랄드 2", "에메랄드 4", "플래티넘 3", "플래티넘 2" - all translated
+- "실시간" badge visible on light bg
+- Match history: "매치 기록" / "Riot API에서 자동 업데이트" - translated
+- Match rows have subtle green/red left borders - visible on white
+- Duration: "30분 22초", "26분 8초" etc. - translated
+- Time ago: "5시간 전", "7시간 전" etc. - translated
+- Match results: "승" / "패" badges - translated
+- KDA numbers visible on white bg
+- Champion cards at top show KDA values - visible
+- Overall light theme looks clean and professional with white background and translucent cards
+
+Everything looks good! The light theme is working with white background and glassmorphism.

@@ -37,11 +37,25 @@ export const en = {
   chart: {
     line: "Line",
     candles: "Candles",
+    toolSelect: "Select",
+    toolTrendLine: "Trend Line",
+    toolHorizontalLine: "Horizontal Line",
+    toolTextLabel: "Text Label",
+    clearAnnotations: "Clear all annotations",
+    pricePlaceholder: "e.g. 50.00",
+    textPlaceholder: "e.g. Support level",
+    drawOnChart: "Draw on chart",
+    annotationCount: "annotation(s)",
+    enterPriceForHLine: "Enter price for horizontal line:",
+    enterTextAnnotation: "Enter text annotation:",
+    add: "Add",
   },
 
   // ─── Price Rank Legend ───
   legend: {
-    title: "Price → Rank Legend",
+    title: "Price \u2192 Rank Legend",
+    showDetails: "Show details",
+    hideDetails: "Hide details",
     subtitle: "How $DORI stock price maps to League rank",
     currentPrice: "Current Price",
     divisionBreakdown: "Division Breakdown",
@@ -377,6 +391,11 @@ export const en = {
     hAgo: "h ago",
     dAgo: "d ago",
     autoUpdated: "Auto-updated from Riot API",
+    anonymous: "Anonymous",
+    trader: "Trader",
+    all: "All",
+    displayNameUpdated: "Display name updated",
+    failedToUpdateName: "Failed to update name",
   },
 
   // ─── Not Found ───

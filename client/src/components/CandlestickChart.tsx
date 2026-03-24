@@ -37,6 +37,7 @@ import {
   MousePointer,
   Pencil,
 } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 interface CandlestickChartProps {
   timeRange?: TimeRange;
@@ -483,11 +484,12 @@ export default function CandlestickChart({
     }
   };
 
+  const { t } = useTranslation();
   const tools = [
-    { id: "pointer" as DrawingTool, icon: MousePointer, label: "Select" },
-    { id: "trendline" as DrawingTool, icon: TrendingUp, label: "Trend Line" },
-    { id: "hline" as DrawingTool, icon: Minus, label: "Horizontal Line" },
-    { id: "text" as DrawingTool, icon: Type, label: "Text Label" },
+    { id: "pointer" as DrawingTool, icon: MousePointer, label: t.chart.toolSelect },
+    { id: "trendline" as DrawingTool, icon: TrendingUp, label: t.chart.toolTrendLine },
+    { id: "hline" as DrawingTool, icon: Minus, label: t.chart.toolHorizontalLine },
+    { id: "text" as DrawingTool, icon: Type, label: t.chart.toolTextLabel },
   ];
 
   return (
@@ -514,7 +516,7 @@ export default function CandlestickChart({
         {annotations.length > 0 && (
           <button
             onClick={clearAnnotations}
-            title="Clear all annotations"
+            title={t.chart.clearAnnotations}
             className="p-1.5 rounded-md text-muted-foreground hover:text-[#FF5252] hover:bg-secondary transition-all ml-1"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -523,14 +525,14 @@ export default function CandlestickChart({
 
         {annotations.length > 0 && (
           <span className="text-[10px] text-muted-foreground ml-2 font-[var(--font-mono)]">
-            {annotations.length} annotation{annotations.length !== 1 ? "s" : ""}
+            {annotations.length} {t.chart.annotationCount}
           </span>
         )}
 
         <div className="flex-1" />
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-[var(--font-mono)]">
           <Pencil className="w-3 h-3" />
-          Draw on chart
+          {t.chart.drawOnChart}
         </div>
       </div>
 
@@ -538,14 +540,14 @@ export default function CandlestickChart({
       {showHlineInput && (
         <div className="absolute top-10 left-0 z-20 bg-card border border-border rounded-lg p-3 shadow-xl">
           <p className="text-xs text-muted-foreground mb-2">
-            Enter price for horizontal line:
+            {t.chart.enterPriceForHLine}
           </p>
           <div className="flex gap-2">
             <input
               type="number"
               value={hlinePrice}
               onChange={(e) => setHlinePrice(e.target.value)}
-              placeholder="e.g. 50.00"
+              placeholder={t.chart.pricePlaceholder}
               className="bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground font-[var(--font-mono)] w-24 focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
               onKeyDown={(e) => {
@@ -572,7 +574,7 @@ export default function CandlestickChart({
               }}
               className="px-2 py-1 bg-primary text-primary-foreground text-xs font-bold rounded"
             >
-              Add
+              {t.chart.add}
             </button>
             <button
               onClick={() => {
@@ -581,7 +583,7 @@ export default function CandlestickChart({
               }}
               className="px-2 py-1 bg-secondary text-muted-foreground text-xs rounded"
             >
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </div>
@@ -591,14 +593,14 @@ export default function CandlestickChart({
       {showTextInput && (
         <div className="absolute top-10 left-0 z-20 bg-card border border-border rounded-lg p-3 shadow-xl">
           <p className="text-xs text-muted-foreground mb-2">
-            Enter text annotation:
+            {t.chart.enterTextAnnotation}
           </p>
           <div className="flex gap-2">
             <input
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="e.g. Support level"
+              placeholder={t.chart.textPlaceholder}
               className="bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground font-[var(--font-mono)] w-36 focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
               onKeyDown={(e) => {
@@ -621,7 +623,7 @@ export default function CandlestickChart({
               }}
               className="px-2 py-1 bg-primary text-primary-foreground text-xs font-bold rounded"
             >
-              Add
+              {t.chart.add}
             </button>
             <button
               onClick={() => {
@@ -630,7 +632,7 @@ export default function CandlestickChart({
               }}
               className="px-2 py-1 bg-secondary text-muted-foreground text-xs rounded"
             >
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </div>

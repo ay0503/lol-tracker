@@ -6,6 +6,7 @@
 import { PLAYER, RANKED_SOLO, LP_HISTORY, totalLPToPrice } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { translateRank } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Activity, DollarSign } from "lucide-react";
 
@@ -13,7 +14,7 @@ const EMERALD_RANK_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663324505869/EqpY4GjGxu3PtSNi8r37GF/emerald-rank-glow-gvNBENfi9Ne5AtDKGtp3U6.webp";
 
 export default function PlayerHeader() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   // Try to get live data from backend
   const { data: livePlayer } = trpc.player.current.useQuery(undefined, {
@@ -120,16 +121,16 @@ export default function PlayerHeader() {
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">{t.player.rank}</p>
             <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
-              {tier} {division} · {lp} {t.player.lp}
+              {translateRank(`${tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase()} ${division}`, language)} · {lp} {t.player.lp}
             </p>
           </div>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">{t.player.record}</p>
           <p className="text-sm font-semibold font-[var(--font-mono)]">
-            <span style={{ color: "#00C805" }}>{wins}W</span>
+            <span style={{ color: "#00C805" }}>{wins}{t.stats.wins}</span>
             <span className="text-muted-foreground"> / </span>
-            <span style={{ color: "#FF5252" }}>{losses}L</span>
+            <span style={{ color: "#FF5252" }}>{losses}{t.stats.losses}</span>
           </p>
         </div>
         <div>
@@ -141,7 +142,7 @@ export default function PlayerHeader() {
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">{t.player.peak}</p>
           <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
-            {RANKED_SOLO.topTier} ({RANKED_SOLO.topLP} {t.player.lp})
+            {translateRank(RANKED_SOLO.topTier, language)} ({RANKED_SOLO.topLP} {t.player.lp})
           </p>
         </div>
         <div className="hidden sm:block">

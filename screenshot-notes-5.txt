@@ -1,0 +1,15 @@
+Light theme observations:
+- Background is white/very light - good!
+- Nav bar has a translucent effect with the glassmorphism
+- Text is dark/readable against white background
+- The chart area has a green line on white background - readable
+- The price change badge (+$10.29) is green on light green bg - visible
+- Ticker buttons have translucent backgrounds
+- Trading panel at bottom has translucent card effect
+- The chart line is green on white - might need slightly darker grid lines
+- Overall the light theme looks clean with white background
+
+ISSUES TO FIX:
+- The hero background blur effect might be too subtle on light theme
+- The chart canvas background might need adjustment for light theme
+- Need to scroll down to check cards, match history, etc.

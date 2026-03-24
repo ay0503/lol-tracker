@@ -6,15 +6,16 @@
 import { SEASON_HISTORY } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { translateRank } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
 function getTierColor(tier: string): string {
-  if (tier.includes("Emerald") || tier.includes("EMERALD")) return "#00C805";
-  if (tier.includes("Diamond") || tier.includes("DIAMOND")) return "#B9F2FF";
-  if (tier.includes("Platinum") || tier.includes("PLATINUM")) return "#4EE1C0";
-  if (tier.includes("Gold") || tier.includes("GOLD")) return "#FFD700";
-  if (tier.includes("Silver") || tier.includes("SILVER")) return "#C0C0C0";
+  if (tier.includes("Emerald") || tier.includes("EMERALD") || tier.includes("에메랄드")) return "#00C805";
+  if (tier.includes("Diamond") || tier.includes("DIAMOND") || tier.includes("다이아몬드")) return "#B9F2FF";
+  if (tier.includes("Platinum") || tier.includes("PLATINUM") || tier.includes("플래티넘")) return "#4EE1C0";
+  if (tier.includes("Gold") || tier.includes("GOLD") || tier.includes("골드")) return "#FFD700";
+  if (tier.includes("Silver") || tier.includes("SILVER") || tier.includes("실버")) return "#C0C0C0";
   return "#9CA3AF";
 }
 
@@ -28,16 +29,17 @@ function formatTierName(tier: string): string {
 }
 
 export default function SeasonHistory() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const { data: livePlayer } = trpc.player.current.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  const currentTier = livePlayer?.solo
+  const currentTierRaw = livePlayer?.solo
     ? `${formatTierName(livePlayer.solo.tier)} ${formatDivision(livePlayer.solo.rank)}`
     : "Emerald 2";
+  const currentTier = translateRank(currentTierRaw, language);
   const currentLP = livePlayer?.solo?.lp ?? 39;
   const isLive = !!livePlayer?.solo;
 
@@ -53,13 +55,13 @@ export default function SeasonHistory() {
           <span className="text-xs font-bold font-[var(--font-mono)] text-primary px-1.5 py-0.5 bg-primary/10 rounded">
             S2026
           </span>
-          <span className="text-sm font-semibold text-foreground" style={{ color: getTierColor(currentTier) }}>
+          <span className="text-sm font-semibold text-foreground" style={{ color: getTierColor(currentTierRaw) }}>
             {currentTier}
           </span>
           {isLive && (
             <span className="flex items-center gap-1 px-1 py-0.5 rounded text-[9px] font-semibold bg-primary/10 text-primary">
               <Activity className="w-2 h-2" />
-              LIVE
+              {t.common.live}
             </span>
           )}
         </div>
@@ -85,7 +87,7 @@ export default function SeasonHistory() {
               className="text-sm font-medium"
               style={{ color: getTierColor(season.tier) }}
             >
-              {season.tier}
+              {translateRank(season.tier, language)}
             </span>
           </div>
           <span className="text-xs font-[var(--font-mono)] text-muted-foreground">

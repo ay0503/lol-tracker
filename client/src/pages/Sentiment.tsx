@@ -4,6 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
+import { formatTimeAgoFromDate } from "@/lib/formatters";
 import { ArrowLeft, MessageCircle, TrendingUp, TrendingDown, Minus, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -16,21 +17,8 @@ function getSentimentConfig(t: any) {
   };
 }
 
-function formatTimeAgo(date: Date | string, t: any) {
-  const now = new Date();
-  const d = new Date(date);
-  const diff = now.getTime() - d.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return t.common.justNow;
-  if (mins < 60) return `${mins}${t.common.mAgo}`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}${t.common.hAgo}`;
-  const days = Math.floor(hrs / 24);
-  return `${days}${t.common.dAgo}`;
-}
-
 export default function Sentiment() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const SENTIMENT_CONFIG = getSentimentConfig(t);
   const { user, isAuthenticated } = useAuth();
   const [content, setContent] = useState("");
@@ -115,7 +103,7 @@ export default function Sentiment() {
           <div className="bg-card border border-border rounded-xl p-4 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs text-muted-foreground">{t.sentiment.postingAs}</span>
-              <span className="text-xs font-bold text-foreground">{user?.name || "Anonymous"}</span>
+              <span className="text-xs font-bold text-foreground">{user?.name || t.common.anonymous}</span>
             </div>
             <div className="flex gap-2 mb-3">
               {(["bullish", "bearish", "neutral"] as const).map((s) => {
@@ -147,11 +135,11 @@ export default function Sentiment() {
                 onChange={(e) => setTicker(e.target.value)}
                 className="bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground"
               >
-                <option value="DORI">$DORI</option>
-                <option value="DDRI">$DDRI (2x)</option>
-                <option value="TDRI">$TDRI (3x)</option>
-                <option value="SDRI">$SDRI (-2x)</option>
-                <option value="XDRI">$XDRI (-3x)</option>
+                <option value="DORI">$DORI — {t.tickers.dori}</option>
+                <option value="DDRI">$DDRI — {t.tickers.ddri}</option>
+                <option value="TDRI">$TDRI — {t.tickers.tdri}</option>
+                <option value="SDRI">$SDRI — {t.tickers.sdri}</option>
+                <option value="XDRI">$XDRI — {t.tickers.xdri}</option>
               </select>
             </div>
             <div className="flex gap-2">
@@ -227,7 +215,7 @@ export default function Sentiment() {
                           {config.emoji} {config.label}
                         </span>
                         <span className="text-xs text-muted-foreground ml-auto">
-                          {formatTimeAgo(comment.createdAt, t)}
+                          {formatTimeAgoFromDate(comment.createdAt, language)}
                         </span>
                       </div>
                       <p className="text-sm text-foreground/90">{comment.content}</p>

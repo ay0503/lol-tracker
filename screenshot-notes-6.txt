@@ -1,0 +1,16 @@
+Light theme card section observations:
+- Cards have translucent/glass effect - visible with subtle borders
+- "주가 → 랭크 가이드" legend is visible with glassmorphism
+- Stat cards: "솔로/듀오", "자유 랭크", "총게임 수", "평균 KDA" - all translated
+- "에메랄드 2" rank translated
+- "다이아몬드 4" rank translated (flex queue)
+- "113승 110패" - wins/losses translated
+- "승/패 연속" section with streak bars - visible on white bg
+- "7일 성적" section with champion win rates - visible
+- "실시간" badges visible
+- "챔피언 풀" section header visible
+- The translucent card backgrounds look good with the white overall bg
+- Green/red colors for win/loss are readable on white
+- The PriceRankLegend is collapsed with "상세 보기" button visible
+
+ISSUE: The "다이아몬드" text in the flex queue stat card appears to have low contrast - it's light blue on white/translucent bg. This might be hard to read.

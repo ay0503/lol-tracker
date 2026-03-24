@@ -30,6 +30,7 @@ import {
   RANKED_FLEX,
   type MatchResult,
 } from "@/lib/playerData";
+import { translateRank, formatDuration, formatTimeAgo, formatMatchResult } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -137,7 +138,7 @@ function StatCard({
  * Match history section that pulls from DB (live polling data) with static fallback.
  */
 function MatchHistorySection() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { data: liveMatches, isLoading } = trpc.matches.stored.useQuery(
     { limit: 20 },
     { refetchInterval: 60_000, staleTime: 30_000 }
@@ -148,15 +149,8 @@ function MatchHistorySection() {
       m.deaths === 0
         ? "Perfect"
         : ((m.kills + m.assists) / m.deaths).toFixed(2);
-    const mins = Math.floor(m.gameDuration / 60);
-    const secs = m.gameDuration % 60;
-    const duration = `${mins}m ${secs}s`;
-    const now = Date.now();
-    const diff = now - m.gameCreation;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-    const timeAgo =
-      days > 0 ? `${days}d ${t.match.ago}` : hours > 0 ? `${hours}h ${t.match.ago}` : "just now";
+    const duration = formatDuration(m.gameDuration, language);
+    const timeAgo = formatTimeAgo(m.gameCreation, language);
     const champKey = m.champion;
     const championImage = `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${champKey}.png`;
 
@@ -202,7 +196,7 @@ function MatchHistorySection() {
             </div>
             <p className="text-xs text-muted-foreground">
               {isLive
-                ? "Auto-updated from Riot API"
+                ? t.common.autoUpdated
                 : t.sections.recentRankedGames}
             </p>
           </div>
@@ -263,6 +257,7 @@ function StatsGrid() {
     const map: Record<string, string> = { I: "1", II: "2", III: "3", IV: "4" };
     return map[rank] || rank;
   };
+  const { language } = useTranslation();
 
   const kdaRatio = avgKda?.kdaRatio ?? 2.23;
   const kdaStr = avgKda
@@ -274,14 +269,14 @@ function StatsGrid() {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <StatCard
         label={t.stats.soloDuo}
-        value={`${formatTier(soloTier)} ${formatDiv(soloRank)}`}
+        value={translateRank(`${formatTier(soloTier)} ${formatDiv(soloRank)}`, language)}
         subValue={`${soloLP} LP · ${soloWR}% ${t.player.winRate}`}
         color="#00C805"
         isLive={hasLivePlayer}
       />
       <StatCard
         label={t.stats.flexQueue}
-        value={`${formatTier(flexTier)} ${formatDiv(flexRank)}`}
+        value={translateRank(`${formatTier(flexTier)} ${formatDiv(flexRank)}`, language)}
         subValue={`${flexLP} LP · ${flexWR}% ${t.player.winRate}`}
         color="#B9F2FF"
         isLive={hasLivePlayer}
@@ -343,7 +338,7 @@ function ChampionPoolSection() {
       <SectionHeader
         icon={Shield}
         title={t.sections.championPool}
-        subtitle={isLive ? "Computed from polled match data" : t.sections.seasonRankedSoloDuo}
+        subtitle={isLive ? t.common.autoUpdated : t.sections.seasonRankedSoloDuo}
         isLive={isLive}
       />
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
@@ -395,12 +390,12 @@ export default function Home() {
 
   const updateNameMutation = trpc.auth.updateDisplayName.useMutation({
     onSuccess: (data) => {
-      toast.success(`Display name updated to "${data.displayName}"`);
+      toast.success(`${t.common.displayNameUpdated}: ${data.displayName}`);
       setIsEditingName(false);
       utils.auth.me.invalidate();
     },
     onError: (err) => {
-      toast.error(err.message || "Failed to update name");
+      toast.error(err.message || t.common.failedToUpdateName);
     },
   });
 
@@ -528,7 +523,7 @@ export default function Home() {
                     <>
                       <User className="w-3.5 h-3.5" />
                       <span className="font-[var(--font-mono)] hidden sm:inline">
-                        {(user as any)?.displayName || user?.name || "Trader"}
+                        {(user as any)?.displayName || user?.name || t.common.trader}
                       </span>
                       <button
                         onClick={() => {

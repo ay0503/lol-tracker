@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { formatTimeAgoFromDate } from "@/lib/formatters";
 import { Link } from "wouter";
 import { ArrowLeft, Newspaper, Rocket, Skull, Zap, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
@@ -16,21 +17,8 @@ function getNewsBorderColor(isWin: boolean | null) {
   return "border-l-yellow-400";
 }
 
-function formatTimeAgo(date: Date | string, t: any) {
-  const now = new Date();
-  const d = new Date(date);
-  const diff = now.getTime() - d.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return t.common.justNow;
-  if (mins < 60) return `${mins}${t.common.mAgo}`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}${t.common.hAgo}`;
-  const days = Math.floor(hrs / 24);
-  return `${days}${t.common.dAgo}`;
-}
-
 export default function NewsFeed() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { data: newsItems, isLoading } = trpc.news.feed.useQuery({ limit: 30 });
 
   return (
@@ -118,7 +106,7 @@ export default function NewsFeed() {
                           {parseFloat(item.priceChange) >= 0 ? "+" : ""}${parseFloat(item.priceChange).toFixed(2)}
                         </span>
                       )}
-                      <span className="text-xs text-muted-foreground ml-auto">{formatTimeAgo(item.createdAt, t)}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{formatTimeAgoFromDate(item.createdAt, language)}</span>
                     </div>
                   </div>
                 </div>

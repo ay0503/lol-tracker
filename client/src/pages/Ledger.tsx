@@ -8,28 +8,14 @@ import { motion } from "framer-motion";
 import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { TICKERS } from "@/lib/playerData";
+import { formatTimeAgoFromDate, translateTickerDescription } from "@/lib/formatters";
 
 function getTickerColor(ticker: string): string {
   return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
 }
 
-function formatTime(date: Date | string, t: any): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMs / 3600000);
-  const diffDay = Math.floor(diffMs / 86400000);
-
-  if (diffMin < 1) return t.common.justNow;
-  if (diffMin < 60) return `${diffMin}${t.common.mAgo}`;
-  if (diffHr < 24) return `${diffHr}${t.common.hAgo}`;
-  if (diffDay < 7) return `${diffDay}${t.common.dAgo}`;
-  return d.toLocaleDateString();
-}
-
 export default function Ledger() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { data: trades, isLoading, refetch, isRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
 
   return (
@@ -72,7 +58,7 @@ export default function Ledger() {
               <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: tk.color }}>
                 ${tk.symbol}
               </span>
-              <span className="text-[10px] text-muted-foreground">{tk.description}</span>
+              <span className="text-[10px] text-muted-foreground">{translateTickerDescription(tk.symbol, tk.description, language)}</span>
             </div>
           ))}
         </div>
@@ -110,11 +96,11 @@ export default function Ledger() {
                 <div className="col-span-2 flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
                     <span className="text-[10px] font-bold text-foreground">
-                      {String(trade.userName || 'A').charAt(0).toUpperCase()}
+                      {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
-                    {String(trade.userName || 'Anonymous')}
+                    {String(trade.userName || t.common.anonymous)}
                   </span>
                 </div>
 
@@ -162,7 +148,7 @@ export default function Ledger() {
                       ${trade.totalAmount.toFixed(2)}
                     </span>
                     <p className="text-[10px] text-muted-foreground">
-                      {formatTime(trade.createdAt, t)}
+                      {formatTimeAgoFromDate(trade.createdAt, language)}
                     </p>
                   </div>
                 </div>

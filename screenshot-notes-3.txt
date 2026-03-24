@@ -1,0 +1,20 @@
+Live browser observations (KR mode active):
+- Nav links are properly translated: 거래장부, 리더보드, 뉴스, 시장심리
+- "실시간" (Live) is translated
+- "최근 2주" (past 2 weeks) is translated
+- "랭크", "전적", "승률", "최고", "래더" - all translated
+- "에메랄드 2" - rank name translated correctly
+- Ticker descriptions: "1배 LP 추적", "2배 레버리지 LP" etc. - all translated
+- "라인" and "캔들" - chart buttons translated
+- "주가 → 랭크 가이드" - legend title translated
+- "상세 보기" - collapsible button visible
+- "로그인" - sign in translated
+- "113승 / 108패" - wins/losses translated
+
+REMAINING ISSUES:
+1. Match history still shows English duration/timeAgo: "26m 08s · 30 min ago" etc.
+   These are from the STATIC MATCH_HISTORY data in playerData.ts
+   The static data has hardcoded English strings like "30 min ago", "2 hrs ago", "26m 08s"
+   Need to parse these or add durationSeconds field to static data
+2. Light theme needs to be tested (click the sun/moon toggle)
+3. Date axis labels on chart: "Feb 22", "Mar 1" etc. still in English format

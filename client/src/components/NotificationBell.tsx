@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { formatTimeAgoFromDate } from "@/lib/formatters";
 import { Bell, Check, CheckCheck, X, ShoppingCart, AlertTriangle, Gift, Info } from "lucide-react";
 
 function getNotifIcon(type: string) {
@@ -22,7 +23,7 @@ function getNotifIcon(type: string) {
 }
 
 export default function NotificationBell() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef<number>(0);
@@ -79,19 +80,6 @@ export default function NotificationBell() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [open]);
-
-  function formatTimeAgo(date: Date | string): string {
-    const d = new Date(date);
-    const now = Date.now();
-    const diff = now - d.getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return t.common.justNow;
-    if (mins < 60) return `${mins}${t.common.mAgo}`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}${t.common.hAgo}`;
-    const days = Math.floor(hours / 24);
-    return `${days}${t.common.dAgo}`;
-  }
 
   const count = unreadCount ?? 0;
 
@@ -171,7 +159,7 @@ export default function NotificationBell() {
                       {n.message}
                     </p>
                     <p className="text-[9px] text-muted-foreground/60 mt-1">
-                      {formatTimeAgo(n.createdAt)}
+                      {formatTimeAgoFromDate(n.createdAt, language)}
                     </p>
                   </div>
                   {!n.read && (

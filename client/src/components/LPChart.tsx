@@ -21,6 +21,7 @@ import {
   type TimeRange,
 } from "@/lib/playerData";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { translateTickerDescription } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
 import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
@@ -48,7 +49,7 @@ function CustomTooltip({ active, payload, tickerColor }: any) {
 }
 
 export default function LPChart() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [chartView, setChartView] = useState<ChartView>("area");
   const [activeRange, setActiveRange] = useState<TimeRange>("1M");
   const [activeTicker, setActiveTicker] = useState("DORI");
@@ -132,7 +133,7 @@ export default function LPChart() {
               />
               <span className="font-[var(--font-mono)]">${tk.symbol}</span>
               <span className="text-[10px] opacity-60 hidden sm:inline">
-                {tk.description}
+                {translateTickerDescription(tk.symbol, tk.description, language)}
               </span>
             </button>
           );

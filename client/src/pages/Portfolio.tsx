@@ -28,19 +28,10 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { TICKERS } from "@/lib/playerData";
+import { formatDateTime } from "@/lib/formatters";
 
 function getTickerColor(ticker: string): string {
   return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
-}
-
-function formatTime(date: Date | string): string {
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend";
@@ -63,15 +54,16 @@ function getTradeTypeStyle(type: string, t: any) {
 }
 
 type PnlTimeRange = "1W" | "1M" | "3M" | "ALL";
-const PNL_RANGES: { id: PnlTimeRange; label: string; ms: number }[] = [
-  { id: "1W", label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
-  { id: "1M", label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
-  { id: "3M", label: "3M", ms: 90 * 24 * 60 * 60 * 1000 },
-  { id: "ALL", label: "All", ms: 0 },
-];
 
 function PortfolioPnlChart() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const PNL_RANGES: { id: PnlTimeRange; label: string; ms: number }[] = [
+    { id: "1W", label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
+    { id: "1M", label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
+    { id: "3M", label: "3M", ms: 90 * 24 * 60 * 60 * 1000 },
+    { id: "ALL", label: t.common.all, ms: 0 },
+  ];
+  const locale = language === "ko" ? "ko-KR" : "en-US";
   const { isAuthenticated } = useAuth();
   const [range, setRange] = useState<PnlTimeRange>("ALL");
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -166,9 +158,9 @@ function PortfolioPnlChart() {
     if (timestamps.length > 1) {
       const first = new Date(timestamps[0]);
       const last = new Date(timestamps[timestamps.length - 1]);
-      ctx.fillText(first.toLocaleDateString("en-US", { month: "short", day: "numeric" }), 4, H - 4);
+      ctx.fillText(first.toLocaleDateString(locale, { month: "short", day: "numeric" }), 4, H - 4);
       ctx.textAlign = "right";
-      ctx.fillText(last.toLocaleDateString("en-US", { month: "short", day: "numeric" }), W - 4, H - 4);
+      ctx.fillText(last.toLocaleDateString(locale, { month: "short", day: "numeric" }), W - 4, H - 4);
       ctx.textAlign = "left";
     }
   }, [snapshots]);
@@ -249,7 +241,7 @@ function PortfolioPnlChart() {
 }
 
 export default function Portfolio() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [filter, setFilter] = useState<TradeFilter>("all");
 
@@ -386,7 +378,7 @@ export default function Portfolio() {
               {t.portfolio.title}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {user?.name || "Trader"}
+              {user?.name || t.common.trader}
             </p>
           </div>
         </div>
@@ -680,7 +672,7 @@ export default function Portfolio() {
                             {style.sign}${trade.totalAmount.toFixed(2)}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
-                            {formatTime(trade.createdAt)}
+                            {formatDateTime(trade.createdAt, language)}
                           </p>
                         </div>
                       </div>

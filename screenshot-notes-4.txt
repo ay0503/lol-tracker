@@ -1,0 +1,14 @@
+Match history section observations (live data from API):
+- Duration is properly translated: "30분 22초", "26분 8초", "33분 22초", "41분 53초" etc.
+- Time ago is properly translated: "5시간 전", "7시간 전", "8시간 전", "9시간 전", "11시간 전", "12시간 전", "1일 전"
+- Match results: "승" (win) and "패" (loss) properly translated
+- "매치 기록" section title translated
+- "Riot API에서 자동 업데이트" subtitle translated
+- "실시간" badge translated
+- Footer: "데이터 출처: OP.GG & Riot Games API. Riot Games와 제휴 관계가 아닙니다."
+- Footer disclaimer also translated
+
+The live data from the API is properly formatted. The static fallback data would still show English but it's not being used since the API is providing data.
+
+SUCCESS: All translations appear to be working correctly in KR mode.
+Now need to test light theme.

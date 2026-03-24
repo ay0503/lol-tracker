@@ -39,11 +39,25 @@ export const ko: TranslationKeys = {
   chart: {
     line: "라인",
     candles: "캔들",
+    toolSelect: "선택",
+    toolTrendLine: "추세선",
+    toolHorizontalLine: "수평선",
+    toolTextLabel: "텍스트 레이블",
+    clearAnnotations: "모든 주석 지우기",
+    pricePlaceholder: "예: 50.00",
+    textPlaceholder: "예: 지지선",
+    drawOnChart: "차트에 그리기",
+    annotationCount: "개 주석",
+    enterPriceForHLine: "수평선 가격 입력:",
+    enterTextAnnotation: "텍스트 주석 입력:",
+    add: "추가",
   },
 
   // ─── Price Rank Legend ───
   legend: {
     title: "주가 → 랭크 가이드",
+    showDetails: "상세 보기",
+    hideDetails: "접기",
     subtitle: "$DORI 주가가 리그 랭크에 어떻게 매핑되는지",
     currentPrice: "현재 주가",
     divisionBreakdown: "디비전 상세",
@@ -378,6 +392,11 @@ export const ko: TranslationKeys = {
     hAgo: "시간 전",
     dAgo: "일 전",
     autoUpdated: "Riot API에서 자동 업데이트",
+    anonymous: "익명",
+    trader: "트레이더",
+    all: "전체",
+    displayNameUpdated: "표시 이름이 변경되었습니다",
+    failedToUpdateName: "이름 변경에 실패했습니다",
   },
 
   // ─── Not Found ───

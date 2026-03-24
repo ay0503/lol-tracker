@@ -4,6 +4,7 @@
  */
 import type { MatchResult } from "@/lib/playerData";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { formatMatchResult } from "@/lib/formatters";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 }
 
 export default function MatchRow({ match, index }: Props) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const isWin = match.result === "Victory";
   const isRemake = match.result === "Remake";
   const borderColor = isRemake ? "#6B7280" : isWin ? "#00C805" : "#FF5252";
@@ -22,13 +23,7 @@ export default function MatchRow({ match, index }: Props) {
     ? "rgba(0, 200, 5, 0.04)"
     : "rgba(255, 82, 82, 0.04)";
 
-  const resultLabel = isWin
-    ? t.match.victory
-    : isRemake
-    ? t.match.remake
-    : t.match.defeat;
-
-  const resultShort = isWin ? "WIN" : isRemake ? "RMK" : "LOSS";
+  const { short: resultShort } = formatMatchResult(match.result, language);
 
   return (
     <motion.div

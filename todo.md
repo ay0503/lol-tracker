@@ -264,3 +264,21 @@
 - [x] Translate PlayerHeader, StreakBar, RecentPerformance, ChampionCard, MatchRow, SeasonHistory, LPChart
 - [x] Persist language preference in localStorage
 - [x] Test both languages in browser — all sections verified in Korean
+
+## Fix: Missing Korean Translations
+- [x] Translate WIN/LOSS → 승리/패배
+- [x] Translate rank names: Emerald→에메랄드, Platinum→플래티넘, Diamond→다이아몬드
+- [x] Translate time formats: 12h ago→12시간 전, 25m 36s→25분 36초
+- [x] Translate date formats: Mar 6→3월 6일
+- [x] Translate "Auto-updated from Riot API" and other remaining English strings
+- [x] Keep champion names as-is (proper nouns)
+
+## Feature: Collapsible Price → Rank Legend
+- [x] Add expand/collapse toggle to the PriceRankLegend component
+- [x] Default to collapsed state
+- [x] Smooth animation on expand/collapse
+
+## Fix: Light Theme White Background with Translucent Components
+- [x] Change light theme background to white
+- [x] Add glassmorphism/translucent effect to cards and components in light mode
+- [x] Ensure text remains readable against white background

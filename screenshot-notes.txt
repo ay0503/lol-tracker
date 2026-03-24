@@ -1,0 +1,16 @@
+Screenshot observations:
+- The page is showing in DARK theme, not light theme
+- The language is set to KR but some strings are still in English:
+  - "Rank" label should be translated
+  - "Emerald II" rank name is in English
+  - "Record" label should be translated
+  - "Win Rate" label should be translated
+  - "Peak" label should be translated
+  - "Ladder" label should be translated
+  - "Live" should be translated
+  - "past 2 weeks" should be translated
+  - "Line" / "Candles" chart buttons should be translated
+  - "Ledger", "Leaderboard", "News", "Sentiment", "Portfolio" nav items should be translated
+  - "1x LP Tracker", "2x Leveraged LP" etc. ticker descriptions are still in English
+- Need to check if the light theme is actually being applied (user is in dark mode)
+- The ticker descriptions are showing in English despite the KR language selection
