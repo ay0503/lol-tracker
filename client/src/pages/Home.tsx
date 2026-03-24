@@ -2,8 +2,11 @@
  * $DORI LP Tracker — Main page with Robinhood-style fintech UI.
  * Navigation to Ledger and Portfolio pages.
  */
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 import PlayerHeader from "@/components/PlayerHeader";
 import LPChart from "@/components/LPChart";
 import StreakBar from "@/components/StreakBar";
@@ -26,6 +29,9 @@ import {
   User,
   BookOpen,
   Wallet,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -87,6 +93,20 @@ function StatCard({
 
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState("");
+  const utils = trpc.useUtils();
+
+  const updateNameMutation = trpc.auth.updateDisplayName.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Display name updated to "${data.displayName}"`);
+      setIsEditingName(false);
+      utils.auth.me.invalidate();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update name");
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,10 +166,58 @@ export default function Home() {
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 text-xs text-white">
-                  <User className="w-3.5 h-3.5" />
-                  <span className="font-[var(--font-mono)] hidden sm:inline">
-                    {user?.name || "Trader"}
-                  </span>
+                  {isEditingName ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        maxLength={50}
+                        className="w-24 px-1.5 py-0.5 rounded bg-secondary border border-border text-xs text-white font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && editName.trim()) {
+                            updateNameMutation.mutate({ displayName: editName.trim() });
+                          } else if (e.key === "Escape") {
+                            setIsEditingName(false);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (editName.trim()) {
+                            updateNameMutation.mutate({ displayName: editName.trim() });
+                          }
+                        }}
+                        className="p-0.5 text-[#00C805] hover:bg-secondary rounded"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setIsEditingName(false)}
+                        className="p-0.5 text-[#FF5252] hover:bg-secondary rounded"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <User className="w-3.5 h-3.5" />
+                      <span className="font-[var(--font-mono)] hidden sm:inline">
+                        {(user as any)?.displayName || user?.name || "Trader"}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setEditName((user as any)?.displayName || user?.name || "");
+                          setIsEditingName(true);
+                        }}
+                        className="p-0.5 text-muted-foreground hover:text-white rounded"
+                        title="Edit display name"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
                 </div>
                 {/* Mobile nav links */}
                 <div className="flex sm:hidden items-center gap-1">

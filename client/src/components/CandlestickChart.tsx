@@ -2,6 +2,10 @@
  * CandlestickChart: TradingView-style chart using lightweight-charts v5.
  * Converts LP data into OHLC candlestick format with price ($) values.
  * Includes drawing/annotation tools: trend lines, horizontal lines, text markers.
+ *
+ * KEY FIX: Always passes the FULL dataset to the chart and uses the time scale
+ * visible range to control the initial view. This means zooming out reveals
+ * more data instead of showing empty space.
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -18,7 +22,13 @@ import {
   type Time,
   type SeriesMarker,
 } from "lightweight-charts";
-import { getDataForRange, totalLPToPrice, type TimeRange, type LPDataPoint } from "@/lib/playerData";
+import {
+  FULL_LP_HISTORY,
+  getDataForRange,
+  totalLPToPrice,
+  type TimeRange,
+  type LPDataPoint,
+} from "@/lib/playerData";
 import {
   Minus,
   TrendingUp,
@@ -30,6 +40,7 @@ import {
 
 interface CandlestickChartProps {
   timeRange?: TimeRange;
+  onVisibleRangeChange?: (range: TimeRange | null) => void;
 }
 
 // Parse a date string like "Mar 23" or "Jan 1" into a YYYY-MM-DD string
@@ -71,7 +82,6 @@ function generateCandlestickData(data: LPDataPoint[]): CandlestickData<Time>[] {
 
     // Simulate intraday volatility
     const volatility = Math.abs(closePrice - openPrice) * 0.3 + 0.5;
-    // Use deterministic "random" based on index to avoid different values on re-render
     const seed1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
     const rand1 = seed1 - Math.floor(seed1);
     const seed2 = Math.sin(i * 43.2316 + 12.989) * 23421.6312;
@@ -79,11 +89,9 @@ function generateCandlestickData(data: LPDataPoint[]): CandlestickData<Time>[] {
     const high = Math.max(openPrice, closePrice) + rand1 * volatility;
     const low = Math.min(openPrice, closePrice) - rand2 * volatility;
 
-    // Parse the actual date from the data point
     let dateStr = parseLPDate(point.date);
 
-    // Deduplicate: if same date appears twice, skip the earlier one
-    // (lightweight-charts requires strictly ascending unique times)
+    // Deduplicate: lightweight-charts requires strictly ascending unique times
     if (seenDates.has(dateStr)) {
       continue;
     }
@@ -114,7 +122,6 @@ function generateVolumeData(data: LPDataPoint[]) {
       if (seenDates.has(dateStr)) return null;
       seenDates.add(dateStr);
 
-      // Deterministic volume
       const seed = Math.sin(i * 7.234 + 3.456) * 12345.6789;
       const rand = seed - Math.floor(seed);
 
@@ -127,6 +134,22 @@ function generateVolumeData(data: LPDataPoint[]) {
     .filter(Boolean) as { time: Time; value: number; color: string }[];
 }
 
+// Get the date string for N days ago from the last data point
+function getDateNDaysAgo(allCandles: CandlestickData<Time>[], days: number): string | null {
+  if (allCandles.length === 0) return null;
+  const targetIdx = Math.max(0, allCandles.length - days);
+  return allCandles[targetIdx].time as string;
+}
+
+// Determine which time range label best matches a visible range span
+function detectTimeRange(visibleDays: number): TimeRange | null {
+  if (visibleDays <= 9) return "1W";
+  if (visibleDays <= 40) return "1M";
+  if (visibleDays <= 100) return "3M";
+  if (visibleDays <= 190) return "6M";
+  return "ALL";
+}
+
 type DrawingTool = "pointer" | "trendline" | "hline" | "text";
 
 interface Annotation {
@@ -136,7 +159,7 @@ interface Annotation {
   seriesRef?: ISeriesApi<any>;
 }
 
-export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartProps) {
+export default function CandlestickChart({ timeRange = "1M", onVisibleRangeChange }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<any> | null>(null);
@@ -148,12 +171,32 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
   const [textInput, setTextInput] = useState<string>("");
   const [showTextInput, setShowTextInput] = useState(false);
   const markersRef = useRef<SeriesMarker<Time>[]>([]);
+  const isSettingRangeRef = useRef(false);
 
-  const rawData = getDataForRange(timeRange);
+  // Always use FULL dataset for the chart
+  const allData = FULL_LP_HISTORY;
+  const allCandles = useRef<CandlestickData<Time>[]>([]);
 
-  // Initialize chart — recreate on timeRange change to ensure clean state
+  // Compute how many candles to show for each time range
+  const getRangeDays = useCallback((range: TimeRange): number => {
+    switch (range) {
+      case "1W": return 7;
+      case "1M": return 30;
+      case "3M": return 90;
+      case "6M": return 180;
+      case "YTD": return 83; // ~Jan 1 to Mar 23
+      case "ALL": return 9999;
+      default: return 30;
+    }
+  }, []);
+
+  // Initialize chart once, then update visible range on timeRange change
   useEffect(() => {
     if (!chartContainerRef.current) return;
+
+    // Clear previous annotations state
+    setAnnotations([]);
+    markersRef.current = [];
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
@@ -185,12 +228,12 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
         borderColor: "rgba(42, 45, 56, 0.8)",
         timeVisible: false,
         rightOffset: 2,
-        barSpacing: timeRange === "1W" ? 40 : timeRange === "1M" ? 15 : timeRange === "3M" ? 8 : 5,
+        barSpacing: 8,
       },
       handleScroll: { vertTouchDrag: false },
     });
 
-    // Candlestick series
+    // Candlestick series with FULL data
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#00C805",
       downColor: "#FF5252",
@@ -200,10 +243,11 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
       wickUpColor: "#00C805",
     });
 
-    const candleData = generateCandlestickData(rawData);
+    const candleData = generateCandlestickData(allData);
+    allCandles.current = candleData;
     candlestickSeries.setData(candleData);
 
-    // Volume histogram
+    // Volume histogram with FULL data
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
       priceScaleId: "volume",
@@ -213,11 +257,34 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
       scaleMargins: { top: 0.8, bottom: 0 },
     });
 
-    const volumeData = generateVolumeData(rawData);
+    const volumeData = generateVolumeData(allData);
     volumeSeries.setData(volumeData);
 
-    // Fit content to show all data in the visible area
-    chart.timeScale().fitContent();
+    // Set initial visible range based on timeRange prop
+    const days = getRangeDays(timeRange);
+    if (timeRange === "ALL" || days >= candleData.length) {
+      chart.timeScale().fitContent();
+    } else {
+      const fromDate = getDateNDaysAgo(candleData, days);
+      const toDate = candleData[candleData.length - 1]?.time as string;
+      if (fromDate && toDate) {
+        chart.timeScale().setVisibleRange({
+          from: fromDate as Time,
+          to: toDate as Time,
+        });
+      }
+    }
+
+    // Listen for visible range changes to sync UI pills
+    if (onVisibleRangeChange) {
+      chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
+        if (isSettingRangeRef.current) return;
+        if (!logicalRange) return;
+        const visibleBars = Math.round(logicalRange.to - logicalRange.from);
+        const detected = detectTimeRange(visibleBars);
+        onVisibleRangeChange(detected);
+      });
+    }
 
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
@@ -242,7 +309,35 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [timeRange]);
+  }, []); // Only create chart once
+
+  // Update visible range when timeRange prop changes (without recreating chart)
+  useEffect(() => {
+    if (!chartRef.current || allCandles.current.length === 0) return;
+
+    isSettingRangeRef.current = true;
+
+    const days = getRangeDays(timeRange);
+    const candleData = allCandles.current;
+
+    if (timeRange === "ALL" || days >= candleData.length) {
+      chartRef.current.timeScale().fitContent();
+    } else {
+      const fromDate = getDateNDaysAgo(candleData, days);
+      const toDate = candleData[candleData.length - 1]?.time as string;
+      if (fromDate && toDate) {
+        chartRef.current.timeScale().setVisibleRange({
+          from: fromDate as Time,
+          to: toDate as Time,
+        });
+      }
+    }
+
+    // Reset flag after a short delay to allow the range change to propagate
+    setTimeout(() => {
+      isSettingRangeRef.current = false;
+    }, 100);
+  }, [timeRange, getRangeDays]);
 
   // Add horizontal line
   const addHorizontalLine = useCallback(
@@ -258,7 +353,7 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
         crosshairMarkerVisible: false,
       });
 
-      const candleData = generateCandlestickData(rawData);
+      const candleData = allCandles.current;
       if (candleData.length < 2) return;
 
       const lineData: LineData<Time>[] = [
@@ -274,7 +369,7 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
         { id, type: "hline", data: { price }, seriesRef: lineSeries },
       ]);
     },
-    [rawData]
+    []
   );
 
   // Add trend line
@@ -290,12 +385,26 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
       priceLineVisible: false,
     });
 
-    const candleData = generateCandlestickData(rawData);
+    const candleData = allCandles.current;
     if (candleData.length < 2) return;
 
+    // Use visible range for trend line endpoints
+    const visibleRange = chartRef.current.timeScale().getVisibleRange();
+    let startCandle = candleData[0];
+    let endCandle = candleData[candleData.length - 1];
+
+    if (visibleRange) {
+      const fromStr = visibleRange.from as string;
+      const toStr = visibleRange.to as string;
+      const visibleStart = candleData.find(c => (c.time as string) >= fromStr);
+      const visibleEnd = [...candleData].reverse().find(c => (c.time as string) <= toStr);
+      if (visibleStart) startCandle = visibleStart;
+      if (visibleEnd) endCandle = visibleEnd;
+    }
+
     const lineData: LineData<Time>[] = [
-      { time: candleData[0].time, value: candleData[0].open },
-      { time: candleData[candleData.length - 1].time, value: candleData[candleData.length - 1].close },
+      { time: startCandle.time, value: startCandle.open },
+      { time: endCandle.time, value: endCandle.close },
     ];
 
     lineSeries.setData(lineData);
@@ -305,14 +414,14 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
       ...prev,
       { id, type: "trendline", data: {}, seriesRef: lineSeries },
     ]);
-  }, [rawData]);
+  }, []);
 
   // Add text marker
   const addTextMarker = useCallback(
     (text: string) => {
       if (!candlestickSeriesRef.current) return;
 
-      const candleData = generateCandlestickData(rawData);
+      const candleData = allCandles.current;
       if (candleData.length === 0) return;
 
       const newMarker: SeriesMarker<Time> = {
@@ -332,7 +441,7 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
         { id, type: "text", data: { text } },
       ]);
     },
-    [rawData]
+    []
   );
 
   // Clear all annotations

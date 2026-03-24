@@ -226,7 +226,7 @@ export async function getAllTrades(limit = 100) {
   return db.select({
     id: trades.id,
     userId: trades.userId,
-    userName: users.name,
+    userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
     ticker: trades.ticker,
     type: trades.type,
     shares: trades.shares,
@@ -278,6 +278,15 @@ export async function getPriceHistory(since?: number) {
 
   return db.select().from(priceHistory)
     .orderBy(priceHistory.timestamp);
+}
+
+export async function updateDisplayName(userId: number, displayName: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users)
+    .set({ displayName })
+    .where(eq(users.id, userId));
 }
 
 export async function getLatestPrice() {

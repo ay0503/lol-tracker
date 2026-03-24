@@ -75,3 +75,23 @@
 - [x] Fix panning (translate left/right) showing empty space / cutoff data
 - [x] Ensure fitContent is called after data updates
 - [x] Test all time range transitions in candlestick mode
+
+## Bug Fix: Chart Zoom Data Cutoff
+- [x] Pass full dataset to chart, use time scale visible range to control view
+- [x] Zooming out past 1M should reveal more data (not empty space)
+- [x] Add visible range change listener to sync UI time range pills with zoom level
+- [x] Zooming in from 3M to 1M-equivalent should update the active pill to 1M
+
+## Feature: Favicon
+- [x] Create a $DORI branded favicon
+- [x] Add favicon to index.html
+
+## Feature: Custom Display Name
+- [x] Add displayName column to users table in DB schema
+- [x] Add API endpoint to update display name
+- [x] Add UI for users to set/edit their display name
+- [x] Show display name in nav, ledger, and portfolio
+
+## Bug Fix: Prevent Negative Trade Amounts
+- [x] Add frontend validation to prevent negative or zero amounts
+- [x] Backend validation z.number().positive() already in place - confirmed working

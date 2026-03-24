@@ -96,7 +96,11 @@ export default function TradingPanel() {
   const handleTrade = () => {
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) {
-      toast.error("Enter a valid dollar amount");
+      toast.error("Enter a valid positive dollar amount");
+      return;
+    }
+    if (shares <= 0) {
+      toast.error("Trade amount too small");
       return;
     }
     tradeMutation.mutate({
@@ -279,8 +283,16 @@ export default function TradingPanel() {
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Prevent negative input
+                  if (val === '' || parseFloat(val) >= 0) {
+                    setAmount(val);
+                  }
+                }}
                 placeholder="Amount in USD"
                 className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-white text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50"
               />

@@ -113,11 +113,11 @@ export default function Ledger() {
                 <div className="col-span-2 flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
                     <span className="text-[10px] font-bold text-white">
-                      {trade.userName.charAt(0).toUpperCase()}
+                      {String(trade.userName || 'A').charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <span className="text-xs text-white truncate font-[var(--font-mono)]">
-                    {trade.userName}
+                    {String(trade.userName || 'Anonymous')}
                   </span>
                 </div>
 

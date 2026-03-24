@@ -12,6 +12,7 @@ import {
   getPriceHistory,
   getLatestPrice,
   addPriceSnapshot,
+  updateDisplayName,
 } from "./db";
 import {
   fetchFullPlayerData,
@@ -61,6 +62,13 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    /** Update display name */
+    updateDisplayName: protectedProcedure
+      .input(z.object({ displayName: z.string().min(1).max(50) }))
+      .mutation(async ({ ctx, input }) => {
+        await updateDisplayName(ctx.user.id, input.displayName);
+        return { success: true, displayName: input.displayName };
+      }),
   }),
 
   // ─── Player Data (Riot API) ───

@@ -1,9 +1,10 @@
 /*
  * LPChart: Main chart component with toggle between Area and Candlestick views.
- * Now supports extended time ranges: 1W, 1M, 3M, 6M, YTD, ALL
+ * Supports extended time ranges: 1W, 1M, 3M, 6M, YTD, ALL
  * Shows price ($) on Y-axis instead of raw LP.
+ * Syncs time range pills with candlestick chart zoom level.
  */
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   AreaChart,
   Area,
@@ -55,6 +56,13 @@ export default function LPChart() {
     const timer = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle candlestick chart zoom syncing to time range pills
+  const handleVisibleRangeChange = useCallback((detectedRange: TimeRange | null) => {
+    if (detectedRange && detectedRange !== activeRange) {
+      setActiveRange(detectedRange);
+    }
+  }, [activeRange]);
 
   const firstPrice = data[0]?.price ?? 0;
   const lastPrice = data[data.length - 1]?.price ?? 0;
@@ -204,7 +212,12 @@ export default function LPChart() {
       )}
 
       {/* Candlestick Chart */}
-      {chartView === "candlestick" && <CandlestickChart timeRange={activeRange} />}
+      {chartView === "candlestick" && (
+        <CandlestickChart
+          timeRange={activeRange}
+          onVisibleRangeChange={handleVisibleRangeChange}
+        />
+      )}
     </motion.div>
   );
 }
