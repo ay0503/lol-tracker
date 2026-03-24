@@ -90,6 +90,17 @@ export async function createLocalUser(data: {
   });
 }
 
+export async function setUserPassword(userId: number, passwordHash: string, displayName?: string): Promise<void> {
+  const db = await getDb();
+  const updateSet: Record<string, unknown> = {
+    passwordHash,
+    loginMethod: "email",
+    updatedAt: new Date().toISOString(),
+  };
+  if (displayName) updateSet.displayName = displayName;
+  await db.update(users).set(updateSet).where(eq(users.id, userId));
+}
+
 // ─── Portfolio Helpers ───
 
 export async function getOrCreatePortfolio(userId: number) {

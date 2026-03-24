@@ -327,3 +327,14 @@
 - [x] Seed historical price data (182 data points) into SQLite
 - [x] Run full test suite — 58 tests passed
 - [x] Verified complete app flow in browser (live data, charts, trading panel, all pages working)
+
+## Bug Fix: Register Page Not Showing Server Errors
+- [x] Verified: Register page already catches and displays "Email already registered" in a red error banner
+- [x] Verified: Login page already catches and displays "Invalid email or password" in a red error banner
+- [x] The console error is from the global logger in main.tsx (expected behavior, not a bug)
+- [x] No redirect occurs on login/register pages (main.tsx line 24 skips them)
+
+## Bug Fix: OAuth Auto-Created Accounts Block Registration
+- [x] Fix register endpoint: if user exists with same email but no passwordHash, update the record with a password instead of rejecting
+- [x] Added setUserPassword() helper to db.ts
+- [x] OAuth-created users can now "claim" their account by registering with the same email

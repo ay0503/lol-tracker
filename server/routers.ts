@@ -15,7 +15,7 @@ import {
   getAllMatchesFromDB, getMatchesSince,
   getPortfolioHistory, getUserNotifications, getUnreadNotificationCount,
   markNotificationRead, markAllNotificationsRead,
-  getUserByEmail, createLocalUser,
+  getUserByEmail, createLocalUser, setUserPassword,
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
@@ -41,16 +41,22 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Check if email already exists
         const existing = await getUserByEmail(input.email);
-        if (existing) {
+        if (existing && existing.passwordHash) {
+          // User already has a password set — truly duplicate registration
           throw new TRPCError({ code: "CONFLICT", message: "Email already registered" });
         }
-        // Hash password and create user
         const passwordHash = await bcrypt.hash(input.password, 12);
-        await createLocalUser({
-          email: input.email,
-          passwordHash,
-          displayName: input.displayName,
-        });
+        if (existing && !existing.passwordHash) {
+          // OAuth-created account without password — let them claim it
+          await setUserPassword(existing.id, passwordHash, input.displayName);
+        } else {
+          // Brand new user
+          await createLocalUser({
+            email: input.email,
+            passwordHash,
+            displayName: input.displayName,
+          });
+        }
         // Auto-login after registration
         const user = await getUserByEmail(input.email);
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user" });
