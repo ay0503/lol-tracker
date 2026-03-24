@@ -12,7 +12,6 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 COPY . .
 RUN pnpm build:server
-RUN pnpm db:push
 
 # Production image
 FROM base AS production
@@ -20,6 +19,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/package.json ./
+COPY --from=build /app/pnpm-lock.yaml ./
+COPY --from=build /app/patches ./patches
 COPY --from=build /app/drizzle.config.ts ./
 
 # Create data directory for SQLite
@@ -29,4 +30,5 @@ ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+# Run migrations then start the server
+CMD ["sh", "-c", "pnpm db:push && node dist/index.js"]
