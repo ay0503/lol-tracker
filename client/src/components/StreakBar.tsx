@@ -5,10 +5,13 @@
  */
 import { calculateStreaks, WIN_LOSS_SEQUENCE } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
 export default function StreakBar() {
+  const { t } = useTranslation();
+
   const { data: liveStreaks } = trpc.stats.streaks.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -52,11 +55,11 @@ export default function StreakBar() {
             }}
           >
             {currentStreak.count}
-            {currentStreak.type === "win" ? "W" : "L"} Streak
+            {currentStreak.type === "win" ? t.streak.win : t.streak.loss} {t.streak.streak}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          Last {sequence.length} games
+          {t.streak.lastGames.replace("{n}", String(sequence.length))}
         </span>
         {isLive && (
           <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
@@ -81,7 +84,7 @@ export default function StreakBar() {
               className={`flex-1 rounded-sm transition-all duration-200 ${
                 isCurrent ? "h-10" : "h-7"
               }`}
-              title={`Game ${sequence.length - i}: ${isWin ? "Win" : "Loss"}`}
+              title={`${t.streak.game} ${sequence.length - i}: ${isWin ? t.streak.winLabel : t.streak.lossLabel}`}
             >
               <div
                 className="w-full h-full rounded-sm"
@@ -97,8 +100,8 @@ export default function StreakBar() {
 
       {/* Streak summary */}
       <div className="flex justify-between mt-3 text-xs text-muted-foreground">
-        <span>Newest</span>
-        <span>Oldest</span>
+        <span>{t.streak.newest}</span>
+        <span>{t.streak.oldest}</span>
       </div>
 
       {/* Streak breakdown */}
@@ -116,7 +119,7 @@ export default function StreakBar() {
             }}
           >
             {streak.count}
-            {streak.type === "win" ? "W" : "L"}
+            {streak.type === "win" ? t.streak.win : t.streak.loss}
           </div>
         ))}
       </div>

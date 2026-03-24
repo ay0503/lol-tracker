@@ -2,9 +2,11 @@
  * Portfolio: Personal portfolio page with holdings, P&L, returns, and transaction history.
  * Now wired to live backend prices via trpc.prices.etfPrices.
  * Supports short positions and all trade types (buy, sell, short, cover, dividend).
+ * Full i18n support (EN/KR).
  */
 import { useMemo, useState, useRef, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
@@ -43,27 +45,18 @@ function formatTime(date: Date | string): string {
 
 type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend";
 
-const TRADE_FILTERS: { id: TradeFilter; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "buy", label: "Buy" },
-  { id: "sell", label: "Sell" },
-  { id: "short", label: "Short" },
-  { id: "cover", label: "Cover" },
-  { id: "dividend", label: "Dividend" },
-];
-
-function getTradeTypeStyle(type: string) {
+function getTradeTypeStyle(type: string, t: any) {
   switch (type) {
     case "buy":
-      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: "Buy", sign: "-" };
+      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: t.trading.buy, sign: "-" };
     case "sell":
-      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: "Sell", sign: "+" };
+      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: t.trading.sell, sign: "+" };
     case "short":
-      return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: "Short", sign: "+" };
+      return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: t.trading.short, sign: "+" };
     case "cover":
-      return { icon: Repeat, color: "#3b82f6", bg: "bg-blue-500/15", label: "Cover", sign: "-" };
+      return { icon: Repeat, color: "#3b82f6", bg: "bg-blue-500/15", label: t.trading.cover, sign: "-" };
     case "dividend":
-      return { icon: Gift, color: "#facc15", bg: "bg-yellow-500/15", label: "Dividend", sign: "+" };
+      return { icon: Gift, color: "#facc15", bg: "bg-yellow-500/15", label: t.portfolio.dividends, sign: "+" };
     default:
       return { icon: DollarSign, color: "#fff", bg: "bg-secondary", label: type, sign: "" };
   }
@@ -78,6 +71,7 @@ const PNL_RANGES: { id: PnlTimeRange; label: string; ms: number }[] = [
 ];
 
 function PortfolioPnlChart() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [range, setRange] = useState<PnlTimeRange>("ALL");
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -109,10 +103,8 @@ function PortfolioPnlChart() {
     const maxVal = Math.max(...values) * 1.02;
     const valRange = maxVal - minVal || 1;
 
-    // Clear
     ctx.clearRect(0, 0, W, H);
 
-    // Draw baseline at $200
     const baselineY = H - ((200 - minVal) / valRange) * H;
     ctx.strokeStyle = "rgba(255,255,255,0.08)";
     ctx.lineWidth = 1;
@@ -123,18 +115,15 @@ function PortfolioPnlChart() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Draw $200 label
     ctx.fillStyle = "rgba(255,255,255,0.25)";
     ctx.font = "10px JetBrains Mono, monospace";
     ctx.fillText("$200", 4, baselineY - 4);
 
-    // Determine color based on final value
     const finalVal = values[values.length - 1];
     const isProfit = finalVal >= 200;
     const lineColor = isProfit ? "#00C805" : "#FF5252";
     const gradientColor = isProfit ? "rgba(0, 200, 5, 0.15)" : "rgba(255, 82, 82, 0.15)";
 
-    // Draw area fill
     const gradient = ctx.createLinearGradient(0, 0, 0, H);
     gradient.addColorStop(0, gradientColor);
     gradient.addColorStop(1, "rgba(0,0,0,0)");
@@ -152,7 +141,6 @@ function PortfolioPnlChart() {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Draw line
     ctx.beginPath();
     ctx.strokeStyle = lineColor;
     ctx.lineWidth = 2;
@@ -165,7 +153,6 @@ function PortfolioPnlChart() {
     }
     ctx.stroke();
 
-    // Draw current value label
     const lastX = W - 4;
     const lastY = H - ((finalVal - minVal) / valRange) * H;
     ctx.fillStyle = lineColor;
@@ -174,7 +161,6 @@ function PortfolioPnlChart() {
     ctx.fillText(`$${finalVal.toFixed(2)}`, lastX, lastY - 8);
     ctx.textAlign = "left";
 
-    // Draw time labels
     ctx.fillStyle = "rgba(255,255,255,0.2)";
     ctx.font = "9px JetBrains Mono, monospace";
     if (timestamps.length > 1) {
@@ -198,15 +184,12 @@ function PortfolioPnlChart() {
         <div className="flex items-center gap-2 mb-4">
           <LineChart className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-            Portfolio Performance
+            {t.portfolio.portfolioPerformance}
           </h3>
         </div>
         <div className="text-center py-8">
           <LineChart className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Not enough data yet</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            Portfolio snapshots are recorded every 20 minutes during polling
-          </p>
+          <p className="text-sm text-muted-foreground">{t.portfolio.noChartData}</p>
         </div>
       </motion.div>
     );
@@ -228,7 +211,7 @@ function PortfolioPnlChart() {
         <div className="flex items-center gap-2">
           <LineChart className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-            Portfolio Performance
+            {t.portfolio.portfolioPerformance}
           </h3>
           <span
             className="text-xs font-semibold font-[var(--font-mono)] px-2 py-0.5 rounded"
@@ -266,8 +249,18 @@ function PortfolioPnlChart() {
 }
 
 export default function Portfolio() {
+  const { t } = useTranslation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [filter, setFilter] = useState<TradeFilter>("all");
+
+  const TRADE_FILTERS: { id: TradeFilter; label: string }[] = [
+    { id: "all", label: t.portfolio.all },
+    { id: "buy", label: t.trading.buy },
+    { id: "sell", label: t.trading.sell },
+    { id: "short", label: t.trading.short },
+    { id: "cover", label: t.trading.cover },
+    { id: "dividend", label: t.portfolio.dividends },
+  ];
 
   const { data: portfolio, isLoading: portfolioLoading } = trpc.trading.portfolio.useQuery(
     undefined,
@@ -278,7 +271,6 @@ export default function Portfolio() {
     { enabled: isAuthenticated }
   );
 
-  // ─── Live prices from backend ───
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -290,7 +282,6 @@ export default function Portfolio() {
     return found ? found.price : 0;
   };
 
-  // Calculate portfolio metrics using live prices
   const metrics = useMemo(() => {
     if (!portfolio || !etfPrices) return null;
 
@@ -304,10 +295,9 @@ export default function Portfolio() {
       const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
       totalHoldingsValue += currentValue;
 
-      // Short position P&L
       const shortValue = h.shortShares * etfPrice;
       const shortCostBasis = h.shortShares * h.shortAvgPrice;
-      const shortPnl = shortCostBasis - shortValue; // profit when price drops
+      const shortPnl = shortCostBasis - shortValue;
       const shortPnlPct = shortCostBasis > 0 ? (shortPnl / shortCostBasis) * 100 : 0;
       totalShortPnl += shortPnl;
 
@@ -326,7 +316,7 @@ export default function Portfolio() {
     });
 
     const totalValue = portfolio.cashBalance + totalHoldingsValue + totalShortPnl;
-    const totalPnl = totalValue - 200; // Starting balance was $200
+    const totalPnl = totalValue - 200;
     const totalPnlPct = (totalPnl / 200) * 100;
 
     return {
@@ -341,41 +331,38 @@ export default function Portfolio() {
     };
   }, [portfolio, etfPrices]);
 
-  // Filter trades
   const filteredTrades = useMemo(() => {
     if (!tradeHistory) return [];
     if (filter === "all") return tradeHistory;
     return tradeHistory.filter(t => t.type === filter);
   }, [tradeHistory, filter]);
 
-  // Count trades by type for filter badges
   const tradeCounts = useMemo(() => {
     if (!tradeHistory) return {};
     const counts: Record<string, number> = {};
-    for (const t of tradeHistory) {
-      counts[t.type] = (counts[t.type] || 0) + 1;
+    for (const tr of tradeHistory) {
+      counts[tr.type] = (counts[tr.type] || 0) + 1;
     }
     return counts;
   }, [tradeHistory]);
 
-  // Not authenticated
   if (!authLoading && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Wallet className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
           <h2 className="text-lg font-bold text-foreground font-[var(--font-heading)] mb-2">
-            Sign in to view your portfolio
+            {t.common.signInRequired}
           </h2>
           <p className="text-sm text-muted-foreground mb-6">
-            Start trading $DORI with $200 in virtual cash
+            {t.portfolio.startTrading}
           </p>
           <a
             href={getLoginUrl()}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors"
           >
             <LogIn className="w-4 h-4" />
-            Sign In to Trade
+            {t.nav.signIn}
           </a>
         </div>
       </div>
@@ -385,23 +372,21 @@ export default function Portfolio() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container py-8 max-w-5xl">
-        {/* Back link */}
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back to $DORI
+          {t.common.back} $DORI
         </Link>
 
-        {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <div className="p-2 rounded-lg bg-secondary">
             <Wallet className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground font-[var(--font-heading)]">
-              My Portfolio
+              {t.portfolio.title}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {user?.name || "Trader"}'s positions and performance
+              {user?.name || "Trader"}
             </p>
           </div>
         </div>
@@ -423,7 +408,7 @@ export default function Portfolio() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-card border border-border rounded-xl p-6 mb-6"
             >
-              <p className="text-xs text-muted-foreground mb-1">Total Portfolio Value</p>
+              <p className="text-xs text-muted-foreground mb-1">{t.portfolio.totalValue}</p>
               <div className="flex items-baseline gap-3">
                 <h2 className="text-4xl font-bold text-foreground font-[var(--font-mono)]">
                   ${metrics.totalValue.toFixed(2)}
@@ -444,22 +429,21 @@ export default function Portfolio() {
                 </div>
               </div>
 
-              {/* Breakdown */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Cash</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.cashBalance}</p>
                   <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
                     ${metrics.cashBalance.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Holdings Value</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.holdingsValue}</p>
                   <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
                     ${metrics.totalHoldingsValue.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Short P&L</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.shortPnl}</p>
                   <p
                     className="text-lg font-bold font-[var(--font-mono)]"
                     style={{ color: metrics.totalShortPnl >= 0 ? "#00C805" : "#FF5252" }}
@@ -468,7 +452,7 @@ export default function Portfolio() {
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Dividends</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.dividends}</p>
                   <p className="text-lg font-bold text-[#facc15] font-[var(--font-mono)]">
                     +${metrics.totalDividends.toFixed(2)}
                   </p>
@@ -476,7 +460,6 @@ export default function Portfolio() {
               </div>
             </motion.div>
 
-            {/* P&L Chart */}
             <PortfolioPnlChart />
 
             {/* Long Holdings */}
@@ -489,20 +472,19 @@ export default function Portfolio() {
               <div className="flex items-center gap-2 mb-4">
                 <PieChart className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-                  Long Holdings
+                  {t.portfolio.longPositions}
                 </h3>
               </div>
 
               {metrics.holdings.filter(h => h.shares > 0).length > 0 ? (
                 <div className="space-y-2">
-                  {/* Header */}
                   <div className="grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                    <div className="col-span-2">Ticker</div>
-                    <div className="col-span-2 text-right">Shares</div>
-                    <div className="col-span-2 text-right">Avg Cost</div>
-                    <div className="col-span-2 text-right">Current</div>
-                    <div className="col-span-2 text-right">Value</div>
-                    <div className="col-span-2 text-right">P&L</div>
+                    <div className="col-span-2">{t.portfolio.ticker}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.shares}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.avgPrice}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.currentPrice}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.value}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.pnl}</div>
                   </div>
 
                   {metrics.holdings
@@ -513,45 +495,28 @@ export default function Portfolio() {
                         className="grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
                       >
                         <div className="col-span-2">
-                          <span
-                            className="text-sm font-bold font-[var(--font-mono)]"
-                            style={{ color: getTickerColor(h.ticker) }}
-                          >
+                          <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
                             ${h.ticker}
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-[var(--font-mono)]">
-                            {h.shares.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-foreground font-[var(--font-mono)]">{h.shares.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">
-                            ${h.avgCostBasis.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">${h.avgCostBasis.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-[var(--font-mono)]">
-                            ${h.currentPrice.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-foreground font-[var(--font-mono)]">${h.currentPrice.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">
-                            ${h.currentValue.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">${h.currentValue.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
                           <div>
-                            <span
-                              className="text-sm font-semibold font-[var(--font-mono)]"
-                              style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}
-                            >
+                            <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}>
                               {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}
                             </span>
-                            <p
-                              className="text-[10px] font-[var(--font-mono)]"
-                              style={{ color: h.pnlPct >= 0 ? "#00C805" : "#FF5252" }}
-                            >
+                            <p className="text-[10px] font-[var(--font-mono)]" style={{ color: h.pnlPct >= 0 ? "#00C805" : "#FF5252" }}>
                               {h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(1)}%
                             </p>
                           </div>
@@ -562,10 +527,8 @@ export default function Portfolio() {
               ) : (
                 <div className="text-center py-8">
                   <PieChart className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">No long holdings yet</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
-                    Buy some $DORI to get started!
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t.portfolio.noHoldings}</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">{t.portfolio.startTrading}</p>
                 </div>
               )}
             </motion.div>
@@ -581,19 +544,18 @@ export default function Portfolio() {
                 <div className="flex items-center gap-2 mb-4">
                   <ArrowDownUp className="w-4 h-4 text-purple-400" />
                   <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-                    Short Positions
+                    {t.portfolio.shortPositions}
                   </h3>
                 </div>
 
                 <div className="space-y-2">
-                  {/* Header */}
                   <div className="grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                    <div className="col-span-2">Ticker</div>
-                    <div className="col-span-2 text-right">Shares</div>
-                    <div className="col-span-2 text-right">Entry Price</div>
-                    <div className="col-span-2 text-right">Current</div>
-                    <div className="col-span-2 text-right">Liability</div>
-                    <div className="col-span-2 text-right">P&L</div>
+                    <div className="col-span-2">{t.portfolio.ticker}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.shares}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.avgPrice}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.currentPrice}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.value}</div>
+                    <div className="col-span-2 text-right">{t.portfolio.pnl}</div>
                   </div>
 
                   {metrics.holdings
@@ -604,45 +566,28 @@ export default function Portfolio() {
                         className="grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-purple-500/5 hover:bg-purple-500/10 transition-colors"
                       >
                         <div className="col-span-2">
-                          <span
-                            className="text-sm font-bold font-[var(--font-mono)]"
-                            style={{ color: getTickerColor(h.ticker) }}
-                          >
+                          <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
                             ${h.ticker}
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-purple-300 font-[var(--font-mono)]">
-                            {h.shortShares.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-purple-300 font-[var(--font-mono)]">{h.shortShares.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">
-                            ${h.shortAvgPrice.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">${h.shortAvgPrice.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-[var(--font-mono)]">
-                            ${h.currentPrice.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-foreground font-[var(--font-mono)]">${h.currentPrice.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">
-                            ${h.shortValue.toFixed(2)}
-                          </span>
+                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">${h.shortValue.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2 text-right">
                           <div>
-                            <span
-                              className="text-sm font-semibold font-[var(--font-mono)]"
-                              style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}
-                            >
+                            <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}>
                               {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)}
                             </span>
-                            <p
-                              className="text-[10px] font-[var(--font-mono)]"
-                              style={{ color: h.shortPnlPct >= 0 ? "#00C805" : "#FF5252" }}
-                            >
+                            <p className="text-[10px] font-[var(--font-mono)]" style={{ color: h.shortPnlPct >= 0 ? "#00C805" : "#FF5252" }}>
                               {h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%
                             </p>
                           </div>
@@ -664,11 +609,11 @@ export default function Portfolio() {
                 <div className="flex items-center gap-2">
                   <History className="w-4 h-4 text-muted-foreground" />
                   <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-                    Transaction History
+                    {t.portfolio.transactionHistory}
                   </h3>
                   {tradeHistory && (
                     <span className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
-                      ({tradeHistory.length} trades)
+                      ({tradeHistory.length})
                     </span>
                   )}
                 </div>
@@ -702,7 +647,7 @@ export default function Portfolio() {
               ) : filteredTrades.length > 0 ? (
                 <div className="space-y-1.5">
                   {filteredTrades.map((trade) => {
-                    const style = getTradeTypeStyle(trade.type);
+                    const style = getTradeTypeStyle(trade.type, t);
                     const Icon = style.icon;
                     return (
                       <div
@@ -726,7 +671,7 @@ export default function Portfolio() {
                               </span>
                             </div>
                             <p className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
-                              {trade.shares.toFixed(2)} shares @ ${trade.pricePerShare.toFixed(2)}
+                              {trade.shares.toFixed(2)} {t.trading.shares} @ ${trade.pricePerShare.toFixed(2)}
                             </p>
                           </div>
                         </div>
@@ -746,7 +691,7 @@ export default function Portfolio() {
                 <div className="text-center py-8">
                   <History className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">
-                    {filter === "all" ? "No transactions yet" : `No ${filter} transactions`}
+                    {t.portfolio.noTransactions}
                   </p>
                 </div>
               )}

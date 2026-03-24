@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
-import { ArrowLeft, Newspaper, TrendingUp, TrendingDown, Zap, Skull, Rocket, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Newspaper, Rocket, Skull, Zap, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 function getNewsIcon(isWin: boolean | null) {
@@ -15,58 +16,57 @@ function getNewsBorderColor(isWin: boolean | null) {
   return "border-l-yellow-400";
 }
 
-function formatTimeAgo(date: Date | string) {
+function formatTimeAgo(date: Date | string, t: any) {
   const now = new Date();
   const d = new Date(date);
   const diff = now.getTime() - d.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t.common.justNow;
+  if (mins < 60) return `${mins}${t.common.mAgo}`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}${t.common.hAgo}`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return `${days}${t.common.dAgo}`;
 }
 
 export default function NewsFeed() {
+  const { t } = useTranslation();
   const { data: newsItems, isLoading } = trpc.news.feed.useQuery({ limit: 30 });
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
-              Back
+              {t.common.back}
             </Link>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Newspaper className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">$DORI News</span>
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">$DORI {t.nav.news}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Leaderboard</Link>
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ledger</Link>
-            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sentiment</Link>
+            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.leaderboard}</Link>
+            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
+            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.sentiment}</Link>
           </div>
         </div>
       </nav>
 
       <main className="container py-6 max-w-3xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">Market News</h1>
-          <p className="text-sm text-muted-foreground mt-1">AI-generated financial news based on $DORI CEO's ranked games. Not financial advice. Probably.</p>
+          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.news.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t.news.subtitle}</p>
         </div>
 
-        {/* Breaking news ticker */}
         {newsItems && newsItems.length > 0 && (
           <div className="mb-6 bg-card border border-border rounded-xl p-3 overflow-hidden">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-              <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Breaking</span>
+              <span className="text-xs font-bold text-red-500 uppercase tracking-wider">{t.news.breakingNews}</span>
             </div>
             <p className="text-sm font-bold text-foreground">{newsItems[0].headline}</p>
           </div>
@@ -81,8 +81,8 @@ export default function NewsFeed() {
         ) : !newsItems || newsItems.length === 0 ? (
           <div className="text-center py-16">
             <Newspaper className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-muted-foreground">No news yet. News will be generated automatically when the player finishes ranked games.</p>
-            <p className="text-xs text-muted-foreground mt-2">The polling engine checks every 20 minutes for new matches.</p>
+            <p className="text-muted-foreground">{t.news.noNews}</p>
+            <p className="text-xs text-muted-foreground mt-2">{t.news.waitingForMatches}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -118,7 +118,7 @@ export default function NewsFeed() {
                           {parseFloat(item.priceChange) >= 0 ? "+" : ""}${parseFloat(item.priceChange).toFixed(2)}
                         </span>
                       )}
-                      <span className="text-xs text-muted-foreground ml-auto">{formatTimeAgo(item.createdAt)}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{formatTimeAgo(item.createdAt, t)}</span>
                     </div>
                   </div>
                 </div>

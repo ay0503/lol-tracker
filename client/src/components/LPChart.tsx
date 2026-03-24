@@ -20,6 +20,7 @@ import {
   TICKERS,
   type TimeRange,
 } from "@/lib/playerData";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
 import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
@@ -47,12 +48,13 @@ function CustomTooltip({ active, payload, tickerColor }: any) {
 }
 
 export default function LPChart() {
+  const { t } = useTranslation();
   const [chartView, setChartView] = useState<ChartView>("area");
   const [activeRange, setActiveRange] = useState<TimeRange>("1M");
   const [activeTicker, setActiveTicker] = useState("DORI");
   const [mounted, setMounted] = useState(false);
 
-  const tickerInfo = TICKERS.find((t) => t.symbol === activeTicker) || TICKERS[0];
+  const tickerInfo = TICKERS.find((tk) => tk.symbol === activeTicker) || TICKERS[0];
   const tickerColor = tickerInfo.color;
 
   const data = useMemo(() => {
@@ -64,7 +66,6 @@ export default function LPChart() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle candlestick chart zoom syncing to time range pills
   const handleVisibleRangeChange = useCallback(
     (detectedRange: TimeRange | null) => {
       if (detectedRange && detectedRange !== activeRange) {
@@ -84,19 +85,16 @@ export default function LPChart() {
   const maxPrice = Math.max(...data.map((d) => d.price ?? 0));
   const padding = Math.max(2, (maxPrice - minPrice) * 0.15);
 
-  // Thin out data for long ranges to keep chart performant
   const chartData = useMemo(() => {
     if (data.length <= 60) return data;
     const step = Math.ceil(data.length / 60);
     const thinned = data.filter((_, i) => i % step === 0);
-    // Always include last point
     if (thinned[thinned.length - 1] !== data[data.length - 1]) {
       thinned.push(data[data.length - 1]);
     }
     return thinned;
   }, [data]);
 
-  // Unique gradient ID per ticker to avoid conflicts
   const gradientId = `lpGradient-${activeTicker}`;
 
   return (
@@ -107,12 +105,12 @@ export default function LPChart() {
     >
       {/* Ticker selector */}
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-thin">
-        {TICKERS.map((t) => {
-          const isActive = t.symbol === activeTicker;
+        {TICKERS.map((tk) => {
+          const isActive = tk.symbol === activeTicker;
           return (
             <button
-              key={t.symbol}
-              onClick={() => setActiveTicker(t.symbol)}
+              key={tk.symbol}
+              onClick={() => setActiveTicker(tk.symbol)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ${
                 isActive
                   ? "border-current"
@@ -121,20 +119,20 @@ export default function LPChart() {
               style={
                 isActive
                   ? {
-                      color: t.color,
-                      backgroundColor: `${t.color}15`,
-                      borderColor: `${t.color}40`,
+                      color: tk.color,
+                      backgroundColor: `${tk.color}15`,
+                      borderColor: `${tk.color}40`,
                     }
                   : {}
               }
             >
               <div
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: t.color }}
+                style={{ backgroundColor: tk.color }}
               />
-              <span className="font-[var(--font-mono)]">${t.symbol}</span>
+              <span className="font-[var(--font-mono)]">${tk.symbol}</span>
               <span className="text-[10px] opacity-60 hidden sm:inline">
-                {t.description}
+                {tk.description}
               </span>
             </button>
           );
@@ -158,7 +156,7 @@ export default function LPChart() {
             }
           >
             <LineChart className="w-3.5 h-3.5" />
-            Line
+            {t.chart.line}
           </button>
           <button
             onClick={() => setChartView("candlestick")}
@@ -174,7 +172,7 @@ export default function LPChart() {
             }
           >
             <CandlestickIcon className="w-3.5 h-3.5" />
-            Candles
+            {t.chart.candles}
           </button>
         </div>
 

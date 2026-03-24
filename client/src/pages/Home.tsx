@@ -2,10 +2,13 @@
  * $DORI LP Tracker — Main page with Robinhood-style fintech UI.
  * Navigation to Ledger and Portfolio pages.
  * All stat components now wired to live backend data with static fallbacks.
+ * Full i18n support (EN/KR).
  */
 import { useState, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "@/contexts/LanguageContext";
+import type { Language } from "@/contexts/LanguageContext";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -50,6 +53,7 @@ import {
   Activity,
   Moon,
   Sun,
+  Globe,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -67,6 +71,7 @@ function SectionHeader({
   subtitle?: string;
   isLive?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2.5 mb-4">
       <div className="p-1.5 rounded-lg bg-secondary">
@@ -80,7 +85,7 @@ function SectionHeader({
           {isLive && (
             <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
               <Activity className="w-2.5 h-2.5" />
-              LIVE
+              {t.common.live}
             </span>
           )}
         </div>
@@ -117,7 +122,7 @@ function StatCard({
       </div>
       <p
         className="text-xl font-bold font-[var(--font-mono)]"
-        style={{ color: color || "white" }}
+        style={{ color: color || undefined }}
       >
         {value}
       </p>
@@ -132,12 +137,12 @@ function StatCard({
  * Match history section that pulls from DB (live polling data) with static fallback.
  */
 function MatchHistorySection() {
+  const { t } = useTranslation();
   const { data: liveMatches, isLoading } = trpc.matches.stored.useQuery(
     { limit: 20 },
     { refetchInterval: 60_000, staleTime: 30_000 }
   );
 
-  // Convert DB matches to MatchResult format for MatchRow
   const dbMatches: MatchResult[] = (liveMatches ?? []).map((m, i) => {
     const kda =
       m.deaths === 0
@@ -151,7 +156,7 @@ function MatchHistorySection() {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     const timeAgo =
-      days > 0 ? `${days}d ago` : hours > 0 ? `${hours}h ago` : "just now";
+      days > 0 ? `${days}d ${t.match.ago}` : hours > 0 ? `${hours}h ${t.match.ago}` : "just now";
     const champKey = m.champion;
     const championImage = `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${champKey}.png`;
 
@@ -173,7 +178,6 @@ function MatchHistorySection() {
     };
   });
 
-  // Use DB matches if available, otherwise fall back to static data
   const matchesToShow = dbMatches.length > 0 ? dbMatches : MATCH_HISTORY;
   const isLive = dbMatches.length > 0;
 
@@ -187,19 +191,19 @@ function MatchHistorySection() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-foreground font-[var(--font-heading)]">
-                Match History
+                {t.sections.matchHistory}
               </h2>
               {isLive && (
                 <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
                   <Activity className="w-2.5 h-2.5" />
-                  LIVE
+                  {t.common.live}
                 </span>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
               {isLive
                 ? "Auto-updated from Riot API"
-                : "Recent ranked games"}
+                : t.sections.recentRankedGames}
             </p>
           </div>
         </div>
@@ -220,6 +224,7 @@ function MatchHistorySection() {
  * Stats grid that uses live data from backend with static fallback.
  */
 function StatsGrid() {
+  const { t } = useTranslation();
   const { data: livePlayer } = trpc.player.current.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -232,7 +237,6 @@ function StatsGrid() {
   const hasLivePlayer = !!livePlayer?.solo;
   const hasLiveKda = !!avgKda;
 
-  // Solo/Duo stats
   const soloTier = livePlayer?.solo?.tier ?? RANKED_SOLO.tier;
   const soloRank = livePlayer?.solo?.rank ?? String(RANKED_SOLO.division);
   const soloLP = livePlayer?.solo?.lp ?? RANKED_SOLO.lp;
@@ -243,7 +247,6 @@ function StatsGrid() {
       ? Math.round((soloWins / (soloWins + soloLosses)) * 100)
       : 0;
 
-  // Flex stats
   const flexTier = livePlayer?.flex?.tier ?? RANKED_FLEX.tier;
   const flexRank = livePlayer?.flex?.rank ?? String(RANKED_FLEX.division);
   const flexLP = livePlayer?.flex?.lp ?? RANKED_FLEX.lp;
@@ -254,7 +257,6 @@ function StatsGrid() {
       ? Math.round((flexWins / (flexWins + flexLosses)) * 100)
       : 0;
 
-  // Format tier name
   const formatTier = (tier: string) =>
     tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
   const formatDiv = (rank: string) => {
@@ -262,7 +264,6 @@ function StatsGrid() {
     return map[rank] || rank;
   };
 
-  // KDA stats
   const kdaRatio = avgKda?.kdaRatio ?? 2.23;
   const kdaStr = avgKda
     ? `${avgKda.avgKills} / ${avgKda.avgDeaths} / ${avgKda.avgAssists}`
@@ -272,27 +273,27 @@ function StatsGrid() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <StatCard
-        label="Solo/Duo"
+        label={t.stats.soloDuo}
         value={`${formatTier(soloTier)} ${formatDiv(soloRank)}`}
-        subValue={`${soloLP} LP · ${soloWR}% WR`}
+        subValue={`${soloLP} LP · ${soloWR}% ${t.player.winRate}`}
         color="#00C805"
         isLive={hasLivePlayer}
       />
       <StatCard
-        label="Flex Queue"
+        label={t.stats.flexQueue}
         value={`${formatTier(flexTier)} ${formatDiv(flexRank)}`}
-        subValue={`${flexLP} LP · ${flexWR}% WR`}
+        subValue={`${flexLP} LP · ${flexWR}% ${t.player.winRate}`}
         color="#B9F2FF"
         isLive={hasLivePlayer}
       />
       <StatCard
-        label="Total Games"
+        label={t.stats.totalGames}
         value={(soloWins + soloLosses).toString()}
-        subValue={`${soloWins}W ${soloLosses}L`}
+        subValue={`${soloWins}${t.stats.wins} ${soloLosses}${t.stats.losses}`}
         isLive={hasLivePlayer}
       />
       <StatCard
-        label={`Avg KDA (${kdaGames}G)`}
+        label={`${t.stats.avgKda20}`}
         value={kdaRatio.toFixed(2)}
         subValue={kdaStr}
         color="#FFD54F"
@@ -306,12 +307,12 @@ function StatsGrid() {
  * Champion pool section wired to live data.
  */
 function ChampionPoolSection() {
+  const { t } = useTranslation();
   const { data: liveChampions } = trpc.stats.championPool.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  // Map live data to ChampionStatData, or fall back to static
   const isLive = !!(liveChampions && liveChampions.length > 0);
 
   const champions: ChampionStatData[] = useMemo(() => {
@@ -326,13 +327,12 @@ function ChampionPoolSection() {
         cs: c.cs,
       }));
     }
-    // Fallback to static data
     return CHAMPION_STATS.map((c) => ({
       name: c.name,
       image: c.image,
       games: c.games,
       winRate: c.winRate,
-      kdaRatio: c.kdaRatio,
+      kdaRatio: parseFloat(c.kda.split("/")[0]) || 0,
       kda: c.kda,
       cs: c.cs,
     }));
@@ -342,8 +342,8 @@ function ChampionPoolSection() {
     <>
       <SectionHeader
         icon={Shield}
-        title="Champion Pool"
-        subtitle={isLive ? "Computed from polled match data" : "Season 2026 Ranked Solo/Duo"}
+        title={t.sections.championPool}
+        subtitle={isLive ? "Computed from polled match data" : t.sections.seasonRankedSoloDuo}
         isLive={isLive}
       />
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
@@ -372,7 +372,22 @@ function ThemeToggleButton() {
   );
 }
 
+function LanguageToggle() {
+  const { language, setLanguage } = useTranslation();
+  return (
+    <button
+      onClick={() => setLanguage(language === "en" ? "ko" : "en")}
+      className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all font-[var(--font-mono)]"
+      title="Toggle language"
+    >
+      <Globe className="w-3.5 h-3.5" />
+      {language === "en" ? "KR" : "EN"}
+    </button>
+  );
+}
+
 export default function Home() {
+  const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState("");
@@ -421,28 +436,28 @@ export default function Home() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                Ledger
+                {t.nav.ledger}
               </Link>
               <Link
                 href="/leaderboard"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <Crown className="w-3.5 h-3.5" />
-                Leaderboard
+                {t.nav.leaderboard}
               </Link>
               <Link
                 href="/news"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <Newspaper className="w-3.5 h-3.5" />
-                News
+                {t.nav.news}
               </Link>
               <Link
                 href="/sentiment"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
-                Sentiment
+                {t.nav.sentiment}
               </Link>
               {isAuthenticated && (
                 <Link
@@ -450,12 +465,12 @@ export default function Home() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
                 >
                   <Wallet className="w-3.5 h-3.5" />
-                  Portfolio
+                  {t.nav.portfolio}
                 </Link>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <a
               href="https://op.gg/lol/summoners/na/%EB%AA%A9%EB%8F%84%EB%A6%AC%20%EB%8F%84%EB%A7%88%EB%B1%80-dori"
               target="_blank"
@@ -469,7 +484,7 @@ export default function Home() {
               S2026
             </div>
             {isAuthenticated ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 text-xs text-foreground">
                   {isEditingName ? (
                     <div className="flex items-center gap-1">
@@ -530,9 +545,8 @@ export default function Home() {
                     </>
                   )}
                 </div>
-                {/* Notification bell */}
                 <NotificationBell />
-                {/* Theme toggle */}
+                <LanguageToggle />
                 <ThemeToggleButton />
                 {/* Mobile nav links */}
                 <div className="flex sm:hidden items-center gap-1">
@@ -558,14 +572,15 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-              <ThemeToggleButton />
-              <a
-                href={getLoginUrl()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                Sign In
-              </a>
+                <LanguageToggle />
+                <ThemeToggleButton />
+                <a
+                  href={getLoginUrl()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  {t.nav.signIn}
+                </a>
               </div>
             )}
           </div>
@@ -574,29 +589,24 @@ export default function Home() {
 
       {/* Main content */}
       <main className="container relative z-10 pb-20">
-        {/* Player header + LP chart hero section */}
         <section className="pt-6 sm:pt-8">
           <PlayerHeader />
         </section>
 
-        {/* LP Chart - the hero */}
         <section className="mt-6">
           <LPChart />
         </section>
 
-        {/* Trading Panel - only visible when logged in */}
         {isAuthenticated && (
           <section className="mt-6">
             <TradingPanel />
           </section>
         )}
 
-        {/* Price → Rank Legend */}
         <section className="mt-6">
           <PriceRankLegend />
         </section>
 
-        {/* Stats grid — now live */}
         <section className="mt-8">
           <StatsGrid />
         </section>
@@ -611,8 +621,8 @@ export default function Home() {
           >
             <SectionHeader
               icon={TrendingUp}
-              title="Win/Loss Streaks"
-              subtitle="Recent match momentum"
+              title={t.sections.winLossStreaks}
+              subtitle={t.sections.recentMomentum}
             />
             <StreakBar />
           </motion.div>
@@ -625,19 +635,17 @@ export default function Home() {
           >
             <SectionHeader
               icon={Swords}
-              title="7-Day Performance"
-              subtitle="Champion win rates this week"
+              title={t.sections.sevenDayPerformance}
+              subtitle={t.sections.championWinRates}
             />
             <RecentPerformance />
           </motion.div>
         </section>
 
-        {/* Champion stats — now live */}
         <section className="mt-8">
           <ChampionPoolSection />
         </section>
 
-        {/* Season history */}
         <section className="mt-8">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -647,14 +655,13 @@ export default function Home() {
           >
             <SectionHeader
               icon={Trophy}
-              title="Season History"
-              subtitle="Past ranked placements"
+              title={t.sections.seasonHistory}
+              subtitle={t.sections.pastRankedPlacements}
             />
             <SeasonHistory />
           </motion.div>
         </section>
 
-        {/* Match history */}
         <section className="mt-8">
           <MatchHistorySection />
         </section>
@@ -662,7 +669,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-16 pt-6 border-t border-border text-center">
           <p className="text-xs text-muted-foreground">
-            Data sourced from{" "}
+            {t.footer.dataSource}{" "}
             <a
               href="https://op.gg"
               target="_blank"
@@ -671,7 +678,7 @@ export default function Home() {
             >
               OP.GG
             </a>{" "}
-            and{" "}
+            &{" "}
             <a
               href="https://developer.riotgames.com"
               target="_blank"
@@ -680,11 +687,10 @@ export default function Home() {
             >
               Riot Games API
             </a>
-            . Not affiliated with Riot Games.
+            . {t.footer.notAffiliated}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            $DORI LP Tracker is not endorsed by Riot Games and does not reflect
-            the views of Riot Games.
+            {t.footer.disclaimer}
           </p>
         </footer>
       </main>

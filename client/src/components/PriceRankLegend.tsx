@@ -7,47 +7,54 @@
  */
 import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { totalLPToPrice, LP_HISTORY } from "@/lib/playerData";
 import { Info } from "lucide-react";
 
 // Tier definitions with price ranges and colors
-const TIERS = [
-  {
-    name: "Platinum",
-    shortName: "Plat",
-    divisions: ["IV", "III", "II", "I"],
-    startPrice: 10,
-    endPrice: 40,
-    color: "#4FA68D",
-    bgColor: "rgba(79, 166, 141, 0.15)",
-    borderColor: "rgba(79, 166, 141, 0.4)",
-  },
-  {
-    name: "Emerald",
-    shortName: "Em",
-    divisions: ["IV", "III", "II", "I"],
-    startPrice: 40,
-    endPrice: 70,
-    color: "#00C805",
-    bgColor: "rgba(0, 200, 5, 0.15)",
-    borderColor: "rgba(0, 200, 5, 0.4)",
-  },
-  {
-    name: "Diamond",
-    shortName: "Dia",
-    divisions: ["IV", "III", "II", "I"],
-    startPrice: 70,
-    endPrice: 100,
-    color: "#B9F2FF",
-    bgColor: "rgba(185, 242, 255, 0.15)",
-    borderColor: "rgba(185, 242, 255, 0.4)",
-  },
-];
+function getTiers(t: any) {
+  return [
+    {
+      name: t.legend.platinum,
+      shortName: t.legend.platShort,
+      divisions: ["IV", "III", "II", "I"],
+      startPrice: 10,
+      endPrice: 40,
+      color: "#4FA68D",
+      bgColor: "rgba(79, 166, 141, 0.15)",
+      borderColor: "rgba(79, 166, 141, 0.4)",
+    },
+    {
+      name: t.legend.emerald,
+      shortName: t.legend.emShort,
+      divisions: ["IV", "III", "II", "I"],
+      startPrice: 40,
+      endPrice: 70,
+      color: "#00C805",
+      bgColor: "rgba(0, 200, 5, 0.15)",
+      borderColor: "rgba(0, 200, 5, 0.4)",
+    },
+    {
+      name: t.legend.diamond,
+      shortName: t.legend.diaShort,
+      divisions: ["IV", "III", "II", "I"],
+      startPrice: 70,
+      endPrice: 100,
+      color: "#B9F2FF",
+      bgColor: "rgba(185, 242, 255, 0.15)",
+      borderColor: "rgba(185, 242, 255, 0.4)",
+    },
+  ];
+}
 
 const MIN_PRICE = 10;
 const MAX_PRICE = 100;
 
 export default function PriceRankLegend() {
+  const { t } = useTranslation();
+
+  const TIERS = useMemo(() => getTiers(t), [t]);
+
   const { data: latestPrice } = trpc.prices.latest.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -66,9 +73,9 @@ export default function PriceRankLegend() {
   // Find which tier the current price is in
   const currentTier = useMemo(() => {
     return TIERS.find(
-      (t) => currentPrice >= t.startPrice && currentPrice < t.endPrice
+      (tier) => currentPrice >= tier.startPrice && currentPrice < tier.endPrice
     ) || TIERS[TIERS.length - 1];
-  }, [currentPrice]);
+  }, [currentPrice, TIERS]);
 
   // Calculate which division within the tier
   const currentDivision = useMemo(() => {
@@ -89,10 +96,10 @@ export default function PriceRankLegend() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-              Price → Rank Legend
+              {t.legend.title}
             </h3>
             <p className="text-xs text-muted-foreground">
-              How $DORI stock price maps to League rank
+              {t.legend.subtitle}
             </p>
           </div>
         </div>
@@ -111,7 +118,7 @@ export default function PriceRankLegend() {
       <div className="relative">
         {/* Tier segments */}
         <div className="flex rounded-lg overflow-hidden h-10 border border-border">
-          {TIERS.map((tier) => {
+          {TIERS.map((tier, idx) => {
             const widthPct =
               ((tier.endPrice - tier.startPrice) / (MAX_PRICE - MIN_PRICE)) *
               100;
@@ -123,7 +130,7 @@ export default function PriceRankLegend() {
                   width: `${widthPct}%`,
                   backgroundColor: tier.bgColor,
                   borderRight:
-                    tier !== TIERS[TIERS.length - 1]
+                    idx !== TIERS.length - 1
                       ? `1px solid ${tier.borderColor}`
                       : "none",
                 }}
@@ -265,7 +272,7 @@ export default function PriceRankLegend() {
 
       {/* Formula note */}
       <p className="text-[10px] text-muted-foreground mt-3 text-center font-[var(--font-mono)]">
-        Linear scale: Plat 4 (0 LP) = $10 → Diamond 1 (100 LP) = $100
+        {t.legend.formula}
       </p>
     </div>
   );

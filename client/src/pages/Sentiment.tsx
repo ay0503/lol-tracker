@@ -1,32 +1,37 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
 import { ArrowLeft, MessageCircle, TrendingUp, TrendingDown, Minus, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
-const SENTIMENT_CONFIG = {
-  bullish: { icon: TrendingUp, color: "#00C805", label: "Bullish", emoji: "🐂" },
-  bearish: { icon: TrendingDown, color: "#FF5252", label: "Bearish", emoji: "🐻" },
-  neutral: { icon: Minus, color: "#888", label: "Neutral", emoji: "😐" },
-};
+function getSentimentConfig(t: any) {
+  return {
+    bullish: { icon: TrendingUp, color: "#00C805", label: t.sentiment.bullish, emoji: "\uD83D\uDC02" },
+    bearish: { icon: TrendingDown, color: "#FF5252", label: t.sentiment.bearish, emoji: "\uD83D\uDC3B" },
+    neutral: { icon: Minus, color: "#888", label: t.sentiment.neutral, emoji: "\uD83D\uDE10" },
+  };
+}
 
-function formatTimeAgo(date: Date | string) {
+function formatTimeAgo(date: Date | string, t: any) {
   const now = new Date();
   const d = new Date(date);
   const diff = now.getTime() - d.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t.common.justNow;
+  if (mins < 60) return `${mins}${t.common.mAgo}`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}${t.common.hAgo}`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return `${days}${t.common.dAgo}`;
 }
 
 export default function Sentiment() {
+  const { t } = useTranslation();
+  const SENTIMENT_CONFIG = getSentimentConfig(t);
   const { user, isAuthenticated } = useAuth();
   const [content, setContent] = useState("");
   const [sentiment, setSentiment] = useState<"bullish" | "bearish" | "neutral">("bullish");
@@ -37,7 +42,7 @@ export default function Sentiment() {
     onSuccess: () => {
       setContent("");
       refetch();
-      toast.success("Comment posted!");
+      toast.success(t.sentiment.commentPosted);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -47,7 +52,6 @@ export default function Sentiment() {
     postComment.mutate({ content: content.trim(), ticker, sentiment });
   };
 
-  // Calculate sentiment breakdown
   const sentimentCounts = { bullish: 0, bearish: 0, neutral: 0 };
   comments?.forEach((c) => {
     if (c.sentiment in sentimentCounts) sentimentCounts[c.sentiment as keyof typeof sentimentCounts]++;
@@ -58,52 +62,51 @@ export default function Sentiment() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
-              Back
+              {t.common.back}
             </Link>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">Sentiment</span>
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">{t.nav.sentiment}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Leaderboard</Link>
-            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">News</Link>
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ledger</Link>
+            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.leaderboard}</Link>
+            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.news}</Link>
+            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
           </div>
         </div>
       </nav>
 
       <main className="container py-6 max-w-3xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">Market Sentiment</h1>
-          <p className="text-sm text-muted-foreground mt-1">Share your takes on $DORI and its ETFs. Are you bullish or bearish?</p>
+          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.sentiment.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t.sentiment.subtitle}</p>
         </div>
 
         {/* Sentiment Gauge */}
         <div className="bg-card border border-border rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Sentiment Gauge</span>
-            <span className="text-xs text-muted-foreground">{totalComments} opinions</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{t.sentiment.gauge}</span>
+            <span className="text-xs text-muted-foreground">{totalComments} {t.sentiment.opinions}</span>
           </div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-bold" style={{ color: "#00C805" }}>🐂 {bullishPct.toFixed(0)}%</span>
+            <span className="text-xs font-bold" style={{ color: "#00C805" }}>{"\uD83D\uDC02"} {bullishPct.toFixed(0)}%</span>
             <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden flex">
               <div className="h-full bg-[#00C805] transition-all" style={{ width: `${bullishPct}%` }} />
               <div className="h-full bg-[#FF5252] transition-all" style={{ width: `${bearishPct}%` }} />
             </div>
-            <span className="text-xs font-bold" style={{ color: "#FF5252" }}>{bearishPct.toFixed(0)}% 🐻</span>
+            <span className="text-xs font-bold" style={{ color: "#FF5252" }}>{bearishPct.toFixed(0)}% {"\uD83D\uDC3B"}</span>
           </div>
           <div className="flex justify-center gap-4 text-xs text-muted-foreground">
-            <span>Bullish: {sentimentCounts.bullish}</span>
-            <span>Neutral: {sentimentCounts.neutral}</span>
-            <span>Bearish: {sentimentCounts.bearish}</span>
+            <span>{t.sentiment.bullish}: {sentimentCounts.bullish}</span>
+            <span>{t.sentiment.neutral}: {sentimentCounts.neutral}</span>
+            <span>{t.sentiment.bearish}: {sentimentCounts.bearish}</span>
           </div>
         </div>
 
@@ -111,7 +114,7 @@ export default function Sentiment() {
         {isAuthenticated ? (
           <div className="bg-card border border-border rounded-xl p-4 mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-muted-foreground">Posting as</span>
+              <span className="text-xs text-muted-foreground">{t.sentiment.postingAs}</span>
               <span className="text-xs font-bold text-foreground">{user?.name || "Anonymous"}</span>
             </div>
             <div className="flex gap-2 mb-3">
@@ -157,7 +160,7 @@ export default function Sentiment() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handlePost()}
-                placeholder="What's your take on $DORI? (e.g., 'Going long, he's on a win streak')"
+                placeholder={t.sentiment.placeholder}
                 className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 maxLength={500}
               />
@@ -172,8 +175,8 @@ export default function Sentiment() {
           </div>
         ) : (
           <div className="bg-card border border-border rounded-xl p-4 mb-6 text-center">
-            <p className="text-sm text-muted-foreground mb-2">Log in to share your market sentiment</p>
-            <a href={getLoginUrl()} className="text-sm text-primary hover:underline font-bold">Sign In</a>
+            <p className="text-sm text-muted-foreground mb-2">{t.sentiment.loginToPost}</p>
+            <a href={getLoginUrl()} className="text-sm text-primary hover:underline font-bold">{t.nav.signIn}</a>
           </div>
         )}
 
@@ -187,7 +190,7 @@ export default function Sentiment() {
         ) : !comments || comments.length === 0 ? (
           <div className="text-center py-16">
             <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-muted-foreground">No comments yet. Be the first to share your take!</p>
+            <p className="text-muted-foreground">{t.sentiment.noComments}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -224,7 +227,7 @@ export default function Sentiment() {
                           {config.emoji} {config.label}
                         </span>
                         <span className="text-xs text-muted-foreground ml-auto">
-                          {formatTimeAgo(comment.createdAt)}
+                          {formatTimeAgo(comment.createdAt, t)}
                         </span>
                       </div>
                       <p className="text-sm text-foreground/90">{comment.content}</p>

@@ -5,10 +5,13 @@
  */
 import { RECENT_7_DAYS } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
 export default function RecentPerformance() {
+  const { t } = useTranslation();
+
   const { data: livePerformance } = trpc.stats.recentPerformance.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -28,7 +31,7 @@ export default function RecentPerformance() {
             <Activity className="w-2.5 h-2.5" />
             LIVE
           </span>
-          <span className="text-[10px] text-muted-foreground">Auto-updated from Riot API</span>
+          <span className="text-[10px] text-muted-foreground">{t.common.autoUpdated}</span>
         </div>
       )}
       <div className="space-y-2">
@@ -64,7 +67,7 @@ export default function RecentPerformance() {
                     {champ.winRate}%
                   </span>
                 </div>
-                <div className="w-full h-1 bg-[#1a1d23] rounded-full overflow-hidden flex">
+                <div className="w-full h-1 bg-secondary rounded-full overflow-hidden flex">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(champ.wins / total) * 100}%` }}
@@ -85,7 +88,7 @@ export default function RecentPerformance() {
                     {champ.wins}W {champ.losses}L
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {total} games
+                    {total} {t.performance.games}
                   </span>
                 </div>
               </div>
@@ -94,7 +97,7 @@ export default function RecentPerformance() {
         })}
         {champData.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-4">
-            No matches in the last 7 days
+            {t.performance.noData}
           </p>
         )}
       </div>

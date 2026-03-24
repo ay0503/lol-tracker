@@ -1,265 +1,264 @@
-/*
- * TradingPanel: Full trading interface with Market Orders, Limit Orders,
- * Stop-Losses, Short Selling, and Market Status.
- * Now wired to live backend prices via trpc.prices.etfPrices and trpc.prices.latest.
- */
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  DollarSign, Clock, ChevronDown, Target, ShieldAlert, ArrowDownUp,
-  XCircle, AlertTriangle, Repeat, Gift,
-} from "lucide-react";
 import { toast } from "sonner";
-import { TICKERS } from "@/lib/playerData";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/contexts/LanguageContext";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  ChevronDown,
+  Clock,
+  Target,
+  ShieldAlert,
+  AlertTriangle,
+  XCircle,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Repeat,
+  Gift,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type TickerSymbol = (typeof TICKERS)[number]["symbol"];
+const TICKERS = [
+  { symbol: "DORI", color: "#00C805", leverage: 1 },
+  { symbol: "DDRI", color: "#FFD54F", leverage: 2 },
+  { symbol: "TDRI", color: "#FF6D00", leverage: 3 },
+  { symbol: "SDRI", color: "#FF5252", leverage: -2 },
+  { symbol: "XDRI", color: "#E040FB", leverage: -3 },
+];
+
+type TickerSymbol = "DORI" | "DDRI" | "TDRI" | "SDRI" | "XDRI";
 type OrderTab = "market" | "limit" | "stop_loss" | "short";
 
-/** Threshold above which we show a confirmation dialog */
 const CONFIRM_THRESHOLD = 50;
 
 interface PendingConfirmation {
-  action: () => void;
-  type: string; // "Buy" | "Sell" | "Short" | "Cover" | "Limit Buy" | "Limit Sell" | "Stop-Loss"
+  type: string;
   ticker: string;
   amount: string;
   shares: string;
   price: string;
+  action: () => void;
 }
 
-/** Get the icon and color for each trade type */
-function getTradeTypeStyle(type: string) {
+function getTradeTypeStyle(type: string, t: any) {
   switch (type) {
     case "buy":
-      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: "Buy" };
+      return { icon: ArrowUpCircle, color: "#00C805", label: t.trading.bought };
     case "sell":
-      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: "Sell" };
+      return { icon: ArrowDownCircle, color: "#FF5252", label: t.trading.sold };
     case "short":
-      return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: "Short" };
+      return { icon: TrendingDown, color: "#E040FB", label: t.trading.shorted };
     case "cover":
-      return { icon: Repeat, color: "#3b82f6", bg: "bg-blue-500/15", label: "Cover" };
+      return { icon: Repeat, color: "#00C805", label: t.trading.covered };
     case "dividend":
-      return { icon: Gift, color: "#facc15", bg: "bg-yellow-500/15", label: "Dividend" };
+      return { icon: Gift, color: "#FFD54F", label: t.trading.dividends };
     default:
-      return { icon: DollarSign, color: "#fff", bg: "bg-secondary", label: type };
+      return { icon: ArrowUpCircle, color: "#888", label: type };
   }
 }
 
 export default function TradingPanel() {
+  const { t } = useTranslation();
   const [selectedTicker, setSelectedTicker] = useState<TickerSymbol>("DORI");
-  const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [orderTab, setOrderTab] = useState<OrderTab>("market");
+  const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
+  const [showTickerDropdown, setShowTickerDropdown] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
-  const [showTickerDropdown, setShowTickerDropdown] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmation | null>(null);
 
-  // ─── Live prices from backend ───
-  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-  });
+  const ORDER_TABS: { id: OrderTab; label: string; icon: any }[] = [
+    { id: "market", label: t.trading.market, icon: TrendingUp },
+    { id: "limit", label: t.trading.limit, icon: Target },
+    { id: "stop_loss", label: t.trading.stopLoss, icon: ShieldAlert },
+    { id: "short", label: t.trading.short, icon: TrendingDown },
+  ];
 
-  // Get live price for a ticker
-  const getLivePrice = (ticker: string): number => {
-    if (!etfPrices) return 0;
-    const found = etfPrices.find(e => e.ticker === ticker);
-    return found ? found.price : 0;
-  };
-
-  const tickerPrice = useMemo(() => getLivePrice(selectedTicker), [etfPrices, selectedTicker]);
-  const tickerInfo = TICKERS.find((t) => t.symbol === selectedTicker)!;
+  // Live ETF prices from backend
+  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { refetchInterval: 60000 });
+  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { refetchInterval: 60000 });
+  const { data: tradeHistory } = trpc.trading.history.useQuery(undefined, { refetchInterval: 30000 });
+  const { data: pendingOrders } = trpc.trading.orders.useQuery(undefined, { refetchInterval: 15000 });
+  const { data: marketStatus } = trpc.market.status.useQuery(undefined, { refetchInterval: 60000 });
 
   const utils = trpc.useUtils();
-  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, {
-    refetchInterval: 60_000,
-  });
-  const { data: tradeHistory } = trpc.trading.history.useQuery({ limit: 10 });
-  const { data: pendingOrders } = trpc.trading.orders.useQuery();
-  const { data: marketStatus } = trpc.market.status.useQuery(undefined, { refetchInterval: 60000 });
 
   const tradeMutation = trpc.trading.trade.useMutation({
     onSuccess: (data) => {
-      toast.success(`${tradeType === "buy" ? "Bought" : "Sold"} shares of $${selectedTicker}`, {
-        description: `Balance: $${data.cashBalance.toFixed(2)}`,
-      });
+      toast.success(`${tradeType === "buy" ? t.trading.bought : t.trading.sold} ${shares.toFixed(2)} ${t.trading.sharesLabel} $${selectedTicker}`);
       setAmount("");
       utils.trading.portfolio.invalidate();
       utils.trading.history.invalidate();
-      utils.trading.orders.invalidate();
-      utils.ledger.all.invalidate();
-      utils.leaderboard.rankings.invalidate();
     },
-    onError: (err) => toast.error(err.message || "Trade failed"),
+    onError: (err) => toast.error(err.message),
   });
 
   const shortMutation = trpc.trading.short.useMutation({
     onSuccess: (data) => {
-      toast.success(`Shorted ${data.shortShares.toFixed(2)} shares of $${selectedTicker}`, {
-        description: `Balance: $${data.cashBalance.toFixed(2)}`,
-      });
+      toast.success(`${t.trading.shorted} ${shares.toFixed(2)} ${t.trading.sharesLabel} $${selectedTicker}`);
       setAmount("");
       utils.trading.portfolio.invalidate();
       utils.trading.history.invalidate();
-      utils.ledger.all.invalidate();
-      utils.leaderboard.rankings.invalidate();
     },
-    onError: (err) => toast.error(err.message || "Short failed"),
+    onError: (err) => toast.error(err.message),
   });
 
   const coverMutation = trpc.trading.cover.useMutation({
     onSuccess: (data) => {
-      toast.success(`Covered short on $${selectedTicker}`, {
-        description: `Balance: $${data.cashBalance.toFixed(2)}`,
-      });
+      toast.success(`${t.trading.covered} ${shares.toFixed(2)} ${t.trading.sharesLabel} $${selectedTicker}`);
       setAmount("");
       utils.trading.portfolio.invalidate();
       utils.trading.history.invalidate();
-      utils.ledger.all.invalidate();
-      utils.leaderboard.rankings.invalidate();
     },
-    onError: (err) => toast.error(err.message || "Cover failed"),
+    onError: (err) => toast.error(err.message),
   });
 
   const createOrderMutation = trpc.trading.createOrder.useMutation({
     onSuccess: () => {
-      toast.success("Order placed!");
+      toast.success(t.trading.orderPlaced);
       setAmount("");
       setTargetPrice("");
       utils.trading.orders.invalidate();
     },
-    onError: (err) => toast.error(err.message || "Order failed"),
+    onError: (err) => toast.error(err.message),
   });
 
   const cancelOrderMutation = trpc.trading.cancelOrder.useMutation({
     onSuccess: () => {
-      toast.success("Order cancelled");
+      toast.success(t.trading.orderCancelled);
       utils.trading.orders.invalidate();
     },
-    onError: (err) => toast.error(err.message || "Cancel failed"),
+    onError: (err) => toast.error(err.message),
   });
 
-  const shares = useMemo(() => {
-    const val = parseFloat(amount);
-    if (isNaN(val) || val <= 0 || tickerPrice <= 0) return 0;
-    return val / tickerPrice;
-  }, [amount, tickerPrice]);
+  const tickerInfo = useMemo(() => {
+    const found = TICKERS.find((t) => t.symbol === selectedTicker);
+    const tickerKey = selectedTicker.toLowerCase() as keyof typeof t.tickers;
+    return {
+      color: found?.color ?? "#fff",
+      description: t.tickers[tickerKey] || selectedTicker,
+    };
+  }, [selectedTicker, t]);
+
+  const getLivePrice = (symbol: string): number => {
+    if (!etfPrices) return 0;
+    const key = symbol.toLowerCase() as keyof typeof etfPrices;
+    return (etfPrices[key] as number) || 0;
+  };
+
+  const tickerPrice = getLivePrice(selectedTicker);
+  const shares = tickerPrice > 0 && parseFloat(amount) > 0 ? parseFloat(amount) / tickerPrice : 0;
+  const isMarketOpen = marketStatus?.isOpen ?? true;
 
   const currentHolding = useMemo(() => {
-    if (!portfolio) return { shares: 0, avgCostBasis: 0, shortShares: 0, shortAvgPrice: 0 };
-    const h = portfolio.holdings.find((h) => h.ticker === selectedTicker);
-    return h ?? { shares: 0, avgCostBasis: 0, shortShares: 0, shortAvgPrice: 0 };
+    if (!portfolio?.holdings) return { shares: 0, avgCostBasis: 0, shortShares: 0, shortAvgPrice: 0 };
+    const h = portfolio.holdings.find((h: any) => h.ticker === selectedTicker);
+    return h || { shares: 0, avgCostBasis: 0, shortShares: 0, shortAvgPrice: 0 };
   }, [portfolio, selectedTicker]);
 
   const totalValue = useMemo(() => {
-    if (!portfolio || !etfPrices) return 0;
-    let holdingsValue = 0;
-    for (const h of portfolio.holdings) {
+    if (!portfolio?.holdings || !etfPrices) return portfolio?.cashBalance ?? 200;
+    const holdingsVal = portfolio.holdings.reduce((sum: number, h: any) => {
       const price = getLivePrice(h.ticker);
-      holdingsValue += h.shares * price;
-      holdingsValue += h.shortShares * (h.shortAvgPrice - price); // short P&L
-    }
-    return portfolio.cashBalance + holdingsValue;
+      return sum + h.shares * price;
+    }, 0);
+    return (portfolio.cashBalance || 0) + holdingsVal;
   }, [portfolio, etfPrices]);
 
-  const pnl = useMemo(() => totalValue - 200, [totalValue]);
-  const isMarketOpen = marketStatus?.isOpen ?? true;
+  const pnl = totalValue - 200;
 
-  /** Wraps a trade action with confirmation if amount >= threshold */
-  const confirmOrExecute = (
-    action: () => void,
-    type: string,
-    ticker: string,
-    dollarAmount: number,
-    shareCount: number,
-    price: number,
-  ) => {
-    if (dollarAmount >= CONFIRM_THRESHOLD) {
+  const pendingOrdersList = useMemo(() => {
+    if (!pendingOrders) return [];
+    return pendingOrders.filter((o: any) => o.status === "pending");
+  }, [pendingOrders]);
+
+  // Confirmation-aware trade handlers
+  const executeMarketTrade = () => {
+    tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice });
+  };
+
+  const executeShort = () => {
+    shortMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+  };
+
+  const executeCover = () => {
+    coverMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+  };
+
+  const maybeConfirm = (type: string, action: () => void) => {
+    const amt = parseFloat(amount);
+    if (isNaN(amt) || amt <= 0) {
+      toast.error(t.trading.validAmount);
+      return;
+    }
+    if (tickerPrice <= 0) {
+      toast.error(t.trading.priceNotAvailable);
+      return;
+    }
+    if (amt < 0.01) {
+      toast.error(t.trading.tooSmall);
+      return;
+    }
+    if (amt >= CONFIRM_THRESHOLD) {
       setPendingConfirm({
-        action,
         type,
-        ticker,
-        amount: `$${dollarAmount.toFixed(2)}`,
-        shares: shareCount.toFixed(4),
-        price: `$${price.toFixed(2)}`,
+        ticker: `$${selectedTicker}`,
+        amount: `$${amt.toFixed(2)}`,
+        shares: `${(amt / tickerPrice).toFixed(4)}`,
+        price: `$${tickerPrice.toFixed(2)}`,
+        action,
       });
     } else {
       action();
     }
   };
 
-  const handleMarketTrade = () => {
-    const val = parseFloat(amount);
-    if (isNaN(val) || val <= 0) { toast.error("Enter a valid positive dollar amount"); return; }
-    if (tickerPrice <= 0) { toast.error("Price data not available yet"); return; }
-    if (shares <= 0) { toast.error("Trade amount too small"); return; }
-    const execute = () => tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice });
-    confirmOrExecute(execute, tradeType === "buy" ? "Buy" : "Sell", selectedTicker, val, shares, tickerPrice);
-  };
-
-  const handleShort = () => {
-    const val = parseFloat(amount);
-    if (isNaN(val) || val <= 0) { toast.error("Enter a valid positive dollar amount"); return; }
-    if (tickerPrice <= 0) { toast.error("Price data not available yet"); return; }
-    if (shares <= 0) { toast.error("Trade amount too small"); return; }
-    const execute = () => shortMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
-    confirmOrExecute(execute, "Short", selectedTicker, val, shares, tickerPrice);
-  };
-
-  const handleCover = () => {
-    const val = parseFloat(amount);
-    if (isNaN(val) || val <= 0) { toast.error("Enter a valid positive dollar amount"); return; }
-    if (tickerPrice <= 0) { toast.error("Price data not available yet"); return; }
-    if (shares <= 0) { toast.error("Trade amount too small"); return; }
-    const execute = () => coverMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
-    confirmOrExecute(execute, "Cover", selectedTicker, val, shares, tickerPrice);
-  };
+  const handleMarketTrade = () => maybeConfirm(tradeType === "buy" ? t.trading.buy : t.trading.sell, executeMarketTrade);
+  const handleShort = () => maybeConfirm(t.trading.shortSell, executeShort);
+  const handleCover = () => maybeConfirm(t.trading.cover, executeCover);
 
   const handleLimitOrder = () => {
-    const val = parseFloat(amount);
-    const tp = parseFloat(targetPrice);
-    if (isNaN(val) || val <= 0) { toast.error("Enter a valid amount"); return; }
-    if (isNaN(tp) || tp <= 0) { toast.error("Enter a valid target price"); return; }
-    const orderShares = val / tp;
-    const execute = () => createOrderMutation.mutate({
+    const amt = parseFloat(amount);
+    const target = parseFloat(targetPrice);
+    if (isNaN(amt) || amt <= 0) { toast.error(t.trading.enterValidAmount); return; }
+    if (isNaN(target) || target <= 0) { toast.error(t.trading.enterValidTarget); return; }
+    const orderShares = target > 0 ? amt / target : 0;
+    createOrderMutation.mutate({
       ticker: selectedTicker,
       orderType: tradeType === "buy" ? "limit_buy" : "limit_sell",
       shares: orderShares,
-      targetPrice: tp,
+      targetPrice: target,
     });
-    confirmOrExecute(execute, tradeType === "buy" ? "Limit Buy" : "Limit Sell", selectedTicker, val, orderShares, tp);
   };
 
   const handleStopLoss = () => {
-    const val = parseFloat(amount);
-    const tp = parseFloat(targetPrice);
-    if (isNaN(val) || val <= 0) { toast.error("Enter a valid amount"); return; }
-    if (isNaN(tp) || tp <= 0) { toast.error("Enter a valid stop price"); return; }
-    const orderShares = val / tp;
-    const execute = () => createOrderMutation.mutate({
-      ticker: selectedTicker, orderType: "stop_loss", shares: orderShares, targetPrice: tp,
+    const amt = parseFloat(amount);
+    const target = parseFloat(targetPrice);
+    if (isNaN(amt) || amt <= 0) { toast.error(t.trading.enterValidAmount); return; }
+    if (isNaN(target) || target <= 0) { toast.error(t.trading.enterValidStop); return; }
+    const stopShares = target > 0 ? amt / target : 0;
+    createOrderMutation.mutate({
+      ticker: selectedTicker,
+      orderType: "stop_loss",
+      shares: stopShares,
+      targetPrice: target,
     });
-    confirmOrExecute(execute, "Stop-Loss", selectedTicker, val, orderShares, tp);
   };
 
-  const ORDER_TABS: { id: OrderTab; label: string; icon: any }[] = [
-    { id: "market", label: "Market", icon: DollarSign },
-    { id: "limit", label: "Limit", icon: Target },
-    { id: "stop_loss", label: "Stop-Loss", icon: ShieldAlert },
-    { id: "short", label: "Short", icon: ArrowDownUp },
-  ];
-
-  const pendingOrdersList = pendingOrders?.filter((o) => o.status === "pending") ?? [];
-
-  // Price loading state
   const priceLoading = !etfPrices;
 
   return (
@@ -273,17 +272,16 @@ export default function TradingPanel() {
       {/* Market Status + Portfolio Summary Bar */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
         <div className="flex items-center gap-4 flex-wrap">
-          {/* Market Status */}
           <div className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
             <span className={`text-[10px] font-bold uppercase tracking-wider ${isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-              {isMarketOpen ? "Market Open" : "Market Closed"}
+              {isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
             </span>
           </div>
           <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
             <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Cash</span>
+            <span className="text-xs text-muted-foreground">{t.trading.cash}</span>
             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">
               ${portfolio ? portfolio.cashBalance.toFixed(2) : "200.00"}
             </span>
@@ -291,7 +289,7 @@ export default function TradingPanel() {
           <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
             <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Portfolio</span>
+            <span className="text-xs text-muted-foreground">{t.trading.portfolio}</span>
             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">
               ${totalValue.toFixed(2)}
             </span>
@@ -299,7 +297,7 @@ export default function TradingPanel() {
           <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
             {pnl >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-[#00C805]" /> : <TrendingDown className="w-3.5 h-3.5 text-[#FF5252]" />}
-            <span className="text-xs text-muted-foreground">P&L</span>
+            <span className="text-xs text-muted-foreground">{t.trading.pnl}</span>
             <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: pnl >= 0 ? "#00C805" : "#FF5252" }}>
               {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
             </span>
@@ -308,7 +306,7 @@ export default function TradingPanel() {
             <>
               <div className="w-px h-4 bg-border" />
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Dividends</span>
+                <span className="text-xs text-muted-foreground">{t.trading.dividends}</span>
                 <span className="text-xs font-bold text-[#00C805] font-[var(--font-mono)]">
                   +${portfolio.totalDividends.toFixed(2)}
                 </span>
@@ -344,21 +342,20 @@ export default function TradingPanel() {
         {!isMarketOpen && orderTab === "market" && (
           <div className="flex items-center gap-2 bg-[#FF5252]/10 border border-[#FF5252]/30 rounded-lg px-3 py-2 mb-4">
             <AlertTriangle className="w-4 h-4 text-[#FF5252]" />
-            <p className="text-xs text-[#FF5252]">Market is closed. {marketStatus?.reason || "Limit orders and stop-losses can still be placed."}</p>
+            <p className="text-xs text-[#FF5252]">{t.trading.marketClosed}. {marketStatus?.reason || ""}</p>
           </div>
         )}
 
         {priceLoading && (
           <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 mb-4">
             <AlertTriangle className="w-4 h-4 text-yellow-500" />
-            <p className="text-xs text-yellow-500">Loading live prices...</p>
+            <p className="text-xs text-yellow-500">{t.trading.loadingPrices}</p>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Left: Ticker selector + Price */}
           <div>
-            {/* Ticker Selector */}
             <div className="relative mb-4">
               <button
                 onClick={() => setShowTickerDropdown(!showTickerDropdown)}
@@ -381,18 +378,19 @@ export default function TradingPanel() {
                     exit={{ opacity: 0, y: -5 }}
                     className="absolute top-full left-0 right-0 mt-1 z-20 bg-card border border-border rounded-lg shadow-xl overflow-hidden"
                   >
-                    {TICKERS.map((t) => {
-                      const tPrice = getLivePrice(t.symbol);
+                    {TICKERS.map((tk) => {
+                      const tPrice = getLivePrice(tk.symbol);
+                      const tkKey = tk.symbol.toLowerCase() as keyof typeof t.tickers;
                       return (
                         <button
-                          key={t.symbol}
-                          onClick={() => { setSelectedTicker(t.symbol as TickerSymbol); setShowTickerDropdown(false); }}
-                          className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-secondary/50 transition-colors ${selectedTicker === t.symbol ? "bg-secondary/30" : ""}`}
+                          key={tk.symbol}
+                          onClick={() => { setSelectedTicker(tk.symbol as TickerSymbol); setShowTickerDropdown(false); }}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-secondary/50 transition-colors ${selectedTicker === tk.symbol ? "bg-secondary/30" : ""}`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color }} />
-                            <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">${t.symbol}</span>
-                            <span className="text-[10px] text-muted-foreground">{t.description}</span>
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tk.color }} />
+                            <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">${tk.symbol}</span>
+                            <span className="text-[10px] text-muted-foreground">{t.tickers[tkKey] || tk.symbol}</span>
                           </div>
                           <span className="text-xs text-foreground font-[var(--font-mono)]">
                             {tPrice > 0 ? `$${tPrice.toFixed(2)}` : "..."}
@@ -407,46 +405,46 @@ export default function TradingPanel() {
 
             {/* Current Price Display */}
             <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Current Price</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t.trading.currentPrice}</p>
               <p className="text-2xl font-bold text-foreground font-[var(--font-mono)]">
-                {tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "Loading..."}
+                {tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : t.common.loading}
               </p>
               <div className="mt-1 space-y-0.5">
                 {currentHolding.shares > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Long: <span className="text-foreground font-semibold">{currentHolding.shares.toFixed(2)}</span> shares (avg ${currentHolding.avgCostBasis.toFixed(2)})
+                    {t.trading.long}: <span className="text-foreground font-semibold">{currentHolding.shares.toFixed(2)}</span> {t.trading.sharesLabel} ({t.trading.avg} ${currentHolding.avgCostBasis.toFixed(2)})
                   </p>
                 )}
                 {currentHolding.shortShares > 0 && (
                   <p className="text-xs text-[#FF5252]">
-                    Short: <span className="font-semibold">{currentHolding.shortShares.toFixed(2)}</span> shares (avg ${currentHolding.shortAvgPrice.toFixed(2)})
+                    {t.trading.short}: <span className="font-semibold">{currentHolding.shortShares.toFixed(2)}</span> {t.trading.sharesLabel} ({t.trading.avg} ${currentHolding.shortAvgPrice.toFixed(2)})
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Right: Trade Form (changes based on tab) */}
+          {/* Right: Trade Form */}
           <div>
             {/* Market Order Tab */}
             {orderTab === "market" && (
               <>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Buy</button>
-                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>Sell</button>
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.buy}</button>
+                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.sell}</button>
                 </div>
                 <div className="relative mb-3">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder="Amount in USD" className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={t.trading.amountUsd} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
-                {shares > 0 && <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">≈ {shares.toFixed(4)} shares @ ${tickerPrice.toFixed(2)}</p>}
+                {shares > 0 && <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">≈ {shares.toFixed(4)} {t.trading.sharesLabel} @ ${tickerPrice.toFixed(2)}</p>}
                 <div className="flex gap-2 mb-4">
                   {["10", "25", "50", "100"].map((val) => (
                     <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
                   ))}
                 </div>
                 <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || shares <= 0 || !isMarketOpen || priceLoading} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
-                  {tradeMutation.isPending ? "Processing..." : `${tradeType === "buy" ? "Buy" : "Sell"} $${selectedTicker}`}
+                  {tradeMutation.isPending ? t.trading.processing : `${tradeType === "buy" ? t.trading.buyTicker : t.trading.sellTicker} $${selectedTicker}`}
                 </button>
               </>
             )}
@@ -455,23 +453,23 @@ export default function TradingPanel() {
             {orderTab === "limit" && (
               <>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Limit Buy</button>
-                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>Limit Sell</button>
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.limitBuy}</button>
+                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.limitSell}</button>
                 </div>
                 <div className="relative mb-3">
                   <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={targetPrice} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setTargetPrice(val); }} placeholder={tradeType === "buy" ? "Buy when price drops to..." : "Sell when price rises to..."} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step="0.01" value={targetPrice} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setTargetPrice(val); }} placeholder={tradeType === "buy" ? t.trading.buyWhenDrops : t.trading.sellWhenRises} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
                 <div className="relative mb-3">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder="Amount in USD" className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={t.trading.amountUsd} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
                 <p className="text-xs text-muted-foreground mb-4">
-                  {tradeType === "buy" ? "Order executes when price drops to target. Current: " : "Order executes when price rises to target. Current: "}
+                  {tradeType === "buy" ? t.trading.limitBuyExec : t.trading.limitSellExec}
                   <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
                 </p>
                 <button onClick={handleLimitOrder} disabled={createOrderMutation.isPending || !amount || !targetPrice} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
-                  {createOrderMutation.isPending ? "Placing..." : `Place Limit ${tradeType === "buy" ? "Buy" : "Sell"}`}
+                  {createOrderMutation.isPending ? t.trading.placing : `${tradeType === "buy" ? t.trading.placeLimitBuy : t.trading.placeLimitSell}`}
                 </button>
               </>
             )}
@@ -480,23 +478,23 @@ export default function TradingPanel() {
             {orderTab === "stop_loss" && (
               <>
                 <div className="bg-[#FF5252]/10 border border-[#FF5252]/20 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-[#FF5252] font-bold mb-1">Stop-Loss Order</p>
-                  <p className="text-[10px] text-muted-foreground">Automatically sells your shares if the price drops to your stop price, limiting your losses.</p>
+                  <p className="text-xs text-[#FF5252] font-bold mb-1">{t.trading.stopLossTitle}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.trading.stopLossDesc}</p>
                 </div>
                 <div className="relative mb-3">
                   <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF5252]" />
-                  <input type="number" min="0" step="0.01" value={targetPrice} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setTargetPrice(val); }} placeholder="Stop price (sell if drops below)" className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-[#FF5252]/30 text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-[#FF5252] placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step="0.01" value={targetPrice} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setTargetPrice(val); }} placeholder={t.trading.stopPrice} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-[#FF5252]/30 text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-[#FF5252] placeholder:text-muted-foreground/50" />
                 </div>
                 <div className="relative mb-3">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder="Amount in USD to protect" className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={t.trading.amountToProtect} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Current price: <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
-                  {currentHolding.shares > 0 && <> · You hold <span className="text-foreground">{currentHolding.shares.toFixed(2)}</span> shares</>}
+                  {t.trading.currentPrice}: <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
+                  {currentHolding.shares > 0 && <> · {t.trading.youHold} <span className="text-foreground">{currentHolding.shares.toFixed(2)}</span> {t.trading.sharesLabel}</>}
                 </p>
                 <button onClick={handleStopLoss} disabled={createOrderMutation.isPending || !amount || !targetPrice} className="w-full py-3 rounded-lg text-sm font-bold bg-[#FF5252] text-white hover:bg-[#e04848] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                  {createOrderMutation.isPending ? "Placing..." : "Set Stop-Loss"}
+                  {createOrderMutation.isPending ? t.trading.placing : t.trading.setStopLoss}
                 </button>
               </>
             )}
@@ -505,18 +503,18 @@ export default function TradingPanel() {
             {orderTab === "short" && (
               <>
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-purple-400 font-bold mb-1">Short Selling</p>
-                  <p className="text-[10px] text-muted-foreground">Borrow shares to sell now and buy back later. Profit if price drops, lose if it rises. Collateral required.</p>
+                  <p className="text-xs text-purple-400 font-bold mb-1">{t.trading.shortSellingTitle}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.trading.shortSellingDesc}</p>
                 </div>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
-                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground"}`}>Short Sell</button>
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Cover (Buy Back)</button>
+                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.shortSell}</button>
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.coverBuyBack}</button>
                 </div>
                 <div className="relative mb-3">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder="Amount in USD" className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={t.trading.amountUsd} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
-                {shares > 0 && <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">≈ {shares.toFixed(4)} shares @ ${tickerPrice.toFixed(2)}</p>}
+                {shares > 0 && <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">≈ {shares.toFixed(4)} {t.trading.sharesLabel} @ ${tickerPrice.toFixed(2)}</p>}
                 <div className="flex gap-2 mb-4">
                   {["10", "25", "50", "100"].map((val) => (
                     <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
@@ -527,7 +525,7 @@ export default function TradingPanel() {
                   disabled={(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) || shares <= 0 || !isMarketOpen || priceLoading}
                   className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "sell" ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]"}`}
                 >
-                  {(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) ? "Processing..." : tradeType === "sell" ? `Short $${selectedTicker}` : `Cover $${selectedTicker}`}
+                  {(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) ? t.trading.processing : tradeType === "sell" ? `${t.trading.shortTicker} $${selectedTicker}` : `${t.trading.coverTicker} $${selectedTicker}`}
                 </button>
               </>
             )}
@@ -539,25 +537,25 @@ export default function TradingPanel() {
           <div className="mt-5 pt-4 border-t border-border">
             <button onClick={() => setShowOrders(!showOrders)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2">
               <Target className="w-3.5 h-3.5" />
-              Pending Orders ({pendingOrdersList.length})
+              {t.trading.pendingOrders} ({pendingOrdersList.length})
               <ChevronDown className={`w-3 h-3 transition-transform ${showOrders ? "rotate-180" : ""}`} />
             </button>
             <AnimatePresence>
               {showOrders && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   <div className="space-y-1.5">
-                    {pendingOrdersList.map((order) => (
+                    {pendingOrdersList.map((order: any) => (
                       <div key={order.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/20">
                         <div className="flex items-center gap-2">
                           {order.orderType === "stop_loss" ? <ShieldAlert className="w-3.5 h-3.5 text-[#FF5252]" /> : <Target className="w-3.5 h-3.5 text-yellow-400" />}
-                          <span className="text-xs text-foreground capitalize font-semibold">{order.orderType.replace("_", " ")}</span>
-                          <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKERS.find((t) => t.symbol === order.ticker)?.color ?? "#fff" }}>${order.ticker}</span>
+                          <span className="text-xs text-foreground capitalize font-semibold">{order.orderType === "stop_loss" ? t.trading.stopLoss : t.trading.limit}</span>
+                          <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKERS.find((tk) => tk.symbol === order.ticker)?.color ?? "#fff" }}>${order.ticker}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="text-right">
                             <span className="text-xs text-foreground font-[var(--font-mono)]">{order.shares.toFixed(2)} @ ${order.targetPrice.toFixed(2)}</span>
                           </div>
-                          <button onClick={() => cancelOrderMutation.mutate({ orderId: order.id })} className="p-1 text-muted-foreground hover:text-[#FF5252] transition-colors" title="Cancel order">
+                          <button onClick={() => cancelOrderMutation.mutate({ orderId: order.id })} className="p-1 text-muted-foreground hover:text-[#FF5252] transition-colors" title={t.trading.cancelOrder}>
                             <XCircle className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -574,22 +572,22 @@ export default function TradingPanel() {
         <div className={`${pendingOrdersList.length > 0 ? "mt-3" : "mt-5"} pt-4 border-t border-border`}>
           <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <Clock className="w-3.5 h-3.5" />
-            Recent Trades
+            {t.trading.recentTrades}
             <ChevronDown className={`w-3 h-3 transition-transform ${showHistory ? "rotate-180" : ""}`} />
           </button>
           <AnimatePresence>
             {showHistory && tradeHistory && tradeHistory.length > 0 && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-3">
                 <div className="space-y-1.5">
-                  {tradeHistory.map((trade) => {
-                    const style = getTradeTypeStyle(trade.type);
+                  {tradeHistory.map((trade: any) => {
+                    const style = getTradeTypeStyle(trade.type, t);
                     const Icon = style.icon;
                     return (
                       <div key={trade.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/20">
                         <div className="flex items-center gap-2">
                           <Icon className="w-3.5 h-3.5" style={{ color: style.color }} />
                           <span className="text-xs text-foreground capitalize font-semibold">{style.label}</span>
-                          <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKERS.find((t) => t.symbol === trade.ticker)?.color ?? "#fff" }}>${trade.ticker}</span>
+                          <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKERS.find((tk) => tk.symbol === trade.ticker)?.color ?? "#fff" }}>${trade.ticker}</span>
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
@@ -611,41 +609,41 @@ export default function TradingPanel() {
       <AlertDialogContent className="bg-card border-border">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground font-[var(--font-heading)]">
-            Confirm {pendingConfirm?.type} Order
+            {t.trading.confirmTitle}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground">
             <div className="space-y-3 mt-2">
               <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Action</span>
+                  <span className="text-xs text-muted-foreground">{t.trading.confirmType}</span>
                   <span className="text-xs font-bold text-foreground">{pendingConfirm?.type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Ticker</span>
-                  <span className="text-xs font-bold text-primary font-[var(--font-mono)]">${pendingConfirm?.ticker}</span>
+                  <span className="text-xs text-muted-foreground">{t.trading.confirmTicker}</span>
+                  <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">{pendingConfirm?.ticker}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Amount</span>
+                  <span className="text-xs text-muted-foreground">{t.trading.confirmAmount}</span>
                   <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">{pendingConfirm?.amount}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Shares</span>
+                  <span className="text-xs text-muted-foreground">{t.trading.confirmShares}</span>
                   <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">{pendingConfirm?.shares}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs text-muted-foreground">Price</span>
+                  <span className="text-xs text-muted-foreground">{t.trading.confirmPrice}</span>
                   <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">{pendingConfirm?.price}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-yellow-500">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                <span>This trade exceeds ${CONFIRM_THRESHOLD}. Please confirm.</span>
+                <span>{t.trading.confirmWarning} ${CONFIRM_THRESHOLD}. {t.trading.pleaseConfirm}</span>
               </div>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="bg-secondary text-foreground border-border hover:bg-secondary/80">Cancel</AlertDialogCancel>
+          <AlertDialogCancel className="bg-secondary text-foreground border-border hover:bg-secondary/80">{t.trading.confirmCancel}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             onClick={() => {
@@ -653,7 +651,7 @@ export default function TradingPanel() {
               setPendingConfirm(null);
             }}
           >
-            Confirm {pendingConfirm?.type}
+            {t.trading.confirmExecute}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

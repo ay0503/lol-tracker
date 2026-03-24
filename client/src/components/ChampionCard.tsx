@@ -3,6 +3,7 @@
  * Win rate shown as a progress bar. KDA and games prominently displayed.
  */
 import { motion } from "framer-motion";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export interface ChampionStatData {
   name: string;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function ChampionCard({ champion, index }: Props) {
+  const { t } = useTranslation();
   const isGoodWinRate = champion.winRate >= 55;
   const isBadWinRate = champion.winRate < 45;
 
@@ -42,7 +44,7 @@ export default function ChampionCard({ champion, index }: Props) {
             {champion.name}
           </h3>
           <p className="text-xs text-muted-foreground">
-            {champion.games} games
+            {champion.games} {t.champion.games}
           </p>
         </div>
       </div>
@@ -50,7 +52,7 @@ export default function ChampionCard({ champion, index }: Props) {
       {/* Win rate bar */}
       <div className="mb-3">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="text-xs text-muted-foreground">Win Rate</span>
+          <span className="text-xs text-muted-foreground">{t.champion.winRate}</span>
           <span
             className="text-sm font-bold font-[var(--font-mono)]"
             style={{
@@ -64,7 +66,7 @@ export default function ChampionCard({ champion, index }: Props) {
             {champion.winRate}%
           </span>
         </div>
-        <div className="w-full h-1.5 bg-[#1a1d23] rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${champion.winRate}%` }}
@@ -86,7 +88,7 @@ export default function ChampionCard({ champion, index }: Props) {
         <span className="text-lg font-bold font-[var(--font-mono)] text-foreground">
           {champion.kdaRatio.toFixed(2)}
         </span>
-        <span className="text-xs text-muted-foreground">KDA</span>
+        <span className="text-xs text-muted-foreground">{t.champion.kda}</span>
       </div>
       <p className="text-xs text-muted-foreground font-[var(--font-mono)] mt-0.5">
         {champion.kda}

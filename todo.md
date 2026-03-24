@@ -248,18 +248,19 @@
 - [x] Fix: Created unified etfPricing.ts module with compounding daily returns, replaced all 3 callers
 
 ## Feature: Korean/English i18n with Language Toggle
-- [ ] Create i18n context and hook (useTranslation)
-- [ ] Create English translation file (en.ts)
-- [ ] Create Korean translation file (kr.ts)
-- [ ] Add EN/KR language toggle button to nav bar
-- [ ] Translate all static text in Home page components
-- [ ] Translate Portfolio page
-- [ ] Translate Leaderboard page
-- [ ] Translate Ledger page
-- [ ] Translate News page
-- [ ] Translate Sentiment page
-- [ ] Translate TradingPanel component
-- [ ] Translate NotificationBell component
-- [ ] Translate PriceRankLegend component
-- [ ] Persist language preference in localStorage
-- [ ] Test both languages in browser
+- [x] Create i18n context and hook (useTranslation)
+- [x] Create English translation file (en.ts)
+- [x] Create Korean translation file (ko.ts)
+- [x] Add EN/KR language toggle button to nav bar
+- [x] Translate all static text in Home page components
+- [x] Translate Portfolio page
+- [x] Translate Leaderboard page
+- [x] Translate Ledger page
+- [x] Translate News page
+- [x] Translate Sentiment page
+- [x] Translate TradingPanel component
+- [x] Translate NotificationBell component
+- [x] Translate PriceRankLegend component
+- [x] Translate PlayerHeader, StreakBar, RecentPerformance, ChampionCard, MatchRow, SeasonHistory, LPChart
+- [x] Persist language preference in localStorage
+- [x] Test both languages in browser — all sections verified in Korean

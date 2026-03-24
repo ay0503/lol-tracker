@@ -5,6 +5,7 @@
  */
 import { SEASON_HISTORY } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
@@ -18,23 +19,22 @@ function getTierColor(tier: string): string {
 }
 
 function formatDivision(rank: string): string {
-  // Convert API format (I, II, III, IV) to display format (1, 2, 3, 4)
   const map: Record<string, string> = { I: "1", II: "2", III: "3", IV: "4" };
   return map[rank] || rank;
 }
 
 function formatTierName(tier: string): string {
-  // Capitalize first letter, lowercase rest
   return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
 }
 
 export default function SeasonHistory() {
+  const { t } = useTranslation();
+
   const { data: livePlayer } = trpc.player.current.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  // Live current season data
   const currentTier = livePlayer?.solo
     ? `${formatTierName(livePlayer.solo.tier)} ${formatDivision(livePlayer.solo.rank)}`
     : "Emerald 2";
@@ -64,7 +64,7 @@ export default function SeasonHistory() {
           )}
         </div>
         <span className="text-sm font-bold font-[var(--font-mono)] text-primary">
-          {currentLP} LP
+          {currentLP} {t.player.lp}
         </span>
       </motion.div>
 
@@ -89,7 +89,7 @@ export default function SeasonHistory() {
             </span>
           </div>
           <span className="text-xs font-[var(--font-mono)] text-muted-foreground">
-            {season.lp} LP
+            {season.lp} {t.player.lp}
           </span>
         </motion.div>
       ))}

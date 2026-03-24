@@ -5,6 +5,7 @@
  */
 import { PLAYER, RANKED_SOLO, LP_HISTORY, totalLPToPrice } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Activity, DollarSign } from "lucide-react";
 
@@ -12,9 +13,11 @@ const EMERALD_RANK_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663324505869/EqpY4GjGxu3PtSNi8r37GF/emerald-rank-glow-gvNBENfi9Ne5AtDKGtp3U6.webp";
 
 export default function PlayerHeader() {
+  const { t } = useTranslation();
+
   // Try to get live data from backend
   const { data: livePlayer } = trpc.player.current.useQuery(undefined, {
-    refetchInterval: 60_000, // refetch every minute
+    refetchInterval: 60_000,
     staleTime: 30_000,
   });
   const { data: latestPrice } = trpc.prices.latest.useQuery(undefined, {
@@ -72,7 +75,7 @@ export default function PlayerHeader() {
                 {PLAYER.region}
               </span>
               <Activity className="w-3 h-3 text-primary animate-pulse" />
-              <span>Live</span>
+              <span>{t.player.live}</span>
             </div>
           </div>
         </div>
@@ -102,7 +105,7 @@ export default function PlayerHeader() {
             )}
             {isPositive ? "+" : ""}${Math.abs(priceChange).toFixed(2)} ({isPositive ? "+" : ""}{pctChange.toFixed(2)}%)
           </div>
-          <span className="text-xs text-muted-foreground">past 2 weeks</span>
+          <span className="text-xs text-muted-foreground">{t.player.past2Weeks}</span>
         </div>
       </div>
 
@@ -111,18 +114,18 @@ export default function PlayerHeader() {
         <div className="flex items-center gap-2">
           <img
             src={EMERALD_RANK_IMG}
-            alt="Rank"
+            alt={t.player.rank}
             className="w-8 h-8 object-contain"
           />
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Rank</p>
+            <p className="text-xs text-muted-foreground mb-0.5">{t.player.rank}</p>
             <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
-              {tier} {division} · {lp} LP
+              {tier} {division} · {lp} {t.player.lp}
             </p>
           </div>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Record</p>
+          <p className="text-xs text-muted-foreground mb-0.5">{t.player.record}</p>
           <p className="text-sm font-semibold font-[var(--font-mono)]">
             <span style={{ color: "#00C805" }}>{wins}W</span>
             <span className="text-muted-foreground"> / </span>
@@ -130,21 +133,21 @@ export default function PlayerHeader() {
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Win Rate</p>
+          <p className="text-xs text-muted-foreground mb-0.5">{t.player.winRate}</p>
           <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
             {winRate}%
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Peak</p>
+          <p className="text-xs text-muted-foreground mb-0.5">{t.player.peak}</p>
           <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
-            {RANKED_SOLO.topTier} ({RANKED_SOLO.topLP} LP)
+            {RANKED_SOLO.topTier} ({RANKED_SOLO.topLP} {t.player.lp})
           </p>
         </div>
         <div className="hidden sm:block">
-          <p className="text-xs text-muted-foreground mb-0.5">Ladder</p>
+          <p className="text-xs text-muted-foreground mb-0.5">{t.player.ladder}</p>
           <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
-            #{PLAYER.ladderRank.toLocaleString()} (Top {PLAYER.ladderPercent}%)
+            #{PLAYER.ladderRank.toLocaleString()} ({t.player.top} {PLAYER.ladderPercent}%)
           </p>
         </div>
       </div>

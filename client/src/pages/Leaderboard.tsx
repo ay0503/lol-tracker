@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award } from "lucide-react";
 import { motion } from "framer-motion";
@@ -18,37 +19,37 @@ function getRankBg(rank: number) {
 }
 
 export default function Leaderboard() {
+  const { t } = useTranslation();
   const { data: rankings, isLoading } = trpc.leaderboard.rankings.useQuery();
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
-              Back
+              {t.common.back}
             </Link>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">Leaderboard</span>
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">{t.nav.leaderboard}</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ledger</Link>
-            <Link href="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Portfolio</Link>
-            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">News</Link>
-            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sentiment</Link>
+            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
+            <Link href="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.portfolio}</Link>
+            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.news}</Link>
+            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.sentiment}</Link>
           </div>
         </div>
       </nav>
 
       <main className="container py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">Trader Rankings</h1>
-          <p className="text-sm text-muted-foreground mt-1">All traders ranked by total portfolio value. Starting balance: $200.</p>
+          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.leaderboard.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t.leaderboard.subtitle}</p>
         </div>
 
         {isLoading ? (
@@ -60,7 +61,7 @@ export default function Leaderboard() {
         ) : !rankings || rankings.length === 0 ? (
           <div className="text-center py-16">
             <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-muted-foreground">No traders yet. Be the first to trade!</p>
+            <p className="text-muted-foreground">{t.leaderboard.noTraders}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -82,19 +83,19 @@ export default function Leaderboard() {
                         <p className="text-sm font-bold text-foreground">{trader.userName}</p>
                         <div className="flex items-center gap-3 mt-0.5">
                           <span className="text-xs text-muted-foreground">
-                            Cash: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(2)}</span>
+                            {t.leaderboard.cash}: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(2)}</span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Holdings: <span className="text-foreground font-mono">${trader.holdingsValue.toFixed(2)}</span>
+                            {t.leaderboard.holdings}: <span className="text-foreground font-mono">${trader.holdingsValue.toFixed(2)}</span>
                           </span>
                           {trader.shortExposure !== 0 && (
                             <span className="text-xs text-muted-foreground">
-                              Shorts: <span className="text-foreground font-mono">${trader.shortExposure.toFixed(2)}</span>
+                              {t.leaderboard.shorts}: <span className="text-foreground font-mono">${trader.shortExposure.toFixed(2)}</span>
                             </span>
                           )}
                           {trader.totalDividends > 0 && (
                             <span className="text-xs text-muted-foreground">
-                              Dividends: <span className="text-green-400 font-mono">${trader.totalDividends.toFixed(2)}</span>
+                              {t.leaderboard.dividends}: <span className="text-green-400 font-mono">${trader.totalDividends.toFixed(2)}</span>
                             </span>
                           )}
                         </div>

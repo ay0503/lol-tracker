@@ -3,6 +3,7 @@
  * Compact layout with champion icon, KDA, and duration.
  */
 import type { MatchResult } from "@/lib/playerData";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function MatchRow({ match, index }: Props) {
+  const { t } = useTranslation();
   const isWin = match.result === "Victory";
   const isRemake = match.result === "Remake";
   const borderColor = isRemake ? "#6B7280" : isWin ? "#00C805" : "#FF5252";
@@ -20,12 +22,20 @@ export default function MatchRow({ match, index }: Props) {
     ? "rgba(0, 200, 5, 0.04)"
     : "rgba(255, 82, 82, 0.04)";
 
+  const resultLabel = isWin
+    ? t.match.victory
+    : isRemake
+    ? t.match.remake
+    : t.match.defeat;
+
+  const resultShort = isWin ? "WIN" : isRemake ? "RMK" : "LOSS";
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03, duration: 0.3, ease: "easeOut" }}
-      className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 rounded-lg hover:bg-[#1e2028] transition-colors duration-150 group"
+      className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 rounded-lg hover:bg-accent/50 transition-colors duration-150 group"
       style={{
         borderLeft: `3px solid ${borderColor}`,
         backgroundColor: bgColor,
@@ -56,7 +66,7 @@ export default function MatchRow({ match, index }: Props) {
                 : "rgba(255, 82, 82, 0.1)",
             }}
           >
-            {match.result === "Victory" ? "WIN" : match.result === "Defeat" ? "LOSS" : "RMK"}
+            {resultShort}
           </span>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -74,7 +84,7 @@ export default function MatchRow({ match, index }: Props) {
           <span className="text-foreground">{match.assists}</span>
         </p>
         <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
-          {match.kdaRatio} KDA
+          {match.kdaRatio} {t.champion.kda}
         </p>
       </div>
 
