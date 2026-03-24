@@ -231,3 +231,12 @@
 - [x] Integrate legend into the main page between LP chart and stats grid
 - [x] Ensure legend works in both dark and light themes — verified
 - [x] Test in browser and save checkpoint
+
+## Feature: Charts for All ETF Tickers
+- [x] Audit existing chart components and ETF price data
+- [x] Add ticker selector to switch between DORI, DDRI, TDRI, SDRI, XDRI charts
+- [x] Generate/fetch price history for all ETF tickers (getFullETFHistory in playerData.ts)
+- [x] Update LPChart to support multi-ticker display with color-coded pills
+- [x] Update CandlestickChart to support multi-ticker display with ticker-specific colors
+- [x] Ensure price change summary updates per selected ticker
+- [x] Test all ticker charts in browser (DORI, SDRI, TDRI verified in both Line and Candles view)

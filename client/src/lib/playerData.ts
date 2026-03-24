@@ -214,6 +214,97 @@ export function getETFPrice(ticker: string, currentPrice: number, previousPrice:
   }
 }
 
+// ─── ETF Price History Generator ───
+export interface ETFDataPoint {
+  date: string;
+  price: number;
+  label: string;
+}
+
+/**
+ * Generate price history for any ETF ticker by applying leverage to base DORI price changes.
+ * For DORI, returns the base price directly.
+ * For leveraged/inverse ETFs, compounds daily returns with the leverage multiplier.
+ */
+export function getETFDataForRange(ticker: string, range: TimeRange): ETFDataPoint[] {
+  const baseData = getDataForRange(range).map(d => ({
+    ...d,
+    price: d.price ?? totalLPToPrice(d.totalLP),
+  }));
+
+  if (ticker === "DORI" || baseData.length === 0) {
+    return baseData.map(d => ({
+      date: d.date,
+      price: d.price!,
+      label: `$${d.price!.toFixed(2)}`,
+    }));
+  }
+
+  const tickerInfo = TICKERS.find(t => t.symbol === ticker);
+  if (!tickerInfo) return [];
+
+  const multiplier = tickerInfo.inverse ? -tickerInfo.leverage : tickerInfo.leverage;
+
+  // Start ETF at the same price as DORI on day 1
+  const result: ETFDataPoint[] = [];
+  let etfPrice = baseData[0].price!;
+  result.push({ date: baseData[0].date, price: etfPrice, label: `$${etfPrice.toFixed(2)}` });
+
+  for (let i = 1; i < baseData.length; i++) {
+    const prevBase = baseData[i - 1].price!;
+    const currBase = baseData[i].price!;
+    if (prevBase <= 0) {
+      result.push({ date: baseData[i].date, price: etfPrice, label: `$${etfPrice.toFixed(2)}` });
+      continue;
+    }
+    const dailyReturn = (currBase - prevBase) / prevBase;
+    etfPrice = Math.max(0.01, etfPrice * (1 + dailyReturn * multiplier));
+    result.push({ date: baseData[i].date, price: etfPrice, label: `$${etfPrice.toFixed(2)}` });
+  }
+
+  return result;
+}
+
+/**
+ * Generate FULL ETF price history (for candlestick chart) by applying leverage to FULL_LP_HISTORY.
+ */
+export function getFullETFHistory(ticker: string): ETFDataPoint[] {
+  if (ticker === "DORI") {
+    return FULL_LP_HISTORY.map(d => ({
+      date: d.date,
+      price: d.price ?? totalLPToPrice(d.totalLP),
+      label: `$${(d.price ?? totalLPToPrice(d.totalLP)).toFixed(2)}`,
+    }));
+  }
+
+  const tickerInfo = TICKERS.find(t => t.symbol === ticker);
+  if (!tickerInfo) return [];
+
+  const multiplier = tickerInfo.inverse ? -tickerInfo.leverage : tickerInfo.leverage;
+  const baseData = FULL_LP_HISTORY.map(d => ({
+    ...d,
+    price: d.price ?? totalLPToPrice(d.totalLP),
+  }));
+
+  const result: ETFDataPoint[] = [];
+  let etfPrice = baseData[0].price;
+  result.push({ date: baseData[0].date, price: etfPrice, label: `$${etfPrice.toFixed(2)}` });
+
+  for (let i = 1; i < baseData.length; i++) {
+    const prevBase = baseData[i - 1].price;
+    const currBase = baseData[i].price;
+    if (prevBase <= 0) {
+      result.push({ date: baseData[i].date, price: etfPrice, label: `$${etfPrice.toFixed(2)}` });
+      continue;
+    }
+    const dailyReturn = (currBase - prevBase) / prevBase;
+    etfPrice = Math.max(0.01, etfPrice * (1 + dailyReturn * multiplier));
+    result.push({ date: baseData[i].date, price: etfPrice, label: `$${etfPrice.toFixed(2)}` });
+  }
+
+  return result;
+}
+
 // ─── Season History ───
 
 export interface SeasonTier {

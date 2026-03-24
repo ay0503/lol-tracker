@@ -1,6 +1,7 @@
 /*
  * LPChart: Main chart component with toggle between Area and Candlestick views.
  * Supports extended time ranges: 1W, 1M, 3M, 6M, YTD, ALL
+ * Supports all ETF tickers: DORI, DDRI, TDRI, SDRI, XDRI
  * Shows price ($) on Y-axis instead of raw LP.
  * Syncs time range pills with candlestick chart zoom level.
  */
@@ -14,7 +15,11 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { getDataForRange, type LPDataPoint, type TimeRange, totalLPToPrice } from "@/lib/playerData";
+import {
+  getETFDataForRange,
+  TICKERS,
+  type TimeRange,
+} from "@/lib/playerData";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
 import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
@@ -22,14 +27,16 @@ import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
 type ChartView = "area" | "candlestick";
 const TIME_RANGES: TimeRange[] = ["1W", "1M", "3M", "6M", "YTD", "ALL"];
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload, tickerColor }: any) {
   if (active && payload && payload.length) {
-    const data = payload[0].payload as LPDataPoint;
-    const price = data.price ?? totalLPToPrice(data.totalLP);
+    const data = payload[0].payload;
     return (
-      <div className="bg-[#1e2028] border border-[#2a2d38] rounded-lg px-4 py-3 shadow-xl">
-        <p className="text-foreground font-semibold text-sm" style={{ fontFamily: "var(--font-heading)" }}>
-          ${price.toFixed(2)}
+      <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-xl">
+        <p
+          className="font-semibold text-sm"
+          style={{ fontFamily: "var(--font-heading)", color: tickerColor }}
+        >
+          ${data.price?.toFixed(2)}
         </p>
         <p className="text-muted-foreground text-xs mt-0.5">{data.label}</p>
         <p className="text-muted-foreground text-xs mt-1">{data.date}</p>
@@ -42,15 +49,15 @@ function CustomTooltip({ active, payload }: any) {
 export default function LPChart() {
   const [chartView, setChartView] = useState<ChartView>("area");
   const [activeRange, setActiveRange] = useState<TimeRange>("1M");
+  const [activeTicker, setActiveTicker] = useState("DORI");
   const [mounted, setMounted] = useState(false);
 
+  const tickerInfo = TICKERS.find((t) => t.symbol === activeTicker) || TICKERS[0];
+  const tickerColor = tickerInfo.color;
+
   const data = useMemo(() => {
-    const raw = getDataForRange(activeRange);
-    return raw.map(d => ({
-      ...d,
-      price: d.price ?? totalLPToPrice(d.totalLP),
-    }));
-  }, [activeRange]);
+    return getETFDataForRange(activeTicker, activeRange);
+  }, [activeRange, activeTicker]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
@@ -58,17 +65,20 @@ export default function LPChart() {
   }, []);
 
   // Handle candlestick chart zoom syncing to time range pills
-  const handleVisibleRangeChange = useCallback((detectedRange: TimeRange | null) => {
-    if (detectedRange && detectedRange !== activeRange) {
-      setActiveRange(detectedRange);
-    }
-  }, [activeRange]);
+  const handleVisibleRangeChange = useCallback(
+    (detectedRange: TimeRange | null) => {
+      if (detectedRange && detectedRange !== activeRange) {
+        setActiveRange(detectedRange);
+      }
+    },
+    [activeRange]
+  );
 
   const firstPrice = data[0]?.price ?? 0;
   const lastPrice = data[data.length - 1]?.price ?? 0;
   const priceChange = lastPrice - firstPrice;
   const isPositive = priceChange >= 0;
-  const chartColor = isPositive ? "#00C805" : "#FF5252";
+  const chartColor = isPositive ? tickerColor : "#FF5252";
 
   const minPrice = Math.min(...data.map((d) => d.price ?? 0));
   const maxPrice = Math.max(...data.map((d) => d.price ?? 0));
@@ -86,12 +96,51 @@ export default function LPChart() {
     return thinned;
   }, [data]);
 
+  // Unique gradient ID per ticker to avoid conflicts
+  const gradientId = `lpGradient-${activeTicker}`;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
+      {/* Ticker selector */}
+      <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-thin">
+        {TICKERS.map((t) => {
+          const isActive = t.symbol === activeTicker;
+          return (
+            <button
+              key={t.symbol}
+              onClick={() => setActiveTicker(t.symbol)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ${
+                isActive
+                  ? "border-current"
+                  : "border-transparent bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
+              }`}
+              style={
+                isActive
+                  ? {
+                      color: t.color,
+                      backgroundColor: `${t.color}15`,
+                      borderColor: `${t.color}40`,
+                    }
+                  : {}
+              }
+            >
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: t.color }}
+              />
+              <span className="font-[var(--font-mono)]">${t.symbol}</span>
+              <span className="text-[10px] opacity-60 hidden sm:inline">
+                {t.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Chart view toggle + time ranges */}
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
@@ -99,9 +148,14 @@ export default function LPChart() {
             onClick={() => setChartView("area")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               chartView === "area"
-                ? "bg-primary text-primary-foreground"
+                ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
+            style={
+              chartView === "area"
+                ? { backgroundColor: tickerColor }
+                : {}
+            }
           >
             <LineChart className="w-3.5 h-3.5" />
             Line
@@ -110,9 +164,14 @@ export default function LPChart() {
             onClick={() => setChartView("candlestick")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               chartView === "candlestick"
-                ? "bg-primary text-primary-foreground"
+                ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
+            style={
+              chartView === "candlestick"
+                ? { backgroundColor: tickerColor }
+                : {}
+            }
           >
             <CandlestickIcon className="w-3.5 h-3.5" />
             Candles
@@ -132,7 +191,7 @@ export default function LPChart() {
               style={{
                 fontFamily: "var(--font-mono)",
                 ...(activeRange === range
-                  ? { backgroundColor: isPositive ? "#00C805" : "#FF5252" }
+                  ? { backgroundColor: isPositive ? tickerColor : "#FF5252" }
                   : {}),
               }}
             >
@@ -144,21 +203,35 @@ export default function LPChart() {
 
       {/* Price change summary */}
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl font-bold text-foreground font-[var(--font-mono)]">
+        <span
+          className="text-2xl font-bold font-[var(--font-mono)]"
+          style={{ color: tickerColor }}
+        >
           ${lastPrice.toFixed(2)}
         </span>
         <span
           className="text-sm font-semibold font-[var(--font-mono)]"
-          style={{ color: isPositive ? "#00C805" : "#FF5252" }}
+          style={{ color: isPositive ? tickerColor : "#FF5252" }}
         >
-          {isPositive ? "+" : ""}${priceChange.toFixed(2)} ({firstPrice > 0 ? ((priceChange / firstPrice) * 100).toFixed(1) : "0.0"}%)
+          {isPositive ? "+" : ""}${priceChange.toFixed(2)} (
+          {firstPrice > 0
+            ? ((priceChange / firstPrice) * 100).toFixed(1)
+            : "0.0"}
+          %)
         </span>
         <span className="text-xs text-muted-foreground">{activeRange}</span>
       </div>
 
       {/* Area Chart */}
       {chartView === "area" && (
-        <div style={{ width: "100%", height: 380, minWidth: 300, minHeight: 300 }}>
+        <div
+          style={{
+            width: "100%",
+            height: 380,
+            minWidth: 300,
+            minHeight: 300,
+          }}
+        >
           {mounted && (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -166,16 +239,34 @@ export default function LPChart() {
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
                 <defs>
-                  <linearGradient id="lpGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={chartColor} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={chartColor} stopOpacity={0.02} />
+                  <linearGradient
+                    id={gradientId}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor={chartColor}
+                      stopOpacity={0.3}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={chartColor}
+                      stopOpacity={0.02}
+                    />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}
+                  tick={{
+                    fill: "#6b7280",
+                    fontSize: 11,
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
                   dy={10}
                   interval="preserveStartEnd"
                 />
@@ -183,23 +274,34 @@ export default function LPChart() {
                   domain={[minPrice - padding, maxPrice + padding]}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#6b7280", fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }}
+                  tick={{
+                    fill: "#6b7280",
+                    fontSize: 10,
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
                   tickFormatter={(val: number) => `$${val.toFixed(0)}`}
                   width={50}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#4b5563", strokeDasharray: "4 4" }} />
-                <ReferenceLine y={firstPrice} stroke="#374151" strokeDasharray="3 3" />
+                <Tooltip
+                  content={<CustomTooltip tickerColor={tickerColor} />}
+                  cursor={{ stroke: "#4b5563", strokeDasharray: "4 4" }}
+                />
+                <ReferenceLine
+                  y={firstPrice}
+                  stroke="#374151"
+                  strokeDasharray="3 3"
+                />
                 <Area
                   type="monotone"
                   dataKey="price"
                   stroke={chartColor}
                   strokeWidth={2.5}
-                  fill="url(#lpGradient)"
+                  fill={`url(#${gradientId})`}
                   dot={false}
                   activeDot={{
                     r: 5,
                     fill: chartColor,
-                    stroke: "#1B1B1B",
+                    stroke: "var(--background)",
                     strokeWidth: 2,
                   }}
                   animationDuration={1200}
@@ -216,6 +318,7 @@ export default function LPChart() {
         <CandlestickChart
           timeRange={activeRange}
           onVisibleRangeChange={handleVisibleRangeChange}
+          ticker={activeTicker}
         />
       )}
     </motion.div>
