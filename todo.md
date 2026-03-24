@@ -240,3 +240,26 @@
 - [x] Update CandlestickChart to support multi-ticker display with ticker-specific colors
 - [x] Ensure price change summary updates per selected ticker
 - [x] Test all ticker charts in browser (DORI, SDRI, TDRI verified in both Line and Candles view)
+
+## Bug Fix: ETF Ticker Prices Not Aligned
+- [x] Investigate how backend calculates ETF prices (prices.etfPrices endpoint)
+- [x] Investigate how frontend chart calculates ETF prices (playerData.ts getFullETFHistory)
+- [x] Compare the two calculation methods and identify discrepancy (3 different methods found)
+- [x] Fix: Created unified etfPricing.ts module with compounding daily returns, replaced all 3 callers
+
+## Feature: Korean/English i18n with Language Toggle
+- [ ] Create i18n context and hook (useTranslation)
+- [ ] Create English translation file (en.ts)
+- [ ] Create Korean translation file (kr.ts)
+- [ ] Add EN/KR language toggle button to nav bar
+- [ ] Translate all static text in Home page components
+- [ ] Translate Portfolio page
+- [ ] Translate Leaderboard page
+- [ ] Translate Ledger page
+- [ ] Translate News page
+- [ ] Translate Sentiment page
+- [ ] Translate TradingPanel component
+- [ ] Translate NotificationBell component
+- [ ] Translate PriceRankLegend component
+- [ ] Persist language preference in localStorage
+- [ ] Test both languages in browser

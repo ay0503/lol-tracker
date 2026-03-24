@@ -16,9 +16,11 @@ import {
   addPriceSnapshot, getProcessedMatchIds, addMatch, markMatchDividendsPaid,
   markMatchNewsGenerated, distributeDividends, addNews, getPendingOrders,
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
-  executeShort, executeCover, recordPortfolioSnapshots, createNotification
+  executeShort, executeCover, recordPortfolioSnapshots, createNotification,
+  getPriceHistory,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
+import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
 
 // Player config
 const GAME_NAME = "목도리 도마뱀";
@@ -49,26 +51,10 @@ export interface PollResult {
 }
 
 /**
- * ETF price calculation helpers
+ * ETF price calculation — uses the unified compounding module.
+ * Kept as a thin wrapper for backward compatibility within pollEngine.
  */
-const TICKERS = ["DORI", "DDRI", "TDRI", "SDRI", "XDRI"] as const;
-const ETF_CONFIG: Record<string, { leverage: number; inverse: boolean; basePrice: number }> = {
-  DORI: { leverage: 1, inverse: false, basePrice: 50 },
-  DDRI: { leverage: 2, inverse: false, basePrice: 50 },
-  TDRI: { leverage: 3, inverse: false, basePrice: 50 },
-  SDRI: { leverage: 2, inverse: true, basePrice: 50 },
-  XDRI: { leverage: 3, inverse: true, basePrice: 50 },
-};
-
-export function getETFPrice(ticker: string, doriPrice: number, previousDoriPrice: number): number {
-  const config = ETF_CONFIG[ticker];
-  if (!config) return doriPrice;
-  if (ticker === "DORI") return doriPrice;
-
-  const pctChange = previousDoriPrice > 0 ? (doriPrice - previousDoriPrice) / previousDoriPrice : 0;
-  const leveragedChange = pctChange * config.leverage * (config.inverse ? -1 : 1);
-  return Math.max(0.01, config.basePrice * (1 + leveragedChange));
-}
+const TICKERS = ETF_TICKERS;
 
 /**
  * Main polling function
@@ -196,6 +182,13 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // 6. Execute pending orders
+    // Compute ETF prices from full history (unified compounding)
+    console.log("[Poll] Computing ETF prices from full history...");
+    const fullHistory = await getPriceHistory();
+    const currentETFPrices = fullHistory.length > 0
+      ? computeAllETFPricesSync(fullHistory)
+      : { DORI: price, DDRI: price, TDRI: price, SDRI: price, XDRI: price };
+
     console.log("[Poll] Checking pending orders...");
     const pendingOrders = await getPendingOrders();
     for (const order of pendingOrders) {
@@ -203,8 +196,8 @@ export async function pollNow(): Promise<PollResult> {
       const orderPrice = parseFloat(order.targetPrice);
       const orderShares = parseFloat(order.shares);
 
-      // Get current ETF price
-      const etfPrice = getETFPrice(orderTicker, price, prevPrice);
+      // Get current ETF price from unified computation
+      const etfPrice = currentETFPrices[orderTicker as keyof typeof currentETFPrices] || price;
 
       let shouldExecute = false;
       if (order.orderType === "limit_buy" && etfPrice <= orderPrice) shouldExecute = true;
@@ -239,11 +232,7 @@ export async function pollNow(): Promise<PollResult> {
 
     // 7. Record portfolio snapshots for P&L charting
     try {
-      const tickerPrices: Record<string, number> = {};
-      for (const t of TICKERS) {
-        tickerPrices[t] = getETFPrice(t, price, prevPrice);
-      }
-      await recordPortfolioSnapshots(tickerPrices);
+      await recordPortfolioSnapshots(currentETFPrices as Record<string, number>);
       console.log("[Poll] Portfolio snapshots recorded");
     } catch (err: any) {
       result.errors.push(`Portfolio snapshot error: ${err.message}`);

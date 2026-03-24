@@ -16,24 +16,8 @@ import {
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
 } from "./riotApi";
-import { pollNow, getPollStatus, startPolling, stopPolling, getETFPrice } from "./pollEngine";
-
-// ─── ETF Definitions ───
-const TICKERS = ["DORI", "DDRI", "TDRI", "SDRI", "XDRI"] as const;
-type Ticker = (typeof TICKERS)[number];
-
-function getETFPriceLocal(ticker: Ticker, currentBasePrice: number, previousBasePrice: number): number {
-  if (previousBasePrice <= 0) return currentBasePrice;
-  const pctChange = (currentBasePrice - previousBasePrice) / previousBasePrice;
-  switch (ticker) {
-    case "DORI": return currentBasePrice;
-    case "DDRI": return previousBasePrice * (1 + pctChange * 2);
-    case "TDRI": return previousBasePrice * (1 + pctChange * 3);
-    case "SDRI": return previousBasePrice * (1 + pctChange * -2);
-    case "XDRI": return previousBasePrice * (1 + pctChange * -3);
-    default: return currentBasePrice;
-  }
-}
+import { pollNow, getPollStatus, startPolling, stopPolling } from "./pollEngine";
+import { TICKERS, type Ticker, computeAllETFPricesSync } from "./etfPricing";
 
 export const appRouter = router({
   system: systemRouter,
@@ -253,16 +237,22 @@ export const appRouter = router({
     etfPrices: publicProcedure.query(async () => {
       const history = await getPriceHistory();
       if (history.length === 0) return [];
-      const latest = history[history.length - 1];
-      const previous = history.length > 1 ? history[history.length - 2] : latest;
-      const currentBase = parseFloat(latest.price);
-      const previousBase = parseFloat(previous.price);
-      return TICKERS.map((ticker) => ({
-        ticker,
-        price: getETFPriceLocal(ticker, currentBase, previousBase),
-        change: getETFPriceLocal(ticker, currentBase, previousBase) - previousBase,
-        changePct: previousBase > 0 ? ((getETFPriceLocal(ticker, currentBase, previousBase) - previousBase) / previousBase) * 100 : 0,
-      }));
+      const etfPrices = computeAllETFPricesSync(history);
+      // Compute change relative to what prices would have been without the latest snapshot
+      const historyWithoutLast = history.slice(0, -1);
+      const prevPrices = historyWithoutLast.length > 0
+        ? computeAllETFPricesSync(historyWithoutLast)
+        : etfPrices;
+      return TICKERS.map((ticker) => {
+        const price = etfPrices[ticker];
+        const prevPrice = prevPrices[ticker];
+        return {
+          ticker,
+          price,
+          change: price - prevPrice,
+          changePct: prevPrice > 0 ? ((price - prevPrice) / prevPrice) * 100 : 0,
+        };
+      });
     }),
     tickers: publicProcedure.query(() => [
       { ticker: "DORI", name: "DORI", description: "1x LP Tracker", leverage: 1, inverse: false },
@@ -444,17 +434,11 @@ export const appRouter = router({
     rankings: publicProcedure.query(async () => {
       const { users: allUsers, holdings: allHoldings } = await getLeaderboard();
 
-      // Get current prices for all tickers
+      // Get current prices for all tickers using unified compounding
       const history = await getPriceHistory();
-      const latest = history.length > 0 ? history[history.length - 1] : null;
-      const previous = history.length > 1 ? history[history.length - 2] : latest;
-      const currentBase = latest ? parseFloat(latest.price) : 50;
-      const previousBase = previous ? parseFloat(previous.price) : 50;
-
-      const tickerPrices: Record<string, number> = {};
-      for (const ticker of TICKERS) {
-        tickerPrices[ticker] = getETFPriceLocal(ticker, currentBase, previousBase);
-      }
+      const tickerPrices: Record<string, number> = history.length > 0
+        ? computeAllETFPricesSync(history)
+        : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
 
       // Calculate portfolio value for each user
       const rankings = allUsers.map((u) => {
