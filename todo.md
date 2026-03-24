@@ -380,3 +380,6 @@
 - [x] Update client-side staleTime to 10 min, gcTime to 30 min
 - [x] Disabled refetchOnWindowFocus, retry limited to 1
 - [x] Production is SQLite-only, will work after next publish
+
+## Documentation
+- [x] Write comprehensive README.md for the project
