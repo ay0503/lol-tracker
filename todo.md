@@ -224,3 +224,10 @@
 - [x] Restore intentional text-white on colored backgrounds (red sell, purple short, notification badge)
 - [x] Replace text-black with text-primary-foreground on green/primary buttons
 - [x] Test both themes in browser - all pages verified (Home, Portfolio, Leaderboard)
+
+## Feature: Stock Price to Rank Legend
+- [x] Review the LP-to-price mapping logic to extract tier/price breakpoints
+- [x] Design and build PriceRankLegend component with tier bar, current price marker, and division breakdown
+- [x] Integrate legend into the main page between LP chart and stats grid
+- [x] Ensure legend works in both dark and light themes — verified
+- [x] Test in browser and save checkpoint

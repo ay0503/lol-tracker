@@ -19,6 +19,7 @@ import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
 import NotificationBell from "@/components/NotificationBell";
+import PriceRankLegend from "@/components/PriceRankLegend";
 import {
   CHAMPION_STATS,
   MATCH_HISTORY,
@@ -589,6 +590,11 @@ export default function Home() {
             <TradingPanel />
           </section>
         )}
+
+        {/* Price → Rank Legend */}
+        <section className="mt-6">
+          <PriceRankLegend />
+        </section>
 
         {/* Stats grid — now live */}
         <section className="mt-8">
