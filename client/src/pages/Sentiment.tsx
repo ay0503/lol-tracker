@@ -62,27 +62,27 @@ export default function Sentiment() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors">
+            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Back
             </Link>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-bold text-white font-[var(--font-heading)]">Sentiment</span>
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">Sentiment</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-white transition-colors">Leaderboard</Link>
-            <Link href="/news" className="text-xs text-muted-foreground hover:text-white transition-colors">News</Link>
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-white transition-colors">Ledger</Link>
+            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Leaderboard</Link>
+            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">News</Link>
+            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ledger</Link>
           </div>
         </div>
       </nav>
 
       <main className="container py-6 max-w-3xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white font-[var(--font-heading)]">Market Sentiment</h1>
+          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">Market Sentiment</h1>
           <p className="text-sm text-muted-foreground mt-1">Share your takes on $DORI and its ETFs. Are you bullish or bearish?</p>
         </div>
 
@@ -112,7 +112,7 @@ export default function Sentiment() {
           <div className="bg-card border border-border rounded-xl p-4 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs text-muted-foreground">Posting as</span>
-              <span className="text-xs font-bold text-white">{user?.name || "Anonymous"}</span>
+              <span className="text-xs font-bold text-foreground">{user?.name || "Anonymous"}</span>
             </div>
             <div className="flex gap-2 mb-3">
               {(["bullish", "bearish", "neutral"] as const).map((s) => {
@@ -142,7 +142,7 @@ export default function Sentiment() {
               <select
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value)}
-                className="bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-white"
+                className="bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground"
               >
                 <option value="DORI">$DORI</option>
                 <option value="DDRI">$DDRI (2x)</option>
@@ -158,13 +158,13 @@ export default function Sentiment() {
                 onChange={(e) => setContent(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handlePost()}
                 placeholder="What's your take on $DORI? (e.g., 'Going long, he's on a win streak')"
-                className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 maxLength={500}
               />
               <button
                 onClick={handlePost}
                 disabled={!content.trim() || postComment.isPending}
-                className="bg-primary text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -211,7 +211,7 @@ export default function Sentiment() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-white">{comment.userName}</span>
+                        <span className="text-xs font-bold text-foreground">{comment.userName}</span>
                         {comment.ticker && (
                           <span className="text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
                             ${comment.ticker}
@@ -227,7 +227,7 @@ export default function Sentiment() {
                           {formatTimeAgo(comment.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-white/90">{comment.content}</p>
+                      <p className="text-sm text-foreground/90">{comment.content}</p>
                     </div>
                   </div>
                 </motion.div>

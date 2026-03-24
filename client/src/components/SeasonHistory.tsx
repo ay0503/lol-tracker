@@ -53,7 +53,7 @@ export default function SeasonHistory() {
           <span className="text-xs font-bold font-[var(--font-mono)] text-primary px-1.5 py-0.5 bg-primary/10 rounded">
             S2026
           </span>
-          <span className="text-sm font-semibold text-white" style={{ color: getTierColor(currentTier) }}>
+          <span className="text-sm font-semibold text-foreground" style={{ color: getTierColor(currentTier) }}>
             {currentTier}
           </span>
           {isLive && (

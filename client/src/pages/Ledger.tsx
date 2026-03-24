@@ -34,7 +34,7 @@ export default function Ledger() {
     <div className="min-h-screen bg-background">
       <div className="container py-8 max-w-4xl">
         {/* Back link */}
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-white transition-colors mb-4">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to $DORI
         </Link>
@@ -46,7 +46,7 @@ export default function Ledger() {
               <BookOpen className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white font-[var(--font-heading)]">
+              <h1 className="text-xl font-bold text-foreground font-[var(--font-heading)]">
                 Public Ledger
               </h1>
               <p className="text-xs text-muted-foreground">
@@ -57,7 +57,7 @@ export default function Ledger() {
           <button
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-xs text-muted-foreground hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`} />
             Refresh
@@ -112,11 +112,11 @@ export default function Ledger() {
                 {/* User */}
                 <div className="col-span-2 flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-white">
+                    <span className="text-[10px] font-bold text-foreground">
                       {String(trade.userName || 'A').charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-xs text-white truncate font-[var(--font-mono)]">
+                  <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
                     {String(trade.userName || 'Anonymous')}
                   </span>
                 </div>
@@ -151,7 +151,7 @@ export default function Ledger() {
 
                 {/* Shares */}
                 <div className="col-span-2 text-right">
-                  <span className="text-xs text-white font-[var(--font-mono)]">
+                  <span className="text-xs text-foreground font-[var(--font-mono)]">
                     {trade.shares.toFixed(2)}
                   </span>
                 </div>
@@ -166,7 +166,7 @@ export default function Ledger() {
                 {/* Total */}
                 <div className="col-span-2 text-right">
                   <div>
-                    <span className="text-xs text-white font-semibold font-[var(--font-mono)]">
+                    <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">
                       ${trade.totalAmount.toFixed(2)}
                     </span>
                     <p className="text-[10px] text-muted-foreground">

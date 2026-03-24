@@ -26,28 +26,28 @@ export default function Leaderboard() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors">
+            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Back
             </Link>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-white font-[var(--font-heading)]">Leaderboard</span>
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">Leaderboard</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-white transition-colors">Ledger</Link>
-            <Link href="/portfolio" className="text-xs text-muted-foreground hover:text-white transition-colors">Portfolio</Link>
-            <Link href="/news" className="text-xs text-muted-foreground hover:text-white transition-colors">News</Link>
-            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-white transition-colors">Sentiment</Link>
+            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ledger</Link>
+            <Link href="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Portfolio</Link>
+            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">News</Link>
+            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sentiment</Link>
           </div>
         </div>
       </nav>
 
       <main className="container py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white font-[var(--font-heading)]">Trader Rankings</h1>
+          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">Trader Rankings</h1>
           <p className="text-sm text-muted-foreground mt-1">All traders ranked by total portfolio value. Starting balance: $200.</p>
         </div>
 
@@ -79,17 +79,17 @@ export default function Leaderboard() {
                     <div className="flex items-center gap-3">
                       {getRankIcon(rank)}
                       <div>
-                        <p className="text-sm font-bold text-white">{trader.userName}</p>
+                        <p className="text-sm font-bold text-foreground">{trader.userName}</p>
                         <div className="flex items-center gap-3 mt-0.5">
                           <span className="text-xs text-muted-foreground">
-                            Cash: <span className="text-white font-mono">${trader.cashBalance.toFixed(2)}</span>
+                            Cash: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(2)}</span>
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Holdings: <span className="text-white font-mono">${trader.holdingsValue.toFixed(2)}</span>
+                            Holdings: <span className="text-foreground font-mono">${trader.holdingsValue.toFixed(2)}</span>
                           </span>
                           {trader.shortExposure !== 0 && (
                             <span className="text-xs text-muted-foreground">
-                              Shorts: <span className="text-white font-mono">${trader.shortExposure.toFixed(2)}</span>
+                              Shorts: <span className="text-foreground font-mono">${trader.shortExposure.toFixed(2)}</span>
                             </span>
                           )}
                           {trader.totalDividends > 0 && (
@@ -101,7 +101,7 @@ export default function Leaderboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-white font-mono">${trader.totalValue.toFixed(2)}</p>
+                      <p className="text-lg font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
                       <div className="flex items-center gap-1 justify-end">
                         {isPositive ? (
                           <TrendingUp className="w-3 h-3 text-[#00C805]" />

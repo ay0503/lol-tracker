@@ -197,7 +197,7 @@ function PortfolioPnlChart() {
       >
         <div className="flex items-center gap-2 mb-4">
           <LineChart className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+          <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
             Portfolio Performance
           </h3>
         </div>
@@ -227,7 +227,7 @@ function PortfolioPnlChart() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <LineChart className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+          <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
             Portfolio Performance
           </h3>
           <span
@@ -247,8 +247,8 @@ function PortfolioPnlChart() {
               onClick={() => setRange(r.id)}
               className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${
                 range === r.id
-                  ? "bg-primary text-black"
-                  : "text-muted-foreground hover:text-white"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {r.label}
@@ -364,7 +364,7 @@ export default function Portfolio() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Wallet className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-white font-[var(--font-heading)] mb-2">
+          <h2 className="text-lg font-bold text-foreground font-[var(--font-heading)] mb-2">
             Sign in to view your portfolio
           </h2>
           <p className="text-sm text-muted-foreground mb-6">
@@ -372,7 +372,7 @@ export default function Portfolio() {
           </p>
           <a
             href={getLoginUrl()}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors"
           >
             <LogIn className="w-4 h-4" />
             Sign In to Trade
@@ -386,7 +386,7 @@ export default function Portfolio() {
     <div className="min-h-screen bg-background">
       <div className="container py-8 max-w-5xl">
         {/* Back link */}
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-white transition-colors mb-4">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to $DORI
         </Link>
@@ -397,7 +397,7 @@ export default function Portfolio() {
             <Wallet className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white font-[var(--font-heading)]">
+            <h1 className="text-xl font-bold text-foreground font-[var(--font-heading)]">
               My Portfolio
             </h1>
             <p className="text-xs text-muted-foreground">
@@ -425,7 +425,7 @@ export default function Portfolio() {
             >
               <p className="text-xs text-muted-foreground mb-1">Total Portfolio Value</p>
               <div className="flex items-baseline gap-3">
-                <h2 className="text-4xl font-bold text-white font-[var(--font-mono)]">
+                <h2 className="text-4xl font-bold text-foreground font-[var(--font-mono)]">
                   ${metrics.totalValue.toFixed(2)}
                 </h2>
                 <div
@@ -448,13 +448,13 @@ export default function Portfolio() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                 <div className="bg-secondary/50 rounded-lg p-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Cash</p>
-                  <p className="text-lg font-bold text-white font-[var(--font-mono)]">
+                  <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
                     ${metrics.cashBalance.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Holdings Value</p>
-                  <p className="text-lg font-bold text-white font-[var(--font-mono)]">
+                  <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
                     ${metrics.totalHoldingsValue.toFixed(2)}
                   </p>
                 </div>
@@ -488,7 +488,7 @@ export default function Portfolio() {
             >
               <div className="flex items-center gap-2 mb-4">
                 <PieChart className="w-4 h-4 text-muted-foreground" />
-                <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+                <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
                   Long Holdings
                 </h3>
               </div>
@@ -521,7 +521,7 @@ export default function Portfolio() {
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-white font-[var(--font-mono)]">
+                          <span className="text-sm text-foreground font-[var(--font-mono)]">
                             {h.shares.toFixed(2)}
                           </span>
                         </div>
@@ -531,12 +531,12 @@ export default function Portfolio() {
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-white font-[var(--font-mono)]">
+                          <span className="text-sm text-foreground font-[var(--font-mono)]">
                             ${h.currentPrice.toFixed(2)}
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-white font-semibold font-[var(--font-mono)]">
+                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">
                             ${h.currentValue.toFixed(2)}
                           </span>
                         </div>
@@ -580,7 +580,7 @@ export default function Portfolio() {
               >
                 <div className="flex items-center gap-2 mb-4">
                   <ArrowDownUp className="w-4 h-4 text-purple-400" />
-                  <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+                  <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
                     Short Positions
                   </h3>
                 </div>
@@ -622,12 +622,12 @@ export default function Portfolio() {
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-white font-[var(--font-mono)]">
+                          <span className="text-sm text-foreground font-[var(--font-mono)]">
                             ${h.currentPrice.toFixed(2)}
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-sm text-white font-semibold font-[var(--font-mono)]">
+                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">
                             ${h.shortValue.toFixed(2)}
                           </span>
                         </div>
@@ -663,7 +663,7 @@ export default function Portfolio() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <History className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+                  <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
                     Transaction History
                   </h3>
                   {tradeHistory && (
@@ -682,8 +682,8 @@ export default function Portfolio() {
                         onClick={() => setFilter(f.id)}
                         className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all capitalize ${
                           filter === f.id
-                            ? "bg-primary text-black"
-                            : "text-muted-foreground hover:text-white"
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         {f.label}
@@ -715,7 +715,7 @@ export default function Portfolio() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-white capitalize">
+                              <span className="text-xs font-semibold text-foreground capitalize">
                                 {style.label}
                               </span>
                               <span
@@ -731,7 +731,7 @@ export default function Portfolio() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-white font-[var(--font-mono)]">
+                          <p className="text-sm font-semibold text-foreground font-[var(--font-mono)]">
                             {style.sign}${trade.totalAmount.toFixed(2)}
                           </p>
                           <p className="text-[10px] text-muted-foreground">

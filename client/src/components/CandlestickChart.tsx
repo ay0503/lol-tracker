@@ -492,8 +492,8 @@ export default function CandlestickChart({ timeRange = "1M", onVisibleRangeChang
               title={tool.label}
               className={`p-1.5 rounded-md transition-all ${
                 activeTool === tool.id
-                  ? "bg-primary text-black"
-                  : "text-muted-foreground hover:text-white hover:bg-secondary"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
             >
               <tool.icon className="w-3.5 h-3.5" />
@@ -536,7 +536,7 @@ export default function CandlestickChart({ timeRange = "1M", onVisibleRangeChang
               value={hlinePrice}
               onChange={(e) => setHlinePrice(e.target.value)}
               placeholder="e.g. 50.00"
-              className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white font-[var(--font-mono)] w-24 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground font-[var(--font-mono)] w-24 focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -560,7 +560,7 @@ export default function CandlestickChart({ timeRange = "1M", onVisibleRangeChang
                   setActiveTool("pointer");
                 }
               }}
-              className="px-2 py-1 bg-primary text-black text-xs font-bold rounded"
+              className="px-2 py-1 bg-primary text-primary-foreground text-xs font-bold rounded"
             >
               Add
             </button>
@@ -589,7 +589,7 @@ export default function CandlestickChart({ timeRange = "1M", onVisibleRangeChang
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               placeholder="e.g. Support level"
-              className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white font-[var(--font-mono)] w-36 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground font-[var(--font-mono)] w-36 focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter" && textInput.trim()) {
@@ -609,7 +609,7 @@ export default function CandlestickChart({ timeRange = "1M", onVisibleRangeChang
                   setActiveTool("pointer");
                 }
               }}
-              className="px-2 py-1 bg-primary text-black text-xs font-bold rounded"
+              className="px-2 py-1 bg-primary text-primary-foreground text-xs font-bold rounded"
             >
               Add
             </button>

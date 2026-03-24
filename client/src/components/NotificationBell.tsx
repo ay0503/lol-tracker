@@ -105,7 +105,7 @@ export default function NotificationBell() {
           setOpen(!open);
           if (!open) refetchNotifs();
         }}
-        className="relative p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+        className="relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
         title="Notifications"
       >
         <Bell className="w-4 h-4" />
@@ -120,7 +120,7 @@ export default function NotificationBell() {
         <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <h3 className="text-sm font-bold text-white font-[var(--font-heading)]">
+            <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
               Notifications
             </h3>
             <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function NotificationBell() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="p-0.5 text-muted-foreground hover:text-white rounded"
+                className="p-0.5 text-muted-foreground hover:text-foreground rounded"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -167,7 +167,7 @@ export default function NotificationBell() {
                     {getNotifIcon(n.type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-semibold ${!n.read ? "text-white" : "text-muted-foreground"}`}>
+                    <p className={`text-xs font-semibold ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>
                       {n.title}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">

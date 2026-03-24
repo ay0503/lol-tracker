@@ -28,7 +28,7 @@ function CustomTooltip({ active, payload }: any) {
     const price = data.price ?? totalLPToPrice(data.totalLP);
     return (
       <div className="bg-[#1e2028] border border-[#2a2d38] rounded-lg px-4 py-3 shadow-xl">
-        <p className="text-white font-semibold text-sm" style={{ fontFamily: "var(--font-heading)" }}>
+        <p className="text-foreground font-semibold text-sm" style={{ fontFamily: "var(--font-heading)" }}>
           ${price.toFixed(2)}
         </p>
         <p className="text-muted-foreground text-xs mt-0.5">{data.label}</p>
@@ -99,8 +99,8 @@ export default function LPChart() {
             onClick={() => setChartView("area")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               chartView === "area"
-                ? "bg-primary text-black"
-                : "text-muted-foreground hover:text-white"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <LineChart className="w-3.5 h-3.5" />
@@ -110,8 +110,8 @@ export default function LPChart() {
             onClick={() => setChartView("candlestick")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
               chartView === "candlestick"
-                ? "bg-primary text-black"
-                : "text-muted-foreground hover:text-white"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <CandlestickIcon className="w-3.5 h-3.5" />
@@ -126,8 +126,8 @@ export default function LPChart() {
               onClick={() => setActiveRange(range)}
               className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-200 ${
                 activeRange === range
-                  ? "text-white"
-                  : "bg-transparent text-muted-foreground hover:text-white"
+                  ? "text-foreground"
+                  : "bg-transparent text-muted-foreground hover:text-foreground"
               }`}
               style={{
                 fontFamily: "var(--font-mono)",
@@ -144,7 +144,7 @@ export default function LPChart() {
 
       {/* Price change summary */}
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl font-bold text-white font-[var(--font-mono)]">
+        <span className="text-2xl font-bold text-foreground font-[var(--font-mono)]">
           ${lastPrice.toFixed(2)}
         </span>
         <span

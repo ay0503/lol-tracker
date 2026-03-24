@@ -42,7 +42,7 @@ export default function MatchRow({ match, index }: Props) {
       {/* Main info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-white font-[var(--font-heading)]">
+          <span className="text-sm font-semibold text-foreground font-[var(--font-heading)]">
             {match.champion}
           </span>
           <span
@@ -66,12 +66,12 @@ export default function MatchRow({ match, index }: Props) {
 
       {/* KDA */}
       <div className="text-right flex-shrink-0">
-        <p className="text-sm font-bold font-[var(--font-mono)] text-white">
+        <p className="text-sm font-bold font-[var(--font-mono)] text-foreground">
           <span style={{ color: "#00C805" }}>{match.kills}</span>
           <span className="text-muted-foreground"> / </span>
           <span style={{ color: "#FF5252" }}>{match.deaths}</span>
           <span className="text-muted-foreground"> / </span>
-          <span className="text-white">{match.assists}</span>
+          <span className="text-foreground">{match.assists}</span>
         </p>
         <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
           {match.kdaRatio} KDA

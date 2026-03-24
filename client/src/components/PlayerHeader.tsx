@@ -81,7 +81,7 @@ export default function PlayerHeader() {
       {/* HERO: Stock Price */}
       <div className="mt-4">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white font-[var(--font-heading)] tracking-tight tabular-nums">
+          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground font-[var(--font-heading)] tracking-tight tabular-nums">
             ${currentPrice.toFixed(2)}
           </h2>
         </div>
@@ -116,7 +116,7 @@ export default function PlayerHeader() {
           />
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">Rank</p>
-            <p className="text-sm font-semibold font-[var(--font-mono)] text-white">
+            <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
               {tier} {division} · {lp} LP
             </p>
           </div>
@@ -131,19 +131,19 @@ export default function PlayerHeader() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">Win Rate</p>
-          <p className="text-sm font-semibold font-[var(--font-mono)] text-white">
+          <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
             {winRate}%
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">Peak</p>
-          <p className="text-sm font-semibold font-[var(--font-mono)] text-white">
+          <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
             {RANKED_SOLO.topTier} ({RANKED_SOLO.topLP} LP)
           </p>
         </div>
         <div className="hidden sm:block">
           <p className="text-xs text-muted-foreground mb-0.5">Ladder</p>
-          <p className="text-sm font-semibold font-[var(--font-mono)] text-white">
+          <p className="text-sm font-semibold font-[var(--font-mono)] text-foreground">
             #{PLAYER.ladderRank.toLocaleString()} (Top {PLAYER.ladderPercent}%)
           </p>
         </div>

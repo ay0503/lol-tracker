@@ -5,6 +5,7 @@
  */
 import { useState, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -46,6 +47,8 @@ import {
   Crown,
   Clock,
   Activity,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -70,7 +73,7 @@ function SectionHeader({
       </div>
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold text-white font-[var(--font-heading)]">
+          <h2 className="text-base font-bold text-foreground font-[var(--font-heading)]">
             {title}
           </h2>
           {isLive && (
@@ -182,7 +185,7 @@ function MatchHistorySection() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-white font-[var(--font-heading)]">
+              <h2 className="text-base font-bold text-foreground font-[var(--font-heading)]">
                 Match History
               </h2>
               {isLive && (
@@ -351,6 +354,23 @@ function ChampionPoolSection() {
   );
 }
 
+function ThemeToggleButton() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
+      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {theme === "dark" ? (
+        <Sun className="w-4 h-4" />
+      ) : (
+        <Moon className="w-4 h-4" />
+      )}
+    </button>
+  );
+}
+
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
   const [isEditingName, setIsEditingName] = useState(false);
@@ -390,35 +410,35 @@ export default function Home() {
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <BarChart3 className="w-5 h-5 text-primary" />
-              <span className="text-sm font-bold text-white font-[var(--font-heading)]">
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">
                 $DORI
               </span>
             </Link>
             <div className="hidden sm:flex items-center gap-1 ml-2">
               <Link
                 href="/ledger"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <BookOpen className="w-3.5 h-3.5" />
                 Ledger
               </Link>
               <Link
                 href="/leaderboard"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <Crown className="w-3.5 h-3.5" />
                 Leaderboard
               </Link>
               <Link
                 href="/news"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <Newspaper className="w-3.5 h-3.5" />
                 News
               </Link>
               <Link
                 href="/sentiment"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
                 Sentiment
@@ -426,7 +446,7 @@ export default function Home() {
               {isAuthenticated && (
                 <Link
                   href="/portfolio"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
                 >
                   <Wallet className="w-3.5 h-3.5" />
                   Portfolio
@@ -439,7 +459,7 @@ export default function Home() {
               href="https://op.gg/lol/summoners/na/%EB%AA%A9%EB%8F%84%EB%A6%AC%20%EB%8F%84%EB%A7%88%EB%B1%80-dori"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-white transition-colors font-[var(--font-mono)] hidden sm:inline"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--font-mono)] hidden sm:inline"
             >
               OP.GG
             </a>
@@ -449,7 +469,7 @@ export default function Home() {
             </div>
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 text-xs text-white">
+                <div className="flex items-center gap-1.5 text-xs text-foreground">
                   {isEditingName ? (
                     <div className="flex items-center gap-1">
                       <input
@@ -457,7 +477,7 @@ export default function Home() {
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         maxLength={50}
-                        className="w-24 px-1.5 py-0.5 rounded bg-secondary border border-border text-xs text-white font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-24 px-1.5 py-0.5 rounded bg-secondary border border-border text-xs text-foreground font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && editName.trim()) {
@@ -501,7 +521,7 @@ export default function Home() {
                           );
                           setIsEditingName(true);
                         }}
-                        className="p-0.5 text-muted-foreground hover:text-white rounded"
+                        className="p-0.5 text-muted-foreground hover:text-foreground rounded"
                         title="Edit display name"
                       >
                         <Pencil className="w-3 h-3" />
@@ -511,36 +531,41 @@ export default function Home() {
                 </div>
                 {/* Notification bell */}
                 <NotificationBell />
+                {/* Theme toggle */}
+                <ThemeToggleButton />
                 {/* Mobile nav links */}
                 <div className="flex sm:hidden items-center gap-1">
                   <Link
                     href="/ledger"
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-white"
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground"
                   >
                     <BookOpen className="w-4 h-4" />
                   </Link>
                   <Link
                     href="/portfolio"
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-white"
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground"
                   >
                     <Wallet className="w-4 h-4" />
                   </Link>
                 </div>
                 <button
                   onClick={() => logout()}
-                  className="text-xs text-muted-foreground hover:text-white transition-colors flex items-center gap-1"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
+              <div className="flex items-center gap-2">
+              <ThemeToggleButton />
               <a
                 href={getLoginUrl()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black bg-primary hover:bg-primary/90 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 Sign In
               </a>
+              </div>
             )}
           </div>
         </div>

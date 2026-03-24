@@ -37,27 +37,27 @@ export default function NewsFeed() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-white transition-colors">
+            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Back
             </Link>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Newspaper className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-white font-[var(--font-heading)]">$DORI News</span>
+              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">$DORI News</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-white transition-colors">Leaderboard</Link>
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-white transition-colors">Ledger</Link>
-            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-white transition-colors">Sentiment</Link>
+            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Leaderboard</Link>
+            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Ledger</Link>
+            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Sentiment</Link>
           </div>
         </div>
       </nav>
 
       <main className="container py-6 max-w-3xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white font-[var(--font-heading)]">Market News</h1>
+          <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">Market News</h1>
           <p className="text-sm text-muted-foreground mt-1">AI-generated financial news based on $DORI CEO's ranked games. Not financial advice. Probably.</p>
         </div>
 
@@ -68,7 +68,7 @@ export default function NewsFeed() {
               <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
               <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Breaking</span>
             </div>
-            <p className="text-sm font-bold text-white">{newsItems[0].headline}</p>
+            <p className="text-sm font-bold text-foreground">{newsItems[0].headline}</p>
           </div>
         )}
 
@@ -97,7 +97,7 @@ export default function NewsFeed() {
                 <div className="flex items-start gap-3">
                   {getNewsIcon(item.isWin)}
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-white leading-snug">{item.headline}</p>
+                    <p className="text-sm font-bold text-foreground leading-snug">{item.headline}</p>
                     {item.body && (
                       <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{item.body}</p>
                     )}

@@ -52,7 +52,7 @@ export default function RecentPerformance() {
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-white">
+                  <span className="text-xs font-medium text-foreground">
                     {champ.champion}
                   </span>
                   <span

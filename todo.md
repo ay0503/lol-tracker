@@ -214,3 +214,13 @@
 - [x] Add confirm/cancel buttons with clear labeling
 - [x] Apply to all trade types: market buy/sell, short sell, cover
 - [x] Write vitest tests for portfolio history, notifications, and confirmation threshold (12 tests)
+
+## Feature: Dark/Light Theme Toggle
+- [x] Audit current ThemeProvider and CSS variable setup
+- [x] Define light theme CSS variables in index.css (:root for light, .dark for dark)
+- [x] Enable switchable theme in ThemeProvider
+- [x] Add theme toggle button (Sun/Moon icon) to nav bar
+- [x] Replace 145 hardcoded text-white with text-foreground across 19 files
+- [x] Restore intentional text-white on colored backgrounds (red sell, purple short, notification badge)
+- [x] Replace text-black with text-primary-foreground on green/primary buttons
+- [x] Test both themes in browser - all pages verified (Home, Portfolio, Leaderboard)

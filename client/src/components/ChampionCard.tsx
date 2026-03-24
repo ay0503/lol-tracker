@@ -38,7 +38,7 @@ export default function ChampionCard({ champion, index }: Props) {
           loading="lazy"
         />
         <div>
-          <h3 className="text-sm font-semibold text-white font-[var(--font-heading)]">
+          <h3 className="text-sm font-semibold text-foreground font-[var(--font-heading)]">
             {champion.name}
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -83,7 +83,7 @@ export default function ChampionCard({ champion, index }: Props) {
 
       {/* KDA */}
       <div className="flex items-baseline gap-1">
-        <span className="text-lg font-bold font-[var(--font-mono)] text-white">
+        <span className="text-lg font-bold font-[var(--font-mono)] text-foreground">
           {champion.kdaRatio.toFixed(2)}
         </span>
         <span className="text-xs text-muted-foreground">KDA</span>
