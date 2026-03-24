@@ -1,6 +1,6 @@
 /*
- * Design Philosophy: "Clean Broker" — Robinhood's minimalist fintech UI.
- * Rebranded as $DORI LP Tracker.
+ * $DORI LP Tracker — Main page with Robinhood-style fintech UI.
+ * Navigation to Ledger and Portfolio pages.
  */
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -14,8 +14,20 @@ import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
 import { CHAMPION_STATS, MATCH_HISTORY, RANKED_SOLO, RANKED_FLEX } from "@/lib/playerData";
 import { motion } from "framer-motion";
-import { BarChart3, Swords, History, Trophy, TrendingUp, Shield, LogIn, LogOut, User, Wallet } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import {
+  BarChart3,
+  Swords,
+  History,
+  Trophy,
+  TrendingUp,
+  Shield,
+  LogIn,
+  LogOut,
+  User,
+  BookOpen,
+  Wallet,
+} from "lucide-react";
+import { Link } from "wouter";
 
 const HERO_BG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663324505869/EqpY4GjGxu3PtSNi8r37GF/hero-bg-BaXtnoCMhWwQSL3MGvhxSm.webp";
@@ -92,21 +104,38 @@ export default function Home() {
       {/* Top nav bar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex items-center justify-between h-14">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <span className="text-sm font-bold text-white font-[var(--font-heading)]">
-              $DORI
-            </span>
-            <span className="text-xs text-muted-foreground font-[var(--font-mono)] hidden sm:inline">
-              LP Tracker
-            </span>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              <span className="text-sm font-bold text-white font-[var(--font-heading)]">
+                $DORI
+              </span>
+            </Link>
+            <div className="hidden sm:flex items-center gap-1 ml-2">
+              <Link
+                href="/ledger"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Ledger
+              </Link>
+              {isAuthenticated && (
+                <Link
+                  href="/portfolio"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-white hover:bg-secondary/50 transition-all"
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  Portfolio
+                </Link>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <a
               href="https://op.gg/lol/summoners/na/%EB%AA%A9%EB%8F%84%EB%A6%AC%20%EB%8F%84%EB%A7%88%EB%B1%80-dori"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-white transition-colors font-[var(--font-mono)]"
+              className="text-xs text-muted-foreground hover:text-white transition-colors font-[var(--font-mono)] hidden sm:inline"
             >
               OP.GG
             </a>
@@ -118,7 +147,24 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 text-xs text-white">
                   <User className="w-3.5 h-3.5" />
-                  <span className="font-[var(--font-mono)] hidden sm:inline">{user?.name || "Trader"}</span>
+                  <span className="font-[var(--font-mono)] hidden sm:inline">
+                    {user?.name || "Trader"}
+                  </span>
+                </div>
+                {/* Mobile nav links */}
+                <div className="flex sm:hidden items-center gap-1">
+                  <Link
+                    href="/ledger"
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-white"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    href="/portfolio"
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-white"
+                  >
+                    <Wallet className="w-4 h-4" />
+                  </Link>
                 </div>
                 <button
                   onClick={() => logout()}
@@ -275,11 +321,21 @@ export default function Home() {
               className="text-primary hover:underline"
             >
               OP.GG
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://developer.riotgames.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Riot Games API
             </a>
             . Not affiliated with Riot Games.
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            $DORI LP Tracker is not endorsed by Riot Games and does not reflect the views of Riot Games.
+            $DORI LP Tracker is not endorsed by Riot Games and does not reflect
+            the views of Riot Games.
           </p>
         </footer>
       </main>

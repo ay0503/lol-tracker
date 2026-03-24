@@ -1,6 +1,6 @@
 /*
  * CandlestickChart: TradingView-style chart using lightweight-charts v5.
- * Converts LP data into OHLC candlestick format.
+ * Converts LP data into OHLC candlestick format with price ($) values.
  * Includes drawing/annotation tools: trend lines, horizontal lines, text markers.
  */
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -18,7 +18,7 @@ import {
   type Time,
   type SeriesMarker,
 } from "lightweight-charts";
-import { LP_HISTORY } from "@/lib/playerData";
+import { getDataForRange, totalLPToPrice, type TimeRange, type LPDataPoint } from "@/lib/playerData";
 import {
   Minus,
   TrendingUp,
@@ -28,48 +28,55 @@ import {
   Pencil,
 } from "lucide-react";
 
-// Convert LP data to OHLC candlestick format
-function generateCandlestickData(): CandlestickData<Time>[] {
-  const data: CandlestickData<Time>[] = [];
+interface CandlestickChartProps {
+  timeRange?: TimeRange;
+}
 
-  for (let i = 0; i < LP_HISTORY.length; i++) {
-    const point = LP_HISTORY[i];
-    const prev = i > 0 ? LP_HISTORY[i - 1] : null;
+// Convert LP data to OHLC candlestick format with price values
+function generateCandlestickData(data: LPDataPoint[]): CandlestickData<Time>[] {
+  const result: CandlestickData<Time>[] = [];
+  const startDate = new Date(2025, 8, 23); // Sep 23, 2025
 
-    const close = point.totalLP;
-    const open = prev ? prev.totalLP : close - 10;
+  for (let i = 0; i < data.length; i++) {
+    const point = data[i];
+    const prev = i > 0 ? data[i - 1] : null;
+
+    const closePrice = point.price ?? totalLPToPrice(point.totalLP);
+    const openPrice = prev ? (prev.price ?? totalLPToPrice(prev.totalLP)) : closePrice - 0.5;
 
     // Simulate intraday volatility
-    const volatility = Math.abs(close - open) * 0.3 + 8;
-    const high = Math.max(open, close) + Math.random() * volatility;
-    const low = Math.min(open, close) - Math.random() * volatility;
+    const volatility = Math.abs(closePrice - openPrice) * 0.3 + 0.5;
+    const high = Math.max(openPrice, closePrice) + Math.random() * volatility;
+    const low = Math.min(openPrice, closePrice) - Math.random() * volatility;
 
-    const day = parseInt(point.date.replace("Mar ", ""));
-    const dateStr = `2026-03-${day.toString().padStart(2, "0")}`;
+    // Generate a proper date string
+    const dayDate = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+    const dateStr = dayDate.toISOString().split("T")[0];
 
-    data.push({
+    result.push({
       time: dateStr as Time,
-      open: Math.round(open * 100) / 100,
+      open: Math.round(openPrice * 100) / 100,
       high: Math.round(high * 100) / 100,
       low: Math.round(low * 100) / 100,
-      close: Math.round(close * 100) / 100,
+      close: Math.round(closePrice * 100) / 100,
     });
   }
 
-  return data;
+  return result;
 }
 
 // Generate volume data
-function generateVolumeData() {
-  return LP_HISTORY.map((point, i) => {
-    const prev = i > 0 ? LP_HISTORY[i - 1] : null;
+function generateVolumeData(data: LPDataPoint[]) {
+  const startDate = new Date(2025, 8, 23);
+  return data.map((point, i) => {
+    const prev = i > 0 ? data[i - 1] : null;
     const change = prev ? point.totalLP - prev.totalLP : 0;
-    const day = parseInt(point.date.replace("Mar ", ""));
-    const dateStr = `2026-03-${day.toString().padStart(2, "0")}`;
+    const dayDate = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+    const dateStr = dayDate.toISOString().split("T")[0];
 
     return {
       time: dateStr as Time,
-      value: Math.abs(change) * 2 + Math.random() * 20 + 10,
+      value: Math.abs(change) * 0.5 + Math.random() * 5 + 2,
       color: change >= 0 ? "rgba(0, 200, 5, 0.3)" : "rgba(255, 82, 82, 0.3)",
     };
   });
@@ -84,10 +91,11 @@ interface Annotation {
   seriesRef?: ISeriesApi<any>;
 }
 
-export default function CandlestickChart() {
+export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<any> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<any> | null>(null);
   const [activeTool, setActiveTool] = useState<DrawingTool>("pointer");
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [hlinePrice, setHlinePrice] = useState<string>("");
@@ -95,6 +103,8 @@ export default function CandlestickChart() {
   const [textInput, setTextInput] = useState<string>("");
   const [showTextInput, setShowTextInput] = useState(false);
   const markersRef = useRef<SeriesMarker<Time>[]>([]);
+
+  const rawData = getDataForRange(timeRange);
 
   // Initialize chart
   useEffect(() => {
@@ -133,7 +143,7 @@ export default function CandlestickChart() {
       handleScroll: { vertTouchDrag: false },
     });
 
-    // Candlestick series (v5 API)
+    // Candlestick series
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#00C805",
       downColor: "#FF5252",
@@ -143,10 +153,10 @@ export default function CandlestickChart() {
       wickUpColor: "#00C805",
     });
 
-    const candleData = generateCandlestickData();
+    const candleData = generateCandlestickData(rawData);
     candlestickSeries.setData(candleData);
 
-    // Volume histogram (v5 API)
+    // Volume histogram
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
       priceScaleId: "volume",
@@ -156,13 +166,14 @@ export default function CandlestickChart() {
       scaleMargins: { top: 0.8, bottom: 0 },
     });
 
-    const volumeData = generateVolumeData();
+    const volumeData = generateVolumeData(rawData);
     volumeSeries.setData(volumeData);
 
     chart.timeScale().fitContent();
 
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
 
     // Handle resize
     const handleResize = () => {
@@ -181,8 +192,9 @@ export default function CandlestickChart() {
       chart.remove();
       chartRef.current = null;
       candlestickSeriesRef.current = null;
+      volumeSeriesRef.current = null;
     };
-  }, []);
+  }, [timeRange]);
 
   // Add horizontal line
   const addHorizontalLine = useCallback(
@@ -192,26 +204,18 @@ export default function CandlestickChart() {
       const lineSeries = chartRef.current.addSeries(LineSeries, {
         color: "#FFD54F",
         lineWidth: 1,
-        lineStyle: 2, // dashed
+        lineStyle: 2,
         priceLineVisible: true,
         lastValueVisible: true,
         crosshairMarkerVisible: false,
       });
 
-      const firstDay = parseInt(LP_HISTORY[0].date.replace("Mar ", ""));
-      const lastDay = parseInt(
-        LP_HISTORY[LP_HISTORY.length - 1].date.replace("Mar ", "")
-      );
+      const candleData = generateCandlestickData(rawData);
+      if (candleData.length < 2) return;
 
       const lineData: LineData<Time>[] = [
-        {
-          time: `2026-03-${firstDay.toString().padStart(2, "0")}` as Time,
-          value: price,
-        },
-        {
-          time: `2026-03-${lastDay.toString().padStart(2, "0")}` as Time,
-          value: price,
-        },
+        { time: candleData[0].time, value: price },
+        { time: candleData[candleData.length - 1].time, value: price },
       ];
 
       lineSeries.setData(lineData);
@@ -222,7 +226,7 @@ export default function CandlestickChart() {
         { id, type: "hline", data: { price }, seriesRef: lineSeries },
       ]);
     },
-    []
+    [rawData]
   );
 
   // Add trend line
@@ -238,20 +242,12 @@ export default function CandlestickChart() {
       priceLineVisible: false,
     });
 
-    const first = LP_HISTORY[0];
-    const last = LP_HISTORY[LP_HISTORY.length - 1];
-    const firstDay = parseInt(first.date.replace("Mar ", ""));
-    const lastDay = parseInt(last.date.replace("Mar ", ""));
+    const candleData = generateCandlestickData(rawData);
+    if (candleData.length < 2) return;
 
     const lineData: LineData<Time>[] = [
-      {
-        time: `2026-03-${firstDay.toString().padStart(2, "0")}` as Time,
-        value: first.totalLP,
-      },
-      {
-        time: `2026-03-${lastDay.toString().padStart(2, "0")}` as Time,
-        value: last.totalLP,
-      },
+      { time: candleData[0].time, value: candleData[0].open },
+      { time: candleData[candleData.length - 1].time, value: candleData[candleData.length - 1].close },
     ];
 
     lineSeries.setData(lineData);
@@ -261,18 +257,18 @@ export default function CandlestickChart() {
       ...prev,
       { id, type: "trendline", data: {}, seriesRef: lineSeries },
     ]);
-  }, []);
+  }, [rawData]);
 
-  // Add text marker using series markers
+  // Add text marker
   const addTextMarker = useCallback(
     (text: string) => {
       if (!candlestickSeriesRef.current) return;
 
-      const last = LP_HISTORY[LP_HISTORY.length - 1];
-      const lastDay = parseInt(last.date.replace("Mar ", ""));
+      const candleData = generateCandlestickData(rawData);
+      if (candleData.length === 0) return;
 
       const newMarker: SeriesMarker<Time> = {
-        time: `2026-03-${lastDay.toString().padStart(2, "0")}` as Time,
+        time: candleData[candleData.length - 1].time,
         position: "aboveBar",
         color: "#FFD54F",
         shape: "arrowDown",
@@ -288,7 +284,7 @@ export default function CandlestickChart() {
         { id, type: "text", data: { text } },
       ]);
     },
-    []
+    [rawData]
   );
 
   // Clear all annotations
@@ -375,14 +371,14 @@ export default function CandlestickChart() {
       {showHlineInput && (
         <div className="absolute top-10 left-0 z-20 bg-card border border-border rounded-lg p-3 shadow-xl">
           <p className="text-xs text-muted-foreground mb-2">
-            Enter LP value for horizontal line:
+            Enter price for horizontal line:
           </p>
           <div className="flex gap-2">
             <input
               type="number"
               value={hlinePrice}
               onChange={(e) => setHlinePrice(e.target.value)}
-              placeholder="e.g. 200"
+              placeholder="e.g. 50.00"
               className="bg-secondary border border-border rounded px-2 py-1 text-xs text-white font-[var(--font-mono)] w-24 focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
               onKeyDown={(e) => {
