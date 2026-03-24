@@ -351,3 +351,20 @@
 - [x] Clean up unused Manus packages from package.json
 - [x] Update self-hosting guide (SELF_HOSTING_GUIDE.md) for SQLite + local auth
 - [x] Add Dockerfile and docker-compose.yml instructions in self-hosting guide
+
+## Audit: Wire All Components to Live Backend Data (Remove Stale Fallbacks)
+- [x] Audit Home.tsx for static data imports (playerData.ts, hardcoded values)
+- [x] Audit PlayerHeader for static fallbacks vs live tRPC data
+- [x] Audit LPChart for static LP_HISTORY vs live price data
+- [x] Audit ChampionCard / champion pool for static CHAMPION_STATS vs live data
+- [x] Audit StreakBar for static data vs live match data
+- [x] Audit RecentPerformance for static data vs live match data
+- [x] Audit MatchRow / match history for static MATCH_HISTORY vs live data
+- [x] Audit SeasonHistory for static data vs live data
+- [x] Audit stat cards for hardcoded values vs live data
+- [x] Audit TradingPanel for static prices vs live prices (already wired)
+- [x] Audit Leaderboard page for static vs live data (already wired)
+- [x] Audit News page for static vs live data (already wired)
+- [x] Audit Sentiment page for static vs live data (already wired)
+- [x] Remove or minimize playerData.ts static data usage
+- [x] Ensure all components show loading states when backend data is pending

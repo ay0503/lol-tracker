@@ -396,6 +396,12 @@ export const en = {
     all: "All",
     displayNameUpdated: "Display name updated",
     failedToUpdateName: "Failed to update name",
+    noData: "No price data yet",
+    waitingForData: "Waiting for polling engine to collect data...",
+    noMatchData: "No matches recorded yet. Data will appear once the polling engine collects games.",
+    noChampionData: "No champion data yet. Play some ranked games to see stats.",
+    noStreakData: "No streak data yet. Play some ranked games to track momentum.",
+    noRecentData: "No recent performance data. Play ranked games this week to see stats.",
   },
 
   // ─── Not Found ───

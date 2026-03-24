@@ -1,9 +1,9 @@
 /*
  * Design: Horizontal streak visualization like a trading volume bar.
  * Green blocks for wins, red for losses. Current streak highlighted.
- * Now wired to live data from the backend stats endpoint.
+ * Fully wired to live backend data — no static fallbacks.
  */
-import { calculateStreaks, WIN_LOSS_SEQUENCE } from "@/lib/playerData";
+import { calculateStreaks } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -12,16 +12,37 @@ import { Activity } from "lucide-react";
 export default function StreakBar() {
   const { t } = useTranslation();
 
-  const { data: liveStreaks } = trpc.stats.streaks.useQuery(undefined, {
+  const { data: liveStreaks, isLoading } = trpc.stats.streaks.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  // Use live data if available, otherwise fall back to static
-  const sequence = liveStreaks && liveStreaks.sequence.length > 0
-    ? liveStreaks.sequence
-    : WIN_LOSS_SEQUENCE;
-  const isLive = !!(liveStreaks && liveStreaks.sequence.length > 0);
+  const sequence = liveStreaks?.sequence ?? [];
+  const isLive = sequence.length > 0;
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="animate-pulse bg-secondary rounded-lg w-32 h-8" />
+          <div className="animate-pulse bg-secondary rounded w-20 h-4" />
+        </div>
+        <div className="flex gap-[3px] items-end h-10">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="flex-1 h-7 animate-pulse bg-secondary rounded-sm" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (sequence.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-8">
+        {t.common.noStreakData}
+      </p>
+    );
+  }
 
   const streaks = calculateStreaks(sequence);
   const currentStreak = streaks[0];

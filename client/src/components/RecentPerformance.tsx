@@ -1,9 +1,8 @@
 /*
  * Design: Compact table showing recent 7-day champion performance.
  * Win rate bars with green/red coloring.
- * Now wired to live data from the backend stats endpoint.
+ * Fully wired to live backend data — no static fallbacks.
  */
-import { RECENT_7_DAYS } from "@/lib/playerData";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -12,16 +11,37 @@ import { Activity } from "lucide-react";
 export default function RecentPerformance() {
   const { t } = useTranslation();
 
-  const { data: livePerformance } = trpc.stats.recentPerformance.useQuery(undefined, {
+  const { data: livePerformance, isLoading } = trpc.stats.recentPerformance.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  // Use live data if available, otherwise fall back to static
-  const champData = livePerformance && livePerformance.length > 0
-    ? livePerformance
-    : RECENT_7_DAYS;
-  const isLive = !!(livePerformance && livePerformance.length > 0);
+  const champData = livePerformance ?? [];
+  const isLive = champData.length > 0;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="animate-pulse bg-secondary rounded-md w-7 h-7" />
+            <div className="flex-1">
+              <div className="animate-pulse bg-secondary rounded w-20 h-3 mb-1" />
+              <div className="animate-pulse bg-secondary rounded w-full h-1" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (champData.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-8">
+        {t.common.noRecentData}
+      </p>
+    );
+  }
 
   return (
     <div>
@@ -95,11 +115,6 @@ export default function RecentPerformance() {
             </motion.div>
           );
         })}
-        {champData.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-4">
-            {t.performance.noData}
-          </p>
-        )}
       </div>
     </div>
   );

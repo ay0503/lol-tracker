@@ -23,13 +23,7 @@ import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
 import NotificationBell from "@/components/NotificationBell";
 import PriceRankLegend from "@/components/PriceRankLegend";
-import {
-  CHAMPION_STATS,
-  MATCH_HISTORY,
-  RANKED_SOLO,
-  RANKED_FLEX,
-  type MatchResult,
-} from "@/lib/playerData";
+import { type MatchResult } from "@/lib/playerData";
 import { translateRank, formatDuration, formatTimeAgo, formatMatchResult } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import {
@@ -171,7 +165,7 @@ function MatchHistorySection() {
     };
   });
 
-  const matchesToShow = dbMatches.length > 0 ? dbMatches : MATCH_HISTORY;
+  const matchesToShow = dbMatches;
   const isLive = dbMatches.length > 0;
 
   return (
@@ -205,9 +199,27 @@ function MatchHistorySection() {
         )}
       </div>
       <div className="space-y-1.5">
-        {matchesToShow.map((match, i) => (
-          <MatchRow key={match.id} match={match} index={i} />
-        ))}
+        {isLoading ? (
+          <div className="space-y-1.5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-card border border-border">
+                <div className="animate-pulse bg-secondary rounded-lg w-10 h-10" />
+                <div className="flex-1">
+                  <div className="animate-pulse bg-secondary rounded w-24 h-4 mb-1" />
+                  <div className="animate-pulse bg-secondary rounded w-32 h-3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : matchesToShow.length > 0 ? (
+          matchesToShow.map((match: MatchResult, i: number) => (
+            <MatchRow key={match.id} match={match} index={i} />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            {t.common.noMatchData}
+          </p>
+        )}
       </div>
     </>
   );
@@ -230,23 +242,23 @@ function StatsGrid() {
   const hasLivePlayer = !!livePlayer?.solo;
   const hasLiveKda = !!avgKda;
 
-  const soloTier = livePlayer?.solo?.tier ?? RANKED_SOLO.tier;
-  const soloRank = livePlayer?.solo?.rank ?? String(RANKED_SOLO.division);
-  const soloLP = livePlayer?.solo?.lp ?? RANKED_SOLO.lp;
-  const soloWins = livePlayer?.solo?.wins ?? RANKED_SOLO.wins;
-  const soloLosses = livePlayer?.solo?.losses ?? RANKED_SOLO.losses;
+  const soloTier = livePlayer?.solo?.tier;
+  const soloRank = livePlayer?.solo?.rank;
+  const soloLP = livePlayer?.solo?.lp;
+  const soloWins = livePlayer?.solo?.wins;
+  const soloLosses = livePlayer?.solo?.losses;
   const soloWR =
-    soloWins + soloLosses > 0
+    soloWins !== undefined && soloLosses !== undefined && (soloWins + soloLosses) > 0
       ? Math.round((soloWins / (soloWins + soloLosses)) * 100)
       : 0;
 
-  const flexTier = livePlayer?.flex?.tier ?? RANKED_FLEX.tier;
-  const flexRank = livePlayer?.flex?.rank ?? String(RANKED_FLEX.division);
-  const flexLP = livePlayer?.flex?.lp ?? RANKED_FLEX.lp;
-  const flexWins = livePlayer?.flex?.wins ?? RANKED_FLEX.wins;
-  const flexLosses = livePlayer?.flex?.losses ?? RANKED_FLEX.losses;
+  const flexTier = livePlayer?.flex?.tier;
+  const flexRank = livePlayer?.flex?.rank;
+  const flexLP = livePlayer?.flex?.lp;
+  const flexWins = livePlayer?.flex?.wins;
+  const flexLosses = livePlayer?.flex?.losses;
   const flexWR =
-    flexWins + flexLosses > 0
+    flexWins !== undefined && flexLosses !== undefined && (flexWins + flexLosses) > 0
       ? Math.round((flexWins / (flexWins + flexLosses)) * 100)
       : 0;
 
@@ -258,38 +270,53 @@ function StatsGrid() {
   };
   const { language } = useTranslation();
 
-  const kdaRatio = avgKda?.kdaRatio ?? 2.23;
+  const isPlayerLoading = !livePlayer;
+  const kdaRatio = avgKda?.kdaRatio;
   const kdaStr = avgKda
     ? `${avgKda.avgKills} / ${avgKda.avgDeaths} / ${avgKda.avgAssists}`
-    : "6.3 / 6.3 / 7.7";
-  const kdaGames = avgKda?.gamesAnalyzed ?? 20;
+    : null;
+  const kdaGames = avgKda?.gamesAnalyzed;
+
+  if (isPlayerLoading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-card border border-border rounded-xl p-4">
+            <div className="animate-pulse bg-secondary rounded w-16 h-3 mb-2" />
+            <div className="animate-pulse bg-secondary rounded w-24 h-6 mb-1" />
+            <div className="animate-pulse bg-secondary rounded w-20 h-3" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <StatCard
         label={t.stats.soloDuo}
-        value={translateRank(`${formatTier(soloTier)} ${formatDiv(soloRank)}`, language)}
-        subValue={`${soloLP} LP · ${soloWR}% ${t.player.winRate}`}
+        value={soloTier && soloRank ? translateRank(`${formatTier(soloTier)} ${formatDiv(soloRank)}`, language) : "--"}
+        subValue={soloLP !== undefined ? `${soloLP} LP · ${soloWR}% ${t.player.winRate}` : undefined}
         color="#00C805"
         isLive={hasLivePlayer}
       />
       <StatCard
         label={t.stats.flexQueue}
-        value={translateRank(`${formatTier(flexTier)} ${formatDiv(flexRank)}`, language)}
-        subValue={`${flexLP} LP · ${flexWR}% ${t.player.winRate}`}
+        value={flexTier && flexRank ? translateRank(`${formatTier(flexTier)} ${formatDiv(flexRank)}`, language) : "--"}
+        subValue={flexLP !== undefined ? `${flexLP} LP · ${flexWR}% ${t.player.winRate}` : undefined}
         color="#B9F2FF"
         isLive={hasLivePlayer}
       />
       <StatCard
         label={t.stats.totalGames}
-        value={(soloWins + soloLosses).toString()}
-        subValue={`${soloWins}${t.stats.wins} ${soloLosses}${t.stats.losses}`}
+        value={soloWins !== undefined && soloLosses !== undefined ? (soloWins + soloLosses).toString() : "--"}
+        subValue={soloWins !== undefined && soloLosses !== undefined ? `${soloWins}${t.stats.wins} ${soloLosses}${t.stats.losses}` : undefined}
         isLive={hasLivePlayer}
       />
       <StatCard
         label={`${t.stats.avgKda20}`}
-        value={kdaRatio.toFixed(2)}
-        subValue={kdaStr}
+        value={kdaRatio !== undefined ? kdaRatio.toFixed(2) : "--"}
+        subValue={kdaStr ?? undefined}
         color="#FFD54F"
         isLive={hasLiveKda}
       />
@@ -321,15 +348,7 @@ function ChampionPoolSection() {
         cs: c.cs,
       }));
     }
-    return CHAMPION_STATS.map((c) => ({
-      name: c.name,
-      image: c.image,
-      games: c.games,
-      winRate: c.winRate,
-      kdaRatio: parseFloat(c.kda.split("/")[0]) || 0,
-      kda: c.kda,
-      cs: c.cs,
-    }));
+    return [];
   }, [liveChampions]);
 
   return (
@@ -340,11 +359,17 @@ function ChampionPoolSection() {
         subtitle={isLive ? t.common.autoUpdated : t.sections.seasonRankedSoloDuo}
         isLive={isLive}
       />
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
-        {champions.map((champ, i) => (
-          <ChampionCard key={champ.name} champion={champ} index={i} />
-        ))}
-      </div>
+      {champions.length > 0 ? (
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-thin">
+          {champions.map((champ, i) => (
+            <ChampionCard key={champ.name} champion={champ} index={i} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground text-center py-8">
+          {t.common.noChampionData}
+        </p>
+      )}
     </>
   );
 }

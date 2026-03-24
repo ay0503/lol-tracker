@@ -97,3 +97,89 @@ export function computeAllETFPricesSync(
 
   return result;
 }
+
+/**
+ * Compute the full ETF price history for a given ticker.
+ * Returns an array of { timestamp, price, tier, division, lp, totalLP } for every snapshot.
+ * For DORI, price is the base price. For leveraged/inverse, price is compounded.
+ */
+export interface ETFHistoryPoint {
+  timestamp: number;
+  price: number;
+  tier: string;
+  division: string;
+  lp: number;
+  totalLP: number;
+}
+
+export function computeETFHistoryFromSnapshots(
+  ticker: Ticker,
+  snapshots: { timestamp: number; price: string; tier: string; division: string; lp: number; totalLP: number }[]
+): ETFHistoryPoint[] {
+  if (snapshots.length === 0) return [];
+
+  const prices = snapshots.map(s => parseFloat(s.price));
+
+  if (ticker === "DORI") {
+    return snapshots.map((s, i) => ({
+      timestamp: s.timestamp,
+      price: prices[i],
+      tier: s.tier,
+      division: s.division,
+      lp: s.lp,
+      totalLP: s.totalLP,
+    }));
+  }
+
+  const config = ETF_CONFIG[ticker];
+  if (!config) {
+    return snapshots.map((s, i) => ({
+      timestamp: s.timestamp,
+      price: prices[i],
+      tier: s.tier,
+      division: s.division,
+      lp: s.lp,
+      totalLP: s.totalLP,
+    }));
+  }
+
+  const multiplier = config.inverse ? -config.leverage : config.leverage;
+  const result: ETFHistoryPoint[] = [];
+  let etfPrice = prices[0];
+
+  result.push({
+    timestamp: snapshots[0].timestamp,
+    price: etfPrice,
+    tier: snapshots[0].tier,
+    division: snapshots[0].division,
+    lp: snapshots[0].lp,
+    totalLP: snapshots[0].totalLP,
+  });
+
+  for (let i = 1; i < snapshots.length; i++) {
+    const prevBase = prices[i - 1];
+    if (prevBase <= 0) {
+      result.push({
+        timestamp: snapshots[i].timestamp,
+        price: etfPrice,
+        tier: snapshots[i].tier,
+        division: snapshots[i].division,
+        lp: snapshots[i].lp,
+        totalLP: snapshots[i].totalLP,
+      });
+      continue;
+    }
+    const dailyReturn = (prices[i] - prevBase) / prevBase;
+    etfPrice = Math.max(0.01, etfPrice * (1 + dailyReturn * multiplier));
+    result.push({
+      timestamp: snapshots[i].timestamp,
+      price: etfPrice,
+      tier: snapshots[i].tier,
+      division: snapshots[i].division,
+      lp: snapshots[i].lp,
+      totalLP: snapshots[i].totalLP,
+    });
+  }
+
+  return result;
+}

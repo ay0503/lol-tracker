@@ -397,6 +397,12 @@ export const ko: TranslationKeys = {
     all: "전체",
     displayNameUpdated: "표시 이름이 변경되었습니다",
     failedToUpdateName: "이름 변경에 실패했습니다",
+    noData: "가격 데이터가 아직 없습니다",
+    waitingForData: "폴링 엔진이 데이터를 수집할 때까지 기다려주세요...",
+    noMatchData: "아직 기록된 매치가 없습니다. 폴링 엔진이 게임을 수집하면 데이터가 표시됩니다.",
+    noChampionData: "아직 챔피언 데이터가 없습니다. 랭크 게임을 플레이하면 통계가 표시됩니다.",
+    noStreakData: "아직 연승/연패 데이터가 없습니다. 랭크 게임을 플레이하면 추적됩니다.",
+    noRecentData: "최근 성적 데이터가 없습니다. 이번 주 랭크 게임을 플레이하면 통계가 표시됩니다.",
   },
 
   // ─── Not Found ───

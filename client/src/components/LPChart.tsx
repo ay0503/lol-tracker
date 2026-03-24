@@ -3,7 +3,7 @@
  * Supports extended time ranges: 1W, 1M, 3M, 6M, YTD, ALL
  * Supports all ETF tickers: DORI, DDRI, TDRI, SDRI, XDRI
  * Shows price ($) on Y-axis instead of raw LP.
- * Syncs time range pills with candlestick chart zoom level.
+ * Now fully wired to backend price history — no static fallbacks.
  */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
@@ -15,19 +15,57 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import {
-  getETFDataForRange,
-  TICKERS,
-  type TimeRange,
-} from "@/lib/playerData";
+import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { translateTickerDescription, formatChartDate } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
-import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
+import { LineChart, CandlestickChart as CandlestickIcon, Loader2 } from "lucide-react";
 
 type ChartView = "area" | "candlestick";
+type TimeRange = "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
 const TIME_RANGES: TimeRange[] = ["1W", "1M", "3M", "6M", "YTD", "ALL"];
+
+const TICKERS = [
+  { symbol: "DORI", name: "DORI", description: "1x LP Tracker", color: "#00C805" },
+  { symbol: "DDRI", name: "DDRI", description: "2x Leveraged LP", color: "#4CAF50" },
+  { symbol: "TDRI", name: "TDRI", description: "3x Leveraged LP", color: "#8BC34A" },
+  { symbol: "SDRI", name: "SDRI", description: "2x Inverse LP", color: "#FF5252" },
+  { symbol: "XDRI", name: "XDRI", description: "3x Inverse LP", color: "#FF1744" },
+] as const;
+
+interface ChartDataPoint {
+  date: string;
+  price: number;
+  label: string;
+  timestamp: number;
+}
+
+function getRangeSince(range: TimeRange): number | undefined {
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+  switch (range) {
+    case "1W": return now - 7 * DAY;
+    case "1M": return now - 30 * DAY;
+    case "3M": return now - 90 * DAY;
+    case "6M": return now - 180 * DAY;
+    case "YTD": {
+      const jan1 = new Date(new Date().getFullYear(), 0, 1).getTime();
+      return jan1;
+    }
+    case "ALL": return undefined;
+    default: return undefined;
+  }
+}
+
+function formatTimestamp(ts: number, language: string): string {
+  const d = new Date(ts);
+  if (language === "ko") {
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  }
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
 
 function CustomTooltip({ active, payload, tickerColor, language }: any) {
   if (active && payload && payload.length) {
@@ -41,7 +79,7 @@ function CustomTooltip({ active, payload, tickerColor, language }: any) {
           ${data.price?.toFixed(2)}
         </p>
         <p className="text-muted-foreground text-xs mt-0.5">{data.label}</p>
-        <p className="text-muted-foreground text-xs mt-1">{formatChartDate(data.date, language)}</p>
+        <p className="text-muted-foreground text-xs mt-1">{data.date}</p>
       </div>
     );
   }
@@ -58,9 +96,22 @@ export default function LPChart() {
   const tickerInfo = TICKERS.find((tk) => tk.symbol === activeTicker) || TICKERS[0];
   const tickerColor = tickerInfo.color;
 
-  const data = useMemo(() => {
-    return getETFDataForRange(activeTicker, activeRange);
-  }, [activeRange, activeTicker]);
+  const since = useMemo(() => getRangeSince(activeRange), [activeRange]);
+
+  const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
+    { ticker: activeTicker as any, since },
+    { refetchInterval: 60_000, staleTime: 30_000 }
+  );
+
+  const data: ChartDataPoint[] = useMemo(() => {
+    if (!etfHistory || etfHistory.length === 0) return [];
+    return etfHistory.map((p) => ({
+      date: formatTimestamp(p.timestamp, language),
+      price: p.price,
+      label: `$${p.price.toFixed(2)}`,
+      timestamp: p.timestamp,
+    }));
+  }, [etfHistory, language]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
@@ -82,8 +133,8 @@ export default function LPChart() {
   const isPositive = priceChange >= 0;
   const chartColor = isPositive ? tickerColor : "#FF5252";
 
-  const minPrice = Math.min(...data.map((d) => d.price ?? 0));
-  const maxPrice = Math.max(...data.map((d) => d.price ?? 0));
+  const minPrice = data.length > 0 ? Math.min(...data.map((d) => d.price)) : 0;
+  const maxPrice = data.length > 0 ? Math.max(...data.map((d) => d.price)) : 100;
   const padding = Math.max(2, (maxPrice - minPrice) * 0.15);
 
   const chartData = useMemo(() => {
@@ -201,28 +252,45 @@ export default function LPChart() {
       </div>
 
       {/* Price change summary */}
-      <div className="flex items-center gap-3 mb-2">
-        <span
-          className="text-2xl font-bold font-[var(--font-mono)]"
-          style={{ color: tickerColor }}
-        >
-          ${lastPrice.toFixed(2)}
-        </span>
-        <span
-          className="text-sm font-semibold font-[var(--font-mono)]"
-          style={{ color: isPositive ? tickerColor : "#FF5252" }}
-        >
-          {isPositive ? "+" : ""}${priceChange.toFixed(2)} (
-          {firstPrice > 0
-            ? ((priceChange / firstPrice) * 100).toFixed(1)
-            : "0.0"}
-          %)
-        </span>
-        <span className="text-xs text-muted-foreground">{activeRange}</span>
-      </div>
+      {data.length > 0 && (
+        <div className="flex items-center gap-3 mb-2">
+          <span
+            className="text-2xl font-bold font-[var(--font-mono)]"
+            style={{ color: tickerColor }}
+          >
+            ${lastPrice.toFixed(2)}
+          </span>
+          <span
+            className="text-sm font-semibold font-[var(--font-mono)]"
+            style={{ color: isPositive ? tickerColor : "#FF5252" }}
+          >
+            {isPositive ? "+" : ""}${priceChange.toFixed(2)} (
+            {firstPrice > 0
+              ? ((priceChange / firstPrice) * 100).toFixed(1)
+              : "0.0"}
+            %)
+          </span>
+          <span className="text-xs text-muted-foreground">{activeRange}</span>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex items-center justify-center h-[380px]">
+          <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && data.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-[380px] text-muted-foreground">
+          <p className="text-sm">{t.common.noData || "No price data yet"}</p>
+          <p className="text-xs mt-1">{t.common.waitingForData || "Waiting for polling engine to collect data..."}</p>
+        </div>
+      )}
 
       {/* Area Chart */}
-      {chartView === "area" && (
+      {chartView === "area" && !isLoading && data.length > 0 && (
         <div
           style={{
             width: "100%",
@@ -266,7 +334,6 @@ export default function LPChart() {
                     fontSize: 11,
                     fontFamily: "'JetBrains Mono', monospace",
                   }}
-                  tickFormatter={(val: string) => formatChartDate(val, language)}
                   dy={10}
                   interval="preserveStartEnd"
                 />
@@ -324,3 +391,5 @@ export default function LPChart() {
     </motion.div>
   );
 }
+
+export type { TimeRange };

@@ -21,7 +21,7 @@ import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
 } from "./riotApi";
 import { pollNow, getPollStatus, startPolling, stopPolling } from "./pollEngine";
-import { TICKERS, type Ticker, computeAllETFPricesSync } from "./etfPricing";
+import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSnapshots } from "./etfPricing";
 
 export const appRouter = router({
   system: systemRouter,
@@ -317,6 +317,15 @@ export const appRouter = router({
         };
       });
     }),
+    etfHistory: publicProcedure
+      .input(z.object({
+        ticker: z.enum(TICKERS),
+        since: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        const history = await getPriceHistory(input.since);
+        return computeETFHistoryFromSnapshots(input.ticker, history);
+      }),
     tickers: publicProcedure.query(() => [
       { ticker: "DORI", name: "DORI", description: "1x LP Tracker", leverage: 1, inverse: false },
       { ticker: "DDRI", name: "DDRI", description: "2x Leveraged LP", leverage: 2, inverse: false },

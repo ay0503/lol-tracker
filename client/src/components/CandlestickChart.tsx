@@ -1,14 +1,11 @@
 /*
  * CandlestickChart: TradingView-style chart using lightweight-charts v5.
- * Converts ETF price data into OHLC candlestick format with price ($) values.
+ * Converts backend ETF price history into OHLC candlestick format.
  * Supports all tickers: DORI, DDRI, TDRI, SDRI, XDRI.
  * Includes drawing/annotation tools: trend lines, horizontal lines, text markers.
- *
- * KEY FIX: Always passes the FULL dataset to the chart and uses the time scale
- * visible range to control the initial view. This means zooming out reveals
- * more data instead of showing empty space.
+ * Now fully wired to backend data — no static fallbacks.
  */
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -23,12 +20,7 @@ import {
   type Time,
   type SeriesMarker,
 } from "lightweight-charts";
-import {
-  getFullETFHistory,
-  TICKERS,
-  type TimeRange,
-  type ETFDataPoint,
-} from "@/lib/playerData";
+import { trpc } from "@/lib/trpc";
 import {
   Minus,
   TrendingUp,
@@ -36,8 +28,19 @@ import {
   Trash2,
   MousePointer,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
+
+type TimeRange = "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
+
+const TICKER_COLORS: Record<string, { color: string; inverse: boolean }> = {
+  DORI: { color: "#00C805", inverse: false },
+  DDRI: { color: "#4CAF50", inverse: false },
+  TDRI: { color: "#8BC34A", inverse: false },
+  SDRI: { color: "#FF5252", inverse: true },
+  XDRI: { color: "#FF1744", inverse: true },
+};
 
 interface CandlestickChartProps {
   timeRange?: TimeRange;
@@ -45,33 +48,26 @@ interface CandlestickChartProps {
   ticker?: string;
 }
 
-// Parse a date string like "Mar 23" or "Jan 1" into a YYYY-MM-DD string
-// The data spans from Sep 2025 to Mar 2026
-function parseLPDate(dateStr: string): string {
-  const monthMap: Record<string, number> = {
-    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-  };
-
-  const parts = dateStr.trim().split(/\s+/);
-  if (parts.length < 2) return "2026-01-01";
-
-  const monthStr = parts[0];
-  const day = parseInt(parts[1], 10);
-  const month = monthMap[monthStr];
-
-  if (month === undefined || isNaN(day)) return "2026-01-01";
-
-  // Determine year: Sep-Dec = 2025, Jan-Mar = 2026
-  const year = month >= 8 ? 2025 : 2026;
-
-  const mm = String(month + 1).padStart(2, "0");
-  const dd = String(day).padStart(2, "0");
-  return `${year}-${mm}-${dd}`;
+interface ETFHistoryPoint {
+  timestamp: number;
+  price: number;
+  tier: string;
+  division: string;
+  lp: number;
+  totalLP: number;
 }
 
-// Convert ETF data to OHLC candlestick format
-function generateCandlestickDataFromETF(data: ETFDataPoint[]): CandlestickData<Time>[] {
+// Convert timestamp to YYYY-MM-DD for lightweight-charts
+function tsToDateStr(ts: number): string {
+  const d = new Date(ts);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Convert ETF history points to OHLC candlestick format
+function generateCandlestickData(data: ETFHistoryPoint[]): CandlestickData<Time>[] {
   const result: CandlestickData<Time>[] = [];
   const seenDates = new Set<string>();
 
@@ -91,12 +87,10 @@ function generateCandlestickDataFromETF(data: ETFDataPoint[]): CandlestickData<T
     const high = Math.max(openPrice, closePrice) + rand1 * volatility;
     const low = Math.min(openPrice, closePrice) - rand2 * volatility;
 
-    let dateStr = parseLPDate(point.date);
+    const dateStr = tsToDateStr(point.timestamp);
 
     // Deduplicate: lightweight-charts requires strictly ascending unique times
-    if (seenDates.has(dateStr)) {
-      continue;
-    }
+    if (seenDates.has(dateStr)) continue;
     seenDates.add(dateStr);
 
     result.push({
@@ -111,15 +105,15 @@ function generateCandlestickDataFromETF(data: ETFDataPoint[]): CandlestickData<T
   return result;
 }
 
-// Generate volume data from ETF data
-function generateVolumeDataFromETF(data: ETFDataPoint[]) {
+// Generate volume data from ETF history
+function generateVolumeData(data: ETFHistoryPoint[]) {
   const seenDates = new Set<string>();
 
   return data
     .map((point, i) => {
       const prev = i > 0 ? data[i - 1] : null;
       const change = prev ? point.price - prev.price : 0;
-      const dateStr = parseLPDate(point.date);
+      const dateStr = tsToDateStr(point.timestamp);
 
       if (seenDates.has(dateStr)) return null;
       seenDates.add(dateStr);
@@ -181,12 +175,16 @@ export default function CandlestickChart({
   const isSettingRangeRef = useRef(false);
 
   // Get ticker color
-  const tickerInfo = TICKERS.find((t) => t.symbol === ticker) || TICKERS[0];
-  const upColor = tickerInfo.inverse ? "#FF5252" : tickerInfo.color;
-  const downColor = tickerInfo.inverse ? tickerInfo.color : "#FF5252";
+  const tickerMeta = TICKER_COLORS[ticker] || TICKER_COLORS.DORI;
+  const upColor = tickerMeta.inverse ? "#FF5252" : tickerMeta.color;
+  const downColor = tickerMeta.inverse ? tickerMeta.color : "#FF5252";
 
-  // Get FULL ETF price history for the selected ticker
-  const allETFData = getFullETFHistory(ticker);
+  // Fetch full ETF history from backend (no time filter — we always load all for candlestick zoom)
+  const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
+    { ticker: ticker as any },
+    { refetchInterval: 60_000, staleTime: 30_000 }
+  );
+
   const allCandles = useRef<CandlestickData<Time>[]>([]);
 
   // Compute how many candles to show for each time range
@@ -196,15 +194,15 @@ export default function CandlestickChart({
       case "1M": return 30;
       case "3M": return 90;
       case "6M": return 180;
-      case "YTD": return 83; // ~Jan 1 to Mar 23
+      case "YTD": return 83;
       case "ALL": return 9999;
       default: return 30;
     }
   }, []);
 
-  // Initialize chart once, recreate when ticker changes
+  // Initialize chart once, recreate when ticker, language, or data changes
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!chartContainerRef.current || !etfHistory || etfHistory.length === 0) return;
 
     // Clear previous annotations state
     setAnnotations([]);
@@ -242,16 +240,15 @@ export default function CandlestickChart({
         rightOffset: 2,
         barSpacing: 8,
         tickMarkFormatter: (time: any) => {
-          if (typeof time === 'string') {
-            // time is YYYY-MM-DD format
-            const parts = time.split('-');
+          if (typeof time === "string") {
+            const parts = time.split("-");
             if (parts.length === 3) {
               const month = parseInt(parts[1], 10);
               const day = parseInt(parts[2], 10);
-              if (language === 'ko') {
+              if (language === "ko") {
                 return `${month}\uc6d4 ${day}\uc77c`;
               }
-              const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
               return `${months[month - 1]} ${day}`;
             }
           }
@@ -271,7 +268,7 @@ export default function CandlestickChart({
       wickUpColor: upColor,
     });
 
-    const candleData = generateCandlestickDataFromETF(allETFData);
+    const candleData = generateCandlestickData(etfHistory);
     allCandles.current = candleData;
     candlestickSeries.setData(candleData);
 
@@ -285,7 +282,7 @@ export default function CandlestickChart({
       scaleMargins: { top: 0.8, bottom: 0 },
     });
 
-    const volumeData = generateVolumeDataFromETF(allETFData);
+    const volumeData = generateVolumeData(etfHistory);
     volumeSeries.setData(volumeData);
 
     // Set initial visible range based on timeRange prop
@@ -337,7 +334,7 @@ export default function CandlestickChart({
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [ticker, language]); // Recreate chart when ticker or language changes
+  }, [ticker, language, etfHistory]);
 
   // Update visible range when timeRange prop changes (without recreating chart)
   useEffect(() => {
@@ -424,8 +421,8 @@ export default function CandlestickChart({
     if (visibleRange) {
       const fromStr = visibleRange.from as string;
       const toStr = visibleRange.to as string;
-      const visibleStart = candleData.find(c => (c.time as string) >= fromStr);
-      const visibleEnd = [...candleData].reverse().find(c => (c.time as string) <= toStr);
+      const visibleStart = candleData.find((c) => (c.time as string) >= fromStr);
+      const visibleEnd = [...candleData].reverse().find((c) => (c.time as string) <= toStr);
       if (visibleStart) startCandle = visibleStart;
       if (visibleEnd) endCandle = visibleEnd;
     }
@@ -507,6 +504,25 @@ export default function CandlestickChart({
     { id: "hline" as DrawingTool, icon: Minus, label: t.chart.toolHorizontalLine },
     { id: "text" as DrawingTool, icon: Type, label: t.chart.toolTextLabel },
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!etfHistory || etfHistory.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
+        <p className="text-sm">{t.common.noData}</p>
+        <p className="text-xs mt-1">{t.common.waitingForData}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

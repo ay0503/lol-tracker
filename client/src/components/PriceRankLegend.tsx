@@ -2,14 +2,14 @@
  * PriceRankLegend: Visual legend mapping stock price ranges to League of Legends ranks.
  * Shows a horizontal gradient bar with tier segments and a current price marker.
  * Collapsible: division breakdown and formula are hidden by default.
+ * Fully wired to live backend data — no static fallbacks.
  *
- * Price mapping: Platinum 4 (0 LP) = $10 → Diamond 1 (100 LP) = $100
+ * Price mapping: Platinum 4 (0 LP) = $10 -> Diamond 1 (100 LP) = $100
  * Each tier has 4 divisions of 100 LP each = 400 LP per tier = $30 per tier
  */
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { totalLPToPrice, LP_HISTORY } from "@/lib/playerData";
 import { Info, ChevronDown } from "lucide-react";
 
 // Tier definitions with price ranges and colors
@@ -57,23 +57,23 @@ export default function PriceRankLegend() {
 
   const TIERS = useMemo(() => getTiers(t), [t]);
 
-  const { data: latestPrice } = trpc.prices.latest.useQuery(undefined, {
+  const { data: latestPrice, isLoading } = trpc.prices.latest.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
 
-  const currentPrice = latestPrice
-    ? parseFloat(latestPrice.price)
-    : totalLPToPrice(LP_HISTORY[LP_HISTORY.length - 1]?.totalLP ?? 0);
+  const currentPrice = latestPrice ? parseFloat(latestPrice.price) : null;
 
   // Calculate marker position as percentage
   const markerPct = useMemo(() => {
+    if (currentPrice === null) return 50;
     const clamped = Math.max(MIN_PRICE, Math.min(currentPrice, MAX_PRICE));
     return ((clamped - MIN_PRICE) / (MAX_PRICE - MIN_PRICE)) * 100;
   }, [currentPrice]);
 
   // Find which tier the current price is in
   const currentTier = useMemo(() => {
+    if (currentPrice === null) return TIERS[1]; // default to Emerald
     return TIERS.find(
       (tier) => currentPrice >= tier.startPrice && currentPrice < tier.endPrice
     ) || TIERS[TIERS.length - 1];
@@ -81,6 +81,7 @@ export default function PriceRankLegend() {
 
   // Calculate which division within the tier
   const currentDivision = useMemo(() => {
+    if (currentPrice === null) return "II";
     const tierRange = currentTier.endPrice - currentTier.startPrice;
     const divSize = tierRange / 4;
     const offset = currentPrice - currentTier.startPrice;
@@ -105,15 +106,19 @@ export default function PriceRankLegend() {
             </p>
           </div>
         </div>
-        <div
-          className="text-xs font-semibold font-[var(--font-mono)] px-2 py-1 rounded-md"
-          style={{
-            color: currentTier.color,
-            backgroundColor: currentTier.bgColor,
-          }}
-        >
-          {currentTier.name} {currentDivision}
-        </div>
+        {currentPrice !== null ? (
+          <div
+            className="text-xs font-semibold font-[var(--font-mono)] px-2 py-1 rounded-md"
+            style={{
+              color: currentTier.color,
+              backgroundColor: currentTier.bgColor,
+            }}
+          >
+            {currentTier.name} {currentDivision}
+          </div>
+        ) : isLoading ? (
+          <div className="animate-pulse bg-secondary rounded-md w-24 h-6" />
+        ) : null}
       </div>
 
       {/* Tier bar visualization */}
@@ -155,37 +160,41 @@ export default function PriceRankLegend() {
         </div>
 
         {/* Current price marker */}
-        <div
-          className="absolute top-0 h-10 flex flex-col items-center pointer-events-none"
-          style={{
-            left: `${markerPct}%`,
-            transform: "translateX(-50%)",
-          }}
-        >
-          <div
-            className="w-0.5 h-full"
-            style={{ backgroundColor: currentTier.color }}
-          />
-        </div>
+        {currentPrice !== null && (
+          <>
+            <div
+              className="absolute top-0 h-10 flex flex-col items-center pointer-events-none"
+              style={{
+                left: `${markerPct}%`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              <div
+                className="w-0.5 h-full"
+                style={{ backgroundColor: currentTier.color }}
+              />
+            </div>
 
-        {/* Marker label above */}
-        <div
-          className="absolute -top-6 flex flex-col items-center pointer-events-none"
-          style={{
-            left: `${markerPct}%`,
-            transform: "translateX(-50%)",
-          }}
-        >
-          <span
-            className="text-[10px] font-bold font-[var(--font-mono)] px-1.5 py-0.5 rounded"
-            style={{
-              color: currentTier.color,
-              backgroundColor: currentTier.bgColor,
-            }}
-          >
-            ${currentPrice.toFixed(2)}
-          </span>
-        </div>
+            {/* Marker label above */}
+            <div
+              className="absolute -top-6 flex flex-col items-center pointer-events-none"
+              style={{
+                left: `${markerPct}%`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              <span
+                className="text-[10px] font-bold font-[var(--font-mono)] px-1.5 py-0.5 rounded"
+                style={{
+                  color: currentTier.color,
+                  backgroundColor: currentTier.bgColor,
+                }}
+              >
+                ${currentPrice.toFixed(2)}
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Price labels below */}
         <div className="flex justify-between mt-1.5">
@@ -257,6 +266,7 @@ export default function PriceRankLegend() {
                     tier.startPrice +
                     ((i + 1) * (tier.endPrice - tier.startPrice)) / 4;
                   const isCurrentDiv =
+                    currentPrice !== null &&
                     currentPrice >= divPrice && currentPrice < divEndPrice;
                   return (
                     <div
@@ -283,7 +293,7 @@ export default function PriceRankLegend() {
                             : "var(--muted-foreground)",
                         }}
                       >
-                        ${divPrice.toFixed(0)}–${divEndPrice.toFixed(0)}
+                        ${divPrice.toFixed(0)}-${divEndPrice.toFixed(0)}
                       </span>
                     </div>
                   );
