@@ -42,10 +42,12 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    // Cache user info in localStorage for quick access
+    if (meQuery.data) {
+      localStorage.setItem("user-info", JSON.stringify(meQuery.data));
+    } else {
+      localStorage.removeItem("user-info");
+    }
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,

@@ -1,317 +1,493 @@
-# LoL LP Tracker — Full Stack Overview & Self-Hosting Guide
+# $DORI LP Tracker — Self-Hosting Guide
 
-This document provides a complete breakdown of the LoL LP Tracker's technology stack, identifies every Manus-specific integration that would need replacement, and offers concrete guidance for deploying the application on external hosting platforms.
-
----
-
-## 1. Architecture Overview
-
-The LoL LP Tracker is a **monolithic full-stack application** that runs as a single Node.js process. That process serves three responsibilities simultaneously:
-
-1. **Frontend**: A React 19 single-page application built with Vite, served as static files in production.
-2. **API Server**: An Express 4 server exposing tRPC 11 endpoints under `/api/trpc` and an OAuth callback at `/api/oauth/callback`.
-3. **Background Worker**: A polling engine (`pollEngine.ts`) that runs every 20 minutes inside the same process, fetching live data from the Riot Games API, computing ETF prices, executing pending orders, distributing dividends, and generating AI-powered meme news.
-
-The build process produces two artifacts: a Vite-compiled `dist/public/` directory (the SPA) and an esbuild-bundled `dist/index.js` (the server). In production, the server serves the static files and handles all API traffic from a single port.
+This guide covers everything you need to deploy and run the $DORI LP Tracker on your own server. The application is fully self-contained with zero external service dependencies beyond the Riot Games API.
 
 ---
 
-## 2. Technology Stack
+## Architecture Overview
 
-### Frontend
+The $DORI LP Tracker is a **single-process Node.js application** that serves both the frontend and backend from one binary. There is no separate database server — all data lives in a single SQLite file.
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Framework | React 19 | UI rendering |
-| Routing | Wouter 3 | Client-side SPA routing |
-| Styling | Tailwind CSS 4 + shadcn/ui (Radix primitives) | Design system and component library |
-| Data Fetching | tRPC 11 + TanStack React Query 5 | Type-safe API calls with caching |
-| Charts | Recharts 2 (line charts) + Lightweight Charts 5 (candlestick) | Financial data visualization |
-| Animation | Framer Motion 12 | UI transitions and micro-interactions |
-| i18n | Custom context-based system (`LanguageContext.tsx`) | English/Korean bilingual support |
-| Theming | Custom context (`ThemeContext.tsx`) | Light/dark mode toggle |
-| Serialization | SuperJSON | Preserves `Date` and other types across the wire |
+```
+┌─────────────────────────────────────────────────┐
+│                  Node.js Process                │
+│                                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │  Vite    │  │  Express  │  │  Poll Engine │  │
+│  │  (React) │  │  (tRPC)   │  │  (15 min)    │  │
+│  └──────────┘  └──────────┘  └──────────────┘  │
+│                      │                │         │
+│                ┌─────┴─────┐   ┌──────┴──────┐  │
+│                │  SQLite   │   │  Riot API   │  │
+│                │  (file)   │   │  (external) │  │
+│                └───────────┘   └─────────────┘  │
+└─────────────────────────────────────────────────┘
+```
 
-### Backend
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| Frontend | React 19, TailwindCSS 4, Recharts, TradingView Lightweight Charts | Robinhood-style trading UI |
+| Backend | Express 4, tRPC v11, TypeScript | API layer with type-safe RPC |
+| Database | SQLite via `@libsql/client` + Drizzle ORM | Single-file database at `./data/lol-tracker.db` |
+| Auth | bcryptjs + jose (JWT) | Email/password signup and login |
+| Polling | Built-in setInterval (15 min) | Fetches LP, matches, generates news, executes orders |
+| AI News | Any OpenAI-compatible API (optional) | Generates meme financial news headlines |
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Runtime | Node.js 22 + TypeScript 5.9 | Server execution |
-| HTTP Server | Express 4 | Request handling, middleware |
-| API Layer | tRPC 11 | Type-safe RPC procedures |
-| ORM | Drizzle ORM 0.44 | Database queries and schema management |
-| Database | MySQL (TiDB on Manus) | Persistent data storage |
-| Auth | JWT (jose library) + Manus OAuth | Session management |
-| LLM | Manus Forge API (Gemini 2.5 Flash) | AI-generated meme news |
-| Storage | Manus Forge Storage Proxy | File uploads (S3-backed) |
-| External API | Riot Games API v5 | Live summoner data and match history |
+---
 
-### Database Schema (13 tables)
+## Prerequisites
 
-The application uses a MySQL database with the following tables, managed via Drizzle migrations:
+You need the following installed on your server:
+
+| Requirement | Minimum Version | Notes |
+|-------------|----------------|-------|
+| **Node.js** | 18.x or later | v22 recommended |
+| **pnpm** | 10.x | Package manager (`npm install -g pnpm`) |
+| **Riot API Key** | — | Get one at [developer.riotgames.com](https://developer.riotgames.com) |
+
+No database server, Redis, or external auth provider is needed.
+
+---
+
+## Quick Start
+
+### 1. Clone and Install
+
+```bash
+git clone <your-repo-url> lol-tracker
+cd lol-tracker
+pnpm install
+```
+
+### 2. Create Environment File
+
+Create a `.env` file in the project root:
+
+```env
+# Required
+JWT_SECRET=your-random-secret-key-at-least-32-chars
+RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+# Optional
+PORT=3000
+DATABASE_PATH=./data/lol-tracker.db
+
+# Optional: AI meme news generation (any OpenAI-compatible API)
+OPENAI_API_URL=https://api.openai.com
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### 3. Initialize Database
+
+```bash
+pnpm db:push
+```
+
+This creates the SQLite database file and runs all migrations. The database is stored at `./data/lol-tracker.db` by default.
+
+### 4. Build and Run
+
+```bash
+# Build the frontend and bundle the server
+pnpm build
+
+# Start the production server
+NODE_ENV=production node dist/index.js
+```
+
+The app will be available at `http://localhost:3000` (or whatever port you set).
+
+### 5. Create Your Account
+
+Visit `http://localhost:3000/register` to create the first user account. The first user can be promoted to admin by running:
+
+```bash
+# Using the sqlite3 CLI (install with: apt install sqlite3)
+sqlite3 ./data/lol-tracker.db "UPDATE users SET role='admin' WHERE id=1;"
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `JWT_SECRET` | **Yes** | `change-me-in-production` | Secret key for signing JWT session cookies. Use a random 32+ character string. |
+| `RIOT_API_KEY` | **Yes** | — | Riot Games API key for fetching player data. |
+| `PORT` | No | `3000` | HTTP port the server listens on. |
+| `DATABASE_PATH` | No | `./data/lol-tracker.db` | Path to the SQLite database file. |
+| `OPENAI_API_URL` | No | — | Base URL for an OpenAI-compatible LLM API (e.g., `https://api.openai.com`). |
+| `OPENAI_API_KEY` | No | — | API key for the LLM service. |
+| `NODE_ENV` | No | — | Set to `production` for production builds. |
+
+### About the Riot API Key
+
+Riot provides two types of API keys:
+
+- **Development Key**: Free, expires every 24 hours. Good for testing but requires manual renewal.
+- **Production Key**: Requires a registered application. Apply at the [Riot Developer Portal](https://developer.riotgames.com). This is what you want for a persistent deployment.
+
+The polling engine fetches data every 15 minutes. With a development key, you will need to update the `.env` file and restart the server daily.
+
+### About the LLM Integration (Optional)
+
+The AI meme news feature generates funny financial headlines when the tracked player finishes a match. If `OPENAI_API_URL` and `OPENAI_API_KEY` are not set, the system falls back to pre-written template headlines — the feature still works, just without AI-generated humor.
+
+Any OpenAI-compatible API works, including:
+
+| Provider | API URL | Notes |
+|----------|---------|-------|
+| OpenAI | `https://api.openai.com` | GPT-4o-mini recommended |
+| Ollama (local) | `http://localhost:11434` | Free, runs on your machine |
+| LM Studio | `http://localhost:1234` | Free, local GUI |
+| Together AI | `https://api.together.xyz` | Cheap cloud option |
+| OpenRouter | `https://openrouter.ai/api` | Multi-model gateway |
+
+---
+
+## Database
+
+The application uses **SQLite** — a single file that lives at `./data/lol-tracker.db`. There is no database server to install, configure, or maintain.
+
+### Schema (14 tables)
 
 | Table | Purpose |
 |-------|---------|
-| `users` | User accounts with roles (admin/user), OAuth profile data |
-| `portfolios` | Per-user paper trading portfolio (cash balance) |
-| `holdings` | Current stock positions per user per ticker |
-| `trades` | Completed buy/sell transaction history |
-| `orders` | Pending limit orders awaiting execution |
-| `comments` | User sentiment/comments on tickers |
+| `users` | User accounts with email/password auth |
+| `portfolios` | Cash balance per user (starts at $200) |
+| `holdings` | Share positions per ticker per user |
+| `trades` | Transaction history (buy, sell, short, cover) |
+| `orders` | Pending limit orders and stop-losses |
+| `priceHistory` | LP price snapshots (one per poll cycle) |
+| `matches` | Stored match results from Riot API |
+| `comments` | User sentiment posts (bullish/bearish) |
 | `news` | AI-generated meme news articles |
 | `dividends` | Dividend distribution records |
-| `matches` | Stored match history from Riot API |
-| `marketStatus` | Current player rank, price, and market state |
-| `priceHistory` | Time-series price snapshots (the core LP→price data) |
-| `portfolioSnapshots` | Periodic portfolio value snapshots for P&L tracking |
-| `notifications` | In-app notification records |
+| `marketStatus` | Whether the market is open/closed |
+| `portfolioSnapshots` | Portfolio value history for P&L charts |
+| `notifications` | Order fill notifications |
 
-### Dev Tooling
+### Backup
 
-| Tool | Purpose |
-|------|---------|
-| pnpm 10 | Package manager |
-| Vite 7 | Dev server + production bundler |
-| esbuild | Server-side TypeScript bundling |
-| Drizzle Kit | Database migration generation and execution |
-| Vitest 2 | Unit testing |
-| Prettier | Code formatting |
-| tsx | TypeScript execution for development |
-
----
-
-## 3. Manus-Specific Integrations (What to Replace)
-
-The following components are tightly coupled to the Manus platform and must be replaced or removed for self-hosting. Everything else in the codebase is standard, portable Node.js/React code.
-
-### 3.1 Authentication (OAuth)
-
-**Current implementation**: Manus OAuth via `OAUTH_SERVER_URL` and `VITE_OAUTH_PORTAL_URL`. The frontend redirects users to Manus's login portal, which calls back to `/api/oauth/callback` with an authorization code. The server exchanges the code for user info via Manus's proprietary gRPC-style endpoints.
-
-**Files affected**: `server/_core/sdk.ts`, `server/_core/oauth.ts`, `client/src/const.ts`, `client/src/main.tsx`
-
-**Replacement options**:
-- **NextAuth.js / Auth.js**: Drop-in OAuth provider supporting Google, GitHub, Discord, etc.
-- **Lucia Auth**: Lightweight session-based auth library that works well with Drizzle.
-- **Clerk / Supabase Auth**: Managed auth services with React SDKs.
-- **Custom JWT**: Keep the existing JWT session logic in `sdk.ts` but replace the OAuth exchange with your own provider (e.g., Google OAuth2 directly).
-
-The JWT session signing/verification logic (`signSession`, `verifySession`) is already self-contained using the `jose` library and `JWT_SECRET` — only the OAuth code exchange and user info fetching need replacement.
-
-### 3.2 LLM Integration (AI News Generation)
-
-**Current implementation**: The polling engine calls `invokeLLM()` from `server/_core/llm.ts`, which sends requests to `BUILT_IN_FORGE_API_URL/v1/chat/completions` using the Forge API key. It uses the OpenAI-compatible chat completions format with the `gemini-2.5-flash` model.
-
-**Files affected**: `server/_core/llm.ts`, `server/pollEngine.ts`
-
-**Replacement options**:
-- **OpenAI API**: Change the base URL to `https://api.openai.com/v1` and use `gpt-4o-mini` or `gpt-3.5-turbo`. The request format is already OpenAI-compatible.
-- **Google Gemini API**: Use `@google/generative-ai` SDK directly.
-- **Anthropic Claude**: Use the Anthropic SDK with minor message format adjustments.
-- **Disable entirely**: Comment out the `generateMemeNews()` call in `pollEngine.ts` if you don't need AI news.
-
-### 3.3 File Storage
-
-**Current implementation**: `server/storage.ts` uploads/downloads files through Manus Forge's storage proxy (`v1/storage/upload`, `v1/storage/downloadUrl`), authenticated with `BUILT_IN_FORGE_API_KEY`.
-
-**Files affected**: `server/storage.ts`
-
-**Replacement options**:
-- **AWS S3 directly**: The `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` packages are already installed. Rewrite `storagePut`/`storageGet` to use `PutObjectCommand`/`GetObjectCommand` with your own S3 bucket credentials.
-- **Cloudflare R2**: S3-compatible API, same SDK works with a different endpoint.
-- **Supabase Storage / Firebase Storage**: Managed alternatives with generous free tiers.
-
-Note: The app currently makes minimal use of file storage (no user file uploads in the current feature set), so this replacement is low-priority unless you add file upload features.
-
-### 3.4 Owner Notifications
-
-**Current implementation**: `server/_core/notification.ts` sends notifications to the project owner via Manus Forge's notification service.
-
-**Files affected**: `server/_core/notification.ts`, `server/_core/systemRouter.ts`
-
-**Replacement options**:
-- **Email (Resend / SendGrid / Nodemailer)**: Send email notifications instead.
-- **Discord/Slack webhook**: Post notifications to a channel.
-- **Remove entirely**: This is an optional operational feature, not user-facing.
-
-### 3.5 Vite Plugins (Dev-Only)
-
-**Current implementation**: `vite.config.ts` includes `vite-plugin-manus-runtime` and a custom `vitePluginManusDebugCollector()` that writes browser logs to `.manus-logs/`.
-
-**Files affected**: `vite.config.ts`
-
-**Action**: Remove both Manus-specific plugins from the `plugins` array. Also remove `@builder.io/vite-plugin-jsx-loc` (used for Manus visual editor). The core plugins you need are just `react()` and `tailwindcss()`. Update the `allowedHosts` in the dev server config to match your domain.
-
----
-
-## 4. Environment Variables
-
-### Required for Core Functionality
-
-| Variable | Purpose | Self-Hosted Value |
-|----------|---------|-------------------|
-| `DATABASE_URL` | MySQL connection string | Your MySQL/PlanetScale/TiDB connection URL |
-| `JWT_SECRET` | Session cookie signing key | Any random 256-bit string (e.g., `openssl rand -hex 32`) |
-| `RIOT_API_KEY` | Riot Games API access | Get from [developer.riotgames.com](https://developer.riotgames.com) |
-| `PORT` | Server port (optional, defaults to 3000) | Set by your hosting platform |
-| `NODE_ENV` | Environment mode | `production` for deployed builds |
-
-### Manus-Specific (Replace or Remove)
-
-| Variable | Purpose | Action |
-|----------|---------|--------|
-| `VITE_APP_ID` | Manus OAuth app identifier | Replace with your OAuth provider's client ID |
-| `OAUTH_SERVER_URL` | Manus OAuth backend | Replace with your OAuth provider's token endpoint |
-| `VITE_OAUTH_PORTAL_URL` | Manus login portal | Replace with your OAuth provider's authorize URL |
-| `OWNER_OPEN_ID` | Manus owner identifier | Replace with your admin user ID |
-| `BUILT_IN_FORGE_API_URL` | Manus Forge services | Replace with OpenAI/Gemini API URL or remove |
-| `BUILT_IN_FORGE_API_KEY` | Manus Forge auth token | Replace with your LLM API key or remove |
-| `VITE_FRONTEND_FORGE_API_URL` | Frontend Forge access | Remove (not used in core features) |
-| `VITE_FRONTEND_FORGE_API_KEY` | Frontend Forge token | Remove (not used in core features) |
-| `VITE_ANALYTICS_ENDPOINT` | Manus analytics | Remove |
-| `VITE_ANALYTICS_WEBSITE_ID` | Manus analytics | Remove |
-
----
-
-## 5. Build & Deploy Commands
-
-The application builds and runs with standard Node.js tooling:
+To back up the database, simply copy the file:
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Generate and run database migrations
-DATABASE_URL="mysql://..." pnpm db:push
-
-# Build for production (outputs dist/public + dist/index.js)
-pnpm build
-
-# Start production server
-NODE_ENV=production DATABASE_URL="mysql://..." JWT_SECRET="..." RIOT_API_KEY="..." node dist/index.js
+cp ./data/lol-tracker.db ./data/lol-tracker.db.backup
 ```
 
-The production server is a single `node dist/index.js` process that serves both the static frontend and the API, and runs the background polling loop internally. There is no need for a separate worker process or cron job.
+For automated backups, add a cron job:
+
+```bash
+# Daily backup at 3 AM
+0 3 * * * cp /path/to/lol-tracker/data/lol-tracker.db /path/to/backups/lol-tracker-$(date +\%Y\%m\%d).db
+```
+
+### Reset
+
+To start fresh, delete the database file and re-run migrations:
+
+```bash
+rm ./data/lol-tracker.db
+pnpm db:push
+```
 
 ---
 
-## 6. Hosting Platform Recommendations
+## Customizing the Tracked Player
 
-### Option A: Railway (Recommended for Simplicity)
+By default, the app tracks the player **목도리 도마뱀#dori** on the NA server. To change this, edit two files:
 
-[Railway](https://railway.app) is the most straightforward option because it supports persistent Node.js processes with built-in MySQL.
+### `server/pollEngine.ts`
 
-1. Create a new Railway project and add a **MySQL** service.
-2. Connect your GitHub repository.
-3. Set the build command to `pnpm install && pnpm db:push && pnpm build`.
-4. Set the start command to `node dist/index.js`.
-5. Add environment variables (`DATABASE_URL` from the MySQL service, plus `JWT_SECRET`, `RIOT_API_KEY`, `NODE_ENV=production`).
-6. Railway automatically assigns a `PORT` and provides a public URL.
+```typescript
+// Change these constants at the top of the file
+const GAME_NAME = "YourPlayerName";
+const TAG_LINE = "YourTag";
+```
 
-**Cost**: ~$5/month for the Hobby plan (includes MySQL and always-on process).
+### `server/routers.ts`
 
-### Option B: Render
+Find the `player.current` endpoint and update the hardcoded values:
 
-[Render](https://render.com) offers a similar experience with a free tier (though free instances spin down after inactivity, which would interrupt the polling engine).
+```typescript
+const data = await fetchFullPlayerData("YourPlayerName", "YourTag");
+```
 
-1. Create a **Web Service** from your GitHub repo.
-2. Create a **MySQL** database (or use PlanetScale/TiDB Cloud for a managed MySQL).
-3. Build command: `pnpm install && pnpm db:push && pnpm build`
-4. Start command: `node dist/index.js`
-5. Set environment variables in the dashboard.
+### `server/riotApi.ts`
 
-**Important**: Use a paid instance ($7/month) to keep the process always-on for the polling engine.
+If the player is on a different region, update the API base URLs:
 
-### Option C: VPS (DigitalOcean, Hetzner, Linode)
+```typescript
+// Change these for your region
+const AMERICAS_BASE = "https://americas.api.riotgames.com";  // Americas
+const NA_BASE = "https://na1.api.riotgames.com";             // NA server
 
-For full control, deploy to a VPS with Docker or PM2:
+// Other regions:
+// Europe: https://europe.api.riotgames.com / https://euw1.api.riotgames.com
+// Asia: https://asia.api.riotgames.com / https://kr.api.riotgames.com
+```
+
+### ETF Ticker Names
+
+The 5 ETF tickers are derived from the player's tag. To rename them, edit `server/etfPricing.ts`:
+
+```typescript
+export const TICKERS = ["DORI", "DDRI", "TDRI", "SDRI", "XDRI"] as const;
+```
+
+---
+
+## Deployment Options
+
+### Option 1: Bare Metal / VPS (Recommended)
+
+The simplest deployment — just run the Node.js process directly. This is ideal for a small group of ~20 friends.
 
 ```bash
-# On your VPS
-git clone <your-repo>
-cd lol-tracker
-pnpm install
+# Build
 pnpm build
 
-# Use PM2 for process management
+# Run with environment variables
+JWT_SECRET=your-secret RIOT_API_KEY=RGAPI-xxx NODE_ENV=production node dist/index.js
+```
+
+For process management, use **pm2**:
+
+```bash
+npm install -g pm2
 pm2 start dist/index.js --name lol-tracker
 pm2 save
-pm2 startup
+pm2 startup  # auto-start on reboot
 ```
 
-Pair with a managed MySQL service (PlanetScale free tier, TiDB Cloud free tier, or self-hosted MySQL on the same VPS).
+**Cost**: ~$4-6/month for a basic VPS (DigitalOcean, Hetzner, Linode).
 
-**Cost**: ~$4-6/month for a basic VPS + free managed MySQL tier.
+### Option 2: Docker
 
-### Option D: Fly.io
+Create a `Dockerfile` in the project root:
 
-[Fly.io](https://fly.io) supports persistent processes and has good global distribution:
+```dockerfile
+FROM node:22-slim AS builder
+WORKDIR /app
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm build && pnpm db:push
 
-```toml
-# fly.toml
-[build]
-  builder = "heroku/buildpacks:22"
+FROM node:22-slim
+WORKDIR /app
+RUN npm install -g pnpm
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/client/public ./client/public
+COPY drizzle.config.ts ./
+VOLUME /app/data
+EXPOSE 3000
+ENV NODE_ENV=production
+CMD ["node", "dist/index.js"]
+```
 
-[env]
-  NODE_ENV = "production"
+And a `docker-compose.yml`:
 
-[[services]]
-  internal_port = 3000
-  protocol = "tcp"
-  [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
+```yaml
+version: "3.8"
+services:
+  lol-tracker:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - JWT_SECRET=your-secret-key-here
+      - RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+      - DATABASE_PATH=/app/data/lol-tracker.db
+      # Optional: AI news generation
+      # - OPENAI_API_URL=https://api.openai.com
+      # - OPENAI_API_KEY=sk-xxx
+    restart: unless-stopped
+```
+
+Run with:
+
+```bash
+docker compose up -d
+```
+
+### Option 3: Reverse Proxy (Nginx + HTTPS)
+
+If you want HTTPS and a custom domain, put Nginx in front:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name dori.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/dori.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dori.yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Use [Certbot](https://certbot.eff.org/) for free Let's Encrypt SSL certificates:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d dori.yourdomain.com
 ```
 
 ### Platforms to Avoid
 
-**Vercel and Netlify** are not suitable because they are designed for serverless/edge functions and static sites. This application requires a persistent, always-on Node.js process for the background polling engine. While you could theoretically split the app into a serverless API + external cron job, it would require significant refactoring.
+**Vercel and Netlify** are not suitable because they are designed for serverless/edge functions and static sites. This application requires a persistent, always-on Node.js process for the background polling engine.
 
 ---
 
-## 7. Database Options
+## Features Overview
 
-The application uses **MySQL** via Drizzle ORM. Compatible managed services include:
+### Trading System
 
-| Service | Free Tier | Notes |
-|---------|-----------|-------|
-| [TiDB Cloud](https://tidbcloud.com) | 5 GiB storage | MySQL-compatible, currently used on Manus |
-| [PlanetScale](https://planetscale.com) | Hobby plan | MySQL-compatible, serverless scaling |
-| [Aiven](https://aiven.io) | Free tier available | Managed MySQL |
-| Self-hosted MySQL | N/A | Run on your VPS alongside the app |
+Every new user starts with **$200 in virtual cash**. They can trade 5 ETF tickers:
 
-The `DATABASE_URL` format is: `mysql://user:password@host:port/database?ssl={"rejectUnauthorized":true}`
+| Ticker | Type | Description |
+|--------|------|-------------|
+| `$DORI` | 1x Base | Tracks LP directly (1 LP point ≈ price movement) |
+| `$DDRI` | 2x Leveraged | Amplifies daily LP returns by 2x |
+| `$TDRI` | 3x Leveraged | Amplifies daily LP returns by 3x |
+| `$SDRI` | 2x Inverse | Profits when LP drops (2x inverse) |
+| `$XDRI` | 3x Inverse | Profits when LP drops (3x inverse) |
 
-Enable SSL for all cloud-hosted databases. The Drizzle config reads `DATABASE_URL` directly.
+Supported order types include market orders, limit orders, stop-losses, and short selling. Dividends are distributed automatically when the tracked player wins or loses games.
 
----
+### Internationalization
 
-## 8. Migration Checklist
+The entire UI supports **Korean** and **English** with a toggle in the navigation bar. All dates, numbers, and times are formatted according to the selected locale.
 
-Use this checklist when migrating off Manus:
+### Themes
 
-- [ ] **Database**: Provision a MySQL instance and set `DATABASE_URL`
-- [ ] **Migrations**: Run `pnpm db:push` against the new database
-- [ ] **Seed data**: Run `node seed-prices.mjs` to populate historical price data (requires `DATABASE_URL`)
-- [ ] **Auth**: Replace Manus OAuth with your chosen auth provider (modify `sdk.ts`, `oauth.ts`, `const.ts`)
-- [ ] **LLM**: Replace `invokeLLM()` with direct OpenAI/Gemini calls, or disable AI news
-- [ ] **Storage**: Rewrite `storage.ts` to use direct S3/R2 if needed
-- [ ] **Notifications**: Replace or remove `notification.ts`
-- [ ] **Vite config**: Remove `vite-plugin-manus-runtime`, `vitePluginManusDebugCollector`, and `jsxLocPlugin` from `vite.config.ts`
-- [ ] **Allowed hosts**: Update `server.allowedHosts` in `vite.config.ts` for your domain
-- [ ] **Environment variables**: Set all required env vars on your hosting platform
-- [ ] **Riot API key**: Obtain a production API key from Riot (dev keys have strict rate limits)
-- [ ] **Build & deploy**: Run `pnpm build` and start with `node dist/index.js`
-- [ ] **Verify polling**: Check server logs for `[Poll] Complete` messages every 20 minutes
+Dark and light themes are available via the toggle in the navigation bar. The dark theme uses a deep charcoal Robinhood-style aesthetic, while the light theme uses white backgrounds with glassmorphism effects.
 
 ---
 
-## 9. Riot API Key Considerations
+## Development
 
-The application currently uses a **development API key** from Riot Games, which has strict rate limits (20 requests per second, 100 requests per 2 minutes) and expires every 24 hours.
+To run in development mode with hot reload:
 
-For a production deployment, you should apply for a **production API key** through the [Riot Developer Portal](https://developer.riotgames.com). Production keys do not expire and have higher rate limits. The application's polling engine is already designed to be rate-limit-friendly (100ms delay between match detail requests, 20-minute polling interval).
+```bash
+pnpm dev
+```
+
+This starts the Express server with Vite middleware for instant frontend updates.
+
+### Running Tests
+
+```bash
+pnpm test
+```
+
+All 58 tests should pass. Tests cover authentication, trading logic, portfolio calculations, Riot API parsing, and more.
+
+### Project Structure
+
+```
+server/
+  _core/           ← Framework plumbing (auth, context, trpc, vite)
+  db.ts            ← Database query helpers
+  routers.ts       ← tRPC API endpoints
+  pollEngine.ts    ← Background polling job
+  riotApi.ts       ← Riot Games API client
+  etfPricing.ts    ← ETF price calculation engine
+client/
+  src/
+    pages/         ← Page components (Home, Portfolio, Ledger, etc.)
+    components/    ← Reusable UI components
+    contexts/      ← React contexts (Language, Theme)
+    lib/           ← Utilities (trpc client, formatters, playerData)
+    i18n/          ← Korean/English translations
+drizzle/
+  schema.ts        ← Database schema (14 tables)
+shared/
+  const.ts         ← Shared constants
+data/
+  lol-tracker.db   ← SQLite database (created on first run)
+```
 
 ---
 
-*This guide was prepared based on the codebase as of March 24, 2026. The application version is `fd69d7d3`.*
+## Security Notes
+
+For a deployment serving ~20 friends, the following are adequate:
+
+- **JWT sessions** are signed with `JWT_SECRET` and stored as HTTP-only cookies. Use a strong, random secret in production.
+- **Passwords** are hashed with bcryptjs (12 rounds). No plaintext passwords are stored.
+- **CORS** is not an issue since the frontend and backend are served from the same origin.
+- **Rate limiting** is not built in. If you expose the app to the public internet, consider adding `express-rate-limit` to the login and register endpoints.
+
+---
+
+## Troubleshooting
+
+### "RIOT_API_KEY is not set"
+
+Make sure your `.env` file exists in the project root and contains a valid `RIOT_API_KEY`. Development keys expire every 24 hours.
+
+### Database locked errors
+
+SQLite uses WAL mode for better concurrency, but if you see "database is locked" errors under heavy load, it means too many concurrent writes. For ~20 users this should never happen. If it does, ensure only one Node.js process is running.
+
+### Polling engine not fetching data
+
+Check the server logs for `[Poll]` messages. Common issues include expired Riot API keys or rate limiting (the development key has a low rate limit). The polling engine logs its status every cycle.
+
+### Build fails with TypeScript errors
+
+Run `pnpm check` to see all TypeScript errors. The project should have zero errors. If you see errors after pulling updates, try:
+
+```bash
+rm -rf node_modules
+pnpm install
+pnpm check
+```
+
+### AI news shows template headlines instead of generated ones
+
+This means either `OPENAI_API_URL` or `OPENAI_API_KEY` is not set, or the LLM API returned an error. Check the server logs for `[News] LLM generation failed` messages. The app will continue to work with pre-written fallback headlines.
+
+---
+
+## What Was Removed (Manus Platform Dependencies)
+
+The following Manus-specific integrations have been fully removed from the codebase. This section is kept for reference in case you encounter any mentions in git history.
+
+| Removed Component | What It Was | Replacement |
+|-------------------|-------------|-------------|
+| Manus OAuth (`oauth.ts`) | External OAuth login flow | Local email/password auth (already built) |
+| Forge LLM (`llm.ts` old version) | Manus-hosted Gemini API proxy | Any OpenAI-compatible API via env vars |
+| Forge Storage (`storage.ts`) | S3 proxy for file uploads | Deleted (unused by the app) |
+| Forge Notifications (`notification.ts`) | Push notifications to owner | Deleted (unused by the app) |
+| Image Generation (`imageGeneration.ts`) | AI image generation proxy | Deleted (unused by the app) |
+| Voice Transcription (`voiceTranscription.ts`) | Whisper API proxy | Deleted (unused by the app) |
+| Data API (`dataApi.ts`) | External data API proxy | Deleted (unused by the app) |
+| Map component (`Map.tsx`) | Google Maps proxy | Deleted (unused by the app) |
+| Manus Vite plugins | Dev tooling and debug collector | Removed from `vite.config.ts` |
+| CloudFront CDN assets | Hosted images (favicon, rank, bg) | Moved to `client/public/assets/` |
+| Umami analytics | Page view tracking | Removed from `index.html` |
+| ManusDialog component | OAuth login dialog | Deleted (unused) |
+| DashboardLayout | Admin sidebar template | Deleted (unused) |
+| AIChatBox | Chat UI template | Deleted (unused) |
+| ComponentShowcase | Template demo page | Deleted (unused) |
+
+---
+
+*Last updated: March 24, 2026*

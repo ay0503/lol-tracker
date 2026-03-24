@@ -58,8 +58,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
-const HERO_BG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663324505869/EqpY4GjGxu3PtSNi8r37GF/hero-bg-BaXtnoCMhWwQSL3MGvhxSm.webp";
+const HERO_BG = "/assets/hero-bg.webp";
 
 function SectionHeader({
   icon: Icon,

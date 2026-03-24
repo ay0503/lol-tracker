@@ -10,8 +10,7 @@ import { translateRank } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Activity, DollarSign } from "lucide-react";
 
-const EMERALD_RANK_IMG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663324505869/EqpY4GjGxu3PtSNi8r37GF/emerald-rank-glow-gvNBENfi9Ne5AtDKGtp3U6.webp";
+const EMERALD_RANK_IMG = "/assets/emerald-rank.webp";
 
 export default function PlayerHeader() {
   const { t, language } = useTranslation();

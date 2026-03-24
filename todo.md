@@ -338,3 +338,16 @@
 - [x] Fix register endpoint: if user exists with same email but no passwordHash, update the record with a password instead of rejecting
 - [x] Added setUserPassword() helper to db.ts
 - [x] OAuth-created users can now "claim" their account by registering with the same email
+
+## Bug Fix: Ledger Page Empty
+- [ ] Investigate why the Ledger page shows no data
+
+## Feature: Full Self-Hosting Independence (Remove All Manus Dependencies)
+- [x] Audit all remaining Manus dependencies (OAuth, env vars, _core modules, CDN assets, etc.)
+- [x] Remove/replace Manus OAuth system with standalone auth only
+- [x] Remove Manus _core modules not needed for self-hosting (LLM, imageGen, notification, storage, etc.)
+- [x] Replace Manus CDN asset URLs with local/self-hosted alternatives
+- [x] Remove Manus-specific env vars and config
+- [x] Clean up unused Manus packages from package.json
+- [x] Update self-hosting guide (SELF_HOSTING_GUIDE.md) for SQLite + local auth
+- [x] Add Dockerfile and docker-compose.yml instructions in self-hosting guide
