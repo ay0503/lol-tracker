@@ -1,0 +1,73 @@
+/*
+ * Design: Compact table showing recent 7-day champion performance.
+ * Win rate bars with green/red coloring.
+ */
+import { RECENT_7_DAYS } from "@/lib/playerData";
+import { motion } from "framer-motion";
+
+export default function RecentPerformance() {
+  return (
+    <div className="space-y-2">
+      {RECENT_7_DAYS.map((champ, i) => {
+        const total = champ.wins + champ.losses;
+        const isGood = champ.winRate >= 55;
+        const isBad = champ.winRate < 45;
+        return (
+          <motion.div
+            key={champ.champion}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.3 }}
+            className="flex items-center gap-3"
+          >
+            <img
+              src={champ.image}
+              alt={champ.champion}
+              className="w-7 h-7 rounded-md"
+              loading="lazy"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-white">
+                  {champ.champion}
+                </span>
+                <span
+                  className="text-xs font-bold font-[var(--font-mono)]"
+                  style={{
+                    color: isGood ? "#00C805" : isBad ? "#FF5252" : "#9CA3AF",
+                  }}
+                >
+                  {champ.winRate}%
+                </span>
+              </div>
+              <div className="w-full h-1 bg-[#1a1d23] rounded-full overflow-hidden flex">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(champ.wins / total) * 100}%` }}
+                  transition={{ delay: i * 0.06 + 0.2, duration: 0.5 }}
+                  className="h-full rounded-full"
+                  style={{ backgroundColor: "#00C805" }}
+                />
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(champ.losses / total) * 100}%` }}
+                  transition={{ delay: i * 0.06 + 0.2, duration: 0.5 }}
+                  className="h-full rounded-full"
+                  style={{ backgroundColor: "#FF5252" }}
+                />
+              </div>
+              <div className="flex justify-between mt-0.5">
+                <span className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
+                  {champ.wins}W {champ.losses}L
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {total} games
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
