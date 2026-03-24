@@ -32,10 +32,35 @@ interface CandlestickChartProps {
   timeRange?: TimeRange;
 }
 
+// Parse a date string like "Mar 23" or "Jan 1" into a YYYY-MM-DD string
+// The data spans from Sep 2025 to Mar 2026
+function parseLPDate(dateStr: string): string {
+  const monthMap: Record<string, number> = {
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+  };
+
+  const parts = dateStr.trim().split(/\s+/);
+  if (parts.length < 2) return "2026-01-01";
+
+  const monthStr = parts[0];
+  const day = parseInt(parts[1], 10);
+  const month = monthMap[monthStr];
+
+  if (month === undefined || isNaN(day)) return "2026-01-01";
+
+  // Determine year: Sep-Dec = 2025, Jan-Mar = 2026
+  const year = month >= 8 ? 2025 : 2026;
+
+  const mm = String(month + 1).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${year}-${mm}-${dd}`;
+}
+
 // Convert LP data to OHLC candlestick format with price values
 function generateCandlestickData(data: LPDataPoint[]): CandlestickData<Time>[] {
   const result: CandlestickData<Time>[] = [];
-  const startDate = new Date(2025, 8, 23); // Sep 23, 2025
+  const seenDates = new Set<string>();
 
   for (let i = 0; i < data.length; i++) {
     const point = data[i];
@@ -46,12 +71,23 @@ function generateCandlestickData(data: LPDataPoint[]): CandlestickData<Time>[] {
 
     // Simulate intraday volatility
     const volatility = Math.abs(closePrice - openPrice) * 0.3 + 0.5;
-    const high = Math.max(openPrice, closePrice) + Math.random() * volatility;
-    const low = Math.min(openPrice, closePrice) - Math.random() * volatility;
+    // Use deterministic "random" based on index to avoid different values on re-render
+    const seed1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+    const rand1 = seed1 - Math.floor(seed1);
+    const seed2 = Math.sin(i * 43.2316 + 12.989) * 23421.6312;
+    const rand2 = seed2 - Math.floor(seed2);
+    const high = Math.max(openPrice, closePrice) + rand1 * volatility;
+    const low = Math.min(openPrice, closePrice) - rand2 * volatility;
 
-    // Generate a proper date string
-    const dayDate = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-    const dateStr = dayDate.toISOString().split("T")[0];
+    // Parse the actual date from the data point
+    let dateStr = parseLPDate(point.date);
+
+    // Deduplicate: if same date appears twice, skip the earlier one
+    // (lightweight-charts requires strictly ascending unique times)
+    if (seenDates.has(dateStr)) {
+      continue;
+    }
+    seenDates.add(dateStr);
 
     result.push({
       time: dateStr as Time,
@@ -67,19 +103,28 @@ function generateCandlestickData(data: LPDataPoint[]): CandlestickData<Time>[] {
 
 // Generate volume data
 function generateVolumeData(data: LPDataPoint[]) {
-  const startDate = new Date(2025, 8, 23);
-  return data.map((point, i) => {
-    const prev = i > 0 ? data[i - 1] : null;
-    const change = prev ? point.totalLP - prev.totalLP : 0;
-    const dayDate = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
-    const dateStr = dayDate.toISOString().split("T")[0];
+  const seenDates = new Set<string>();
 
-    return {
-      time: dateStr as Time,
-      value: Math.abs(change) * 0.5 + Math.random() * 5 + 2,
-      color: change >= 0 ? "rgba(0, 200, 5, 0.3)" : "rgba(255, 82, 82, 0.3)",
-    };
-  });
+  return data
+    .map((point, i) => {
+      const prev = i > 0 ? data[i - 1] : null;
+      const change = prev ? point.totalLP - prev.totalLP : 0;
+      const dateStr = parseLPDate(point.date);
+
+      if (seenDates.has(dateStr)) return null;
+      seenDates.add(dateStr);
+
+      // Deterministic volume
+      const seed = Math.sin(i * 7.234 + 3.456) * 12345.6789;
+      const rand = seed - Math.floor(seed);
+
+      return {
+        time: dateStr as Time,
+        value: Math.abs(change) * 0.5 + rand * 5 + 2,
+        color: change >= 0 ? "rgba(0, 200, 5, 0.3)" : "rgba(255, 82, 82, 0.3)",
+      };
+    })
+    .filter(Boolean) as { time: Time; value: number; color: string }[];
 }
 
 type DrawingTool = "pointer" | "trendline" | "hline" | "text";
@@ -106,7 +151,7 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
 
   const rawData = getDataForRange(timeRange);
 
-  // Initialize chart
+  // Initialize chart — recreate on timeRange change to ensure clean state
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -139,6 +184,8 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
       timeScale: {
         borderColor: "rgba(42, 45, 56, 0.8)",
         timeVisible: false,
+        rightOffset: 2,
+        barSpacing: timeRange === "1W" ? 40 : timeRange === "1M" ? 15 : timeRange === "3M" ? 8 : 5,
       },
       handleScroll: { vertTouchDrag: false },
     });
@@ -169,6 +216,7 @@ export default function CandlestickChart({ timeRange = "1M" }: CandlestickChartP
     const volumeData = generateVolumeData(rawData);
     volumeSeries.setData(volumeData);
 
+    // Fit content to show all data in the visible area
     chart.timeScale().fitContent();
 
     chartRef.current = chart;

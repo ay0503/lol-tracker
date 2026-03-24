@@ -68,3 +68,10 @@
 - [x] Store LP snapshots in DB for historical price tracking
 - [x] Create DB table for LP price history
 - [x] Build scheduled/on-demand data refresh endpoint
+
+## Bug Fix: Candlestick Chart Data Cutoff
+- [x] Reproduce data cutoff when switching time ranges in candlestick view
+- [x] Fix chart not properly re-rendering with new data on time range change
+- [x] Fix panning (translate left/right) showing empty space / cutoff data
+- [x] Ensure fitContent is called after data updates
+- [x] Test all time range transitions in candlestick mode
