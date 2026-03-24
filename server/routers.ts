@@ -136,7 +136,7 @@ export const appRouter = router({
         return Array.from(champMap.entries())
           .map(([name, s]) => ({
             name,
-            image: `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${name}.png`,
+            image: `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${name}.png`,
             games: s.games,
             wins: s.wins,
             losses: s.losses,
@@ -176,7 +176,7 @@ export const appRouter = router({
         return Array.from(champMap.entries())
           .map(([champion, s]) => ({
             champion,
-            image: `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${champion}.png`,
+            image: `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${champion}.png`,
             wins: s.wins,
             losses: s.losses,
             winRate: (s.wins + s.losses) > 0 ? Math.round((s.wins / (s.wins + s.losses)) * 100) : 0,

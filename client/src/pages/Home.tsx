@@ -148,7 +148,7 @@ function MatchHistorySection() {
     const timeAgo =
       days > 0 ? `${days}d ago` : hours > 0 ? `${hours}h ago` : "just now";
     const champKey = m.champion;
-    const championImage = `https://ddragon.leagueoflegends.com/cdn/14.6.1/img/champion/${champKey}.png`;
+    const championImage = `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${champKey}.png`;
 
     return {
       id: m.id,

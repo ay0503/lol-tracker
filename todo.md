@@ -179,3 +179,7 @@
 - [x] Frontend: Wire MatchRow history to use live match data (already done)
 - [x] Frontend: Add auto-refresh (refetchInterval) to all live queries
 - [x] Write vitest tests for stats endpoints (championPool, streaks, recentPerformance, avgKda)
+
+## Bug Fix: Mel Champion Image Broken
+- [x] Investigate why Mel's champion image URL is invalid on Data Dragon CDN
+- [x] Fix champion image URL mapping for newer champions like Mel
