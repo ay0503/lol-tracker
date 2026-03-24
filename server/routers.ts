@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { sdk } from "./_core/sdk";
+import { cache } from "./cache";
 import {
   getOrCreatePortfolio, getUserHoldings, executeTrade, getUserTrades,
   getAllTrades, getPriceHistory, getLatestPrice, addPriceSnapshot,
@@ -23,6 +24,11 @@ import {
 import { pollNow, getPollStatus, startPolling, stopPolling } from "./pollEngine";
 import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSnapshots } from "./etfPricing";
 
+/** Cache TTL constants */
+const THIRTY_MIN = 30 * 60 * 1000;
+const TEN_MIN = 10 * 60 * 1000;
+const FIVE_MIN = 5 * 60 * 1000;
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -39,25 +45,20 @@ export const appRouter = router({
         displayName: z.string().min(1).max(50),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Check if email already exists
         const existing = await getUserByEmail(input.email);
         if (existing && existing.passwordHash) {
-          // User already has a password set — truly duplicate registration
           throw new TRPCError({ code: "CONFLICT", message: "Email already registered" });
         }
         const passwordHash = await bcrypt.hash(input.password, 12);
         if (existing && !existing.passwordHash) {
-          // OAuth-created account without password — let them claim it
           await setUserPassword(existing.id, passwordHash, input.displayName);
         } else {
-          // Brand new user
           await createLocalUser({
             email: input.email,
             passwordHash,
             displayName: input.displayName,
           });
         }
-        // Auto-login after registration
         const user = await getUserByEmail(input.email);
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user" });
         const sessionToken = await sdk.createSessionToken(user.openId, {
@@ -82,7 +83,6 @@ export const appRouter = router({
         if (!valid) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
         }
-        // Create session token and set cookie
         const sessionToken = await sdk.createSessionToken(user.openId, {
           name: user.displayName || user.name || "",
           expiresInMs: ONE_YEAR_MS,
@@ -99,31 +99,33 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Player Data (Riot API) ───
+  // ─── Player Data (Riot API) — cached 30 min ───
   player: router({
     current: publicProcedure.query(async () => {
-      try {
-        const data = await fetchFullPlayerData("목도리 도마뱀", "dori");
-        return {
-          gameName: data.account.gameName, tagLine: data.account.tagLine,
-          puuid: data.account.puuid, summonerLevel: data.summoner.summonerLevel,
-          profileIconId: data.summoner.profileIconId,
-          solo: data.soloEntry ? {
-            tier: data.soloEntry.tier, rank: data.soloEntry.rank,
-            lp: data.soloEntry.leaguePoints, wins: data.soloEntry.wins,
-            losses: data.soloEntry.losses, hotStreak: data.soloEntry.hotStreak,
-          } : null,
-          flex: data.flexEntry ? {
-            tier: data.flexEntry.tier, rank: data.flexEntry.rank,
-            lp: data.flexEntry.leaguePoints, wins: data.flexEntry.wins,
-            losses: data.flexEntry.losses,
-          } : null,
-          currentPrice: data.currentPrice,
-        };
-      } catch (err: any) {
-        console.error("[Player] Failed to fetch:", err?.message);
-        return null;
-      }
+      return cache.getOrSet("player.current", async () => {
+        try {
+          const data = await fetchFullPlayerData("목도리 도마뱀", "dori");
+          return {
+            gameName: data.account.gameName, tagLine: data.account.tagLine,
+            puuid: data.account.puuid, summonerLevel: data.summoner.summonerLevel,
+            profileIconId: data.summoner.profileIconId,
+            solo: data.soloEntry ? {
+              tier: data.soloEntry.tier, rank: data.soloEntry.rank,
+              lp: data.soloEntry.leaguePoints, wins: data.soloEntry.wins,
+              losses: data.soloEntry.losses, hotStreak: data.soloEntry.hotStreak,
+            } : null,
+            flex: data.flexEntry ? {
+              tier: data.flexEntry.tier, rank: data.flexEntry.rank,
+              lp: data.flexEntry.leaguePoints, wins: data.flexEntry.wins,
+              losses: data.flexEntry.losses,
+            } : null,
+            currentPrice: data.currentPrice,
+          };
+        } catch (err: any) {
+          console.error("[Player] Failed to fetch:", err?.message);
+          return null;
+        }
+      }, THIRTY_MIN);
     }),
     refresh: publicProcedure.mutation(async () => {
       try {
@@ -135,6 +137,8 @@ export const appRouter = router({
             lp: data.soloEntry.leaguePoints, totalLP, price: data.currentPrice,
             wins: data.soloEntry.wins, losses: data.soloEntry.losses,
           });
+          cache.invalidatePrefix("player.");
+          cache.invalidatePrefix("prices.");
           return { success: true, price: data.currentPrice, totalLP };
         }
         return { success: false, price: 0, totalLP: 0 };
@@ -145,177 +149,185 @@ export const appRouter = router({
     matches: publicProcedure
       .input(z.object({ count: z.number().min(1).max(20).default(10) }).optional())
       .query(async ({ input }) => {
-        try {
-          const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-          const matches = await fetchRecentMatches(account.account.puuid, input?.count ?? 10);
-          return matches.map((m) => {
-            const player = m.info.participants.find((p) => p.puuid === account.account.puuid);
-            return {
-              matchId: m.metadata.matchId, gameCreation: m.info.gameCreation,
-              gameDuration: m.info.gameDuration, queueId: m.info.queueId,
-              win: player?.win ?? false, champion: player?.championName ?? "Unknown",
-              kills: player?.kills ?? 0, deaths: player?.deaths ?? 0,
-              assists: player?.assists ?? 0,
-              cs: (player?.totalMinionsKilled ?? 0) + (player?.neutralMinionsKilled ?? 0),
-              position: player?.teamPosition ?? "",
-            };
-          });
-        } catch (err: any) { return []; }
+        const count = input?.count ?? 10;
+        return cache.getOrSet(`player.matches.${count}`, async () => {
+          try {
+            const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
+            const matches = await fetchRecentMatches(account.account.puuid, count);
+            return matches.map((m) => {
+              const player = m.info.participants.find((p) => p.puuid === account.account.puuid);
+              return {
+                matchId: m.metadata.matchId, gameCreation: m.info.gameCreation,
+                gameDuration: m.info.gameDuration, queueId: m.info.queueId,
+                win: player?.win ?? false, champion: player?.championName ?? "Unknown",
+                kills: player?.kills ?? 0, deaths: player?.deaths ?? 0,
+                assists: player?.assists ?? 0,
+                cs: (player?.totalMinionsKilled ?? 0) + (player?.neutralMinionsKilled ?? 0),
+                position: player?.teamPosition ?? "",
+              };
+            });
+          } catch (err: any) { return []; }
+        }, THIRTY_MIN);
       }),
   }),
 
-  // ─── Live Stats (computed from stored matches) ───
+  // ─── Live Stats (computed from stored matches) — cached 30 min ───
   stats: router({
-    /** All-time champion pool stats computed from stored matches */
     championPool: publicProcedure.query(async () => {
-      try {
-        const allMatches = await getAllMatchesFromDB();
-        if (allMatches.length === 0) return [];
-        const champMap = new Map<string, { wins: number; losses: number; kills: number; deaths: number; assists: number; cs: number; games: number }>();
-        for (const m of allMatches) {
-          const existing = champMap.get(m.champion) || { wins: 0, losses: 0, kills: 0, deaths: 0, assists: 0, cs: 0, games: 0 };
-          existing.games++;
-          if (m.win) existing.wins++; else existing.losses++;
-          existing.kills += m.kills;
-          existing.deaths += m.deaths;
-          existing.assists += m.assists;
-          existing.cs += m.cs;
-          champMap.set(m.champion, existing);
-        }
-        return Array.from(champMap.entries())
-          .map(([name, s]) => ({
-            name,
-            image: `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${name}.png`,
-            games: s.games,
-            wins: s.wins,
-            losses: s.losses,
-            winRate: s.games > 0 ? Math.round((s.wins / s.games) * 100) : 0,
-            kills: +(s.kills / s.games).toFixed(1),
-            deaths: +(s.deaths / s.games).toFixed(1),
-            assists: +(s.assists / s.games).toFixed(1),
-            kdaRatio: s.deaths > 0 ? +((s.kills + s.assists) / s.deaths).toFixed(2) : +(s.kills + s.assists).toFixed(2),
-            kda: `${(s.kills / s.games).toFixed(1)} / ${(s.deaths / s.games).toFixed(1)} / ${(s.assists / s.games).toFixed(1)}`,
-            cs: `${Math.round(s.cs / s.games)}`,
-          }))
-          .sort((a, b) => b.games - a.games);
-      } catch { return []; }
+      return cache.getOrSet("stats.championPool", async () => {
+        try {
+          const allMatches = await getAllMatchesFromDB();
+          if (allMatches.length === 0) return [];
+          const champMap = new Map<string, { wins: number; losses: number; kills: number; deaths: number; assists: number; cs: number; games: number }>();
+          for (const m of allMatches) {
+            const existing = champMap.get(m.champion) || { wins: 0, losses: 0, kills: 0, deaths: 0, assists: 0, cs: 0, games: 0 };
+            existing.games++;
+            if (m.win) existing.wins++; else existing.losses++;
+            existing.kills += m.kills;
+            existing.deaths += m.deaths;
+            existing.assists += m.assists;
+            existing.cs += m.cs;
+            champMap.set(m.champion, existing);
+          }
+          return Array.from(champMap.entries())
+            .map(([name, s]) => ({
+              name,
+              image: `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${name}.png`,
+              games: s.games, wins: s.wins, losses: s.losses,
+              winRate: s.games > 0 ? Math.round((s.wins / s.games) * 100) : 0,
+              kills: +(s.kills / s.games).toFixed(1),
+              deaths: +(s.deaths / s.games).toFixed(1),
+              assists: +(s.assists / s.games).toFixed(1),
+              kdaRatio: s.deaths > 0 ? +((s.kills + s.assists) / s.deaths).toFixed(2) : +(s.kills + s.assists).toFixed(2),
+              kda: `${(s.kills / s.games).toFixed(1)} / ${(s.deaths / s.games).toFixed(1)} / ${(s.assists / s.games).toFixed(1)}`,
+              cs: `${Math.round(s.cs / s.games)}`,
+            }))
+            .sort((a, b) => b.games - a.games);
+        } catch { return []; }
+      }, THIRTY_MIN);
     }),
 
-    /** Win/loss streak sequence from stored matches (newest first) */
     streaks: publicProcedure.query(async () => {
-      try {
-        const allMatches = await getAllMatchesFromDB(); // already ordered newest first
-        const sequence = allMatches.map(m => m.win ? "W" : "L");
-        return { sequence, totalGames: allMatches.length };
-      } catch { return { sequence: [] as string[], totalGames: 0 }; }
+      return cache.getOrSet("stats.streaks", async () => {
+        try {
+          const allMatches = await getAllMatchesFromDB();
+          const sequence = allMatches.map(m => m.win ? "W" : "L");
+          return { sequence, totalGames: allMatches.length };
+        } catch { return { sequence: [] as string[], totalGames: 0 }; }
+      }, THIRTY_MIN);
     }),
 
-    /** 7-day champion performance */
     recentPerformance: publicProcedure.query(async () => {
-      try {
-        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        const recentMatches = await getMatchesSince(sevenDaysAgo);
-        if (recentMatches.length === 0) return [];
-        const champMap = new Map<string, { wins: number; losses: number }>();
-        for (const m of recentMatches) {
-          const existing = champMap.get(m.champion) || { wins: 0, losses: 0 };
-          if (m.win) existing.wins++; else existing.losses++;
-          champMap.set(m.champion, existing);
-        }
-        return Array.from(champMap.entries())
-          .map(([champion, s]) => ({
-            champion,
-            image: `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${champion}.png`,
-            wins: s.wins,
-            losses: s.losses,
-            winRate: (s.wins + s.losses) > 0 ? Math.round((s.wins / (s.wins + s.losses)) * 100) : 0,
-          }))
-          .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses));
-      } catch { return []; }
+      return cache.getOrSet("stats.recentPerformance", async () => {
+        try {
+          const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          const recentMatches = await getMatchesSince(sevenDaysAgo);
+          if (recentMatches.length === 0) return [];
+          const champMap = new Map<string, { wins: number; losses: number }>();
+          for (const m of recentMatches) {
+            const existing = champMap.get(m.champion) || { wins: 0, losses: 0 };
+            if (m.win) existing.wins++; else existing.losses++;
+            champMap.set(m.champion, existing);
+          }
+          return Array.from(champMap.entries())
+            .map(([champion, s]) => ({
+              champion,
+              image: `https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${champion}.png`,
+              wins: s.wins, losses: s.losses,
+              winRate: (s.wins + s.losses) > 0 ? Math.round((s.wins / (s.wins + s.losses)) * 100) : 0,
+            }))
+            .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses));
+        } catch { return []; }
+      }, THIRTY_MIN);
     }),
 
-    /** Aggregate KDA from recent N matches */
     avgKda: publicProcedure
       .input(z.object({ count: z.number().min(1).max(50).default(20) }).optional())
       .query(async ({ input }) => {
-        try {
-          const allMatches = await getRecentMatchesFromDB(input?.count ?? 20);
-          if (allMatches.length === 0) return null;
-          let totalK = 0, totalD = 0, totalA = 0;
-          for (const m of allMatches) {
-            totalK += m.kills;
-            totalD += m.deaths;
-            totalA += m.assists;
-          }
-          const n = allMatches.length;
-          const avgK = totalK / n;
-          const avgD = totalD / n;
-          const avgA = totalA / n;
-          const kdaRatio = totalD > 0 ? (totalK + totalA) / totalD : totalK + totalA;
-          return {
-            avgKills: +avgK.toFixed(1),
-            avgDeaths: +avgD.toFixed(1),
-            avgAssists: +avgA.toFixed(1),
-            kdaRatio: +kdaRatio.toFixed(2),
-            gamesAnalyzed: n,
-          };
-        } catch { return null; }
+        const count = input?.count ?? 20;
+        return cache.getOrSet(`stats.avgKda.${count}`, async () => {
+          try {
+            const allMatches = await getRecentMatchesFromDB(count);
+            if (allMatches.length === 0) return null;
+            let totalK = 0, totalD = 0, totalA = 0;
+            for (const m of allMatches) {
+              totalK += m.kills;
+              totalD += m.deaths;
+              totalA += m.assists;
+            }
+            const n = allMatches.length;
+            const avgK = totalK / n;
+            const avgD = totalD / n;
+            const avgA = totalA / n;
+            const kdaRatio = totalD > 0 ? (totalK + totalA) / totalD : totalK + totalA;
+            return {
+              avgKills: +avgK.toFixed(1),
+              avgDeaths: +avgD.toFixed(1),
+              avgAssists: +avgA.toFixed(1),
+              kdaRatio: +kdaRatio.toFixed(2),
+              gamesAnalyzed: n,
+            };
+          } catch { return null; }
+        }, THIRTY_MIN);
       }),
   }),
 
-  // ─── Stored Match History (from DB, updated by polling) ───
+  // ─── Stored Match History (from DB) — cached 30 min ───
   matches: router({
     stored: publicProcedure
       .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
       .query(async ({ input }) => {
-        try {
-          const raw = await getRecentMatchesFromDB(input?.limit ?? 20);
-          return raw.map((m) => ({
-            id: m.id,
-            matchId: m.matchId,
-            win: m.win,
-            champion: m.champion,
-            kills: m.kills,
-            deaths: m.deaths,
-            assists: m.assists,
-            cs: m.cs,
-            position: m.position,
-            gameDuration: m.gameDuration,
-            gameCreation: Number(m.gameCreation),
-            priceBefore: m.priceBefore ? parseFloat(m.priceBefore) : null,
-            priceAfter: m.priceAfter ? parseFloat(m.priceAfter) : null,
-          }));
-        } catch {
-          return [];
-        }
+        const limit = input?.limit ?? 20;
+        return cache.getOrSet(`matches.stored.${limit}`, async () => {
+          try {
+            const raw = await getRecentMatchesFromDB(limit);
+            return raw.map((m) => ({
+              id: m.id, matchId: m.matchId, win: m.win, champion: m.champion,
+              kills: m.kills, deaths: m.deaths, assists: m.assists, cs: m.cs,
+              position: m.position, gameDuration: m.gameDuration,
+              gameCreation: Number(m.gameCreation),
+              priceBefore: m.priceBefore ? parseFloat(m.priceBefore) : null,
+              priceAfter: m.priceAfter ? parseFloat(m.priceAfter) : null,
+            }));
+          } catch { return []; }
+        }, THIRTY_MIN);
       }),
   }),
 
-  // ─── Price & ETF Data ───
+  // ─── Price & ETF Data — cached 30 min ───
   prices: router({
     history: publicProcedure
       .input(z.object({ since: z.number().optional() }).optional())
-      .query(async ({ input }) => getPriceHistory(input?.since)),
-    latest: publicProcedure.query(async () => getLatestPrice()),
+      .query(async ({ input }) => {
+        const since = input?.since;
+        return cache.getOrSet(`prices.history.${since ?? "all"}`, async () => {
+          return getPriceHistory(since);
+        }, THIRTY_MIN);
+      }),
+    latest: publicProcedure.query(async () => {
+      return cache.getOrSet("prices.latest", async () => {
+        return getLatestPrice();
+      }, THIRTY_MIN);
+    }),
     etfPrices: publicProcedure.query(async () => {
-      const history = await getPriceHistory();
-      if (history.length === 0) return [];
-      const etfPrices = computeAllETFPricesSync(history);
-      // Compute change relative to what prices would have been without the latest snapshot
-      const historyWithoutLast = history.slice(0, -1);
-      const prevPrices = historyWithoutLast.length > 0
-        ? computeAllETFPricesSync(historyWithoutLast)
-        : etfPrices;
-      return TICKERS.map((ticker) => {
-        const price = etfPrices[ticker];
-        const prevPrice = prevPrices[ticker];
-        return {
-          ticker,
-          price,
-          change: price - prevPrice,
-          changePct: prevPrice > 0 ? ((price - prevPrice) / prevPrice) * 100 : 0,
-        };
-      });
+      return cache.getOrSet("prices.etfPrices", async () => {
+        const history = await getPriceHistory();
+        if (history.length === 0) return [];
+        const etfPrices = computeAllETFPricesSync(history);
+        const historyWithoutLast = history.slice(0, -1);
+        const prevPrices = historyWithoutLast.length > 0
+          ? computeAllETFPricesSync(historyWithoutLast)
+          : etfPrices;
+        return TICKERS.map((ticker) => {
+          const price = etfPrices[ticker];
+          const prevPrice = prevPrices[ticker];
+          return {
+            ticker, price,
+            change: price - prevPrice,
+            changePct: prevPrice > 0 ? ((price - prevPrice) / prevPrice) * 100 : 0,
+          };
+        });
+      }, THIRTY_MIN);
     }),
     etfHistory: publicProcedure
       .input(z.object({
@@ -323,8 +335,10 @@ export const appRouter = router({
         since: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        const history = await getPriceHistory(input.since);
-        return computeETFHistoryFromSnapshots(input.ticker, history);
+        return cache.getOrSet(`prices.etfHistory.${input.ticker}.${input.since ?? "all"}`, async () => {
+          const history = await getPriceHistory(input.since);
+          return computeETFHistoryFromSnapshots(input.ticker, history);
+        }, THIRTY_MIN);
       }),
     tickers: publicProcedure.query(() => [
       { ticker: "DORI", name: "DORI", description: "1x LP Tracker", leverage: 1, inverse: false },
@@ -335,7 +349,7 @@ export const appRouter = router({
     ]),
   }),
 
-  // ─── Trading ───
+  // ─── Trading (user-specific, no server cache) ───
   trading: router({
     portfolio: protectedProcedure.query(async ({ ctx }) => {
       const portfolio = await getOrCreatePortfolio(ctx.user.id);
@@ -357,10 +371,12 @@ export const appRouter = router({
         shares: z.number().positive(), pricePerShare: z.number().positive(),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Check market status
         const market = await getMarketStatus();
         if (!market.isOpen) throw new Error("Market is currently closed: " + (market.reason || ""));
         const result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, input.pricePerShare);
+        // Invalidate ledger and leaderboard caches after trade
+        cache.invalidate("ledger.all");
+        cache.invalidate("leaderboard.rankings");
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
           sharesOwned: parseFloat(result.holding.shares), ticker: input.ticker,
@@ -377,7 +393,6 @@ export const appRouter = router({
         }));
       }),
 
-    // ─── Short Selling ───
     short: protectedProcedure
       .input(z.object({
         ticker: z.enum(TICKERS), shares: z.number().positive(),
@@ -387,6 +402,8 @@ export const appRouter = router({
         const market = await getMarketStatus();
         if (!market.isOpen) throw new Error("Market is currently closed");
         const result = await executeShort(ctx.user.id, input.ticker, input.shares, input.pricePerShare);
+        cache.invalidate("ledger.all");
+        cache.invalidate("leaderboard.rankings");
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
           shortShares: parseFloat(result.holding.shortShares), ticker: input.ticker,
@@ -401,13 +418,14 @@ export const appRouter = router({
         const market = await getMarketStatus();
         if (!market.isOpen) throw new Error("Market is currently closed");
         const result = await executeCover(ctx.user.id, input.ticker, input.shares, input.pricePerShare);
+        cache.invalidate("ledger.all");
+        cache.invalidate("leaderboard.rankings");
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
           shortShares: parseFloat(result.holding.shortShares), ticker: input.ticker,
         };
       }),
 
-    // ─── Limit Orders & Stop-Losses ───
     createOrder: protectedProcedure
       .input(z.object({
         ticker: z.enum(TICKERS),
@@ -438,7 +456,6 @@ export const appRouter = router({
         return cancelOrder(input.orderId, ctx.user.id);
       }),
 
-    // ─── Dividends ───
     dividends: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
       .query(async ({ ctx, input }) => {
@@ -452,33 +469,39 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Public Ledger ───
+  // ─── Public Ledger — cached 5 min ───
   ledger: router({
     all: publicProcedure
       .input(z.object({ limit: z.number().min(1).max(500).default(100) }).optional())
       .query(async ({ input }) => {
-        const raw = await getAllTrades(input?.limit ?? 100);
-        return raw.map((t) => ({
-          id: t.id, userName: t.userName ?? "Anonymous",
-          ticker: t.ticker, type: t.type,
-          shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
-          totalAmount: parseFloat(t.totalAmount), createdAt: t.createdAt,
-        }));
+        const limit = input?.limit ?? 100;
+        return cache.getOrSet(`ledger.all`, async () => {
+          const raw = await getAllTrades(limit);
+          return raw.map((t) => ({
+            id: t.id, userName: t.userName ?? "Anonymous",
+            ticker: t.ticker, type: t.type,
+            shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
+            totalAmount: parseFloat(t.totalAmount), createdAt: t.createdAt,
+          }));
+        }, FIVE_MIN);
       }),
   }),
 
-  // ─── Comments / Sentiment ───
+  // ─── Comments / Sentiment — cached 5 min ───
   comments: router({
     list: publicProcedure
       .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
       .query(async ({ input }) => {
-        const raw = await getComments(input?.limit ?? 50);
-        return raw.map((c) => ({
-          id: c.id, userId: c.userId,
-          userName: (c.userName as string) ?? "Anonymous",
-          ticker: c.ticker, content: c.content,
-          sentiment: c.sentiment, createdAt: c.createdAt,
-        }));
+        const limit = input?.limit ?? 50;
+        return cache.getOrSet(`comments.list`, async () => {
+          const raw = await getComments(limit);
+          return raw.map((c) => ({
+            id: c.id, userId: c.userId,
+            userName: (c.userName as string) ?? "Anonymous",
+            ticker: c.ticker, content: c.content,
+            sentiment: c.sentiment, createdAt: c.createdAt,
+          }));
+        }, FIVE_MIN);
       }),
     post: protectedProcedure
       .input(z.object({
@@ -488,73 +511,66 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         await postComment(ctx.user.id, input.content, input.ticker, input.sentiment);
+        cache.invalidate("comments.list");
         return { success: true };
       }),
   }),
 
-  // ─── News Feed ───
+  // ─── News Feed — cached 30 min ───
   news: router({
     feed: publicProcedure
       .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
       .query(async ({ input }) => {
-        return getNews(input?.limit ?? 20);
+        return cache.getOrSet("news.feed", async () => {
+          return getNews(input?.limit ?? 20);
+        }, THIRTY_MIN);
       }),
   }),
 
-  // ─── Leaderboard ───
+  // ─── Leaderboard — cached 10 min ───
   leaderboard: router({
     rankings: publicProcedure.query(async () => {
-      const { users: allUsers, holdings: allHoldings } = await getLeaderboard();
+      return cache.getOrSet("leaderboard.rankings", async () => {
+        const { users: allUsers, holdings: allHoldings } = await getLeaderboard();
+        const history = await getPriceHistory();
+        const tickerPrices: Record<string, number> = history.length > 0
+          ? computeAllETFPricesSync(history)
+          : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
 
-      // Get current prices for all tickers using unified compounding
-      const history = await getPriceHistory();
-      const tickerPrices: Record<string, number> = history.length > 0
-        ? computeAllETFPricesSync(history)
-        : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
+        const rankings = allUsers.map((u) => {
+          const cash = u.cashBalance ? parseFloat(u.cashBalance) : 200;
+          const totalDivs = u.totalDividends ? parseFloat(u.totalDividends) : 0;
+          const userHoldings = allHoldings.filter((h) => h.userId === u.userId);
 
-      // Calculate portfolio value for each user
-      const rankings = allUsers.map((u) => {
-        const cash = u.cashBalance ? parseFloat(u.cashBalance) : 200;
-        const totalDivs = u.totalDividends ? parseFloat(u.totalDividends) : 0;
-        const userHoldings = allHoldings.filter((h) => h.userId === u.userId);
+          let holdingsValue = 0;
+          let shortExposure = 0;
+          for (const h of userHoldings) {
+            const shares = parseFloat(h.shares);
+            const shortShares = parseFloat(h.shortShares);
+            const shortAvg = parseFloat(h.shortAvgPrice);
+            const price = tickerPrices[h.ticker] || 0;
+            holdingsValue += shares * price;
+            shortExposure += shortShares * (shortAvg - price);
+          }
 
-        let holdingsValue = 0;
-        let shortExposure = 0;
-        for (const h of userHoldings) {
-          const shares = parseFloat(h.shares);
-          const shortShares = parseFloat(h.shortShares);
-          const shortAvg = parseFloat(h.shortAvgPrice);
-          const price = tickerPrices[h.ticker] || 0;
-          holdingsValue += shares * price;
-          // Short P&L: profit if price went down
-          shortExposure += shortShares * (shortAvg - price);
-        }
+          const totalValue = cash + holdingsValue + shortExposure;
+          const pnl = totalValue - 200;
+          const pnlPct = (pnl / 200) * 100;
 
-        const totalValue = cash + holdingsValue + shortExposure;
-        const pnl = totalValue - 200; // starting balance
-        const pnlPct = (pnl / 200) * 100;
+          return {
+            userId: u.userId, userName: (u.userName as string) || "Anonymous",
+            cashBalance: cash, holdingsValue, shortExposure,
+            totalValue, pnl, pnlPct, totalDividends: totalDivs,
+          };
+        });
 
-        return {
-          userId: u.userId,
-          userName: (u.userName as string) || "Anonymous",
-          cashBalance: cash,
-          holdingsValue,
-          shortExposure,
-          totalValue,
-          pnl,
-          pnlPct,
-          totalDividends: totalDivs,
-        };
-      });
-
-      // Sort by total value descending
-      rankings.sort((a, b) => b.totalValue - a.totalValue);
-
-      return rankings;
+        rankings.sort((a, b) => b.totalValue - a.totalValue);
+        return rankings;
+      }, TEN_MIN);
     }),
   }),
 
-  // ─── Portfolio History (P&L Chart) ───
+  // ─── Portfolio History (user-specific, no server cache) ───
   portfolioHistory: router({
     history: protectedProcedure
       .input(z.object({ since: z.number().optional() }).optional())
@@ -570,7 +586,7 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Notifications ───
+  // ─── Notifications (user-specific, no server cache) ───
   notifications: router({
     list: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
@@ -592,15 +608,17 @@ export const appRouter = router({
     }),
   }),
 
-  // ─── Market Status ───
+  // ─── Market Status — cached 10 min ───
   market: router({
     status: publicProcedure.query(async () => {
-      const status = await getMarketStatus();
-      return {
-        isOpen: status.isOpen,
-        reason: status.reason,
-        lastActivity: status.lastActivity,
-      };
+      return cache.getOrSet("market.status", async () => {
+        const status = await getMarketStatus();
+        return {
+          isOpen: status.isOpen,
+          reason: status.reason,
+          lastActivity: status.lastActivity,
+        };
+      }, TEN_MIN);
     }),
   }),
 

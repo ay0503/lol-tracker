@@ -9,7 +9,29 @@ import { getLoginUrl } from "./const";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import "./index.css";
 
-const queryClient = new QueryClient();
+/**
+ * Client-side caching strategy:
+ * - staleTime: 10 min → data is considered "fresh" for 10 min after fetch, no refetch on mount
+ * - gcTime: 30 min → cached data stays in memory for 30 min even after components unmount
+ * - refetchOnWindowFocus: false → don't refetch when user switches tabs back
+ * - refetchOnReconnect: true → refetch if network reconnects (default)
+ *
+ * The server-side cache (30 min TTL) is the primary cache layer.
+ * The client-side cache prevents redundant network requests during navigation.
+ */
+const STALE_TIME = 10 * 60 * 1000; // 10 minutes
+const GC_TIME = 30 * 60 * 1000;    // 30 minutes
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: STALE_TIME,
+      gcTime: GC_TIME,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;

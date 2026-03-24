@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { cache } from "./cache";
 
 /**
  * Tests for the stats router endpoints (championPool, streaks, recentPerformance, avgKda).
@@ -67,6 +68,7 @@ const SAMPLE_MATCHES = [
 describe("stats.championPool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("returns aggregated champion stats from stored matches", async () => {
@@ -109,6 +111,7 @@ describe("stats.championPool", () => {
 describe("stats.streaks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("returns win/loss sequence from stored matches", async () => {
@@ -132,6 +135,7 @@ describe("stats.streaks", () => {
 describe("stats.recentPerformance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("returns 7-day champion performance", async () => {
@@ -160,6 +164,7 @@ describe("stats.recentPerformance", () => {
 describe("stats.avgKda", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("computes average KDA from recent matches", async () => {

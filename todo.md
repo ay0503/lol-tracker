@@ -368,3 +368,15 @@
 - [x] Audit Sentiment page for static vs live data (already wired)
 - [x] Remove or minimize playerData.ts static data usage
 - [x] Ensure all components show loading states when backend data is pending
+
+## Bug: Login query failure + components stuck loading
+- [x] Fix "Failed query" error on login — caused by stale MySQL build, SQLite-only now
+- [x] Fix all components stuck in loading state — same stale MySQL build issue
+
+## Feature: Server + Client Caching
+- [x] Build server-side in-memory cache module with TTL and invalidation
+- [x] Wire cache into all public tRPC endpoints (player, prices, matches, stats, news, etc.)
+- [x] Auto-invalidate cache when polling engine writes new data
+- [x] Update client-side staleTime to 10 min, gcTime to 30 min
+- [x] Disabled refetchOnWindowFocus, retry limited to 1
+- [x] Production is SQLite-only, will work after next publish

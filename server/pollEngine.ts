@@ -12,6 +12,7 @@
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP
 } from "./riotApi";
+import { cache } from "./cache";
 import {
   addPriceSnapshot, getProcessedMatchIds, addMatch, markMatchDividendsPaid,
   markMatchNewsGenerated, distributeDividends, addNews, getPendingOrders,
@@ -258,6 +259,8 @@ export async function pollNow(): Promise<PollResult> {
     isPolling = false;
     lastPollTime = new Date();
     lastPollResult = result;
+    // Invalidate all server-side caches after poll writes new data
+    cache.invalidateAll();
     console.log(`[Poll] Complete. Price: $${result.price.toFixed(2)}, New matches: ${result.newMatches}, News: ${result.newsGenerated}, Dividends: ${result.dividendsPaid}, Orders: ${result.ordersExecuted}`);
   }
 

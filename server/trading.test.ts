@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { cache } from "./cache";
 
 // Mock the db module with ALL exported functions
 vi.mock("./db", () => ({
@@ -107,6 +108,7 @@ function createUnauthContext(): TrpcContext {
 describe("trading.portfolio", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("returns portfolio with holdings for authenticated user", async () => {
@@ -179,6 +181,7 @@ describe("trading.portfolio", () => {
 describe("trading.trade", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
     // Default: market is open
     (getMarketStatus as any).mockResolvedValue({ isOpen: true, reason: null, lastActivity: null });
   });
@@ -283,6 +286,7 @@ describe("trading.trade", () => {
 describe("trading.short", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
     (getMarketStatus as any).mockResolvedValue({ isOpen: true, reason: null, lastActivity: null });
   });
 
@@ -329,6 +333,7 @@ describe("trading.short", () => {
 describe("trading.orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("creates a limit buy order", async () => {
@@ -392,6 +397,7 @@ describe("trading.orders", () => {
 describe("comments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("posts a comment", async () => {
@@ -439,6 +445,7 @@ describe("comments", () => {
 describe("trading.history", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("returns trade history with ticker field", async () => {
@@ -490,6 +497,7 @@ describe("trading.history", () => {
 describe("ledger.all", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("returns all trades from all users (public)", async () => {
@@ -531,6 +539,7 @@ describe("ledger.all", () => {
 describe("prices.etfPrices", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cache.invalidateAll();
   });
 
   it("calculates ETF prices from base DORI price", async () => {
