@@ -314,3 +314,16 @@
 - [x] Update getLoginUrl() to point to local /login page
 - [x] Test full register → login → protected routes → logout flow — VERIFIED in browser
 - [x] Add 11 vitest tests for local auth (password hashing, user lookup, registration, login)
+
+## Feature: Migrate MySQL to SQLite
+- [x] Install @libsql/client (pure JS SQLite driver, no native compilation needed)
+- [x] Rewrite drizzle/schema.ts from mysqlTable to sqliteTable (all 14 tables)
+- [x] Update drizzle.config.ts to use SQLite dialect and local ./data/lol-tracker.db file
+- [x] Update server/db.ts: change drizzle driver from mysql2 to @libsql/client with WAL mode
+- [x] Update all db helpers for SQLite syntax (onConflictDoUpdate, text for decimals, ISO strings for dates)
+- [x] No MySQL-specific patterns in routers.ts, pollEngine.ts, or riotApi.ts (all use db.ts helpers)
+- [x] Remove mysql2 dependency from package.json
+- [x] Update server/_core/env.ts: DATABASE_URL → DATABASE_PATH with default ./data/lol-tracker.db
+- [x] Seed historical price data (182 data points) into SQLite
+- [x] Run full test suite — 58 tests passed
+- [x] Verified complete app flow in browser (live data, charts, trading panel, all pages working)

@@ -1,30 +1,39 @@
-import { eq, desc, sql, and, inArray, ne } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { eq, desc, sql, and } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client";
 import {
   InsertUser, users, portfolios, holdings, trades, priceHistory,
   orders, comments, news, dividends, matches, marketStatus,
+  portfolioSnapshots, notifications,
   type Order, type InsertOrder
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { existsSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+export function getDbSync() {
+  if (!_db) {
+    const dbPath = ENV.databasePath;
+    // Ensure the directory exists
+    const dir = dirname(dbPath);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const client = createClient({ url: `file:${dbPath}` });
+    _db = drizzle(client);
+    // Enable WAL mode for better concurrent read performance
+    client.executeMultiple("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
   }
   return _db;
+}
+
+export async function getDb() {
+  return getDbSync();
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
 
   try {
     const values: InsertUser = { openId: user.openId };
@@ -39,25 +48,26 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet[field] = normalized;
     };
     textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
+    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn as string; updateSet.lastSignedIn = user.lastSignedIn; }
     if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
     else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
-    if (!values.lastSignedIn) values.lastSignedIn = new Date();
-    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    if (!values.lastSignedIn) values.lastSignedIn = new Date().toISOString();
+    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date().toISOString();
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
+      set: updateSet,
+    });
   } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -68,8 +78,6 @@ export async function createLocalUser(data: {
   displayName: string;
 }): Promise<void> {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  // Generate a unique openId for local users (prefix with 'local_' to distinguish)
   const openId = `local_${crypto.randomUUID()}`;
   await db.insert(users).values({
     openId,
@@ -78,7 +86,7 @@ export async function createLocalUser(data: {
     displayName: data.displayName,
     name: data.displayName,
     loginMethod: "email",
-    lastSignedIn: new Date(),
+    lastSignedIn: new Date().toISOString(),
   });
 }
 
@@ -86,7 +94,6 @@ export async function createLocalUser(data: {
 
 export async function getOrCreatePortfolio(userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const existing = await db.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
   if (existing.length > 0) return existing[0];
   await db.insert(portfolios).values({ userId, cashBalance: "200.00", totalDividends: "0.00" });
@@ -98,7 +105,6 @@ export async function getOrCreatePortfolio(userId: number) {
 
 export async function getOrCreateHolding(userId: number, ticker: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const existing = await db.select().from(holdings)
     .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
   if (existing.length > 0) return existing[0];
@@ -110,7 +116,6 @@ export async function getOrCreateHolding(userId: number, ticker: string) {
 
 export async function getUserHoldings(userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(holdings).where(eq(holdings.userId, userId));
 }
 
@@ -120,7 +125,6 @@ export async function executeTrade(
   userId: number, ticker: string, type: "buy" | "sell", shares: number, pricePerShare: number
 ) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
   const portfolio = await getOrCreatePortfolio(userId);
   const holding = await getOrCreateHolding(userId, ticker);
@@ -159,7 +163,6 @@ export async function executeShort(
   userId: number, ticker: string, shares: number, pricePerShare: number
 ) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
   const portfolio = await getOrCreatePortfolio(userId);
   const holding = await getOrCreateHolding(userId, ticker);
@@ -168,18 +171,13 @@ export async function executeShort(
   const currentShortShares = parseFloat(holding.shortShares);
   const currentShortAvg = parseFloat(holding.shortAvgPrice);
 
-  // Require 50% margin (collateral)
   const marginRequired = totalAmount * 0.5;
   if (marginRequired > currentCash) throw new Error("Insufficient margin. Need 50% collateral.");
 
-  // Lock margin
-  await db.update(portfolios).set({ cashBalance: (currentCash - marginRequired).toFixed(2) }).where(eq(portfolios.userId, userId));
-
-  // Credit the sale proceeds (they get the cash from selling borrowed shares)
+  // Lock margin then credit sale proceeds
   const newCash = currentCash - marginRequired + totalAmount;
   await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
 
-  // Update short position
   const newShortShares = currentShortShares + shares;
   const newShortAvg = currentShortShares > 0
     ? ((currentShortAvg * currentShortShares) + (pricePerShare * shares)) / newShortShares
@@ -202,7 +200,6 @@ export async function executeCover(
   userId: number, ticker: string, shares: number, pricePerShare: number
 ) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
   const portfolio = await getOrCreatePortfolio(userId);
   const holding = await getOrCreateHolding(userId, ticker);
@@ -213,10 +210,7 @@ export async function executeCover(
   if (shares > currentShortShares) throw new Error("Cannot cover more shares than shorted");
   if (totalCost > currentCash) throw new Error("Insufficient funds to cover");
 
-  // Pay to buy back shares
   await db.update(portfolios).set({ cashBalance: (currentCash - totalCost).toFixed(2) }).where(eq(portfolios.userId, userId));
-
-  // Reduce short position
   await db.update(holdings).set({
     shortShares: (currentShortShares - shares).toFixed(4),
   }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
@@ -236,7 +230,6 @@ export async function createOrder(data: {
   shares: number; targetPrice: number;
 }) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
   await db.insert(orders).values({
     userId: data.userId, ticker: data.ticker, orderType: data.orderType,
@@ -251,13 +244,11 @@ export async function createOrder(data: {
 
 export async function getUserOrders(userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
 }
 
 export async function cancelOrder(orderId: number, userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const order = await db.select().from(orders).where(and(eq(orders.id, orderId), eq(orders.userId, userId))).limit(1);
   if (!order.length || order[0].status !== "pending") throw new Error("Order not found or already processed");
   await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, orderId));
@@ -266,15 +257,13 @@ export async function cancelOrder(orderId: number, userId: number) {
 
 export async function getPendingOrders() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(orders).where(eq(orders.status, "pending"));
 }
 
 export async function fillOrder(orderId: number, filledPrice: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.update(orders).set({
-    status: "filled", filledAt: new Date(), filledPrice: filledPrice.toFixed(4),
+    status: "filled", filledAt: new Date().toISOString(), filledPrice: filledPrice.toFixed(4),
   }).where(eq(orders.id, orderId));
 }
 
@@ -282,7 +271,6 @@ export async function fillOrder(orderId: number, filledPrice: number) {
 
 export async function getUserTrades(userId: number, limit = 50) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select({
     id: trades.id, ticker: trades.ticker, type: trades.type,
     shares: trades.shares, pricePerShare: trades.pricePerShare,
@@ -292,7 +280,6 @@ export async function getUserTrades(userId: number, limit = 50) {
 
 export async function getAllTrades(limit = 100) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select({
     id: trades.id, userId: trades.userId,
     userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
@@ -306,13 +293,11 @@ export async function getAllTrades(limit = 100) {
 
 export async function postComment(userId: number, content: string, ticker: string | null, sentiment: "bullish" | "bearish" | "neutral") {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.insert(comments).values({ userId, content, ticker, sentiment });
 }
 
 export async function getComments(limit = 50) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select({
     id: comments.id, userId: comments.userId,
     userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
@@ -328,7 +313,6 @@ export async function addNews(data: {
   champion?: string; kda?: string; priceChange?: number;
 }) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.insert(news).values({
     headline: data.headline, body: data.body ?? null,
     matchId: data.matchId ?? null, isWin: data.isWin ?? null,
@@ -339,7 +323,6 @@ export async function addNews(data: {
 
 export async function getNews(limit = 20) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(news).orderBy(desc(news.createdAt)).limit(limit);
 }
 
@@ -347,10 +330,7 @@ export async function getNews(limit = 20) {
 
 export async function distributeDividends(matchId: string, isWin: boolean, reason: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
-  // High dividend rates: $0.50/share for DORI on win, $0.75 for 2x, $1.00 for 3x
-  // Inverse gets dividends on loss: $0.75 for SDRI, $1.00 for XDRI
   const winTickers = [
     { ticker: "DORI", rate: 0.50 },
     { ticker: "DDRI", rate: 0.75 },
@@ -365,9 +345,9 @@ export async function distributeDividends(matchId: string, isWin: boolean, reaso
   let totalDistributed = 0;
 
   for (const { ticker, rate } of eligibleTickers) {
-    // Get all holders of this ticker with shares > 0
+    // SQLite: use CAST(... AS REAL) instead of CAST(... AS DECIMAL)
     const holders = await db.select().from(holdings)
-      .where(and(eq(holdings.ticker, ticker), sql`CAST(${holdings.shares} AS DECIMAL(12,4)) > 0`));
+      .where(and(eq(holdings.ticker, ticker), sql`CAST(${holdings.shares} AS REAL) > 0`));
 
     for (const holder of holders) {
       const sharesHeld = parseFloat(holder.shares);
@@ -376,7 +356,6 @@ export async function distributeDividends(matchId: string, isWin: boolean, reaso
       const payout = sharesHeld * rate;
       totalDistributed += payout;
 
-      // Credit cash
       const portfolio = await getOrCreatePortfolio(holder.userId);
       const newCash = parseFloat(portfolio.cashBalance) + payout;
       await db.update(portfolios).set({
@@ -384,14 +363,12 @@ export async function distributeDividends(matchId: string, isWin: boolean, reaso
         totalDividends: (parseFloat(portfolio.totalDividends) + payout).toFixed(2),
       }).where(eq(portfolios.userId, holder.userId));
 
-      // Record dividend
       await db.insert(dividends).values({
         userId: holder.userId, ticker, shares: sharesHeld.toFixed(4),
         dividendPerShare: rate.toFixed(4), totalPayout: payout.toFixed(2),
         reason, matchId,
       });
 
-      // Record as a trade for visibility
       await db.insert(trades).values({
         userId: holder.userId, ticker, type: "dividend",
         shares: sharesHeld.toFixed(4), pricePerShare: rate.toFixed(4),
@@ -405,7 +382,6 @@ export async function distributeDividends(matchId: string, isWin: boolean, reaso
 
 export async function getUserDividends(userId: number, limit = 50) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(dividends).where(eq(dividends.userId, userId)).orderBy(desc(dividends.createdAt)).limit(limit);
 }
 
@@ -413,7 +389,6 @@ export async function getUserDividends(userId: number, limit = 50) {
 
 export async function getProcessedMatchIds() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const result = await db.select({ matchId: matches.matchId }).from(matches);
   return new Set(result.map(r => r.matchId));
 }
@@ -425,7 +400,6 @@ export async function addMatch(data: {
   priceBefore?: number; priceAfter?: number; gameCreation: number;
 }) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.insert(matches).values({
     matchId: data.matchId, win: data.win, champion: data.champion,
     kills: data.kills, deaths: data.deaths, assists: data.assists,
@@ -439,27 +413,23 @@ export async function addMatch(data: {
 
 export async function markMatchDividendsPaid(matchId: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.update(matches).set({ dividendsPaid: true }).where(eq(matches.matchId, matchId));
 }
 
 export async function markMatchNewsGenerated(matchId: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.update(matches).set({ newsGenerated: true }).where(eq(matches.matchId, matchId));
 }
 
 export async function getRecentMatchesFromDB(limit: number = 20) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(matches).orderBy(sql`${matches.gameCreation} DESC`).limit(limit);
 }
 
 export async function getUnprocessedMatches() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(matches)
-    .where(sql`${matches.dividendsPaid} = false OR ${matches.newsGenerated} = false`)
+    .where(sql`${matches.dividendsPaid} = 0 OR ${matches.newsGenerated} = 0`)
     .orderBy(matches.gameCreation);
 }
 
@@ -467,10 +437,8 @@ export async function getUnprocessedMatches() {
 
 export async function getMarketStatus() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const result = await db.select().from(marketStatus).limit(1);
   if (result.length === 0) {
-    // Initialize market status
     await db.insert(marketStatus).values({ isOpen: true, reason: "Market initialized" });
     return { isOpen: true, reason: "Market initialized", lastActivity: null };
   }
@@ -479,12 +447,11 @@ export async function getMarketStatus() {
 
 export async function setMarketStatus(isOpen: boolean, reason: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const existing = await db.select().from(marketStatus).limit(1);
   if (existing.length === 0) {
-    await db.insert(marketStatus).values({ isOpen, reason, lastActivity: new Date() });
+    await db.insert(marketStatus).values({ isOpen, reason, lastActivity: new Date().toISOString() });
   } else {
-    await db.update(marketStatus).set({ isOpen, reason, lastActivity: new Date() }).where(eq(marketStatus.id, existing[0].id));
+    await db.update(marketStatus).set({ isOpen, reason, lastActivity: new Date().toISOString() }).where(eq(marketStatus.id, existing[0].id));
   }
 }
 
@@ -492,9 +459,7 @@ export async function setMarketStatus(isOpen: boolean, reason: string) {
 
 export async function getLeaderboard() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
-  // Get all users with portfolios
   const allUsers = await db.select({
     userId: users.id,
     userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
@@ -502,7 +467,6 @@ export async function getLeaderboard() {
     totalDividends: portfolios.totalDividends,
   }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId));
 
-  // Get all holdings for each user
   const allHoldings = await db.select().from(holdings);
 
   return { users: allUsers, holdings: allHoldings };
@@ -516,7 +480,6 @@ export async function addPriceSnapshot(data: {
   wins?: number; losses?: number;
 }) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.insert(priceHistory).values({
     timestamp: data.timestamp, tier: data.tier, division: data.division,
     lp: data.lp, totalLP: data.totalLP, price: data.price.toFixed(4),
@@ -526,7 +489,6 @@ export async function addPriceSnapshot(data: {
 
 export async function getPriceHistory(since?: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   if (since) {
     return db.select().from(priceHistory).where(sql`${priceHistory.timestamp} >= ${since}`).orderBy(priceHistory.timestamp);
   }
@@ -535,34 +497,24 @@ export async function getPriceHistory(since?: number) {
 
 export async function updateDisplayName(userId: number, displayName: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.update(users).set({ displayName }).where(eq(users.id, userId));
 }
 
 export async function getLatestPrice() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const result = await db.select().from(priceHistory).orderBy(desc(priceHistory.timestamp)).limit(1);
   return result.length > 0 ? result[0] : null;
 }
 
 // ─── Live Stats (computed from stored matches) ───
 
-/**
- * Get all matches for computing stats (all stored matches, ordered newest first).
- */
 export async function getAllMatchesFromDB() {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(matches).orderBy(sql`${matches.gameCreation} DESC`);
 }
 
-/**
- * Get matches from the last N days.
- */
 export async function getMatchesSince(sinceTimestamp: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(matches)
     .where(sql`${matches.gameCreation} >= ${sinceTimestamp}`)
     .orderBy(sql`${matches.gameCreation} DESC`);
@@ -570,15 +522,11 @@ export async function getMatchesSince(sinceTimestamp: number) {
 
 // ─── Portfolio Snapshots ───
 
-import { portfolioSnapshots, notifications } from "../drizzle/schema";
-
 export async function recordPortfolioSnapshots(
   tickerPrices: Record<string, number>
 ) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
 
-  // Get all users with portfolios
   const allPortfolios = await db.select().from(portfolios);
   const allHoldingsData = await db.select().from(holdings);
   const now = Date.now();
@@ -613,7 +561,6 @@ export async function recordPortfolioSnapshots(
 
 export async function getPortfolioHistory(userId: number, since?: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   if (since) {
     return db.select().from(portfolioSnapshots)
       .where(and(eq(portfolioSnapshots.userId, userId), sql`${portfolioSnapshots.timestamp} >= ${since}`))
@@ -634,7 +581,6 @@ export async function createNotification(data: {
   relatedId?: number;
 }) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.insert(notifications).values({
     userId: data.userId,
     type: data.type,
@@ -647,7 +593,6 @@ export async function createNotification(data: {
 
 export async function getUserNotifications(userId: number, limit = 50) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   return db.select().from(notifications)
     .where(eq(notifications.userId, userId))
     .orderBy(desc(notifications.createdAt))
@@ -656,7 +601,6 @@ export async function getUserNotifications(userId: number, limit = 50) {
 
 export async function getUnreadNotificationCount(userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   const result = await db.select({ count: sql<number>`COUNT(*)` })
     .from(notifications)
     .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
@@ -665,14 +609,12 @@ export async function getUnreadNotificationCount(userId: number) {
 
 export async function markNotificationRead(notificationId: number, userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.update(notifications).set({ read: true })
     .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
 }
 
 export async function markAllNotificationsRead(userId: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
   await db.update(notifications).set({ read: true })
     .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
 }

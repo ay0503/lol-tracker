@@ -1,17 +1,12 @@
 /**
  * Seed script: Populate priceHistory table with historical LP data
  * so that ETF compounding produces different prices for leveraged/inverse tickers.
- *
- * Uses the same LP waypoints and totalLPToPrice logic as the frontend playerData.ts.
+ * SQLite version using @libsql/client.
  */
-import 'dotenv/config';
-import mysql from 'mysql2/promise';
+import { createClient } from '@libsql/client';
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  console.error("DATABASE_URL not set");
-  process.exit(1);
-}
+const dbPath = process.env.DATABASE_PATH || "./data/lol-tracker.db";
+const client = createClient({ url: `file:${dbPath}` });
 
 function totalLPToPrice(totalLP) {
   const maxLP = 1200;
@@ -22,7 +17,6 @@ function totalLPToPrice(totalLP) {
 }
 
 function totalLPToTierInfo(totalLP) {
-  // Platinum: 0-399, Emerald: 400-799, Diamond: 800-1200
   const tiers = [
     { name: "PLATINUM", min: 0, max: 399 },
     { name: "EMERALD", min: 400, max: 799 },
@@ -38,17 +32,13 @@ function totalLPToTierInfo(totalLP) {
       return { tier: t.name, division: divs[divIdx], lp };
     }
   }
-  // Fallback: Diamond I
   return { tier: "DIAMOND", division: "I", lp: Math.min(totalLP - 1100, 100) };
 }
 
-// Generate the same extended history as the frontend
 function generateHistory() {
   const points = [];
-
-  // Extended history: Sep 23, 2025 → Mar 10, 2026
-  const startDate = new Date(2025, 8, 23); // Sep 23, 2025
-  const endDate = new Date(2026, 2, 10);   // Mar 10, 2026
+  const startDate = new Date(2025, 8, 23);
+  const endDate = new Date(2026, 2, 10);
   const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
   const waypoints = [
@@ -63,7 +53,6 @@ function generateHistory() {
     { day: totalDays, totalLP: 460 },
   ];
 
-  // Use a seeded random to match frontend (we'll use sin/cos noise like frontend)
   for (let day = 0; day <= totalDays; day++) {
     let prevWP = waypoints[0];
     let nextWP = waypoints[1];
@@ -77,7 +66,6 @@ function generateHistory() {
 
     const progress = (day - prevWP.day) / (nextWP.day - prevWP.day || 1);
     const baseTotalLP = prevWP.totalLP + (nextWP.totalLP - prevWP.totalLP) * progress;
-    // Use deterministic noise (same as frontend but without Math.random)
     const noise = Math.sin(day * 0.7) * 15 + Math.cos(day * 1.3) * 10;
     const totalLP = Math.max(0, Math.round(baseTotalLP + noise));
 
@@ -96,7 +84,6 @@ function generateHistory() {
     });
   }
 
-  // Real recent data: Mar 11 - Mar 23
   const recentData = [
     { date: "2026-03-11", tier: "EMERALD", division: "IV", lp: 60, totalLP: 460 },
     { date: "2026-03-12", tier: "EMERALD", division: "IV", lp: 84, totalLP: 484 },
@@ -114,7 +101,7 @@ function generateHistory() {
   ];
 
   for (const d of recentData) {
-    const timestamp = new Date(d.date).getTime() + 12 * 60 * 60 * 1000; // noon
+    const timestamp = new Date(d.date).getTime() + 12 * 60 * 60 * 1000;
     const price = totalLPToPrice(d.totalLP);
     points.push({
       timestamp,
@@ -130,23 +117,18 @@ function generateHistory() {
 }
 
 async function main() {
-  console.log("Connecting to database...");
-  const connection = await mysql.createConnection(DATABASE_URL);
+  console.log("Connecting to SQLite database...");
 
-  // Check existing count
-  const [rows] = await connection.execute("SELECT COUNT(*) as cnt FROM priceHistory");
-  const existingCount = rows[0].cnt;
+  const countResult = await client.execute("SELECT COUNT(*) as cnt FROM priceHistory");
+  const existingCount = countResult.rows[0].cnt;
   console.log(`Existing price history records: ${existingCount}`);
 
-  // Delete existing records that are all the same price (today's polling data)
-  // We'll keep them and just add historical data before them
-  const [minTs] = await connection.execute("SELECT MIN(timestamp) as minTs FROM priceHistory");
-  const earliestExisting = minTs[0].minTs;
+  const minTsResult = await client.execute("SELECT MIN(timestamp) as minTs FROM priceHistory");
+  const earliestExisting = minTsResult.rows[0].minTs;
 
   const history = generateHistory();
   console.log(`Generated ${history.length} historical data points`);
 
-  // Only insert points that are before the earliest existing record
   const toInsert = earliestExisting
     ? history.filter(p => p.timestamp < Number(earliestExisting))
     : history;
@@ -155,36 +137,30 @@ async function main() {
 
   if (toInsert.length === 0) {
     console.log("No new data to insert. All historical data already exists.");
-    await connection.end();
+    client.close();
     return;
   }
 
-  // Batch insert
+  // SQLite: batch insert using individual parameterized inserts in a transaction
   const batchSize = 50;
   for (let i = 0; i < toInsert.length; i += batchSize) {
     const batch = toInsert.slice(i, i + batchSize);
-    const values = batch.map(p =>
-      `(${p.timestamp}, '${p.tier}', '${p.division}', ${p.lp}, ${p.totalLP}, ${p.price})`
-    ).join(",\n");
-
-    await connection.execute(
-      `INSERT INTO priceHistory (timestamp, tier, division, lp, totalLP, price) VALUES ${values}`
-    );
+    const stmts = batch.map(p => ({
+      sql: "INSERT INTO priceHistory (timestamp, tier, division, lp, totalLP, price) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [p.timestamp, p.tier, p.division, p.lp, p.totalLP, p.price],
+    }));
+    await client.batch(stmts, "write");
     console.log(`  Inserted batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(toInsert.length / batchSize)}`);
   }
 
-  // Verify
-  const [countResult] = await connection.execute("SELECT COUNT(*) as cnt FROM priceHistory");
-  console.log(`Total price history records after seeding: ${countResult[0].cnt}`);
+  const finalCount = await client.execute("SELECT COUNT(*) as cnt FROM priceHistory");
+  console.log(`Total price history records after seeding: ${finalCount.rows[0].cnt}`);
 
-  // Check ETF price variation
-  const [priceRange] = await connection.execute(
-    "SELECT MIN(price) as min_price, MAX(price) as max_price FROM priceHistory"
-  );
-  console.log(`Price range: $${priceRange[0].min_price} - $${priceRange[0].max_price}`);
+  const priceRange = await client.execute("SELECT MIN(CAST(price AS REAL)) as min_price, MAX(CAST(price AS REAL)) as max_price FROM priceHistory");
+  console.log(`Price range: $${priceRange.rows[0].min_price} - $${priceRange.rows[0].max_price}`);
 
-  await connection.end();
-  console.log("Done! ETF prices should now show different values for each ticker.");
+  client.close();
+  console.log("Done!");
 }
 
 main().catch(err => {

@@ -1,54 +1,12 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1774323059620,
-      "tag": "0000_spicy_pandemic",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1774323166358,
-      "tag": "0001_lean_randall_flagg",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1774324546519,
-      "tag": "0002_common_roxanne_simpson",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1774326493556,
-      "tag": "0003_happy_beyonder",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1774327083021,
-      "tag": "0004_minor_morgan_stark",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1774332395976,
-      "tag": "0005_superb_clint_barton",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1774375498404,
-      "tag": "0006_rare_nico_minoru",
+      "version": "6",
+      "when": 1774386476159,
+      "tag": "0000_eminent_wrecking_crew",
       "breakpoints": true
     }
   ]

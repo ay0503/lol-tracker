@@ -267,7 +267,7 @@ class SDKServer {
     }
 
     const sessionUserId = session.openId;
-    const signedInAt = new Date();
+    const signedInAt = new Date().toISOString();
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, try to sync from OAuth server (for Manus OAuth users)

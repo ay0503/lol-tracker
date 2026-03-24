@@ -1,20 +1,22 @@
-import { decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar, bigint, json, boolean } from "drizzle-orm/mysql-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Core user table backing auth flow.
+ * SQLite: timestamps stored as ISO strings via DEFAULT, booleans as integers.
  */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  openId: text("openId").notNull().unique(),
   name: text("name"),
-  displayName: varchar("displayName", { length: 50 }),
-  email: varchar("email", { length: 320 }).unique(),
-  passwordHash: varchar("passwordHash", { length: 255 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  displayName: text("displayName"),
+  email: text("email").unique(),
+  passwordHash: text("passwordHash"),
+  loginMethod: text("loginMethod"),
+  role: text("role", { enum: ["user", "admin"] }).default("user").notNull(),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+  updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),
+  lastSignedIn: text("lastSignedIn").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -24,14 +26,13 @@ export type InsertUser = typeof users.$inferInsert;
  * Portfolio table - tracks each user's cash balance.
  * Every new user starts with $200 cash.
  */
-export const portfolios = mysqlTable("portfolios", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  cashBalance: decimal("cashBalance", { precision: 12, scale: 2 }).notNull().default("200.00"),
-  /** Total dividends received all-time */
-  totalDividends: decimal("totalDividends", { precision: 12, scale: 2 }).notNull().default("0.00"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const portfolios = sqliteTable("portfolios", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull().unique(),
+  cashBalance: text("cashBalance").notNull().default("200.00"),
+  totalDividends: text("totalDividends").notNull().default("0.00"),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+  updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Portfolio = typeof portfolios.$inferSelect;
@@ -39,21 +40,17 @@ export type InsertPortfolio = typeof portfolios.$inferInsert;
 
 /**
  * Holdings table - tracks shares per ticker per user.
- * Supports multiple tickers: DORI, DDRI, TDRI, SDRI, XDRI
- * Negative shares = short position
  */
-export const holdings = mysqlTable("holdings", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  ticker: varchar("ticker", { length: 10 }).notNull(),
-  shares: decimal("shares", { precision: 12, scale: 4 }).notNull().default("0.0000"),
-  avgCostBasis: decimal("avgCostBasis", { precision: 12, scale: 4 }).notNull().default("0.0000"),
-  /** Borrowed shares for short positions */
-  shortShares: decimal("shortShares", { precision: 12, scale: 4 }).notNull().default("0.0000"),
-  /** Average price at which shares were shorted */
-  shortAvgPrice: decimal("shortAvgPrice", { precision: 12, scale: 4 }).notNull().default("0.0000"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const holdings = sqliteTable("holdings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  ticker: text("ticker").notNull(),
+  shares: text("shares").notNull().default("0.0000"),
+  avgCostBasis: text("avgCostBasis").notNull().default("0.0000"),
+  shortShares: text("shortShares").notNull().default("0.0000"),
+  shortAvgPrice: text("shortAvgPrice").notNull().default("0.0000"),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+  updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Holding = typeof holdings.$inferSelect;
@@ -62,15 +59,15 @@ export type InsertHolding = typeof holdings.$inferInsert;
 /**
  * Trades table - records every buy/sell/short/cover transaction.
  */
-export const trades = mysqlTable("trades", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  ticker: varchar("ticker", { length: 10 }).notNull().default("DORI"),
-  type: mysqlEnum("type", ["buy", "sell", "short", "cover", "dividend"]).notNull(),
-  shares: decimal("shares", { precision: 12, scale: 4 }).notNull(),
-  pricePerShare: decimal("pricePerShare", { precision: 12, scale: 4 }).notNull(),
-  totalAmount: decimal("totalAmount", { precision: 12, scale: 2 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const trades = sqliteTable("trades", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  ticker: text("ticker").notNull().default("DORI"),
+  type: text("type", { enum: ["buy", "sell", "short", "cover", "dividend"] }).notNull(),
+  shares: text("shares").notNull(),
+  pricePerShare: text("pricePerShare").notNull(),
+  totalAmount: text("totalAmount").notNull(),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Trade = typeof trades.$inferSelect;
@@ -79,23 +76,18 @@ export type InsertTrade = typeof trades.$inferInsert;
 /**
  * Orders table - pending limit orders and stop-losses.
  */
-export const orders = mysqlTable("orders", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  ticker: varchar("ticker", { length: 10 }).notNull(),
-  /** limit_buy: buy when price <= target, limit_sell: sell when price >= target, stop_loss: sell when price <= target */
-  orderType: mysqlEnum("orderType", ["limit_buy", "limit_sell", "stop_loss"]).notNull(),
-  /** Number of shares to trade */
-  shares: decimal("shares", { precision: 12, scale: 4 }).notNull(),
-  /** Target price to trigger the order */
-  targetPrice: decimal("targetPrice", { precision: 8, scale: 4 }).notNull(),
-  status: mysqlEnum("status", ["pending", "filled", "cancelled", "expired"]).notNull().default("pending"),
-  /** When the order was filled */
-  filledAt: timestamp("filledAt"),
-  /** Price at which the order was actually filled */
-  filledPrice: decimal("filledPrice", { precision: 8, scale: 4 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const orders = sqliteTable("orders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  ticker: text("ticker").notNull(),
+  orderType: text("orderType", { enum: ["limit_buy", "limit_sell", "stop_loss"] }).notNull(),
+  shares: text("shares").notNull(),
+  targetPrice: text("targetPrice").notNull(),
+  status: text("status", { enum: ["pending", "filled", "cancelled", "expired"] }).notNull().default("pending"),
+  filledAt: text("filledAt"),
+  filledPrice: text("filledPrice"),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+  updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
@@ -104,13 +96,13 @@ export type InsertOrder = typeof orders.$inferInsert;
 /**
  * Comments table - StockTwits-style trade sentiment feed.
  */
-export const comments = mysqlTable("comments", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  ticker: varchar("ticker", { length: 10 }),
+export const comments = sqliteTable("comments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  ticker: text("ticker"),
   content: text("content").notNull(),
-  sentiment: mysqlEnum("sentiment", ["bullish", "bearish", "neutral"]).default("neutral").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  sentiment: text("sentiment", { enum: ["bullish", "bearish", "neutral"] }).default("neutral").notNull(),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Comment = typeof comments.$inferSelect;
@@ -119,21 +111,16 @@ export type InsertComment = typeof comments.$inferInsert;
 /**
  * News table - AI-generated meme news headlines from match results.
  */
-export const news = mysqlTable("news", {
-  id: int("id").autoincrement().primaryKey(),
-  headline: varchar("headline", { length: 500 }).notNull(),
+export const news = sqliteTable("news", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  headline: text("headline").notNull(),
   body: text("body"),
-  /** Match ID from Riot API that triggered this news */
-  matchId: varchar("matchId", { length: 64 }),
-  /** Whether the player won the match */
-  isWin: boolean("isWin"),
-  /** Champion played */
-  champion: varchar("champion", { length: 32 }),
-  /** KDA string */
-  kda: varchar("kda", { length: 32 }),
-  /** Price impact */
-  priceChange: decimal("priceChange", { precision: 8, scale: 4 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  matchId: text("matchId"),
+  isWin: integer("isWin", { mode: "boolean" }),
+  champion: text("champion"),
+  kda: text("kda"),
+  priceChange: text("priceChange"),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type News = typeof news.$inferSelect;
@@ -141,123 +128,108 @@ export type InsertNews = typeof news.$inferInsert;
 
 /**
  * Dividends table - tracks dividend payouts to users.
- * DORI/DDRI/TDRI holders get dividends on player wins.
- * SDRI/XDRI holders get dividends on player losses.
  */
-export const dividends = mysqlTable("dividends", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  ticker: varchar("ticker", { length: 10 }).notNull(),
-  shares: decimal("shares", { precision: 12, scale: 4 }).notNull(),
-  /** Dividend per share */
-  dividendPerShare: decimal("dividendPerShare", { precision: 8, scale: 4 }).notNull(),
-  /** Total payout */
-  totalPayout: decimal("totalPayout", { precision: 12, scale: 2 }).notNull(),
-  /** Reason: win or loss */
-  reason: varchar("reason", { length: 100 }).notNull(),
-  /** Related match ID */
-  matchId: varchar("matchId", { length: 64 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const dividends = sqliteTable("dividends", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  ticker: text("ticker").notNull(),
+  shares: text("shares").notNull(),
+  dividendPerShare: text("dividendPerShare").notNull(),
+  totalPayout: text("totalPayout").notNull(),
+  reason: text("reason").notNull(),
+  matchId: text("matchId"),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Dividend = typeof dividends.$inferSelect;
 export type InsertDividend = typeof dividends.$inferInsert;
 
 /**
- * Matches table - stores processed match results for news generation.
- * Prevents duplicate processing of the same match.
+ * Matches table - stores processed match results.
  */
-export const matches = mysqlTable("matches", {
-  id: int("id").autoincrement().primaryKey(),
-  matchId: varchar("matchId", { length: 64 }).notNull().unique(),
-  win: boolean("win").notNull(),
-  champion: varchar("champion", { length: 32 }).notNull(),
-  kills: int("kills").notNull(),
-  deaths: int("deaths").notNull(),
-  assists: int("assists").notNull(),
-  cs: int("cs").notNull().default(0),
-  position: varchar("position", { length: 16 }),
-  gameDuration: int("gameDuration").notNull(),
-  /** Price before this match */
-  priceBefore: decimal("priceBefore", { precision: 8, scale: 4 }),
-  /** Price after this match */
-  priceAfter: decimal("priceAfter", { precision: 8, scale: 4 }),
-  /** Whether dividends were distributed for this match */
-  dividendsPaid: boolean("dividendsPaid").notNull().default(false),
-  /** Whether news was generated for this match */
-  newsGenerated: boolean("newsGenerated").notNull().default(false),
-  gameCreation: bigint("gameCreation", { mode: "number" }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const matches = sqliteTable("matches", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  matchId: text("matchId").notNull().unique(),
+  win: integer("win", { mode: "boolean" }).notNull(),
+  champion: text("champion").notNull(),
+  kills: integer("kills").notNull(),
+  deaths: integer("deaths").notNull(),
+  assists: integer("assists").notNull(),
+  cs: integer("cs").notNull().default(0),
+  position: text("position"),
+  gameDuration: integer("gameDuration").notNull(),
+  priceBefore: text("priceBefore"),
+  priceAfter: text("priceAfter"),
+  dividendsPaid: integer("dividendsPaid", { mode: "boolean" }).notNull().default(false),
+  newsGenerated: integer("newsGenerated", { mode: "boolean" }).notNull().default(false),
+  gameCreation: integer("gameCreation").notNull(),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Match = typeof matches.$inferSelect;
 export type InsertMatch = typeof matches.$inferInsert;
 
 /**
- * Market status table - tracks whether the market is open or closed.
+ * Market status table.
  */
-export const marketStatus = mysqlTable("marketStatus", {
-  id: int("id").autoincrement().primaryKey(),
-  isOpen: boolean("isOpen").notNull().default(false),
-  /** Reason for current status */
-  reason: varchar("reason", { length: 200 }),
-  /** Last time the player was seen in a game */
-  lastActivity: timestamp("lastActivity"),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const marketStatus = sqliteTable("marketStatus", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  isOpen: integer("isOpen", { mode: "boolean" }).notNull().default(false),
+  reason: text("reason"),
+  lastActivity: text("lastActivity"),
+  updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type MarketStatus = typeof marketStatus.$inferSelect;
 
 /**
- * Price history table - stores LP snapshots over time for charting.
+ * Price history table - stores LP snapshots over time.
  */
-export const priceHistory = mysqlTable("priceHistory", {
-  id: int("id").autoincrement().primaryKey(),
-  timestamp: bigint("timestamp", { mode: "number" }).notNull(),
-  tier: varchar("tier", { length: 20 }).notNull(),
-  division: varchar("division", { length: 5 }).notNull(),
-  lp: int("lp").notNull(),
-  totalLP: int("totalLP").notNull(),
-  price: decimal("price", { precision: 8, scale: 4 }).notNull(),
-  wins: int("wins"),
-  losses: int("losses"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const priceHistory = sqliteTable("priceHistory", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  timestamp: integer("timestamp").notNull(),
+  tier: text("tier").notNull(),
+  division: text("division").notNull(),
+  lp: integer("lp").notNull(),
+  totalLP: integer("totalLP").notNull(),
+  price: text("price").notNull(),
+  wins: integer("wins"),
+  losses: integer("losses"),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = typeof priceHistory.$inferInsert;
 
 /**
- * Portfolio snapshots - records portfolio value over time for P&L charting.
- * Recorded during each poll cycle for every user with a portfolio.
+ * Portfolio snapshots - records portfolio value over time.
  */
-export const portfolioSnapshots = mysqlTable("portfolioSnapshots", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  totalValue: decimal("totalValue", { precision: 12, scale: 2 }).notNull(),
-  cashBalance: decimal("cashBalance", { precision: 12, scale: 2 }).notNull(),
-  holdingsValue: decimal("holdingsValue", { precision: 12, scale: 2 }).notNull(),
-  shortPnl: decimal("shortPnl", { precision: 12, scale: 2 }).notNull().default("0.00"),
-  timestamp: bigint("timestamp", { mode: "number" }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const portfolioSnapshots = sqliteTable("portfolioSnapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  totalValue: text("totalValue").notNull(),
+  cashBalance: text("cashBalance").notNull(),
+  holdingsValue: text("holdingsValue").notNull(),
+  shortPnl: text("shortPnl").notNull().default("0.00"),
+  timestamp: integer("timestamp").notNull(),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type PortfolioSnapshot = typeof portfolioSnapshots.$inferSelect;
 export type InsertPortfolioSnapshot = typeof portfolioSnapshots.$inferInsert;
 
 /**
- * Notifications table - tracks order fills, dividends, and other events.
+ * Notifications table.
  */
-export const notifications = mysqlTable("notifications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  type: mysqlEnum("type", ["order_filled", "stop_loss_triggered", "dividend_received", "system"]).notNull(),
-  title: varchar("title", { length: 200 }).notNull(),
+export const notifications = sqliteTable("notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  type: text("type", { enum: ["order_filled", "stop_loss_triggered", "dividend_received", "system"] }).notNull(),
+  title: text("title").notNull(),
   message: text("message").notNull(),
-  /** Related entity ID (orderId, dividendId, etc.) */
-  relatedId: int("relatedId"),
-  read: boolean("read").notNull().default(false),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  relatedId: integer("relatedId"),
+  read: integer("read", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
 
 export type Notification = typeof notifications.$inferSelect;
