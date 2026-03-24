@@ -1,9 +1,9 @@
 /*
  * Design Philosophy: "Clean Broker" — Robinhood's minimalist fintech UI.
- * Single-column scrolling layout with the LP chart as the hero.
- * Deep charcoal backgrounds, functional green/red coloring.
- * DM Sans headings, Plus Jakarta Sans body, JetBrains Mono for data.
+ * Rebranded as $DORI LP Tracker.
  */
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 import PlayerHeader from "@/components/PlayerHeader";
 import LPChart from "@/components/LPChart";
 import StreakBar from "@/components/StreakBar";
@@ -11,9 +11,11 @@ import ChampionCard from "@/components/ChampionCard";
 import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
+import TradingPanel from "@/components/TradingPanel";
 import { CHAMPION_STATS, MATCH_HISTORY, RANKED_SOLO, RANKED_FLEX } from "@/lib/playerData";
 import { motion } from "framer-motion";
-import { BarChart3, Swords, History, Trophy, TrendingUp, Shield } from "lucide-react";
+import { BarChart3, Swords, History, Trophy, TrendingUp, Shield, LogIn, LogOut, User, Wallet } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 const HERO_BG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663324505869/EqpY4GjGxu3PtSNi8r37GF/hero-bg-BaXtnoCMhWwQSL3MGvhxSm.webp";
@@ -72,6 +74,8 @@ function StatCard({
 }
 
 export default function Home() {
+  const { user, isAuthenticated, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Subtle hero background */}
@@ -91,6 +95,9 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" />
             <span className="text-sm font-bold text-white font-[var(--font-heading)]">
+              $DORI
+            </span>
+            <span className="text-xs text-muted-foreground font-[var(--font-mono)] hidden sm:inline">
               LP Tracker
             </span>
           </div>
@@ -101,12 +108,34 @@ export default function Home() {
               rel="noopener noreferrer"
               className="text-xs text-muted-foreground hover:text-white transition-colors font-[var(--font-mono)]"
             >
-              OP.GG Profile
+              OP.GG
             </a>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               S2026
             </div>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-white">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="font-[var(--font-mono)] hidden sm:inline">{user?.name || "Trader"}</span>
+                </div>
+                <button
+                  onClick={() => logout()}
+                  className="text-xs text-muted-foreground hover:text-white transition-colors flex items-center gap-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <a
+                href={getLoginUrl()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black bg-primary hover:bg-primary/90 transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign In
+              </a>
+            )}
           </div>
         </div>
       </nav>
@@ -122,6 +151,13 @@ export default function Home() {
         <section className="mt-6">
           <LPChart />
         </section>
+
+        {/* Trading Panel - only visible when logged in */}
+        {isAuthenticated && (
+          <section className="mt-6">
+            <TradingPanel />
+          </section>
+        )}
 
         {/* Stats grid */}
         <section className="mt-8">
@@ -154,7 +190,6 @@ export default function Home() {
 
         {/* Two-column layout: Streaks + Recent Performance */}
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Win/Loss Streaks */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -169,7 +204,6 @@ export default function Home() {
             <StreakBar />
           </motion.div>
 
-          {/* Recent 7-day performance */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,7 +279,7 @@ export default function Home() {
             . Not affiliated with Riot Games.
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            LP Tracker is not endorsed by Riot Games and does not reflect the views of Riot Games.
+            $DORI LP Tracker is not endorsed by Riot Games and does not reflect the views of Riot Games.
           </p>
         </footer>
       </main>
