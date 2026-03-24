@@ -1,0 +1,13 @@
+Trading panel observations:
+1. The trading panel shows "매수 $DORI" button - price is working, not stuck on loading!
+2. The "대기 주문 (1)" and "최근 거래" sections are visible
+3. Price → Rank Legend shows correctly with "상세 보기" toggle (collapsed by default)
+4. Stats cards: 솔로/듀오 에메랄드 2, 자유 랭크 다이아몬드 4, 총게임 수 223, 평균 KDA (20게임) 2.38
+5. 승/패 연속 section: "1패 연속", "최근 10게임", "실시간" badge
+6. 7일 성적 section: "이번 주 챔피언 승률", "실시간" badge, "Riot API에서 자동 업데이트"
+7. Champion names remain in English (Naafiri, Swain, Yone, Mel, Ahri) - correct, these are proper nouns
+8. Win/loss: "1승 2패", "2승 1패", "1승 1패", "0승 1패", "1승 0패" ✓
+9. "3 게임", "2 게임", "1 게임" ✓
+
+EVERYTHING IS WORKING! Both the chart dates and the price loading issue are fixed.
+The light theme has white background with translucent cards.

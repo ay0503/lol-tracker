@@ -143,6 +143,24 @@ export function formatNumber(num: number, lang: string): string {
   return num.toLocaleString(locale);
 }
 
+// ─── Chart Axis Date Formatting ───
+// Converts English date strings like "Mar 6" to locale-aware format
+// Used by both Recharts (LPChart) and lightweight-charts (CandlestickChart)
+const MONTH_MAP: Record<string, number> = {
+  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+  Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+};
+
+export function formatChartDate(dateStr: string, lang: string): string {
+  if (lang !== "ko") return dateStr;
+  const parts = dateStr.trim().split(/\s+/);
+  if (parts.length < 2) return dateStr;
+  const monthNum = MONTH_MAP[parts[0]];
+  const day = parts[1];
+  if (!monthNum) return dateStr;
+  return `${monthNum}월 ${day}일`;
+}
+
 // ─── Ticker Description Translation ───
 const TICKER_DESC_KO: Record<string, string> = {
   DORI: "1배 LP 추적",

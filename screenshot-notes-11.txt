@@ -1,0 +1,11 @@
+GREAT NEWS - Match history is now fully translated!
+- Duration: "30분 22초", "26분 8초", "33분 22초", "41분 53초" etc. ✓
+- Time ago: "5시간 전", "6시간 전", "7시간 전", "8시간 전", "9시간 전", "12시간 전", "13시간 전", "1일 전" ✓
+- Win/Loss badges: 승 (green), 패 (red) ✓
+- Footer: "데이터 출처: OP.GG & Riot Games API. Riot Games와 제휴 관계가 아닙니다." ✓
+- "LP Tracker는 Riot Games의 승인을 받지 않았으며 Riot Games의 견해를 반영하지 않습니다." ✓
+
+The chart dates are also translated: "2월 22일" format visible on X-axis.
+
+The user is logged in (윤여균 visible in nav), so I need to check the trading panel price.
+I notice the user is logged in on this session. Let me scroll up to see the trading panel.

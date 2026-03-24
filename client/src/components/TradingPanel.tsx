@@ -155,9 +155,9 @@ export default function TradingPanel() {
   }, [selectedTicker, t]);
 
   const getLivePrice = (symbol: string): number => {
-    if (!etfPrices) return 0;
-    const key = symbol.toLowerCase() as keyof typeof etfPrices;
-    return (etfPrices[key] as number) || 0;
+    if (!etfPrices || !Array.isArray(etfPrices)) return 0;
+    const found = etfPrices.find((p: any) => p.ticker === symbol);
+    return found?.price || 0;
   };
 
   const tickerPrice = getLivePrice(selectedTicker);

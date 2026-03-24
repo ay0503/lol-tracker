@@ -21,7 +21,7 @@ import {
   type TimeRange,
 } from "@/lib/playerData";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { translateTickerDescription } from "@/lib/formatters";
+import { translateTickerDescription, formatChartDate } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
 import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
@@ -29,7 +29,7 @@ import { LineChart, CandlestickChart as CandlestickIcon } from "lucide-react";
 type ChartView = "area" | "candlestick";
 const TIME_RANGES: TimeRange[] = ["1W", "1M", "3M", "6M", "YTD", "ALL"];
 
-function CustomTooltip({ active, payload, tickerColor }: any) {
+function CustomTooltip({ active, payload, tickerColor, language }: any) {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -41,7 +41,7 @@ function CustomTooltip({ active, payload, tickerColor }: any) {
           ${data.price?.toFixed(2)}
         </p>
         <p className="text-muted-foreground text-xs mt-0.5">{data.label}</p>
-        <p className="text-muted-foreground text-xs mt-1">{data.date}</p>
+        <p className="text-muted-foreground text-xs mt-1">{formatChartDate(data.date, language)}</p>
       </div>
     );
   }
@@ -266,6 +266,7 @@ export default function LPChart() {
                     fontSize: 11,
                     fontFamily: "'JetBrains Mono', monospace",
                   }}
+                  tickFormatter={(val: string) => formatChartDate(val, language)}
                   dy={10}
                   interval="preserveStartEnd"
                 />
@@ -282,7 +283,7 @@ export default function LPChart() {
                   width={50}
                 />
                 <Tooltip
-                  content={<CustomTooltip tickerColor={tickerColor} />}
+                  content={<CustomTooltip tickerColor={tickerColor} language={language} />}
                   cursor={{ stroke: "#4b5563", strokeDasharray: "4 4" }}
                 />
                 <ReferenceLine

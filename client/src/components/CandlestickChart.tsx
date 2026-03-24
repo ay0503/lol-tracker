@@ -166,6 +166,7 @@ export default function CandlestickChart({
   onVisibleRangeChange,
   ticker = "DORI",
 }: CandlestickChartProps) {
+  const { t, language } = useTranslation();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<ISeriesApi<any> | null>(null);
@@ -240,6 +241,22 @@ export default function CandlestickChart({
         timeVisible: false,
         rightOffset: 2,
         barSpacing: 8,
+        tickMarkFormatter: (time: any) => {
+          if (typeof time === 'string') {
+            // time is YYYY-MM-DD format
+            const parts = time.split('-');
+            if (parts.length === 3) {
+              const month = parseInt(parts[1], 10);
+              const day = parseInt(parts[2], 10);
+              if (language === 'ko') {
+                return `${month}\uc6d4 ${day}\uc77c`;
+              }
+              const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              return `${months[month - 1]} ${day}`;
+            }
+          }
+          return String(time);
+        },
       },
       handleScroll: { vertTouchDrag: false },
     });
@@ -320,7 +337,7 @@ export default function CandlestickChart({
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [ticker]); // Recreate chart when ticker changes
+  }, [ticker, language]); // Recreate chart when ticker or language changes
 
   // Update visible range when timeRange prop changes (without recreating chart)
   useEffect(() => {
@@ -484,7 +501,6 @@ export default function CandlestickChart({
     }
   };
 
-  const { t } = useTranslation();
   const tools = [
     { id: "pointer" as DrawingTool, icon: MousePointer, label: t.chart.toolSelect },
     { id: "trendline" as DrawingTool, icon: TrendingUp, label: t.chart.toolTrendLine },

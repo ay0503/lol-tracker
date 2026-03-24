@@ -1,0 +1,8 @@
+Key finding from markdown extraction:
+The "로딩 중..." (Loading...) text appears in the TRADING PANEL section, specifically:
+"현재 가격\n로딩 중..."
+
+This is the "Current Price" label in the TradingPanel component showing "Loading..." instead of the actual price.
+The hero price ($57.92) is showing fine. The issue is in the TradingPanel's current price display.
+
+Also confirmed: Chart X-axis dates still show English format: "Feb 22", "Feb 24", "Mar 1" etc.

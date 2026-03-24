@@ -1,0 +1,12 @@
+Key observations from browser:
+1. Chart X-axis dates are NOW TRANSLATED to Korean: "2월 22일", "2월 24일", "2월 26일", "2월 28일", "3월 2일", "3월 4일", "3월 6일", "3월 8일", "3월 10일", etc.
+2. The hero price shows $62.28 correctly
+3. The site is in light theme with white background - looks good
+4. Not logged in so can't see the trading panel price loading issue - need to check that separately
+5. The "past 2 weeks" text shows as "최근 2주" - translated
+6. All rank names translated: "에메랄드 2 · 39 LP"
+7. Win/loss labels: "113승 / 108패" - translated
+8. Match history durations: "26m 08s" - still English format! Need to check if this is from the API or static data
+9. Match history time ago: "30 min ago", "2 hrs ago" - still English! These come from the Riot API data
+
+Wait - the match data is now coming from the live API, not static data. The match history section shows different data from what was in the static MATCH_HISTORY. The duration and timeAgo are being returned from the server in English format.

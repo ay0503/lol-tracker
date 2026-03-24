@@ -282,3 +282,12 @@
 - [x] Change light theme background to white
 - [x] Add glassmorphism/translucent effect to cards and components in light mode
 - [x] Ensure text remains readable against white background
+
+## Bug Fix: Price Stuck on Loading
+- [x] Investigate why the stock price shows "loading" instead of actual value
+- [x] Fix the price display issue (etfPrices was array, TradingPanel treated it as object - fixed getLivePrice to use .find())
+
+## Feature: Translate Chart Date Labels to Korean
+- [x] Translate X-axis date labels on Line chart (Feb 22 → 2월 22일)
+- [x] Translate X-axis date labels on Candlestick chart
+- [x] Translate tooltip dates

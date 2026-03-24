@@ -1,0 +1,9 @@
+Key observations from logged-in view:
+1. Chart X-axis dates: TRANSLATED - "2월 22일", "2월 24일", "2월 26일", "2월 28일", "3월 2일", etc. ✓
+2. Trading panel visible at bottom with tabs: 시장가, 지정가, 손절매, 공매도 ✓
+3. Trading panel shows: 시장 개장, 포트폴리오 $232.34, 배당금 +$6.15 ✓
+4. The $DORI ticker selector shows "1배 LP 추적" - translated ✓
+5. 매수/매도 buttons visible ✓
+6. The hero price shows $57.92 correctly
+7. The chart price shows $62.28 correctly
+8. I need to scroll down slightly to see the current price in the trading panel to verify it's not "loading"

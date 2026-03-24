@@ -1,0 +1,14 @@
+ROOT CAUSE FOUND:
+The etfPrices endpoint returns an ARRAY of objects: [{ticker: "DORI", price: 57.925, ...}, ...]
+But TradingPanel's getLivePrice function treats it as an OBJECT with lowercase keys: etfPrices["dori"]
+
+The function does:
+  const key = symbol.toLowerCase() as keyof typeof etfPrices;
+  return (etfPrices[key] as number) || 0;
+
+Since etfPrices is an array, etfPrices["dori"] is undefined, so tickerPrice is always 0.
+This causes the "Loading..." display.
+
+FIX: Change getLivePrice to search the array:
+  const found = etfPrices.find(p => p.ticker === symbol);
+  return found?.price || 0;
