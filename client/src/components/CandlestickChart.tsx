@@ -159,11 +159,27 @@ function generateCandleData(
     prevClose = close;
   }
 
+  // Filter out flat/barely-change candles for all views.
+  // Use a dynamic threshold based on the overall price range.
+  const allPrices = rawCandles.flatMap(rc => [rc.candle.open, rc.candle.close, rc.candle.high, rc.candle.low]);
+  const priceRange = Math.max(...allPrices) - Math.min(...allPrices);
+  const dynamicThreshold = Math.max(0.005, priceRange * 0.01); // 1% of total range, min $0.005
+
+  const filtered = rawCandles.filter(rc => {
+    const c = rc.candle;
+    const range = c.high - c.low;
+    const change = Math.abs(c.close - c.open);
+    return range > dynamicThreshold || change > dynamicThreshold;
+  });
+
+  // Keep at least some candles — if filtering removed too many, use originals
+  const toUse = filtered.length >= 3 ? filtered : rawCandles;
+
   if (isIntraday) {
-    // For intraday: keep all candles, use real timestamps
+    // For intraday: use real timestamps
     const meta: CandleMeta[] = [];
     let prevDay = "";
-    for (const rc of rawCandles) {
+    for (const rc of toUse) {
       const d = new Date(rc.originalTs);
       const day = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       meta.push({
@@ -173,20 +189,8 @@ function generateCandleData(
       });
       prevDay = day;
     }
-    return { candles: rawCandles.map(rc => rc.candle), meta };
+    return { candles: toUse.map(rc => rc.candle), meta };
   }
-
-  // Non-intraday: filter out flat candles (no price change)
-  const FLAT_THRESHOLD = 0.005; // $0.005 tolerance
-  const filtered = rawCandles.filter(rc => {
-    const c = rc.candle;
-    const range = c.high - c.low;
-    const change = Math.abs(c.close - c.open);
-    return range > FLAT_THRESHOLD || change > FLAT_THRESHOLD;
-  });
-
-  // If filtering removed everything, keep original
-  const toUse = filtered.length > 0 ? filtered : rawCandles;
 
   // Reassign sequential fake timestamps (1 day apart) to compress gaps
   // Use a base date far in the past to avoid conflicts
