@@ -45,6 +45,32 @@ let lastPollResult: PollResult | null = null;
 let previousRawIsInGame: boolean | null = null; // raw result from last poll
 let confirmedIsInGame = false; // only changes after 2 consecutive agreeing polls
 
+// Pre-game snapshot for post-game LP notification banner
+let preGameSnapshot: {
+  lp: number;
+  tier: string;
+  division: string;
+  totalLP: number;
+  price: number;
+  timestamp: number;
+} | null = null;
+
+// Game-end event stored in cache for frontend to poll
+export interface GameEndEvent {
+  lpBefore: number;
+  lpAfter: number;
+  lpDelta: number;
+  tierBefore: string;
+  divisionBefore: string;
+  tierAfter: string;
+  divisionAfter: string;
+  priceBefore: number;
+  priceAfter: number;
+  priceChange: number;
+  priceChangePct: number;
+  timestamp: number;
+}
+
 export interface PollResult {
   timestamp: Date;
   price: number;
@@ -99,6 +125,7 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // Two-consecutive-confirmation logic
+    const wasConfirmedInGame = confirmedIsInGame;
     if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
       // Two consecutive polls agree on a NEW status — flip confirmed
       confirmedIsInGame = rawIsInGame;
@@ -109,6 +136,29 @@ export async function pollNow(): Promise<PollResult> {
       console.log(`[Poll] Live game: confirmed=${confirmedIsInGame ? "IN GAME" : "not in game"}, raw=${rawIsInGame ? "IN GAME" : "not in game"}`);
     }
     previousRawIsInGame = rawIsInGame;
+
+    // Track game-start: capture pre-game LP/price snapshot
+    if (!wasConfirmedInGame && confirmedIsInGame) {
+      try {
+        const snapData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
+        const snapEntry = snapData.soloEntry;
+        if (snapEntry) {
+          const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
+          const snapPrice = tierToPrice(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
+          preGameSnapshot = {
+            lp: snapEntry.leaguePoints,
+            tier: snapEntry.tier,
+            division: snapEntry.rank,
+            totalLP: snapTotalLP,
+            price: snapPrice,
+            timestamp: Date.now(),
+          };
+          console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
+        }
+      } catch (err: any) {
+        console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
+      }
+    }
 
     // Update the cache with the CONFIRMED status (used by trade endpoints + bot)
     cache.set("player.liveGame.check", confirmedIsInGame, 150_000); // 2.5 min TTL
@@ -126,6 +176,37 @@ export async function pollNow(): Promise<PollResult> {
     const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
     const totalLP = tierToTotalLP(tier, division, lp);
     const price = tierToPrice(tier, division, lp);
+
+    // Emit game-end event now that we have current LP/price
+    if (wasConfirmedInGame && !confirmedIsInGame && preGameSnapshot) {
+      const lpDelta = lp - preGameSnapshot.lp;
+      const priceChange = price - preGameSnapshot.price;
+      const priceChangePct = preGameSnapshot.price > 0
+        ? (priceChange / preGameSnapshot.price) * 100
+        : 0;
+
+      const gameEndEvent: GameEndEvent = {
+        lpBefore: preGameSnapshot.lp,
+        lpAfter: lp,
+        lpDelta,
+        tierBefore: preGameSnapshot.tier,
+        divisionBefore: preGameSnapshot.division,
+        tierAfter: tier,
+        divisionAfter: division,
+        priceBefore: preGameSnapshot.price,
+        priceAfter: price,
+        priceChange,
+        priceChangePct,
+        timestamp: Date.now(),
+      };
+
+      // Store in cache with 10-minute TTL so frontend can poll for it
+      cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
+      console.log(`[Poll] Game END event: LP ${preGameSnapshot.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${preGameSnapshot.price.toFixed(2)} → $${price.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(2)})`);
+
+      // Clear pre-game snapshot
+      preGameSnapshot = null;
+    }
 
     result.price = price;
     result.tier = tier;
@@ -311,9 +392,15 @@ export async function pollNow(): Promise<PollResult> {
     lastPollTime = new Date();
     lastPollResult = result;
     // Invalidate all server-side caches after poll writes new data
+    // Preserve game-end event before clearing (10-min TTL for frontend to poll)
+    const savedGameEndEvent = cache.get<GameEndEvent>("player.gameEndEvent");
     cache.invalidateAll();
     // Re-set confirmed live game status so trade blocking persists between polls
     cache.set("player.liveGame.check", confirmedIsInGame, 150_000);
+    // Re-set game-end event if it exists (survives cache clear)
+    if (savedGameEndEvent) {
+      cache.set("player.gameEndEvent", savedGameEndEvent, 10 * 60 * 1000);
+    }
     console.log(`[Poll] Complete. Price: $${result.price.toFixed(2)}, New matches: ${result.newMatches}, News: ${result.newsGenerated}, Dividends: ${result.dividendsPaid}, Orders: ${result.ordersExecuted}`);
   }
 

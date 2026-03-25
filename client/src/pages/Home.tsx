@@ -220,6 +220,144 @@ function LiveGameBanner() {
 }
 
 /**
+ * Post-game LP notification banner — appears when a game ends,
+ * showing LP delta and price movement. Auto-dismisses after 60s or on user click.
+ */
+function PostGameBanner() {
+  const { t } = useTranslation();
+  const { data: event } = trpc.player.gameEndEvent.useQuery(undefined, {
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+  const dismissMutation = trpc.player.dismissGameEndEvent.useMutation({
+    onSuccess: () => {
+      utils.player.gameEndEvent.invalidate();
+    },
+  });
+  const utils = trpc.useUtils();
+  const [dismissed, setDismissed] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  // Track the event timestamp to reset dismissed state on new events
+  const [lastEventTs, setLastEventTs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (event && event.timestamp !== lastEventTs) {
+      setDismissed(false);
+      setVisible(true);
+      setLastEventTs(event.timestamp);
+    }
+  }, [event, lastEventTs]);
+
+  // Auto-dismiss after 60 seconds
+  useEffect(() => {
+    if (!visible || dismissed) return;
+    const timer = setTimeout(() => {
+      setDismissed(true);
+    }, 60_000);
+    return () => clearTimeout(timer);
+  }, [visible, dismissed]);
+
+  if (!event || dismissed) return null;
+
+  const isPositive = event.lpDelta >= 0;
+  const borderColor = isPositive ? "border-green-500/40" : "border-red-500/40";
+  const bgColor = isPositive ? "bg-green-500/5" : "bg-red-500/5";
+  const accentColor = isPositive ? "text-green-400" : "text-red-400";
+  const pulseColor = isPositive ? "bg-green-500/10" : "bg-red-500/10";
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    dismissMutation.mutate();
+  };
+
+  return (
+    <motion.section
+      className="mt-4"
+      initial={{ opacity: 0, y: -16, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
+      <div className={`relative overflow-hidden rounded-xl border ${borderColor} ${bgColor} backdrop-blur-sm`}>
+        {/* Animated pulse background */}
+        <div className={`absolute inset-0 ${pulseColor} animate-pulse`} />
+
+        <div className="relative px-5 py-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isPositive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                {t.common.gameEnded}
+              </div>
+              <span className={`text-sm font-semibold ${accentColor}`}>
+                {isPositive ? t.common.gameEndWin : t.common.gameEndLoss}
+              </span>
+            </div>
+            <button
+              onClick={handleDismiss}
+              className="p-1 rounded-md hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+              title={t.common.dismiss}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Stats row */}
+          <div className="flex items-center gap-6">
+            {/* LP Change */}
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t.common.lpChange}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-2xl font-bold font-[var(--font-mono)] ${accentColor}`}>
+                  {isPositive ? "+" : ""}{event.lpDelta}
+                </span>
+                <span className="text-xs text-muted-foreground">LP</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground mt-0.5">
+                {event.lpBefore} → {event.lpAfter}
+              </span>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-12 bg-border/50" />
+
+            {/* Price Impact */}
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t.common.priceImpact}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-2xl font-bold font-[var(--font-mono)] ${accentColor}`}>
+                  {event.priceChange >= 0 ? "+" : ""}${event.priceChange.toFixed(2)}
+                </span>
+                <span className={`text-xs font-medium ${accentColor}`}>
+                  ({event.priceChangePct >= 0 ? "+" : ""}{event.priceChangePct.toFixed(1)}%)
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground mt-0.5">
+                ${event.priceBefore.toFixed(2)} → ${event.priceAfter.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Rank Change */}
+            {(event.tierBefore !== event.tierAfter || event.divisionBefore !== event.divisionAfter) && (
+              <>
+                <div className="w-px h-12 bg-border/50" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Rank</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {event.tierBefore} {event.divisionBefore} → {event.tierAfter} {event.divisionAfter}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
+/**
  * Match history section that pulls from DB (live polling data) with static fallback.
  */
 function MatchHistorySection() {
@@ -706,6 +844,7 @@ export default function Home() {
 
         {/* Live Game Alert */}
         <LiveGameBanner />
+        <PostGameBanner />
 
         <TickerProvider>
           <section className="mt-6">

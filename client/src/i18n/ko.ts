@@ -409,6 +409,13 @@ export const ko: TranslationKeys = {
     noChampionData: "아직 챔피언 데이터가 없습니다. 랭크 게임을 플레이하면 통계가 표시됩니다.",
     noStreakData: "아직 연승/연패 데이터가 없습니다. 랭크 게임을 플레이하면 추적됩니다.",
     noRecentData: "최근 성적 데이터가 없습니다. 이번 주 랭크 게임을 플레이하면 통계가 표시됩니다.",
+    // Post-game banner
+    gameEnded: "게임 종료",
+    gameEndWin: "승리",
+    gameEndLoss: "패배",
+    lpChange: "LP 변동",
+    priceImpact: "가격 영향",
+    dismiss: "닫기",
   },
 
   // ─── Not Found ───

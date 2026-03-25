@@ -25,7 +25,7 @@ import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
   getActiveGame, getQueueName,
 } from "./riotApi";
-import { pollNow, getPollStatus, startPolling, stopPolling } from "./pollEngine";
+import { pollNow, getPollStatus, startPolling, stopPolling, type GameEndEvent } from "./pollEngine";
 import { forceRunBot, getBotUserId } from "./botTrader";
 import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSnapshots } from "./etfPricing";
 
@@ -211,6 +211,17 @@ export const appRouter = router({
           return { inGame: true as const }; // confirmed but details unavailable
         }
       }, 60_000);
+    }),
+    gameEndEvent: publicProcedure.query(() => {
+      // Returns the latest game-end event from cache (10-min TTL)
+      // Frontend polls this to show the post-game LP notification banner
+      const event = cache.get<GameEndEvent>("player.gameEndEvent");
+      return event || null;
+    }),
+    dismissGameEndEvent: publicProcedure.mutation(() => {
+      // Allows frontend to dismiss the banner by clearing the cache entry
+      cache.invalidate("player.gameEndEvent");
+      return { success: true };
     }),
   }),
 

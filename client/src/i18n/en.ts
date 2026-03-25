@@ -408,6 +408,13 @@ export const en = {
     noChampionData: "No champion data yet. Play some ranked games to see stats.",
     noStreakData: "No streak data yet. Play some ranked games to track momentum.",
     noRecentData: "No recent performance data. Play ranked games this week to see stats.",
+    // Post-game banner
+    gameEnded: "Game Over",
+    gameEndWin: "Victory",
+    gameEndLoss: "Defeat",
+    lpChange: "LP Change",
+    priceImpact: "Price Impact",
+    dismiss: "Dismiss",
   },
 
   // ─── Not Found ───
