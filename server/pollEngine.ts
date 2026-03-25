@@ -457,7 +457,7 @@ export async function pollNow(): Promise<PollResult> {
             holdVal += parseFloat(h.shares) * p;
             shortPnl += parseFloat(h.shortShares) * (parseFloat(h.shortAvgPrice) - p);
           }
-          return { name: u.userName || "Unknown", value: cash + holdVal + shortPnl };
+          return { name: String(u.userName || "Unknown"), value: cash + holdVal + shortPnl };
         }).sort((a, b) => b.value - a.value);
 
         await notifyDailySummary(tier, division, lp, price, wins, losses, rankings);
