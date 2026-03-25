@@ -259,7 +259,7 @@ export async function pollNow(): Promise<PollResult> {
       result.errors.push(`Portfolio snapshot error: ${err.message}`);
     }
 
-    // 8. Run AI bot trader (every 5th poll cycle = 10 min)
+    // 8. Run AI bot trader (every cycle, only during live games)
     try {
       const botTraded = await runBotTrader();
       if (botTraded) {

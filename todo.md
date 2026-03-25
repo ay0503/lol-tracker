@@ -485,3 +485,8 @@
 - [x] Fallback to BUILT_IN_FORGE_API if OPENAI env vars not set
 - [x] 11 vitest tests for bot trader module (all passing)
 - [x] Full test suite: 81 tests passing
+
+## Change: Bot Only Trades During Live Games
+- [x] Remove 5-cycle counter — bot runs every poll cycle
+- [x] Invert live game check — bot ONLY trades when player is in a live game
+- [x] Update tests to reflect new behavior (11 tests passing)

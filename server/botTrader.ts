@@ -6,8 +6,7 @@
  * - Makes trading decisions using LLM with a quant-style system prompt
  * - Executes trades using the same DB helpers as regular users
  * - Posts analytical sentiment comments explaining its reasoning
- * - Runs every 10 minutes (every 5th poll cycle)
- * - Respects trading halts during live games
+ * - Runs every poll cycle, but ONLY when a live game is detected
  * - Starts with $200 capital (same as regular users)
  */
 
@@ -29,8 +28,7 @@ const BOT_DISPLAY_NAME = "QuantBot 🤖";
 const BOT_OPEN_ID = "bot_quanttrader_001";
 const BOT_STARTING_CASH = 200;
 
-// Track poll cycles to run bot every 5th cycle (10 min at 2-min polls)
-let pollCycleCount = 0;
+
 
 // ─── Bot User Management ───
 
@@ -531,27 +529,21 @@ async function postBotComment(
 // ─── Main Bot Execution ───
 
 /**
- * Run the bot trader. Called from the polling engine.
+ * Run the bot trader. Called from the polling engine every cycle.
+ * Only trades when a live game is detected — the bot speculates during games.
  * Returns true if the bot traded, false if it skipped.
  */
 export async function runBotTrader(): Promise<boolean> {
-  pollCycleCount++;
-
-  // Run every 5th poll cycle (10 minutes at 2-min intervals)
-  if (pollCycleCount % 5 !== 0) {
+  // Only trade when a live game is active
+  const isInGame = cache.get<boolean>("player.liveGame.check");
+  if (!isInGame) {
     return false;
   }
 
   console.log("[Bot] ═══════════════════════════════════════");
-  console.log("[Bot] QuantBot trading cycle starting...");
+  console.log("[Bot] QuantBot trading cycle — LIVE GAME detected!");
 
   try {
-    // Check if trading is halted (live game)
-    const isInGame = cache.get<boolean>("player.liveGame.check");
-    if (isInGame) {
-      console.log("[Bot] Trading halted — player is in a live game. Skipping.");
-      return false;
-    }
 
     // Ensure bot user exists
     const botUserId = await ensureBotUser();
@@ -606,16 +598,33 @@ export async function getBotUserId(): Promise<number | null> {
 }
 
 /**
- * Reset the poll cycle counter (for testing).
- */
-export function resetBotCycleCount(): void {
-  pollCycleCount = 0;
-}
-
-/**
- * Force run the bot (bypasses cycle count). Used for admin/testing.
+ * Force run the bot (bypasses live game check). Used for admin/testing.
  */
 export async function forceRunBot(): Promise<boolean> {
-  pollCycleCount = 4; // Next increment will be 5, triggering the bot
-  return runBotTrader();
+  console.log("[Bot] ═══════════════════════════════════════");
+  console.log("[Bot] QuantBot FORCE RUN (admin override)...");
+
+  try {
+    const botUserId = await ensureBotUser();
+    const marketData = await gatherMarketData(botUserId);
+    const hasLLM = !!(ENV.openaiApiUrl && ENV.openaiApiKey);
+    let decision: TradeDecision;
+    if (hasLLM) {
+      console.log("[Bot] Requesting AI analysis...");
+      decision = await getAIDecision(marketData);
+    } else {
+      console.log("[Bot] LLM not configured — using momentum fallback strategy");
+      decision = getFallbackDecision(marketData);
+    }
+    console.log(`[Bot] Decision: ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} (confidence: ${decision.confidence}%, sentiment: ${decision.sentiment})`);
+    const result = await executeDecision(botUserId, decision, marketData.currentPrices);
+    console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
+    await postBotComment(botUserId, decision, result);
+    console.log("[Bot] ═══════════════════════════════════════");
+    return true;
+  } catch (err) {
+    console.error("[Bot] Force run error:", err);
+    console.log("[Bot] ═══════════════════════════════════════");
+    return false;
+  }
 }

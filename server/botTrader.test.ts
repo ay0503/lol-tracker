@@ -64,7 +64,7 @@ import { invokeLLM } from "./_core/llm";
 import { cache } from "./cache";
 
 // Import after mocks
-import { runBotTrader, resetBotCycleCount, forceRunBot, ensureBotUser, getBotUserId } from "./botTrader";
+import { runBotTrader, forceRunBot, ensureBotUser, getBotUserId } from "./botTrader";
 
 // Helper to create mock DB
 function createMockDb() {
@@ -87,45 +87,62 @@ function createMockDb() {
   };
 }
 
+// Helper to set up standard mocks for a bot run
+function setupBotRunMocks(overrides: {
+  cash?: string;
+  holdings?: any[];
+  matches?: any[];
+  priceHistory?: any[];
+  latestPrice?: any;
+} = {}) {
+  const mockDb = createMockDb();
+  mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
+  (getDb as any).mockResolvedValue(mockDb);
+
+  (getOrCreatePortfolio as any).mockResolvedValue({
+    cashBalance: overrides.cash ?? "200.00",
+    totalDividends: "0.00",
+  });
+  (getUserHoldings as any).mockResolvedValue(overrides.holdings ?? []);
+  (getRecentMatchesFromDB as any).mockResolvedValue(overrides.matches ?? []);
+  (getPriceHistory as any).mockResolvedValue(overrides.priceHistory ?? [
+    { timestamp: 1000, price: "50.00" },
+    { timestamp: 2000, price: "50.50" },
+    { timestamp: 3000, price: "51.00" },
+  ]);
+  (getLatestPrice as any).mockResolvedValue(overrides.latestPrice ?? {
+    tier: "EMERALD",
+    division: "II",
+    lp: 45,
+    price: "51.00",
+  });
+  (postComment as any).mockResolvedValue(undefined);
+}
+
 describe("Bot Trader", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetBotCycleCount();
   });
 
-  describe("runBotTrader cycle counting", () => {
-    it("should skip when not on 5th cycle", async () => {
-      // Cycle 1 — should skip
+  describe("live game gating", () => {
+    it("should skip when no live game is active", async () => {
+      (cache.get as any).mockReturnValue(false); // no live game
+      const result = await runBotTrader();
+      expect(result).toBe(false);
+      // Should not call any DB functions
+      expect(getOrCreatePortfolio).not.toHaveBeenCalled();
+    });
+
+    it("should skip when live game cache returns undefined", async () => {
+      (cache.get as any).mockReturnValue(undefined); // no cache entry
       const result = await runBotTrader();
       expect(result).toBe(false);
     });
 
-    it("should run on 5th cycle", async () => {
-      // Set up mocks for a successful run
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false); // not in game
+    it("should trade when a live game IS active", async () => {
+      (cache.get as any).mockReturnValue(true); // live game!
+      setupBotRunMocks();
 
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "200.00",
-        totalDividends: "0.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "50.00" },
-        { timestamp: 2000, price: "50.50" },
-        { timestamp: 3000, price: "51.00" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "II",
-        lp: 45,
-        price: "51.00",
-      });
-
-      // Mock LLM response
       (invokeLLM as any).mockResolvedValue({
         choices: [{
           message: {
@@ -133,63 +150,29 @@ describe("Bot Trader", () => {
               action: "buy",
               ticker: "DORI",
               amount: 30,
-              reasoning: "Positive momentum detected. Allocating to DORI.",
+              reasoning: "Live game detected. Positioning for potential LP gain.",
               sentiment: "bullish",
               confidence: 65,
             }),
           },
         }],
       });
-
       (executeTrade as any).mockResolvedValue({
         portfolio: { cashBalance: "170.00" },
         holding: { shares: "0.5882" },
       });
-      (postComment as any).mockResolvedValue(undefined);
 
-      // Run 5 cycles
-      for (let i = 0; i < 4; i++) {
-        await runBotTrader();
-      }
-      const result = await runBotTrader(); // 5th cycle
-      expect(result).toBe(true);
-    });
-
-    it("should skip when player is in a live game", async () => {
-      (cache.get as any).mockReturnValue(true); // in game
-
-      // Force to 5th cycle
-      for (let i = 0; i < 4; i++) {
-        await runBotTrader();
-      }
       const result = await runBotTrader();
-      expect(result).toBe(false);
+      expect(result).toBe(true);
+      expect(executeTrade).toHaveBeenCalled();
+      expect(postComment).toHaveBeenCalled();
     });
   });
 
   describe("forceRunBot", () => {
-    it("should force the bot to run regardless of cycle", async () => {
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false);
-
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "200.00",
-        totalDividends: "0.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "50.00" },
-        { timestamp: 2000, price: "50.50" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "II",
-        lp: 45,
-        price: "50.50",
-      });
+    it("should run regardless of live game status", async () => {
+      (cache.get as any).mockReturnValue(false); // no live game
+      setupBotRunMocks();
 
       (invokeLLM as any).mockResolvedValue({
         choices: [{
@@ -198,50 +181,38 @@ describe("Bot Trader", () => {
               action: "hold",
               ticker: "DORI",
               amount: 0,
-              reasoning: "Insufficient data for confident trade.",
+              reasoning: "No strong signal. Maintaining positions.",
               sentiment: "neutral",
               confidence: 20,
             }),
           },
         }],
       });
-      (postComment as any).mockResolvedValue(undefined);
 
       const result = await forceRunBot();
       expect(result).toBe(true);
-      // Hold action should still post a comment
       expect(postComment).toHaveBeenCalled();
     });
   });
 
   describe("AI decision parsing", () => {
-    it("should handle LLM returning a sell decision", async () => {
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false);
-
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "150.00",
-        totalDividends: "10.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([
-        { ticker: "DORI", shares: "2.0000", avgCostBasis: "48.0000", shortShares: "0.0000", shortAvgPrice: "0.0000" },
-      ]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([
-        { win: false, champion: "Ahri", kills: 2, deaths: 8, assists: 3, gameDuration: 1800, gameCreation: Date.now() - 3600000 },
-        { win: false, champion: "Zed", kills: 1, deaths: 6, assists: 2, gameDuration: 1500, gameCreation: Date.now() - 7200000 },
-      ]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "52.00" },
-        { timestamp: 2000, price: "51.00" },
-        { timestamp: 3000, price: "49.50" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "III",
-        lp: 20,
-        price: "49.50",
+    it("should handle LLM returning a sell decision during live game", async () => {
+      (cache.get as any).mockReturnValue(true); // live game
+      setupBotRunMocks({
+        cash: "150.00",
+        holdings: [
+          { ticker: "DORI", shares: "2.0000", avgCostBasis: "48.0000", shortShares: "0.0000", shortAvgPrice: "0.0000" },
+        ],
+        matches: [
+          { win: false, champion: "Ahri", kills: 2, deaths: 8, assists: 3, gameDuration: 1800, gameCreation: Date.now() - 3600000 },
+          { win: false, champion: "Zed", kills: 1, deaths: 6, assists: 2, gameDuration: 1500, gameCreation: Date.now() - 7200000 },
+        ],
+        priceHistory: [
+          { timestamp: 1000, price: "52.00" },
+          { timestamp: 2000, price: "51.00" },
+          { timestamp: 3000, price: "49.50" },
+        ],
+        latestPrice: { tier: "EMERALD", division: "III", lp: 20, price: "49.50" },
       });
 
       (invokeLLM as any).mockResolvedValue({
@@ -251,96 +222,51 @@ describe("Bot Trader", () => {
               action: "sell",
               ticker: "DORI",
               amount: 50,
-              reasoning: "Losing streak detected. Reducing DORI exposure to manage downside risk.",
+              reasoning: "Losing streak detected. Reducing DORI exposure.",
               sentiment: "bearish",
               confidence: 70,
             }),
           },
         }],
       });
-
       (executeTrade as any).mockResolvedValue({
         portfolio: { cashBalance: "200.00" },
         holding: { shares: "1.0000" },
       });
-      (postComment as any).mockResolvedValue(undefined);
 
-      // Force run
-      resetBotCycleCount();
-      for (let i = 0; i < 4; i++) await runBotTrader();
       const result = await runBotTrader();
-
       expect(result).toBe(true);
       expect(executeTrade).toHaveBeenCalledWith(
-        1,
-        "DORI",
-        "sell",
-        expect.any(Number),
-        expect.any(Number)
+        1, "DORI", "sell", expect.any(Number), expect.any(Number)
       );
     });
 
     it("should handle LLM failure gracefully with fallback", async () => {
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false);
-
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "200.00",
-        totalDividends: "0.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "50.00" },
-        { timestamp: 2000, price: "50.50" },
-        { timestamp: 3000, price: "51.00" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "II",
-        lp: 45,
-        price: "51.00",
-      });
+      (cache.get as any).mockReturnValue(true); // live game
+      setupBotRunMocks();
 
       // LLM throws error
       (invokeLLM as any).mockRejectedValue(new Error("API timeout"));
-      (postComment as any).mockResolvedValue(undefined);
 
-      resetBotCycleCount();
-      for (let i = 0; i < 4; i++) await runBotTrader();
       const result = await runBotTrader();
-
       expect(result).toBe(true);
       // Should still post a comment with fallback reasoning
       expect(postComment).toHaveBeenCalled();
     });
 
     it("should handle short selling decision", async () => {
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false);
-
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "180.00",
-        totalDividends: "5.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([
-        { win: false, champion: "Yasuo", kills: 0, deaths: 10, assists: 1, gameDuration: 1200, gameCreation: Date.now() - 1800000 },
-      ]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "55.00" },
-        { timestamp: 2000, price: "53.00" },
-        { timestamp: 3000, price: "50.00" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "III",
-        lp: 10,
-        price: "50.00",
+      (cache.get as any).mockReturnValue(true); // live game
+      setupBotRunMocks({
+        cash: "180.00",
+        matches: [
+          { win: false, champion: "Yasuo", kills: 0, deaths: 10, assists: 1, gameDuration: 1200, gameCreation: Date.now() - 1800000 },
+        ],
+        priceHistory: [
+          { timestamp: 1000, price: "55.00" },
+          { timestamp: 2000, price: "53.00" },
+          { timestamp: 3000, price: "50.00" },
+        ],
+        latestPrice: { tier: "EMERALD", division: "III", lp: 10, price: "50.00" },
       });
 
       (invokeLLM as any).mockResolvedValue({
@@ -350,57 +276,30 @@ describe("Bot Trader", () => {
               action: "short",
               ticker: "TDRI",
               amount: 40,
-              reasoning: "0/10 Yasuo game signals severe tilt. Shorting TDRI for maximum downside exposure.",
+              reasoning: "0/10 Yasuo game signals severe tilt. Shorting TDRI.",
               sentiment: "bearish",
               confidence: 80,
             }),
           },
         }],
       });
-
       (executeShort as any).mockResolvedValue({
         portfolio: { cashBalance: "160.00" },
         holding: { shortShares: "0.8000" },
       });
-      (postComment as any).mockResolvedValue(undefined);
 
-      resetBotCycleCount();
-      for (let i = 0; i < 4; i++) await runBotTrader();
       const result = await runBotTrader();
-
       expect(result).toBe(true);
       expect(executeShort).toHaveBeenCalledWith(
-        1,
-        "TDRI",
-        expect.any(Number),
-        expect.any(Number)
+        1, "TDRI", expect.any(Number), expect.any(Number)
       );
     });
   });
 
   describe("trade execution safety", () => {
     it("should not buy more than available cash", async () => {
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false);
-
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "5.00", // Very low cash
-        totalDividends: "0.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "50.00" },
-        { timestamp: 2000, price: "51.00" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "II",
-        lp: 45,
-        price: "51.00",
-      });
+      (cache.get as any).mockReturnValue(true); // live game
+      setupBotRunMocks({ cash: "5.00" });
 
       (invokeLLM as any).mockResolvedValue({
         choices: [{
@@ -408,7 +307,7 @@ describe("Bot Trader", () => {
             content: JSON.stringify({
               action: "buy",
               ticker: "DORI",
-              amount: 100, // Wants to buy $100 but only has $5
+              amount: 100, // Wants $100 but only has $5
               reasoning: "Strong signal but limited capital.",
               sentiment: "bullish",
               confidence: 50,
@@ -416,19 +315,13 @@ describe("Bot Trader", () => {
           },
         }],
       });
-
       (executeTrade as any).mockResolvedValue({
         portfolio: { cashBalance: "0.25" },
         holding: { shares: "0.0931" },
       });
-      (postComment as any).mockResolvedValue(undefined);
 
-      resetBotCycleCount();
-      for (let i = 0; i < 4; i++) await runBotTrader();
       const result = await runBotTrader();
-
       expect(result).toBe(true);
-      // Should have capped the buy amount to available cash * 0.95
       if ((executeTrade as any).mock.calls.length > 0) {
         const [, , , shares, price] = (executeTrade as any).mock.calls[0];
         const totalAmount = shares * price;
@@ -437,28 +330,17 @@ describe("Bot Trader", () => {
     });
 
     it("should not sell more shares than held", async () => {
-      const mockDb = createMockDb();
-      mockDb._mockLimit.mockResolvedValue([{ id: 1, openId: "bot_quanttrader_001" }]);
-      (getDb as any).mockResolvedValue(mockDb);
-      (cache.get as any).mockReturnValue(false);
-
-      (getOrCreatePortfolio as any).mockResolvedValue({
-        cashBalance: "100.00",
-        totalDividends: "0.00",
-      });
-      (getUserHoldings as any).mockResolvedValue([
-        { ticker: "DORI", shares: "1.0000", avgCostBasis: "50.0000", shortShares: "0.0000", shortAvgPrice: "0.0000" },
-      ]);
-      (getRecentMatchesFromDB as any).mockResolvedValue([]);
-      (getPriceHistory as any).mockResolvedValue([
-        { timestamp: 1000, price: "50.00" },
-        { timestamp: 2000, price: "48.00" },
-      ]);
-      (getLatestPrice as any).mockResolvedValue({
-        tier: "EMERALD",
-        division: "III",
-        lp: 20,
-        price: "48.00",
+      (cache.get as any).mockReturnValue(true); // live game
+      setupBotRunMocks({
+        cash: "100.00",
+        holdings: [
+          { ticker: "DORI", shares: "1.0000", avgCostBasis: "50.0000", shortShares: "0.0000", shortAvgPrice: "0.0000" },
+        ],
+        priceHistory: [
+          { timestamp: 1000, price: "50.00" },
+          { timestamp: 2000, price: "48.00" },
+        ],
+        latestPrice: { tier: "EMERALD", division: "III", lp: 20, price: "48.00" },
       });
 
       (invokeLLM as any).mockResolvedValue({
@@ -467,7 +349,7 @@ describe("Bot Trader", () => {
             content: JSON.stringify({
               action: "sell",
               ticker: "DORI",
-              amount: 500, // Wants to sell $500 worth but only holds 1 share
+              amount: 500, // Wants $500 but only holds 1 share
               reasoning: "Cutting losses.",
               sentiment: "bearish",
               confidence: 60,
@@ -475,17 +357,12 @@ describe("Bot Trader", () => {
           },
         }],
       });
-
       (executeTrade as any).mockResolvedValue({
         portfolio: { cashBalance: "148.00" },
         holding: { shares: "0.0000" },
       });
-      (postComment as any).mockResolvedValue(undefined);
 
-      resetBotCycleCount();
-      for (let i = 0; i < 4; i++) await runBotTrader();
       const result = await runBotTrader();
-
       expect(result).toBe(true);
       if ((executeTrade as any).mock.calls.length > 0) {
         const [, , , shares] = (executeTrade as any).mock.calls[0];
