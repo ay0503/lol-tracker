@@ -4,7 +4,7 @@
  * All stat components now wired to live backend data with static fallbacks.
  * Full i18n support (EN/KR).
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -49,6 +49,8 @@ import {
   Moon,
   Sun,
   Globe,
+  Gamepad2,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -124,6 +126,95 @@ function StatCard({
         <p className="text-xs text-muted-foreground mt-0.5">{subValue}</p>
       )}
     </div>
+  );
+}
+
+/**
+ * Live game alert banner — shows when the tracked player is in an active game.
+ */
+function LiveGameBanner() {
+  const { t } = useTranslation();
+  const { data: liveGame } = trpc.player.liveGame.useQuery(undefined, {
+    refetchInterval: 30_000, // Check every 30 seconds
+    staleTime: 15_000,
+  });
+
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!liveGame?.inGame || !liveGame.gameStartTime) return;
+    const update = () => {
+      const now = Date.now();
+      const seconds = Math.max(0, Math.floor((now - liveGame.gameStartTime) / 1000) + liveGame.gameLengthSeconds);
+      setElapsed(seconds);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [liveGame]);
+
+  if (!liveGame?.inGame) return null;
+
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+  return (
+    <motion.section
+      className="mt-6"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
+        {/* Animated pulse background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 animate-pulse" />
+
+        <div className="relative flex items-center gap-4 px-5 py-4">
+          {/* Pulsing game icon */}
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
+            <div className="relative p-2.5 rounded-full bg-primary/20 border border-primary/40">
+              <Gamepad2 className="w-5 h-5 text-primary" />
+            </div>
+          </div>
+
+          {/* Game info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary text-primary-foreground">
+                {t.common.inGame}
+              </span>
+              <span className="text-sm font-semibold text-foreground">
+                목도리 도마뱀 {t.common.liveGameAlert}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Activity className="w-3 h-3" />
+                {liveGame.gameMode}
+              </span>
+              <span className="flex items-center gap-1 font-[var(--font-mono)]">
+                <Clock className="w-3 h-3" />
+                {timeStr}
+              </span>
+              {liveGame.isRanked && (
+                <span className="flex items-center gap-1 text-yellow-500">
+                  <AlertTriangle className="w-3 h-3" />
+                  {t.common.rankedWarning}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Live indicator dot */}
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs font-bold text-red-400 uppercase tracking-wider">LIVE</span>
+          </div>
+        </div>
+      </div>
+    </motion.section>
   );
 }
 
@@ -611,6 +702,9 @@ export default function Home() {
         <section className="pt-6 sm:pt-8">
           <PlayerHeader />
         </section>
+
+        {/* Live Game Alert */}
+        <LiveGameBanner />
 
         <section className="mt-6">
           <LPChart />

@@ -434,3 +434,9 @@
 
 ## Fix: Auto-switch ticker when entering sell mode
 - [x] Auto-select first held ticker when switching to sell if current ticker is not held
+
+## Feature: Live Game Alert Banner
+- [x] Add Riot Spectator API call to detect if player is in an active game
+- [x] Create backend endpoint to check live game status
+- [x] Build alert banner component above the LP chart
+- [x] Show game mode, live timer, and ranked warning in the alert

@@ -21,6 +21,7 @@ import {
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
+  getActiveGame, getQueueName,
 } from "./riotApi";
 import { pollNow, getPollStatus, startPolling, stopPolling } from "./pollEngine";
 import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSnapshots } from "./etfPricing";
@@ -170,6 +171,36 @@ export const appRouter = router({
           } catch (err: any) { return []; }
         }, THIRTY_MIN);
       }),
+    liveGame: publicProcedure.query(async () => {
+      return cache.getOrSet("player.liveGame", async () => {
+        try {
+          const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
+          const game = await getActiveGame(account.account.puuid);
+          if (!game) return { inGame: false as const };
+
+          // Find the tracked player's participant data
+          const playerParticipant = game.participants.find(p => p.puuid === account.account.puuid);
+          const gameStartTime = game.gameStartTime;
+          const gameLengthSeconds = game.gameLength;
+          const queueName = getQueueName(game.gameQueueConfigId);
+          const isRanked = game.gameQueueConfigId === 420 || game.gameQueueConfigId === 440;
+
+          return {
+            inGame: true as const,
+            gameMode: queueName,
+            gameStartTime,
+            gameLengthSeconds,
+            championId: playerParticipant?.championId ?? 0,
+            teamId: playerParticipant?.teamId ?? 0,
+            isRanked,
+            queueId: game.gameQueueConfigId,
+          };
+        } catch (err: any) {
+          console.warn("[LiveGame] Check failed:", err?.message);
+          return { inGame: false as const };
+        }
+      }, 60_000); // Cache for 1 minute
+    }),
   }),
 
   // ─── Live Stats (computed from stored matches) — cached 30 min ───

@@ -264,6 +264,66 @@ export function priceToTierLabel(price: number): string {
   return `${tierName.charAt(0)}${tierName.slice(1).toLowerCase()} ${divName} ${remainingLP}LP`;
 }
 
+// ─── Spectator / Live Game ───
+
+export interface CurrentGameParticipant {
+  puuid: string;
+  summonerId: string;
+  championId: number;
+  teamId: number;
+  spell1Id: number;
+  spell2Id: number;
+}
+
+export interface CurrentGameInfo {
+  gameId: number;
+  gameType: string;
+  gameStartTime: number;
+  mapId: number;
+  gameLength: number; // seconds since game started
+  gameMode: string;
+  gameQueueConfigId: number;
+  participants: CurrentGameParticipant[];
+}
+
+/**
+ * Check if a player is currently in a live game using the Spectator v5 API.
+ * Returns the game info if in game, or null if not.
+ */
+export async function getActiveGame(puuid: string): Promise<CurrentGameInfo | null> {
+  try {
+    const url = `${NA1_URL}/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+    const res = await axios.get<CurrentGameInfo>(url, { headers: headers() });
+    return res.data;
+  } catch (err: any) {
+    // 404 means player is not in a game
+    if (err?.response?.status === 404) return null;
+    console.warn("[RiotAPI] Spectator check failed:", err?.message);
+    return null;
+  }
+}
+
+// Queue ID to human-readable game mode
+const QUEUE_NAMES: Record<number, string> = {
+  420: "Ranked Solo/Duo",
+  440: "Ranked Flex",
+  400: "Normal Draft",
+  430: "Normal Blind",
+  450: "ARAM",
+  490: "Quickplay",
+  700: "Clash",
+  900: "URF",
+  1020: "One for All",
+  1300: "Nexus Blitz",
+  1400: "Ultimate Spellbook",
+  1700: "Arena",
+  1900: "Pick URF",
+};
+
+export function getQueueName(queueId: number): string {
+  return QUEUE_NAMES[queueId] || `Queue ${queueId}`;
+}
+
 // ─── Composite Fetchers ───
 
 /**
