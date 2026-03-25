@@ -1,0 +1,17 @@
+Chart verification (2026-03-25 01:57 UTC):
+
+X-axis ticks: Feb 24 through Mar 25 - properly spaced every 2 days
+Endpoint dot: 2 circles at cx=1180, cy=50.44 (rightmost position in chart)
+  - Outer glow: r=8, fill=#00C805, opacity=0.2
+  - Inner dot: r=4, fill=#00C805
+
+The endpoint dot is at the far right of the chart area (cx=1180),
+confirming the line ends at the last data point with a visible marker.
+
+CHART FIX COMPLETE:
+✓ Line stops at current date (no future extension)
+✓ Green endpoint dot marks the last data point
+✓ X-axis uses proper temporal spacing (numerical timestamps)
+✓ Intraday snapshots collapsed to one per day
+✓ No duplicate date labels
+✓ Clean, professional stock-chart appearance

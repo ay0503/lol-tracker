@@ -397,7 +397,8 @@
 - [x] Add environment variable documentation for split deployment
 
 ## Bug: Line graph extends past current date
-- [ ] Fix LPChart line graph to stop at the current date instead of continuing endlessly
+- [x] Fix LPChart line graph to stop at the current date with an endpoint marker
+- [x] Ensure no data points are rendered beyond the current date
 
 ## Feature: Connection diagnostics logging
 - [x] Add frontend logging: API URL, tRPC requests/responses, CORS errors, cookie status

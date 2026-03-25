@@ -3,7 +3,8 @@
  * Supports extended time ranges: 1W, 1M, 3M, 6M, YTD, ALL
  * Supports all ETF tickers: DORI, DDRI, TDRI, SDRI, XDRI
  * Shows price ($) on Y-axis instead of raw LP.
- * Now fully wired to backend price history — no static fallbacks.
+ * Uses numerical timestamp X-axis for proper temporal spacing.
+ * Collapses intraday snapshots to one point per day (last snapshot wins).
  */
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
@@ -17,7 +18,7 @@ import {
 } from "recharts";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { translateTickerDescription, formatChartDate } from "@/lib/formatters";
+import { translateTickerDescription } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
 import { LineChart, CandlestickChart as CandlestickIcon, Loader2 } from "lucide-react";
@@ -35,10 +36,13 @@ const TICKERS = [
 ] as const;
 
 interface ChartDataPoint {
+  /** Timestamp used as the numerical X-axis value */
+  ts: number;
+  /** Formatted date label for display */
   date: string;
   price: number;
   label: string;
-  timestamp: number;
+  isLast?: boolean;
 }
 
 function getRangeSince(range: TimeRange): number | undefined {
@@ -58,6 +62,7 @@ function getRangeSince(range: TimeRange): number | undefined {
   }
 }
 
+/** Format a timestamp into a short date label */
 function formatTimestamp(ts: number, language: string): string {
   const d = new Date(ts);
   if (language === "ko") {
@@ -67,7 +72,13 @@ function formatTimestamp(ts: number, language: string): string {
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
-function CustomTooltip({ active, payload, tickerColor, language }: any) {
+/** Get a date-only key (YYYY-MM-DD) from a timestamp for deduplication */
+function dateKey(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function CustomTooltip({ active, payload, tickerColor }: any) {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -81,6 +92,21 @@ function CustomTooltip({ active, payload, tickerColor, language }: any) {
         <p className="text-muted-foreground text-xs mt-0.5">{data.label}</p>
         <p className="text-muted-foreground text-xs mt-1">{data.date}</p>
       </div>
+    );
+  }
+  return null;
+}
+
+/**
+ * Custom dot renderer: only renders a visible dot on the last data point.
+ */
+function EndpointDot({ cx, cy, payload, chartColor }: any) {
+  if (payload?.isLast) {
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={8} fill={chartColor} opacity={0.2} />
+        <circle cx={cx} cy={cy} r={4} fill={chartColor} stroke="var(--background)" strokeWidth={2} />
+      </g>
     );
   }
   return null;
@@ -103,13 +129,34 @@ export default function LPChart() {
     { refetchInterval: 60_000, staleTime: 30_000 }
   );
 
+  /**
+   * Process raw ETF history into chart data:
+   * 1. Filter out any future timestamps
+   * 2. Collapse multiple intraday snapshots to one per day (last snapshot wins)
+   * 3. Mark the last point for the endpoint dot
+   */
   const data: ChartDataPoint[] = useMemo(() => {
     if (!etfHistory || etfHistory.length === 0) return [];
-    return etfHistory.map((p) => ({
+
+    const now = Date.now();
+    const filtered = etfHistory.filter((p) => p.timestamp <= now);
+    if (filtered.length === 0) return [];
+
+    // Collapse to one point per day — keep the LAST snapshot of each day
+    const dayMap = new Map<string, typeof filtered[0]>();
+    for (const p of filtered) {
+      const key = dateKey(p.timestamp);
+      dayMap.set(key, p); // overwrites earlier snapshots, keeping the last
+    }
+
+    const dailyPoints = Array.from(dayMap.values()).sort((a, b) => a.timestamp - b.timestamp);
+
+    return dailyPoints.map((p, i) => ({
+      ts: p.timestamp,
       date: formatTimestamp(p.timestamp, language),
       price: p.price,
       label: `$${p.price.toFixed(2)}`,
-      timestamp: p.timestamp,
+      isLast: i === dailyPoints.length - 1,
     }));
   }, [etfHistory, language]);
 
@@ -137,14 +184,10 @@ export default function LPChart() {
   const maxPrice = data.length > 0 ? Math.max(...data.map((d) => d.price)) : 100;
   const padding = Math.max(2, (maxPrice - minPrice) * 0.15);
 
-  const chartData = useMemo(() => {
-    if (data.length <= 60) return data;
-    const step = Math.ceil(data.length / 60);
-    const thinned = data.filter((_, i) => i % step === 0);
-    if (thinned[thinned.length - 1] !== data[data.length - 1]) {
-      thinned.push(data[data.length - 1]);
-    }
-    return thinned;
+  // X-axis domain: from first to last timestamp (no extension beyond data)
+  const xDomain = useMemo(() => {
+    if (data.length === 0) return [0, 1];
+    return [data[0].ts, data[data.length - 1].ts];
   }, [data]);
 
   const gradientId = `lpGradient-${activeTicker}`;
@@ -302,8 +345,8 @@ export default function LPChart() {
           {mounted && (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                data={data}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <defs>
                   <linearGradient
@@ -326,7 +369,10 @@ export default function LPChart() {
                   </linearGradient>
                 </defs>
                 <XAxis
-                  dataKey="date"
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={xDomain}
                   axisLine={false}
                   tickLine={false}
                   tick={{
@@ -335,7 +381,8 @@ export default function LPChart() {
                     fontFamily: "'JetBrains Mono', monospace",
                   }}
                   dy={10}
-                  interval="preserveStartEnd"
+                  tickFormatter={(ts: number) => formatTimestamp(ts, language)}
+                  tickCount={7}
                 />
                 <YAxis
                   domain={[minPrice - padding, maxPrice + padding]}
@@ -364,7 +411,7 @@ export default function LPChart() {
                   stroke={chartColor}
                   strokeWidth={2.5}
                   fill={`url(#${gradientId})`}
-                  dot={false}
+                  dot={(props: any) => <EndpointDot {...props} chartColor={chartColor} />}
                   activeDot={{
                     r: 5,
                     fill: chartColor,
