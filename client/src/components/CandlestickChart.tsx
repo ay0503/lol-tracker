@@ -11,6 +11,7 @@ import {
   CandlestickSeries,
   LineSeries,
   HistogramSeries,
+  createSeriesMarkers,
   type IChartApi,
   type ISeriesApi,
   ColorType,
@@ -89,27 +90,39 @@ function getRangeCutoffMs(range: TimeRange): number {
   }
 }
 
+/**
+ * Metadata for each candle: original timestamp and day boundary info.
+ * Used for custom tick formatting and day separator markers.
+ */
+interface CandleMeta {
+  originalTs: number;
+  isNewDay: boolean;
+  dayLabel: string;
+}
+
 // ─── Generate candle data using Unix timestamps (seconds) ───
-// Groups data points into buckets based on the interval
+// Groups data points into buckets based on the interval.
+// For non-intraday: filters out flat/no-change candles and uses sequential
+// fake timestamps (1-day apart) to compress dead time.
 function generateCandleData(
   data: ETFHistoryPoint[],
-  intervalMs: number
-): CandlestickData<Time>[] {
-  if (data.length === 0) return [];
+  intervalMs: number,
+  isIntraday: boolean
+): { candles: CandlestickData<Time>[]; meta: CandleMeta[] } {
+  if (data.length === 0) return { candles: [], meta: [] };
 
   const buckets = new Map<number, ETFHistoryPoint[]>();
 
   for (const point of data) {
-    // Floor timestamp to the interval bucket
     const bucketKey = Math.floor(point.timestamp / intervalMs) * intervalMs;
     if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
     buckets.get(bucketKey)!.push(point);
   }
 
-  // Sort bucket keys chronologically
   const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
 
-  const result: CandlestickData<Time>[] = [];
+  // First pass: generate all candles with real timestamps
+  const rawCandles: { candle: CandlestickData<Time>; originalTs: number }[] = [];
   let prevClose: number | null = null;
 
   for (const key of sortedKeys) {
@@ -130,21 +143,80 @@ function generateCandleData(
     const adjustedHigh = high + rand1;
     const adjustedLow = Math.max(low - rand2, 0.01);
 
-    // lightweight-charts expects Unix timestamp in SECONDS for UTCTimestamp
     const timeSec = Math.floor(key / 1000) as unknown as Time;
 
-    result.push({
-      time: timeSec,
-      open: Math.round(open * 100) / 100,
-      high: Math.round(adjustedHigh * 100) / 100,
-      low: Math.round(adjustedLow * 100) / 100,
-      close: Math.round(close * 100) / 100,
+    rawCandles.push({
+      candle: {
+        time: timeSec,
+        open: Math.round(open * 100) / 100,
+        high: Math.round(adjustedHigh * 100) / 100,
+        low: Math.round(adjustedLow * 100) / 100,
+        close: Math.round(close * 100) / 100,
+      },
+      originalTs: key,
     });
 
     prevClose = close;
   }
 
-  return result;
+  if (isIntraday) {
+    // For intraday: keep all candles, use real timestamps
+    const meta: CandleMeta[] = [];
+    let prevDay = "";
+    for (const rc of rawCandles) {
+      const d = new Date(rc.originalTs);
+      const day = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      meta.push({
+        originalTs: rc.originalTs,
+        isNewDay: day !== prevDay,
+        dayLabel: `${d.getMonth() + 1}/${d.getDate()}`,
+      });
+      prevDay = day;
+    }
+    return { candles: rawCandles.map(rc => rc.candle), meta };
+  }
+
+  // Non-intraday: filter out flat candles (no price change)
+  const FLAT_THRESHOLD = 0.005; // $0.005 tolerance
+  const filtered = rawCandles.filter(rc => {
+    const c = rc.candle;
+    const range = c.high - c.low;
+    const change = Math.abs(c.close - c.open);
+    return range > FLAT_THRESHOLD || change > FLAT_THRESHOLD;
+  });
+
+  // If filtering removed everything, keep original
+  const toUse = filtered.length > 0 ? filtered : rawCandles;
+
+  // Reassign sequential fake timestamps (1 day apart) to compress gaps
+  // Use a base date far in the past to avoid conflicts
+  const BASE_TS = new Date(2020, 0, 1).getTime() / 1000; // Jan 1 2020 in seconds
+  const DAY_SEC = 86400;
+
+  const result: CandlestickData<Time>[] = [];
+  const meta: CandleMeta[] = [];
+  let prevDay = "";
+
+  for (let i = 0; i < toUse.length; i++) {
+    const rc = toUse[i];
+    const fakeTime = (BASE_TS + i * DAY_SEC) as unknown as Time;
+
+    result.push({
+      ...rc.candle,
+      time: fakeTime,
+    });
+
+    const d = new Date(rc.originalTs);
+    const day = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    meta.push({
+      originalTs: rc.originalTs,
+      isNewDay: day !== prevDay,
+      dayLabel: `${d.getMonth() + 1}/${d.getDate()}`,
+    });
+    prevDay = day;
+  }
+
+  return { candles: result, meta };
 }
 
 // ─── Generate volume data ───
@@ -198,6 +270,7 @@ export default function CandlestickChart({
   const [textInput, setTextInput] = useState<string>("");
   const [showTextInput, setShowTextInput] = useState(false);
   const markersRef = useRef<SeriesMarker<Time>[]>([]);
+  const markersPluginRef = useRef<any>(null);
   const isSettingRangeRef = useRef(false);
   const allCandles = useRef<CandlestickData<Time>[]>([]);
 
@@ -214,8 +287,8 @@ export default function CandlestickChart({
   );
 
   // Process data based on timeRange
-  const { candles, volumes } = useMemo(() => {
-    if (!etfHistory || etfHistory.length === 0) return { candles: [], volumes: [] };
+  const { candles, volumes, candleMeta } = useMemo(() => {
+    if (!etfHistory || etfHistory.length === 0) return { candles: [], volumes: [], candleMeta: [] };
 
     const cutoff = getRangeCutoffMs(timeRange);
     const filtered = etfHistory.filter(p => p.timestamp >= cutoff);
@@ -225,13 +298,14 @@ export default function CandlestickChart({
       ? getCandleIntervalMs(timeRange)
       : 24 * 60 * 60 * 1000;
 
-    const candleData = generateCandleData(
+    const { candles: candleData, meta } = generateCandleData(
       filtered.length > 0 ? filtered : etfHistory,
-      intervalMs
+      intervalMs,
+      INTRADAY_RANGES.has(timeRange)
     );
     const volumeData = generateVolumeData(candleData);
 
-    return { candles: candleData, volumes: volumeData };
+    return { candles: candleData, volumes: volumeData, candleMeta: meta };
   }, [etfHistory, timeRange]);
 
   // Initialize chart — recreate when ticker, language, timeRange, or data changes
@@ -270,11 +344,29 @@ export default function CandlestickChart({
       },
       timeScale: {
         borderColor: "rgba(42, 45, 56, 0.8)",
-        timeVisible: true,
+        timeVisible: isIntraday,
         secondsVisible: false,
         rightOffset: 2,
-        barSpacing: isIntraday ? 12 : 8,
-        minBarSpacing: isIntraday ? 6 : 4,
+        barSpacing: isIntraday ? 12 : 10,
+        minBarSpacing: isIntraday ? 6 : 5,
+        // For compressed (non-intraday) charts, use custom tick formatter
+        // that maps fake sequential timestamps back to real dates
+        ...(isIntraday ? {} : {
+          tickMarkFormatter: (time: Time) => {
+            // Find the candle index from the fake timestamp
+            const BASE_TS = new Date(2020, 0, 1).getTime() / 1000;
+            const DAY_SEC = 86400;
+            const idx = Math.round(((time as number) - BASE_TS) / DAY_SEC);
+            const m = candleMeta[idx];
+            if (!m) return "";
+            const d = new Date(m.originalTs);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            if (language === "ko") {
+              return `${d.getMonth() + 1}/${d.getDate()}`;
+            }
+            return `${months[d.getMonth()]} ${d.getDate()}`;
+          },
+        }),
       },
       handleScroll: { vertTouchDrag: false },
     });
@@ -291,6 +383,26 @@ export default function CandlestickChart({
 
     allCandles.current = candles;
     candlestickSeries.setData(candles);
+
+    // Add day separator markers for non-intraday compressed charts
+    if (!isIntraday && candleMeta.length > 0) {
+      const dayMarkers: SeriesMarker<Time>[] = [];
+      for (let i = 0; i < candleMeta.length; i++) {
+        if (candleMeta[i].isNewDay && i > 0) {
+          dayMarkers.push({
+            time: candles[i].time,
+            position: "belowBar",
+            color: "rgba(107, 114, 128, 0.6)",
+            shape: "square",
+            text: "",
+          });
+        }
+      }
+      if (dayMarkers.length > 0) {
+        markersPluginRef.current = createSeriesMarkers(candlestickSeries, dayMarkers);
+        markersRef.current = dayMarkers;
+      }
+    }
 
     // Volume histogram
     const volumeSeries = chart.addSeries(HistogramSeries, {
@@ -347,9 +459,13 @@ export default function CandlestickChart({
     }
 
     // Listen for visible range changes to sync UI pills
+    // Disable auto-detection briefly after chart init to prevent feedback loops
+    // (fitContent triggers visibleRangeChange which could override user's selection)
+    let suppressDetection = true;
+    const suppressTimer = setTimeout(() => { suppressDetection = false; }, 500);
     if (onVisibleRangeChange) {
       chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {
-        if (isSettingRangeRef.current) return;
+        if (suppressDetection || isSettingRangeRef.current) return;
         if (!logicalRange) return;
         const visibleBars = Math.round(logicalRange.to - logicalRange.from);
         const detected = detectTimeRange(visibleBars, isIntraday);
@@ -374,13 +490,14 @@ export default function CandlestickChart({
     resizeObserver.observe(chartContainerRef.current);
 
     return () => {
+      clearTimeout(suppressTimer);
       resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [ticker, language, candles, volumes, isIntraday]);
+  }, [ticker, language, candles, volumes, isIntraday, candleMeta]);
 
   // Add horizontal line
   const addHorizontalLine = useCallback(
@@ -465,7 +582,12 @@ export default function CandlestickChart({
       };
 
       markersRef.current = [...markersRef.current, newMarker];
-      (candlestickSeriesRef.current as any).setMarkers(markersRef.current);
+      // Use createSeriesMarkers plugin API
+      if (markersPluginRef.current) {
+        markersPluginRef.current.setMarkers(markersRef.current);
+      } else if (candlestickSeriesRef.current) {
+        markersPluginRef.current = createSeriesMarkers(candlestickSeriesRef.current, markersRef.current);
+      }
 
       const id = `text-${Date.now()}`;
       setAnnotations((prev) => [
@@ -483,9 +605,11 @@ export default function CandlestickChart({
         chartRef.current.removeSeries(ann.seriesRef);
       }
     });
-    if (candlestickSeriesRef.current) {
+    if (markersPluginRef.current) {
+      markersPluginRef.current.setMarkers([]);
       markersRef.current = [];
-      (candlestickSeriesRef.current as any).setMarkers([]);
+    } else {
+      markersRef.current = [];
     }
     setAnnotations([]);
   }, [annotations]);

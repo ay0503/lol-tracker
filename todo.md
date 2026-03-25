@@ -671,3 +671,10 @@
 - [x] 1M: ~6 evenly spaced labels
 - [x] 3M/6M/YTD/ALL: one label per month boundary
 - [x] Compact format: M/D for Korean, "Mon D" for English
+
+## Change: Compress Dead Time on Charts
+- [x] Line chart: smoosh/compress gaps between play sessions — index-based X-axis for non-intraday views
+- [x] Candlestick chart: remove no-change/flat candles, use sequential timestamps for compressed view
+- [x] Optimize x-axis labels for compressed timelines — real dates mapped from sequential indices
+- [x] Fixed time range pill feedback loop (suppress auto-detection for 500ms after chart init)
+- [x] Verified all time ranges: 3H, 6H, 1D (intraday real timestamps), 1W, 1M, 3M, 6M, YTD, ALL (compressed)

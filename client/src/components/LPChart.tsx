@@ -37,13 +37,17 @@ const TICKERS = [
 ] as const;
 
 interface ChartDataPoint {
-  /** Timestamp used as the numerical X-axis value */
+  /** Index-based X value for compressed timeline (non-intraday) or timestamp (intraday) */
   ts: number;
+  /** Original timestamp for tooltip display and label formatting */
+  originalTs: number;
   /** Formatted date label for display */
   date: string;
   price: number;
   label: string;
   isLast?: boolean;
+  /** Whether this point is the first of a new day (for day separators) */
+  isNewDay?: boolean;
 }
 
 function getRangeSince(range: TimeRange): number | undefined {
@@ -93,15 +97,20 @@ function formatTimestamp(ts: number, language: string, intraday: boolean = false
 }
 
 /**
- * Format a tick label that only shows the "change" — e.g., when the month changes
- * show the month name, when only the day changes show just the day number.
- * For intraday, show only when the hour changes.
+ * Format a tick label for the compressed (index-based) or intraday (timestamp-based) x-axis.
+ * For compressed mode, we look up the original timestamp from the data array.
  */
-function formatSmartTickLabel(ts: number, language: string, range: TimeRange): string {
-  const d = new Date(ts);
+function formatCompressedTickLabel(
+  value: number,
+  language: string,
+  range: TimeRange,
+  data: ChartDataPoint[]
+): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   if (isIntradayRange(range)) {
+    // value is a real timestamp
+    const d = new Date(value);
     const hours = d.getHours();
     if (language === "ko") {
       return `${hours}시`;
@@ -111,7 +120,12 @@ function formatSmartTickLabel(ts: number, language: string, range: TimeRange): s
     return `${h12} ${ampm}`;
   }
 
-  // For longer ranges, show "Mon DD" or "M월 D일"
+  // value is an index — look up the original timestamp
+  const idx = Math.round(value);
+  const pt = data[idx];
+  if (!pt) return "";
+  const d = new Date(pt.originalTs);
+
   if (language === "ko") {
     return `${d.getMonth() + 1}/${d.getDate()}`;
   }
@@ -119,25 +133,16 @@ function formatSmartTickLabel(ts: number, language: string, range: TimeRange): s
 }
 
 /**
- * Generate evenly-spaced, meaningful tick positions for the x-axis.
- * Instead of letting Recharts auto-pick ticks (which creates clutter),
- * we select ~5-7 ticks at meaningful boundaries:
- * - Intraday: every N hours (showing only when hour changes)
- * - 1W: one tick per day
- * - 1M: ~5-6 ticks at week boundaries
- * - 3M+: one tick per month change
+ * Generate smart tick positions for the x-axis.
+ * For intraday: uses real timestamps, picks hour boundaries.
+ * For compressed (non-intraday): uses index values, picks ~5-7 evenly spaced
+ * positions that align with day boundaries where possible.
  */
 function generateSmartTicks(data: ChartDataPoint[], range: TimeRange): number[] {
   if (data.length < 2) return data.map(d => d.ts);
 
-  const first = data[0].ts;
-  const last = data[data.length - 1].ts;
-  const span = last - first;
-  const HOUR = 60 * 60 * 1000;
-  const DAY = 24 * HOUR;
-
   if (isIntradayRange(range)) {
-    // For intraday: pick ticks at each distinct hour boundary
+    // Intraday: pick ticks at each distinct hour boundary (real timestamps)
     const seen = new Set<number>();
     const ticks: number[] = [];
     for (const pt of data) {
@@ -148,7 +153,6 @@ function generateSmartTicks(data: ChartDataPoint[], range: TimeRange): number[] 
         ticks.push(pt.ts);
       }
     }
-    // If too many ticks, thin them out to ~6-8
     if (ticks.length > 8) {
       const step = Math.ceil(ticks.length / 7);
       return ticks.filter((_, i) => i % step === 0);
@@ -156,57 +160,36 @@ function generateSmartTicks(data: ChartDataPoint[], range: TimeRange): number[] 
     return ticks;
   }
 
-  if (range === "1W") {
-    // One tick per day
-    const seen = new Set<string>();
-    const ticks: number[] = [];
-    for (const pt of data) {
-      const key = dateKey(pt.ts);
-      if (!seen.has(key)) {
-        seen.add(key);
-        ticks.push(pt.ts);
-      }
+  // Compressed mode: pick indices where day changes, then thin to ~5-8 ticks
+  const dayBoundaryIndices: number[] = [];
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].isNewDay) {
+      dayBoundaryIndices.push(i);
     }
-    return ticks;
   }
 
-  if (range === "1M") {
-    // ~5-6 evenly spaced ticks
+  // If few enough day boundaries, use them all
+  if (dayBoundaryIndices.length <= 8 && dayBoundaryIndices.length >= 2) {
+    return dayBoundaryIndices;
+  }
+
+  // Too many day boundaries — thin to ~6 evenly spaced
+  if (dayBoundaryIndices.length > 8) {
     const TARGET = 6;
-    const step = Math.floor(data.length / TARGET);
-    if (step <= 1) return data.map(d => d.ts);
-    const ticks: number[] = [];
-    for (let i = 0; i < data.length; i += step) {
-      ticks.push(data[i].ts);
-    }
-    // Always include the last point
-    if (ticks[ticks.length - 1] !== last) {
-      ticks.push(last);
-    }
-    return ticks;
+    const step = Math.ceil(dayBoundaryIndices.length / TARGET);
+    const thinned = dayBoundaryIndices.filter((_, i) => i % step === 0);
+    return thinned;
   }
 
-  // 3M, 6M, YTD, ALL: show one tick per month boundary
-  const seen = new Set<string>();
+  // Very few day boundaries (< 2) — fall back to evenly spaced indices
+  const TARGET = Math.min(6, data.length);
+  const step = Math.max(1, Math.floor(data.length / TARGET));
   const ticks: number[] = [];
-  for (const pt of data) {
-    const d = new Date(pt.ts);
-    const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
-    if (!seen.has(monthKey)) {
-      seen.add(monthKey);
-      ticks.push(pt.ts);
-    }
+  for (let i = 0; i < data.length; i += step) {
+    ticks.push(i);
   }
-  // If only 1-2 ticks, fall back to evenly spaced
-  if (ticks.length < 3) {
-    const TARGET = 5;
-    const step = Math.floor(data.length / TARGET);
-    if (step <= 1) return data.map(d => d.ts);
-    const result: number[] = [];
-    for (let i = 0; i < data.length; i += step) {
-      result.push(data[i].ts);
-    }
-    return result;
+  if (ticks[ticks.length - 1] !== data.length - 1) {
+    ticks.push(data.length - 1);
   }
   return ticks;
 }
@@ -340,13 +323,23 @@ export default function LPChart() {
       points = Array.from(dayMap.values()).sort((a, b) => a.timestamp - b.timestamp);
     }
 
-    return points.map((p, i) => ({
-      ts: p.timestamp,
-      date: formatTimestamp(p.timestamp, language, intraday),
-      price: p.price,
-      label: `$${p.price.toFixed(2)}`,
-      isLast: i === points.length - 1,
-    }));
+    // For non-intraday: use index-based X to compress dead time between sessions
+    // For intraday: keep real timestamps
+    let prevDay = "";
+    return points.map((p, i) => {
+      const day = dateKey(p.timestamp);
+      const isNewDay = day !== prevDay;
+      prevDay = day;
+      return {
+        ts: intraday ? p.timestamp : i, // index-based for compressed timeline
+        originalTs: p.timestamp,
+        date: formatTimestamp(p.timestamp, language, intraday),
+        price: p.price,
+        label: `$${p.price.toFixed(2)}`,
+        isLast: i === points.length - 1,
+        isNewDay,
+      };
+    });
   }, [etfHistory, language, intraday]);
 
   useEffect(() => {
@@ -373,7 +366,7 @@ export default function LPChart() {
   const maxPrice = data.length > 0 ? Math.max(...data.map((d) => d.price)) : 100;
   const padding = Math.max(2, (maxPrice - minPrice) * 0.15);
 
-  // X-axis domain: from first to last timestamp (no extension beyond data)
+  // X-axis domain: for intraday use timestamp range, for compressed use index range
   const xDomain = useMemo(() => {
     if (data.length === 0) return [0, 1];
     return [data[0].ts, data[data.length - 1].ts];
@@ -564,7 +557,7 @@ export default function LPChart() {
                 <XAxis
                   dataKey="ts"
                   type="number"
-                  scale="time"
+                  scale={intraday ? "time" : "linear"}
                   domain={xDomain}
                   axisLine={false}
                   tickLine={false}
@@ -575,7 +568,7 @@ export default function LPChart() {
                   }}
                   dy={10}
                   ticks={smartTicks}
-                  tickFormatter={(ts: number) => formatSmartTickLabel(ts, language, activeRange)}
+                  tickFormatter={(val: number) => formatCompressedTickLabel(val, language, activeRange, data)}
                 />
                 <YAxis
                   domain={[minPrice - padding, maxPrice + padding]}
