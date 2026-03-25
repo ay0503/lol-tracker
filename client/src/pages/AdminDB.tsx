@@ -25,6 +25,8 @@ import {
   DollarSign,
   RotateCcw,
   Search,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Dialog,
@@ -475,6 +477,15 @@ function QuickActions() {
 
   const utils = trpc.useUtils();
 
+  const marketStatus = trpc.market.status.useQuery();
+  const toggleHaltMutation = trpc.market.toggleHalt.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      utils.market.status.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const runBotMutation = trpc.admin.runBot.useMutation({
     onSuccess: (data) => {
       toast.success(data.traded ? "Bot executed a trade" : "Bot decided to hold");
@@ -492,8 +503,47 @@ function QuickActions() {
     onError: (err) => toast.error(err.message),
   });
 
+  const isHalted = marketStatus.data?.adminHalt ?? false;
+
   return (
     <div className="space-y-6">
+      {/* Trading Halt Toggle */}
+      <div className={`border rounded-xl p-5 ${isHalted ? 'bg-red-950/30 border-red-800/50' : 'bg-card border-border'}`}>
+        <div className="flex items-center gap-2 mb-3">
+          {isHalted ? (
+            <ShieldAlert className="w-4 h-4 text-red-400" />
+          ) : (
+            <ShieldCheck className="w-4 h-4 text-primary" />
+          )}
+          <h3 className="text-sm font-bold">Trading Halt</h3>
+          {isHalted && (
+            <span className="ml-auto px-2 py-0.5 rounded-full bg-red-900/60 text-red-300 text-[10px] font-bold uppercase tracking-wider">
+              HALTED
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          {isHalted
+            ? "Trading is currently halted by admin. All buy, sell, short, and order operations are blocked."
+            : "Trading is active. Use this to force-halt all trading regardless of market/game status."}
+        </p>
+        <Button
+          size="sm"
+          variant={isHalted ? "default" : "destructive"}
+          onClick={() => toggleHaltMutation.mutate({ halt: !isHalted })}
+          disabled={toggleHaltMutation.isPending}
+        >
+          {toggleHaltMutation.isPending ? (
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+          ) : isHalted ? (
+            <ShieldCheck className="w-3 h-3 mr-1" />
+          ) : (
+            <ShieldAlert className="w-3 h-3 mr-1" />
+          )}
+          {isHalted ? "Resume Trading" : "Halt Trading"}
+        </Button>
+      </div>
+
       {/* Run Bot */}
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center gap-2 mb-3">

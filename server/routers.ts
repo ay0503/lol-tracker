@@ -17,7 +17,7 @@ import {
   getPortfolioHistory, getUserNotifications, getUnreadNotificationCount,
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
-  getRawClient, getDb,
+  getRawClient, getDb, toggleAdminHalt,
 } from "./db";
 import { users, portfolios } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -253,8 +253,9 @@ export const appRouter = router({
     championPool: publicProcedure.query(async () => {
       return cache.getOrSet("stats.championPool", async () => {
         try {
-          const allMatches = await getAllMatchesFromDB();
-          if (allMatches.length === 0) return [];
+          const allMatchesRaw = await getAllMatchesFromDB();
+          const allMatches = allMatchesRaw.filter(m => !m.isRemake);
+           if (allMatches.length === 0) return [];
           const champMap = new Map<string, { wins: number; losses: number; kills: number; deaths: number; assists: number; cs: number; games: number }>();
           for (const m of allMatches) {
             const existing = champMap.get(m.champion) || { wins: 0, losses: 0, kills: 0, deaths: 0, assists: 0, cs: 0, games: 0 };
@@ -287,7 +288,8 @@ export const appRouter = router({
     streaks: publicProcedure.query(async () => {
       return cache.getOrSet("stats.streaks", async () => {
         try {
-          const allMatches = await getAllMatchesFromDB();
+          const allMatchesRaw = await getAllMatchesFromDB();
+          const allMatches = allMatchesRaw.filter(m => !m.isRemake);
           const sequence = allMatches.map(m => m.win ? "W" : "L");
           return { sequence, totalGames: allMatches.length };
         } catch { return { sequence: [] as string[], totalGames: 0 }; }
@@ -365,6 +367,7 @@ export const appRouter = router({
               gameCreation: Number(m.gameCreation),
               priceBefore: m.priceBefore ? parseFloat(m.priceBefore) : null,
               priceAfter: m.priceAfter ? parseFloat(m.priceAfter) : null,
+              isRemake: m.isRemake ?? false,
             }));
           } catch { return []; }
         }, THIRTY_MIN);
@@ -449,10 +452,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         checkTradeCooldown(ctx.user.id);
-        // Block trading during live games
+        // Block trading during admin halt, live games, or market closed
+        const market = await getMarketStatus();
+        if (market.adminHalt) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted by admin." });
         const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
-        const market = await getMarketStatus();
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed: " + (market.reason || "") });
 
         // Server-side price validation: compute real ETF price and reject stale client prices
@@ -492,9 +496,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         checkTradeCooldown(ctx.user.id);
+        const market = await getMarketStatus();
+        if (market.adminHalt) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted by admin." });
         const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
-        const market = await getMarketStatus();
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
 
         // Server-side price validation
@@ -552,6 +557,8 @@ export const appRouter = router({
         targetPrice: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
+        const market = await getMarketStatus();
+        if (market.adminHalt) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted by admin. Orders cannot be placed." });
         const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Orders can be placed after the match ends." });
         const order = await createOrder({
@@ -737,11 +744,20 @@ export const appRouter = router({
         const status = await getMarketStatus();
         return {
           isOpen: status.isOpen,
+          adminHalt: status.adminHalt ?? false,
           reason: status.reason,
           lastActivity: status.lastActivity,
         };
       }, TEN_MIN);
     }),
+    toggleHalt: adminProcedure
+      .input(z.object({ halt: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await toggleAdminHalt(input.halt);
+        // Invalidate market status cache immediately
+        cache.invalidate("market.status");
+        return { adminHalt: input.halt, message: input.halt ? "Trading halted by admin" : "Trading resumed by admin" };
+      }),
   }),
 
   // ─── Polling Control ───

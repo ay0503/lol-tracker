@@ -94,9 +94,9 @@ export default function TradingPanel() {
     { id: "short", label: t.trading.short, icon: TrendingDown },
   ];
 
-  // Check if player is in a live game (trading halt)
+  // Check if player is in a live game (trading halt) or admin halt
   const { data: liveGameData } = trpc.player.liveGame.useQuery(undefined, { refetchInterval: 30000 });
-  const isTradingHalted = liveGameData?.inGame === true;
+  const isLiveGameHalt = liveGameData?.inGame === true;
 
   // Single source of truth for all current prices
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { refetchInterval: 30_000, staleTime: 15_000 });
@@ -179,6 +179,8 @@ export default function TradingPanel() {
   const dollarAmount = inputMode === "dollars"
     ? rawInput
     : rawInput * tickerPrice;
+  const isAdminHalted = marketStatus?.adminHalt ?? false;
+  const isTradingHalted = isLiveGameHalt || isAdminHalted;
   const isMarketOpen = marketStatus?.isOpen ?? true;
 
   const currentHolding = useMemo(() => {
@@ -358,9 +360,9 @@ export default function TradingPanel() {
       <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${isTradingHalted ? "bg-yellow-500 animate-pulse" : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
-             <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? "text-yellow-500" : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-               {isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
+            <div className={`w-2 h-2 rounded-full ${isTradingHalted ? (isAdminHalted ? "bg-red-500 animate-pulse" : "bg-yellow-500 animate-pulse") : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
+             <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+               {isAdminHalted ? "ADMIN HALT" : isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
              </span>
           </div>
           <div className="w-px h-4 bg-border" />

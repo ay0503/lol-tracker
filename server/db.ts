@@ -503,6 +503,7 @@ export async function addMatch(data: {
   kills: number; deaths: number; assists: number;
   cs?: number; position?: string; gameDuration: number;
   priceBefore?: number; priceAfter?: number; gameCreation: number;
+  isRemake?: boolean;
 }) {
   const db = await getDb();
   await db.insert(matches).values({
@@ -513,6 +514,7 @@ export async function addMatch(data: {
     priceBefore: data.priceBefore?.toFixed(4) ?? null,
     priceAfter: data.priceAfter?.toFixed(4) ?? null,
     gameCreation: data.gameCreation,
+    isRemake: data.isRemake ?? false,
   });
 }
 
@@ -545,7 +547,7 @@ export async function getMarketStatus() {
   const result = await db.select().from(marketStatus).limit(1);
   if (result.length === 0) {
     await db.insert(marketStatus).values({ isOpen: true, reason: "Market initialized" });
-    return { isOpen: true, reason: "Market initialized", lastActivity: null };
+    return { isOpen: true, adminHalt: false, reason: "Market initialized", lastActivity: null };
   }
   return result[0];
 }
@@ -557,6 +559,17 @@ export async function setMarketStatus(isOpen: boolean, reason: string) {
     await db.insert(marketStatus).values({ isOpen, reason, lastActivity: new Date().toISOString() });
   } else {
     await db.update(marketStatus).set({ isOpen, reason, lastActivity: new Date().toISOString() }).where(eq(marketStatus.id, existing[0].id));
+  }
+}
+
+export async function toggleAdminHalt(halt: boolean) {
+  const db = await getDb();
+  const existing = await db.select().from(marketStatus).limit(1);
+  const reason = halt ? "Admin halted trading" : "Admin resumed trading";
+  if (existing.length === 0) {
+    await db.insert(marketStatus).values({ isOpen: !halt, adminHalt: halt, reason, lastActivity: new Date().toISOString() });
+  } else {
+    await db.update(marketStatus).set({ adminHalt: halt, reason, lastActivity: new Date().toISOString() }).where(eq(marketStatus.id, existing[0].id));
   }
 }
 

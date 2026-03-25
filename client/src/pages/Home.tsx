@@ -380,7 +380,7 @@ function MatchHistorySection() {
     return {
       id: m.id,
       timeAgo,
-      result: m.win ? ("Victory" as const) : ("Defeat" as const),
+      result: m.isRemake ? ("Remake" as const) : m.win ? ("Victory" as const) : ("Defeat" as const),
       duration,
       champion: m.champion,
       championImage,

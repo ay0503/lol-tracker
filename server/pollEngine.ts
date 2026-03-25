@@ -261,6 +261,14 @@ export async function pollNow(): Promise<PollResult> {
       const participant = match.info.participants.find(p => p.puuid === puuid);
       if (!participant) continue;
 
+      // Remake detection: game < 5 minutes AND 0/0/0 KDA
+      const isRemake = match.info.gameDuration < 300 &&
+        participant.kills === 0 && participant.deaths === 0 && participant.assists === 0;
+
+      if (isRemake) {
+        console.log(`[Poll] Match ${matchId} detected as REMAKE (${Math.floor(match.info.gameDuration / 60)}m, 0/0/0 KDA on ${participant.championName})`);
+      }
+
       try {
         await addMatch({
           matchId,
@@ -272,11 +280,18 @@ export async function pollNow(): Promise<PollResult> {
           cs: participant.totalMinionsKilled + participant.neutralMinionsKilled,
           position: participant.teamPosition || participant.individualPosition,
           gameDuration: match.info.gameDuration,
-          priceBefore: prevPrice,
-          priceAfter: price,
+          priceBefore: isRemake ? prevPrice : prevPrice,
+          priceAfter: isRemake ? prevPrice : price, // Remakes don't change price
           gameCreation: match.info.gameCreation,
+          isRemake,
         });
         result.newMatches++;
+
+        // Skip news generation and dividends for remakes
+        if (isRemake) {
+          console.log(`[Poll] Skipping news/dividends for remake match ${matchId}`);
+          continue;
+        }
 
         // 4. Distribute dividends (DISABLED — kept for easy re-enable)
         // try {

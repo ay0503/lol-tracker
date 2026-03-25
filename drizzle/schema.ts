@@ -162,6 +162,7 @@ export const matches = sqliteTable("matches", {
   priceAfter: text("priceAfter"),
   dividendsPaid: integer("dividendsPaid", { mode: "boolean" }).notNull().default(false),
   newsGenerated: integer("newsGenerated", { mode: "boolean" }).notNull().default(false),
+  isRemake: integer("isRemake", { mode: "boolean" }).notNull().default(false),
   gameCreation: integer("gameCreation").notNull(),
   createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
 });
@@ -175,6 +176,7 @@ export type InsertMatch = typeof matches.$inferInsert;
 export const marketStatus = sqliteTable("marketStatus", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   isOpen: integer("isOpen", { mode: "boolean" }).notNull().default(false),
+  adminHalt: integer("adminHalt", { mode: "boolean" }).notNull().default(false),
   reason: text("reason"),
   lastActivity: text("lastActivity"),
   updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),

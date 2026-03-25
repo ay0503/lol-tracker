@@ -684,3 +684,19 @@
 - [x] Use totalLP (absolute LP across all tiers) difference instead of raw LP difference in pollEngine.ts
 - [x] Updated PostGameBanner subtitle to show full tier+division alongside LP (e.g., "EMERALD II 10LP → EMERALD III 96LP")
 - [x] Verified: price change was already correct (uses tierToPrice which accounts for tier/division)
+
+## Feature: Admin Trading Halt Switch
+- [x] Add adminHalt column to marketStatus table (schema + migration)
+- [x] Add db helpers for admin halt toggle (toggleAdminHalt in db.ts)
+- [x] Add admin tRPC endpoint to toggle trading halt (market.toggleHalt)
+- [x] Update trading halt check to respect admin override — adminHalt blocks trade, short, createOrder endpoints
+- [x] Add admin UI toggle in AdminDB QuickActions panel (red/green state, HALTED badge)
+- [x] Update TradingPanel to show ADMIN HALT (red) vs live game halt (yellow) vs market open (green)
+
+## Feature: Remake Detection
+- [x] Detect remakes: game duration < 5 min AND 0/0/0 KDA (in pollEngine.ts)
+- [x] Add isRemake column to matches table (schema + migration)
+- [x] Skip price change, news generation, and dividends for remakes
+- [x] Show remake indicator in match history UI (result mapped to "Remake" → gray MatchRow)
+- [x] Filter remakes from champion pool stats and streak calculations
+- [x] Include isRemake in matches.stored API response
