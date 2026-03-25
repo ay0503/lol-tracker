@@ -6,7 +6,7 @@
  * Uses numerical timestamp X-axis for proper temporal spacing.
  * Collapses intraday snapshots to one point per day (last snapshot wins).
  */
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useMemo, useEffect, useCallback, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -22,6 +22,7 @@ import { translateTickerDescription } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import CandlestickChart from "./CandlestickChart";
 import { LineChart, CandlestickChart as CandlestickIcon, Loader2 } from "lucide-react";
+import { useTicker } from "@/contexts/TickerContext";
 
 type ChartView = "area" | "candlestick";
 type TimeRange = "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
@@ -116,7 +117,7 @@ export default function LPChart() {
   const { t, language } = useTranslation();
   const [chartView, setChartView] = useState<ChartView>("area");
   const [activeRange, setActiveRange] = useState<TimeRange>("1M");
-  const [activeTicker, setActiveTicker] = useState("DORI");
+  const { activeTicker, setActiveTicker } = useTicker();
   const [mounted, setMounted] = useState(false);
 
   const tickerInfo = TICKERS.find((tk) => tk.symbol === activeTicker) || TICKERS[0];

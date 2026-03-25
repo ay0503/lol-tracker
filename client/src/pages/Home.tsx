@@ -21,6 +21,7 @@ import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
+import { TickerProvider } from "@/contexts/TickerContext";
 import NotificationBell from "@/components/NotificationBell";
 import PriceRankLegend from "@/components/PriceRankLegend";
 import { type MatchResult } from "@/lib/playerData";
@@ -706,15 +707,17 @@ export default function Home() {
         {/* Live Game Alert */}
         <LiveGameBanner />
 
-        <section className="mt-6">
-          <LPChart />
-        </section>
-
-        {isAuthenticated && (
+        <TickerProvider>
           <section className="mt-6">
-            <TradingPanel />
+            <LPChart />
           </section>
-        )}
+
+          {isAuthenticated && (
+            <section className="mt-6">
+              <TradingPanel />
+            </section>
+          )}
+        </TickerProvider>
 
         <section className="mt-6">
           <PriceRankLegend />

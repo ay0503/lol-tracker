@@ -499,3 +499,9 @@
 - [x] Ensure chart data updates correctly: reduced refetchInterval to 30s / staleTime to 15s across all price-consuming components
 - [x] Fixed client-side totalLPToPrice formula to match server (1200 LP range)
 - [x] Backend cache invalidateAll() already runs after every poll, so 30s staleTime ensures fresh data within one poll cycle
+
+## Feature: Sync Ticker Selection Between Chart and Trading Panel
+- [x] Create a shared TickerContext (React context) to hold the active ticker
+- [x] Wire LPChart to read/write from TickerContext instead of local state
+- [x] Wire TradingPanel to read/write from TickerContext instead of local state
+- [x] Verify bidirectional sync: chart selection updates trading panel and vice versa

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTicker } from "@/contexts/TickerContext";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -72,7 +73,7 @@ function getTradeTypeStyle(type: string, t: any) {
 
 export default function TradingPanel() {
   const { t } = useTranslation();
-  const [selectedTicker, setSelectedTicker] = useState<TickerSymbol>("DORI");
+  const { activeTicker: selectedTicker, setActiveTicker: setSelectedTicker } = useTicker();
   const [orderTab, setOrderTab] = useState<OrderTab>("market");
   const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("");
