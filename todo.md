@@ -601,3 +601,24 @@
 - [x] Fix data grouping: switched from YYYY-MM-DD strings to Unix timestamps (seconds), group into 10m/15m/30m candles for 3H/6H/1D
 - [x] Fix x-axis: lightweight-charts now shows times natively with timeVisible: true
 - [x] Fix scrolling: chart uses fitContent() and proper barSpacing for intraday
+
+## Audit Findings: Short/Cover Logic & Race Conditions
+- [x] BUG FIXED: TradingPanel totalValue now includes short P&L (was missing, Portfolio page was correct)
+- [x] BUG FIXED: executeCover now returns locked margin (marginReturn = shares * shortAvgPrice * 0.5)
+- [x] RISK NOTED: No SQL transactions — acceptable for single-process game app
+- [x] RISK NOTED: withUserLock only works in single-process — acceptable for current deployment
+- [x] RISK NOTED: getOrCreatePortfolio/getOrCreateHolding have read-then-write race — low risk, only on first trade
+- [x] RISK NOTED: Price from frontend not validated server-side — acceptable for game
+- [x] OK: withUserLock serializes per-user trades correctly for single-process deployment
+- [x] OK: Short margin calculation (50%) is correct
+- [x] OK: Short avg price weighted average calculation is correct
+- [x] OK: Portfolio snapshots correctly compute shortPnl = shortShares * (shortAvg - currentPrice)
+
+## Feature: Sell All Button
+- [x] Add "Sell All" button in TradingPanel market tab (shows when in sell mode with shares held)
+- [x] Add "Cover All" button in TradingPanel short tab (shows when in cover mode with short positions)
+- [x] Both buttons show share count and dollar estimate, respect confirmation threshold
+
+## Verify: Admin Table Edits Actually Modify Database
+- [x] Confirmed: all admin CRUD endpoints (updateRow, deleteRow, insertRow) execute real SQL via getRawClient().execute()
+- [x] Note: SQL is string-concatenated (not parameterized) — acceptable for admin-only but noted as risk

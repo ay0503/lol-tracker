@@ -250,11 +250,18 @@ export function executeCover(
     const totalCost = shares * pricePerShare;
     const currentCash = parseFloat(portfolio.cashBalance);
     const currentShortShares = parseFloat(holding.shortShares);
+    const currentShortAvg = parseFloat(holding.shortAvgPrice);
 
     if (shares > currentShortShares) throw new Error("Cannot cover more shares than shorted");
-    if (totalCost > currentCash) throw new Error("Insufficient funds to cover");
 
-    await db.update(portfolios).set({ cashBalance: (currentCash - totalCost).toFixed(2) }).where(eq(portfolios.userId, userId));
+    // Return the margin that was locked when the short was opened
+    // Original short: locked margin = shortAvgPrice * shares * 0.5
+    const marginReturn = shares * currentShortAvg * 0.5;
+    const newCash = currentCash - totalCost + marginReturn;
+
+    if (newCash < 0) throw new Error("Insufficient funds to cover (after margin return)");
+
+    await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
     await db.update(holdings).set({
       shortShares: (currentShortShares - shares).toFixed(4),
     }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));

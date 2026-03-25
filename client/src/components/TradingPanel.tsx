@@ -189,11 +189,17 @@ export default function TradingPanel() {
 
   const totalValue = useMemo(() => {
     if (!portfolio?.holdings || !etfPrices) return portfolio?.cashBalance ?? 200;
-    const holdingsVal = portfolio.holdings.reduce((sum: number, h: any) => {
+    let holdingsVal = 0;
+    let shortPnl = 0;
+    for (const h of portfolio.holdings as any[]) {
       const price = getLivePrice(h.ticker);
-      return sum + h.shares * price;
-    }, 0);
-    return (portfolio.cashBalance || 0) + holdingsVal;
+      holdingsVal += h.shares * price;
+      // Short P&L: profit when price drops below short avg
+      if (h.shortShares > 0) {
+        shortPnl += h.shortShares * (h.shortAvgPrice - price);
+      }
+    }
+    return (portfolio.cashBalance || 0) + holdingsVal + shortPnl;
   }, [portfolio, etfPrices]);
 
   const pnl = totalValue - 200;
@@ -565,6 +571,32 @@ export default function TradingPanel() {
                 <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
                   {tradeMutation.isPending ? t.trading.processing : `${tradeType === "buy" ? t.trading.buyTicker : t.trading.sellTicker} $${selectedTicker}`}
                 </button>
+                {/* Sell All button — only show when user holds shares of selected ticker in sell mode */}
+                {tradeType === "sell" && currentHolding.shares > 0 && (
+                  <button
+                    onClick={() => {
+                      const allShares = currentHolding.shares;
+                      if (allShares <= 0 || tickerPrice <= 0) return;
+                      const dollarVal = allShares * tickerPrice;
+                      if (dollarVal >= CONFIRM_THRESHOLD) {
+                        setPendingConfirm({
+                          type: t.trading.sell,
+                          ticker: `$${selectedTicker}`,
+                          amount: `$${dollarVal.toFixed(2)}`,
+                          shares: `${allShares.toFixed(4)}`,
+                          price: `$${tickerPrice.toFixed(2)}`,
+                          action: () => guardedExecute(() => tradeMutation.mutate({ ticker: selectedTicker, type: "sell", shares: allShares, pricePerShare: tickerPrice })),
+                        });
+                      } else {
+                        guardedExecute(() => tradeMutation.mutate({ ticker: selectedTicker, type: "sell", shares: allShares, pricePerShare: tickerPrice }));
+                      }
+                    }}
+                    disabled={tradeMutation.isPending || tradingLocked || !isMarketOpen || priceLoading || isTradingHalted}
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[#FF5252]/20 text-[#FF5252] border border-[#FF5252]/30 hover:bg-[#FF5252]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Sell All {currentHolding.shares.toFixed(2)} shares (≈${(currentHolding.shares * tickerPrice).toFixed(2)})
+                  </button>
+                )}
               </>
             )}
 
@@ -675,6 +707,32 @@ export default function TradingPanel() {
                 >
                   {(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) ? t.trading.processing : tradeType === "sell" ? `${t.trading.shortTicker} $${selectedTicker}` : `${t.trading.coverTicker} $${selectedTicker}`}
                 </button>
+                {/* Cover All button — only show when user has short positions in cover mode */}
+                {tradeType === "buy" && currentHolding.shortShares > 0 && (
+                  <button
+                    onClick={() => {
+                      const allShares = currentHolding.shortShares;
+                      if (allShares <= 0 || tickerPrice <= 0) return;
+                      const dollarVal = allShares * tickerPrice;
+                      if (dollarVal >= CONFIRM_THRESHOLD) {
+                        setPendingConfirm({
+                          type: t.trading.cover,
+                          ticker: `$${selectedTicker}`,
+                          amount: `$${dollarVal.toFixed(2)}`,
+                          shares: `${allShares.toFixed(4)}`,
+                          price: `$${tickerPrice.toFixed(2)}`,
+                          action: () => guardedExecute(() => coverMutation.mutate({ ticker: selectedTicker, shares: allShares, pricePerShare: tickerPrice })),
+                        });
+                      } else {
+                        guardedExecute(() => coverMutation.mutate({ ticker: selectedTicker, shares: allShares, pricePerShare: tickerPrice }));
+                      }
+                    }}
+                    disabled={coverMutation.isPending || tradingLocked || !isMarketOpen || priceLoading || isTradingHalted}
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[#00C805]/20 text-[#00C805] border border-[#00C805]/30 hover:bg-[#00C805]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cover All {currentHolding.shortShares.toFixed(2)} shares (≈${(currentHolding.shortShares * tickerPrice).toFixed(2)})
+                  </button>
+                )}
               </>
             )}
           </div>
