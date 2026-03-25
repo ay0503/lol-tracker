@@ -706,6 +706,12 @@ export default function Home() {
                   {t.nav.portfolio}
                 </Link>
               )}
+              {user?.role === "admin" && (
+                <Link href="/admin" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30 transition-all">
+                  <Shield className="w-3.5 h-3.5" />
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
 
@@ -838,6 +844,12 @@ export default function Home() {
                   <Link href="/portfolio" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
                     <Wallet className="w-4 h-4" />
                     {t.nav.portfolio}
+                  </Link>
+                )}
+                {user?.role === "admin" && (
+                  <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 transition-all">
+                    <Shield className="w-4 h-4" />
+                    Admin
                   </Link>
                 )}
                 <a

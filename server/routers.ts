@@ -446,7 +446,7 @@ export const appRouter = router({
         const history = await getPriceHistory() ?? [];
         const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
         const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
-        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
+        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
@@ -489,7 +489,7 @@ export const appRouter = router({
         const history = await getPriceHistory() ?? [];
         const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
         const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
-        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
+        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
@@ -518,7 +518,7 @@ export const appRouter = router({
         const history = await getPriceHistory() ?? [];
         const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
         const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
-        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
+        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 

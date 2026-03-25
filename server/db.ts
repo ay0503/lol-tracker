@@ -635,6 +635,38 @@ export async function getLatestPrice() {
   return result.length > 0 ? result[0] : null;
 }
 
+/**
+ * Prune old price history: keep all snapshots from last 7 days,
+ * then keep only 1 per hour for 7-30 days, and 1 per day for 30+ days.
+ * Returns number of rows deleted.
+ */
+export async function pruneOldPriceHistory(): Promise<number> {
+  const client = getRawClient();
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+  // For 7-30 days: keep only the last snapshot per hour
+  const hourlyResult = await client.execute({
+    sql: `DELETE FROM priceHistory WHERE timestamp < ? AND timestamp >= ? AND id NOT IN (
+      SELECT MAX(id) FROM priceHistory WHERE timestamp < ? AND timestamp >= ? GROUP BY CAST(timestamp / 3600000 AS INTEGER)
+    )`,
+    args: [sevenDaysAgo, thirtyDaysAgo, sevenDaysAgo, thirtyDaysAgo],
+  });
+
+  // For 30+ days: keep only the last snapshot per day
+  const dailyResult = await client.execute({
+    sql: `DELETE FROM priceHistory WHERE timestamp < ? AND id NOT IN (
+      SELECT MAX(id) FROM priceHistory WHERE timestamp < ? GROUP BY CAST(timestamp / 86400000 AS INTEGER)
+    )`,
+    args: [thirtyDaysAgo, thirtyDaysAgo],
+  });
+
+  const total = (hourlyResult.rowsAffected ?? 0) + (dailyResult.rowsAffected ?? 0);
+  if (total > 0) console.log(`[DB] Pruned ${total} old price history rows`);
+  return total;
+}
+
 // ─── Live Stats (computed from stored matches) ───
 
 export async function getAllMatchesFromDB() {

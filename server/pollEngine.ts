@@ -20,7 +20,7 @@ import {
   markMatchNewsGenerated, distributeDividends, addNews, getPendingOrders,
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
-  getPriceHistory, getRecentMatchesFromDB, getLeaderboard,
+  getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
@@ -62,6 +62,11 @@ let preGameSnapshot: {
 // Previous rank for rank-change detection
 let previousTier: string | null = null;
 let previousDivision: string | null = null;
+
+// Snapshot throttling: only store if price changed or 5 min elapsed
+let lastSnapshotPrice: number | null = null;
+let lastSnapshotTime = 0;
+const SNAPSHOT_MIN_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Daily summary: track last summary date to send once per day
 let lastDailySummaryDate: string | null = null;
@@ -235,9 +240,18 @@ export async function pollNow(): Promise<PollResult> {
     result.wins = wins;
     result.losses = losses;
 
-    // 2. Store price snapshot
-    console.log(`[Poll] Price: $${price.toFixed(2)} (${tier} ${division} ${lp}LP)`);
-    await addPriceSnapshot({ timestamp: Date.now(), tier, division, lp, totalLP, price, wins, losses });
+    // 2. Store price snapshot (throttled: only if price changed or 5 min elapsed)
+    const now = Date.now();
+    const priceChanged = lastSnapshotPrice === null || Math.abs(price - lastSnapshotPrice) >= 0.005;
+    const timeElapsed = now - lastSnapshotTime >= SNAPSHOT_MIN_INTERVAL_MS;
+    if (priceChanged || timeElapsed) {
+      console.log(`[Poll] Price: $${price.toFixed(2)} (${tier} ${division} ${lp}LP) — snapshot saved`);
+      await addPriceSnapshot({ timestamp: now, tier, division, lp, totalLP, price, wins, losses });
+      lastSnapshotPrice = price;
+      lastSnapshotTime = now;
+    } else {
+      console.log(`[Poll] Price: $${price.toFixed(2)} (${tier} ${division} ${lp}LP) — unchanged, skipping snapshot`);
+    }
 
     // 3. Fetch and process new matches
     // First get match IDs, filter out already-processed ones, then only fetch details for new ones
@@ -463,6 +477,9 @@ export async function pollNow(): Promise<PollResult> {
         await notifyDailySummary(tier, division, lp, price, wins, losses, rankings);
         lastDailySummaryDate = todayKey;
         console.log("[Poll] Daily summary sent to Discord");
+
+        // Daily price history cleanup
+        await pruneOldPriceHistory();
       } catch (err: any) {
         console.warn("[Poll] Daily summary failed:", err?.message);
       }
