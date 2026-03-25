@@ -424,3 +424,7 @@
 - [x] Endpoint should insert ~190 historical data points (Sep 2025 - Mar 2026)
 - [x] Skip duplicates (don't re-seed if data already exists, >20 check)
 - [x] Return count of inserted rows
+
+## Fix: Hide Admin User from Leaderboard and Ledger
+- [x] Filter out admin users from leaderboard query
+- [x] Filter out admin users from ledger (all trades) query

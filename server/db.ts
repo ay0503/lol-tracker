@@ -1,4 +1,4 @@
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import {
@@ -303,7 +303,9 @@ export async function getAllTrades(limit = 100) {
     ticker: trades.ticker, type: trades.type,
     shares: trades.shares, pricePerShare: trades.pricePerShare,
     totalAmount: trades.totalAmount, createdAt: trades.createdAt,
-  }).from(trades).leftJoin(users, eq(trades.userId, users.id)).orderBy(desc(trades.createdAt)).limit(limit);
+  }).from(trades).leftJoin(users, eq(trades.userId, users.id))
+    .where(ne(users.role, 'admin'))
+    .orderBy(desc(trades.createdAt)).limit(limit);
 }
 
 // ─── Comments / Sentiment ───
@@ -482,7 +484,8 @@ export async function getLeaderboard() {
     userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
     cashBalance: portfolios.cashBalance,
     totalDividends: portfolios.totalDividends,
-  }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId));
+  }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId))
+    .where(ne(users.role, 'admin'));
 
   const allHoldings = await db.select().from(holdings);
 
