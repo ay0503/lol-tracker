@@ -10,6 +10,36 @@ import { serveStatic, setupVite } from "./vite";
 import { startPolling } from "../pollEngine";
 import { ENV } from "./env";
 
+// Programmatic migration — runs at app startup, after volumes are mounted
+async function runMigrations() {
+  try {
+    console.log("[DB] Running migrations...");
+    console.log("[DB] Database path:", ENV.databasePath);
+
+    const { createClient } = await import("@libsql/client");
+    const { drizzle } = await import("drizzle-orm/libsql");
+    const { migrate } = await import("drizzle-orm/libsql/migrator");
+    const { existsSync, mkdirSync } = await import("fs");
+    const { dirname } = await import("path");
+
+    // Ensure the data directory exists
+    const dir = dirname(ENV.databasePath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+      console.log(`[DB] Created directory: ${dir}`);
+    }
+
+    const client = createClient({ url: `file:${ENV.databasePath}` });
+    const db = drizzle(client);
+    await migrate(db, { migrationsFolder: "./drizzle" });
+    console.log("[DB] ✓ Migrations completed successfully");
+  } catch (error) {
+    console.error("[DB] ✗ Migration failed:", error);
+    // Don't throw — the app may still work if tables already exist
+    console.log("[DB] Continuing startup despite migration error...");
+  }
+}
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -44,8 +74,10 @@ async function startServer() {
   console.log("[Server] Mode:", ENV.corsOrigin ? "SPLIT (Railway backend only)" : "SAME-ORIGIN (full stack)");
   console.log("[Server] ───────────────────────────────────────");
 
+  // ─── Run migrations before anything else ──────────────────────────────────
+  await runMigrations();
+
   // ─── Request logging middleware ───────────────────────────────────────────
-  // Logs every incoming request with origin, cookies, and timing
   app.use((req, res, next) => {
     const start = Date.now();
     const origin = req.headers.origin || "(no origin)";
@@ -54,23 +86,19 @@ async function startServer() {
       ? req.headers.cookie!.split(";").map(c => c.trim().split("=")[0]).join(", ")
       : "(none)";
 
-    // Log on response finish
     res.on("finish", () => {
       const duration = Date.now() - start;
       const status = res.statusCode;
       const method = req.method;
       const path = req.path;
 
-      // Color-code by status
       const statusTag = status >= 500 ? "✗" : status >= 400 ? "⚠" : "✓";
 
-      // Only log API requests (skip static files in same-origin mode)
       if (path.startsWith("/api/")) {
         console.log(
           `[HTTP] ${statusTag} ${method} ${path} → ${status} (${duration}ms) | origin: ${origin} | cookies: [${cookieNames}]`
         );
 
-        // Detailed CORS logging for cross-origin requests
         if (origin !== "(no origin)" && ENV.corsOrigin) {
           const isAllowed = origin === ENV.corsOrigin;
           if (!isAllowed) {
@@ -78,7 +106,6 @@ async function startServer() {
           }
         }
 
-        // Auth logging for tRPC requests
         if (path.startsWith("/api/trpc")) {
           if (!hasCookies) {
             console.log(`[Auth] No cookies sent with request — user is not authenticated`);
@@ -96,7 +123,6 @@ async function startServer() {
   if (ENV.corsOrigin) {
     app.use(cors({
       origin: (requestOrigin, callback) => {
-        // Allow requests with no origin (e.g., server-to-server, health checks)
         if (!requestOrigin) {
           callback(null, true);
           return;
@@ -117,11 +143,10 @@ async function startServer() {
     console.log("[CORS] Disabled (same-origin mode)");
   }
 
-  // Configure body parser with larger size limit
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // Health check endpoint (useful for Railway)
+  // Health check endpoint
   app.get("/api/health", (req, res) => {
     const origin = req.headers.origin || "(no origin)";
     console.log(`[Health] Check from origin: ${origin}`);
@@ -143,10 +168,8 @@ async function startServer() {
     })
   );
 
-  // In split deployment mode (CORS_ORIGIN set), don't serve static files
-  // The frontend is hosted separately on Vercel
+  // In split deployment mode, don't serve static files
   if (!ENV.corsOrigin) {
-    // development mode uses Vite, production mode uses static files
     if (process.env.NODE_ENV === "development") {
       await setupVite(app, server);
     } else {
@@ -163,7 +186,6 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    // Start LP polling
     startPolling();
   });
 }

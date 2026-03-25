@@ -119,18 +119,16 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/package.json ./
-COPY --from=build /app/pnpm-lock.yaml ./
-COPY --from=build /app/patches ./patches
-COPY --from=build /app/drizzle.config.ts ./
 RUN mkdir -p /app/data
 
 ENV NODE_ENV=production
 ENV PORT=3000
-# Default DATABASE_PATH to the persistent volume mount
 ENV DATABASE_PATH=/app/data/lol-tracker.db
 EXPOSE 3000
-# Migrations run at startup so they target the volume-mounted DB
-CMD ["sh", "-c", "DATABASE_PATH=/app/data/lol-tracker.db pnpm db:push && node dist/index.js"]
+
+# Migrations run programmatically inside the Node.js app at startup
+# This ensures they run AFTER the Railway volume is mounted
+CMD ["node", "dist/index.js"]
 ```
 
 ---
