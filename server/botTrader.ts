@@ -490,37 +490,122 @@ async function executeDecision(
   }
 }
 
-// ─── Sentiment Comment ───
+// ─── Sentiment Comment (Korean meme trader style) ───
+
+// Rate limit: max 1 comment per 30 minutes
+let lastCommentTime = 0;
+const COMMENT_COOLDOWN_MS = 30 * 60 * 1000;
+
+// Only comment ~30% of the time even when cooldown is clear
+function shouldComment(): boolean {
+  if (Date.now() - lastCommentTime < COMMENT_COOLDOWN_MS) return false;
+  return Math.random() < 0.3;
+}
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateKoreanComment(
+  decision: TradeDecision,
+  tradeResult: { success: boolean; message: string },
+  ctx: MarketContext,
+): { content: string; ticker: string | null; sentiment: "bullish" | "bearish" | "neutral" } {
+  const recentWins = ctx.recentMatches.slice(0, 5).filter(m => m.win).length;
+  const recentLosses = ctx.recentMatches.slice(0, 5).filter(m => !m.win).length;
+  const onWinStreak = recentWins >= 3;
+  const onLossStreak = recentLosses >= 3;
+  const lastMatch = ctx.recentMatches[0];
+  const lastKda = lastMatch ? `${lastMatch.kills}/${lastMatch.deaths}/${lastMatch.assists}` : null;
+
+  // Bullish comments (when buying / win streak / optimistic)
+  const bullishComments = [
+    "현석이 믿는다 가즈아 🚀",
+    "다이아 가자 화이팅!! 롱 추매 ㄱㄱ",
+    "이건 무조건 사야됨 ㄹㅇ",
+    "현석이 캐리력 보고 올인했다",
+    "LP 올라가는거 보니까 다이아 각이다",
+    "솔랭 장인 현석이 믿고 매수",
+    "연승 개쩔어 추매 안하면 바보",
+    "ㅋㅋ 숏충이들 다 울고있겠네",
+    "이 가격에 안사면 후회한다 진짜",
+    "현석이 폼 미쳤음 풀매수 간다",
+  ];
+
+  // Bearish comments (when shorting / loss streak / pessimistic)
+  const bearishComments = [
+    "현석씨... 이러면 안되는데",
+    "숏 안치면 바보 아닌가 ㅋㅋ",
+    "ㄹㅇ 팀운 개역겹네",
+    "롱충이들 지금이라도 도망쳐",
+    "다음판 지면 인버스 추매한다",
+    "이거 에메 떨어지는거 아님? ㄷㄷ",
+    "현석이 믿지 마세요 3x 레버리지 샀다가 ㅈ됐어요",
+    "솔랭 왜 돌리는건지 모르겠다 진심",
+    "LP 녹는거 실시간으로 보는중",
+    "손절각 잡아야되나... 고민중",
+  ];
+
+  // Neutral / hold comments
+  const neutralComments = [
+    "관망중... 현석이 다음판 보고 결정",
+    "지금 들어가기엔 좀 애매한데",
+    "추세 확인하고 진입할 예정",
+    "현금 들고 기다리는게 답인듯",
+    "다음 게임 결과 보고 판단하겠음",
+  ];
+
+  // After a specific match result
+  const postWinComments = [
+    lastKda ? `${lastKda} 미쳤다 ㅋㅋㅋ 현석이 캐리` : "현석이 이겼다 가즈아",
+    "승리 ㄴㅇㅅ 추매 각",
+    "역시 현석이 믿고 롱",
+    "이기니까 기분이 좋다 추매 ㄱ",
+  ];
+
+  const postLossComments = [
+    lastKda ? `${lastKda} 이게 뭐냐 ㅋㅋㅋ` : "졌네... 숏 준비",
+    "팀 탓 ㄹㅇ 현석이 잘했는데",
+    "바텀 차이 ㅈㄴ 심하네",
+    "다음판은 이기겠지... 아마도...",
+  ];
+
+  if (decision.action === "hold") {
+    return { content: pickRandom(neutralComments), ticker: null, sentiment: "neutral" };
+  }
+
+  const isBullish = decision.action === "buy" || (decision.action === "cover");
+  const isBearish = decision.action === "short" || (decision.action === "sell");
+
+  if (isBullish) {
+    const pool = onWinStreak ? [...bullishComments, ...postWinComments] :
+      (lastMatch?.win ? [...bullishComments, ...postWinComments] : bullishComments);
+    return { content: pickRandom(pool), ticker: decision.ticker, sentiment: "bullish" };
+  }
+
+  if (isBearish) {
+    const pool = onLossStreak ? [...bearishComments, ...postLossComments] :
+      (lastMatch && !lastMatch.win ? [...bearishComments, ...postLossComments] : bearishComments);
+    return { content: pickRandom(pool), ticker: decision.ticker, sentiment: "bearish" };
+  }
+
+  return { content: pickRandom(neutralComments), ticker: decision.ticker, sentiment: "neutral" };
+}
 
 async function postBotComment(
   botUserId: number,
   decision: TradeDecision,
-  tradeResult: { success: boolean; message: string }
+  tradeResult: { success: boolean; message: string },
+  ctx: MarketContext,
 ): Promise<void> {
+  if (!shouldComment()) return;
+
   try {
-    let content: string;
+    const { content, ticker, sentiment } = generateKoreanComment(decision, tradeResult, ctx);
 
-    if (decision.action === "hold") {
-      content = `📊 ${decision.reasoning}`;
-    } else if (tradeResult.success) {
-      const actionEmoji = decision.action === "buy" ? "📈" : decision.action === "sell" ? "💰" : decision.action === "short" ? "📉" : "🔄";
-      content = `${actionEmoji} ${tradeResult.message} — ${decision.reasoning}`;
-    } else {
-      // Failed trade — still post analysis
-      content = `📊 Attempted ${decision.action} $${decision.ticker} but ${tradeResult.message}. ${decision.reasoning}`;
-    }
-
-    // Truncate to reasonable length
-    if (content.length > 280) {
-      content = content.substring(0, 277) + "...";
-    }
-
-    await postComment(
-      botUserId,
-      content,
-      decision.action !== "hold" ? decision.ticker : null,
-      decision.sentiment
-    );
+    await postComment(botUserId, content, ticker, sentiment);
+    lastCommentTime = Date.now();
+    console.log(`[Bot] Posted comment: ${content}`);
   } catch (err) {
     console.error("[Bot] Failed to post comment:", err);
   }
@@ -568,11 +653,10 @@ export async function runBotTrader(): Promise<boolean> {
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
     console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
 
-    // Bot sentiment comments disabled
-    // await postBotComment(botUserId, decision, result);
+    await postBotComment(botUserId, decision, result, marketData);
 
     console.log("[Bot] ═══════════════════════════════════════");
-    return true;
+    return decision.action !== "hold";
   } catch (err) {
     console.error("[Bot] Unexpected error:", err);
     console.log("[Bot] ═══════════════════════════════════════");
@@ -615,8 +699,7 @@ export async function forceRunBot(): Promise<boolean> {
     console.log(`[Bot] Decision: ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} (confidence: ${decision.confidence}%, sentiment: ${decision.sentiment})`);
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
     console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
-    // Bot sentiment comments disabled
-    // await postBotComment(botUserId, decision, result);
+    await postBotComment(botUserId, decision, result, marketData);
     console.log("[Bot] ═══════════════════════════════════════");
     return true;
   } catch (err) {
