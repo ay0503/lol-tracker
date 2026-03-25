@@ -357,33 +357,34 @@ export default function TradingPanel() {
       className="bg-card border border-border rounded-xl overflow-hidden"
     >
       {/* Market Status + Portfolio Summary Bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
-        <div className="flex items-center gap-4 flex-wrap">
+      <div className="px-3 sm:px-5 py-3 border-b border-border bg-secondary/30">
+        {/* Market status indicator */}
+        <div className="flex items-center gap-1.5 mb-2 sm:mb-0">
+          <div className={`w-2 h-2 rounded-full ${isTradingHalted ? (isAdminHalted ? "bg-red-500 animate-pulse" : "bg-yellow-500 animate-pulse") : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
+           <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+             {isAdminHalted ? "ADMIN HALT" : isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
+           </span>
+        </div>
+        {/* Portfolio stats - grid on mobile, flex on desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${isTradingHalted ? (isAdminHalted ? "bg-red-500 animate-pulse" : "bg-yellow-500 animate-pulse") : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
-             <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-               {isAdminHalted ? "ADMIN HALT" : isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
-             </span>
-          </div>
-          <div className="w-px h-4 bg-border" />
-          <div className="flex items-center gap-1.5">
-            <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
+            <Wallet className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <span className="text-xs text-muted-foreground">{t.trading.cash}</span>
             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">
               ${portfolio ? portfolio.cashBalance.toFixed(2) : "200.00"}
             </span>
           </div>
-          <div className="w-px h-4 bg-border" />
+          <div className="hidden sm:block w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
-            <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
+            <DollarSign className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <span className="text-xs text-muted-foreground">{t.trading.portfolio}</span>
             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">
               ${totalValue.toFixed(2)}
             </span>
           </div>
-          <div className="w-px h-4 bg-border" />
+          <div className="hidden sm:block w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
-            {pnl >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-[#00C805]" /> : <TrendingDown className="w-3.5 h-3.5 text-[#FF5252]" />}
+            {pnl >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-[#00C805] shrink-0" /> : <TrendingDown className="w-3.5 h-3.5 text-[#FF5252] shrink-0" />}
             <span className="text-xs text-muted-foreground">{t.trading.pnl}</span>
             <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: pnl >= 0 ? "#00C805" : "#FF5252" }}>
               {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
@@ -391,7 +392,7 @@ export default function TradingPanel() {
           </div>
           {portfolio && portfolio.totalDividends > 0 && (
             <>
-              <div className="w-px h-4 bg-border" />
+              <div className="hidden sm:block w-px h-4 bg-border" />
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">{t.trading.dividends}</span>
                 <span className="text-xs font-bold text-[#00C805] font-[var(--font-mono)]">
@@ -404,28 +405,29 @@ export default function TradingPanel() {
       </div>
 
       {/* Order Type Tabs */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto">
         {ORDER_TABS.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setOrderTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all border-b-2 ${
+              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 sm:py-2.5 text-[10px] sm:text-xs font-bold transition-all border-b-2 whitespace-nowrap px-1 sm:px-2 ${
                 orderTab === tab.id
                   ? "text-foreground border-primary bg-secondary/20"
                   : "text-muted-foreground border-transparent hover:text-foreground hover:bg-secondary/10"
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              {tab.label}
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.label}</span>
             </button>
           );
         })}
       </div>
 
       {/* Trading Form */}
-      <div className="p-5">
+      <div className="p-3 sm:p-5">
         {isTradingHalted && (
            <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 mb-4">
              <Pause className="w-4 h-4 text-yellow-500" />

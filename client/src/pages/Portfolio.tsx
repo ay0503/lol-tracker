@@ -399,11 +399,11 @@ export default function Portfolio() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card border border-border rounded-xl p-6 mb-6"
+              className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-6"
             >
               <p className="text-xs text-muted-foreground mb-1">{t.portfolio.totalValue}</p>
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-4xl font-bold text-foreground font-[var(--font-mono)]">
+              <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
+                <h2 className="text-2xl sm:text-4xl font-bold text-foreground font-[var(--font-mono)]">
                   ${metrics.totalValue.toFixed(2)}
                 </h2>
                 <div
@@ -460,7 +460,7 @@ export default function Portfolio() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-card border border-border rounded-xl p-6 mb-6"
+              className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-6"
             >
               <div className="flex items-center gap-2 mb-4">
                 <PieChart className="w-4 h-4 text-muted-foreground" />
@@ -471,7 +471,8 @@ export default function Portfolio() {
 
               {metrics.holdings.filter(h => h.shares > 0).length > 0 ? (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  {/* Desktop table header */}
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                     <div className="col-span-2">{t.portfolio.ticker}</div>
                     <div className="col-span-2 text-right">{t.portfolio.shares}</div>
                     <div className="col-span-2 text-right">{t.portfolio.avgPrice}</div>
@@ -483,35 +484,52 @@ export default function Portfolio() {
                   {metrics.holdings
                     .filter(h => h.shares > 0)
                     .map((h) => (
-                      <div
-                        key={h.ticker}
-                        className="grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-                      >
-                        <div className="col-span-2">
-                          <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
-                            ${h.ticker}
-                          </span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-[var(--font-mono)]">{h.shares.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">${h.avgCostBasis.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-[var(--font-mono)]">${h.currentPrice.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">${h.currentValue.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <div>
-                            <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}>
-                              {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}
+                      <div key={h.ticker}>
+                        {/* Desktop row */}
+                        <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                          <div className="col-span-2">
+                            <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
+                              ${h.ticker}
                             </span>
-                            <p className="text-[10px] font-[var(--font-mono)]" style={{ color: h.pnlPct >= 0 ? "#00C805" : "#FF5252" }}>
-                              {h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(1)}%
-                            </p>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-foreground font-[var(--font-mono)]">{h.shares.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-muted-foreground font-[var(--font-mono)]">${h.avgCostBasis.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-foreground font-[var(--font-mono)]">${h.currentPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">${h.currentValue.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <div>
+                              <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}>
+                                {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}
+                              </span>
+                              <p className="text-[10px] font-[var(--font-mono)]" style={{ color: h.pnlPct >= 0 ? "#00C805" : "#FF5252" }}>
+                                {h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(1)}%
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Mobile card */}
+                        <div className="sm:hidden px-3 py-3 rounded-lg bg-secondary/30">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
+                              ${h.ticker}
+                            </span>
+                            <span className="text-sm font-semibold text-foreground font-[var(--font-mono)]">${h.currentValue.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-muted-foreground font-[var(--font-mono)]">
+                              {h.shares.toFixed(2)} @ ${h.avgCostBasis.toFixed(2)} → ${h.currentPrice.toFixed(2)}
+                            </span>
+                            <span className="font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}>
+                              {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)} ({h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(1)}%)
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -542,7 +560,8 @@ export default function Portfolio() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  {/* Desktop table header */}
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                     <div className="col-span-2">{t.portfolio.ticker}</div>
                     <div className="col-span-2 text-right">{t.portfolio.shares}</div>
                     <div className="col-span-2 text-right">{t.portfolio.avgPrice}</div>
@@ -554,35 +573,52 @@ export default function Portfolio() {
                   {metrics.holdings
                     .filter(h => h.shortShares > 0)
                     .map((h) => (
-                      <div
-                        key={`short-${h.ticker}`}
-                        className="grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-purple-500/5 hover:bg-purple-500/10 transition-colors"
-                      >
-                        <div className="col-span-2">
-                          <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
-                            ${h.ticker}
-                          </span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-purple-300 font-[var(--font-mono)]">{h.shortShares.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-muted-foreground font-[var(--font-mono)]">${h.shortAvgPrice.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-[var(--font-mono)]">${h.currentPrice.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">${h.shortValue.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2 text-right">
-                          <div>
-                            <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}>
-                              {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)}
+                      <div key={`short-${h.ticker}`}>
+                        {/* Desktop row */}
+                        <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-3 py-3 rounded-lg bg-purple-500/5 hover:bg-purple-500/10 transition-colors">
+                          <div className="col-span-2">
+                            <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
+                              ${h.ticker}
                             </span>
-                            <p className="text-[10px] font-[var(--font-mono)]" style={{ color: h.shortPnlPct >= 0 ? "#00C805" : "#FF5252" }}>
-                              {h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%
-                            </p>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-purple-300 font-[var(--font-mono)]">{h.shortShares.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-muted-foreground font-[var(--font-mono)]">${h.shortAvgPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-foreground font-[var(--font-mono)]">${h.currentPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-foreground font-semibold font-[var(--font-mono)]">${h.shortValue.toFixed(2)}</span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <div>
+                              <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}>
+                                {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)}
+                              </span>
+                              <p className="text-[10px] font-[var(--font-mono)]" style={{ color: h.shortPnlPct >= 0 ? "#00C805" : "#FF5252" }}>
+                                {h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Mobile card */}
+                        <div className="sm:hidden px-3 py-3 rounded-lg bg-purple-500/5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(h.ticker) }}>
+                              ${h.ticker}
+                            </span>
+                            <span className="text-sm font-semibold text-foreground font-[var(--font-mono)]">${h.shortValue.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-purple-300 font-[var(--font-mono)]">
+                              {h.shortShares.toFixed(2)} @ ${h.shortAvgPrice.toFixed(2)} → ${h.currentPrice.toFixed(2)}
+                            </span>
+                            <span className="font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}>
+                              {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)} ({h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%)
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -596,9 +632,9 @@ export default function Portfolio() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-card border border-border rounded-xl p-6"
+              className="bg-card border border-border rounded-xl p-4 sm:p-6"
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-2">
                   <History className="w-4 h-4 text-muted-foreground" />
                   <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">

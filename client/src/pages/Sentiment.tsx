@@ -93,7 +93,7 @@ export default function Sentiment() {
               <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">{t.nav.sentiment}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.leaderboard}</Link>
             <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.news}</Link>
             <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
@@ -135,7 +135,7 @@ export default function Sentiment() {
               <span className="text-xs text-muted-foreground">{t.sentiment.postingAs}</span>
               <span className="text-xs font-bold text-foreground">{user?.name || t.common.anonymous}</span>
             </div>
-            <div className="flex gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-3">
               {(["bullish", "bearish", "neutral"] as const).map((s) => {
                 const config = SENTIMENT_CONFIG[s];
                 return (
@@ -163,7 +163,7 @@ export default function Sentiment() {
               <select
                 value={ticker}
                 onChange={(e) => setTicker(e.target.value as typeof ticker)}
-                className="bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground"
+                className="bg-secondary border border-border rounded-lg px-3 py-2.5 text-xs text-foreground w-full sm:w-auto"
               >
                 <option value="DORI">$DORI — {t.tickers.dori}</option>
                 <option value="DDRI">$DDRI — {t.tickers.ddri}</option>
@@ -231,20 +231,20 @@ export default function Sentiment() {
                       <Icon className="w-3.5 h-3.5" style={{ color: config.color }} />
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                         <span className="text-xs font-bold text-foreground">{comment.userName}</span>
                         {comment.ticker && (
-                          <span className="text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
+                          <span className="text-[10px] sm:text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
                             ${comment.ticker}
                           </span>
                         )}
                         <span
-                          className="text-xs font-bold px-1.5 py-0.5 rounded"
+                          className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: config.color + "15", color: config.color }}
                         >
                           {config.emoji} {config.label}
                         </span>
-                        <span className="text-xs text-muted-foreground ml-auto">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground sm:ml-auto">
                           {formatTimeAgoFromDate(comment.createdAt, language)}
                         </span>
                       </div>

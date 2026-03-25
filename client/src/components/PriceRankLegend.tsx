@@ -240,11 +240,11 @@ export default function PriceRankLegend() {
       {/* Collapsible section: Division breakdown + formula */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? "max-h-[500px] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"
+          isExpanded ? "max-h-[800px] sm:max-h-[500px] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"
         }`}
       >
         {/* Division breakdown table */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {TIERS.map((tier) => (
             <div
               key={tier.name}

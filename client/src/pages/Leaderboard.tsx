@@ -37,7 +37,7 @@ export default function Leaderboard() {
               <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">{t.nav.leaderboard}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
             <Link href="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.portfolio}</Link>
             <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.news}</Link>
@@ -76,7 +76,8 @@ export default function Leaderboard() {
                   transition={{ delay: idx * 0.05 }}
                   className={`border rounded-xl p-4 ${getRankBg(rank)}`}
                 >
-                  <div className="flex items-center justify-between">
+                  {/* Desktop layout */}
+                  <div className="hidden sm:flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {getRankIcon(rank)}
                       <div>
@@ -114,6 +115,45 @@ export default function Leaderboard() {
                           style={{ color: isPositive ? "#00C805" : "#FF5252" }}
                         >
                           {isPositive ? "+" : ""}${trader.pnl.toFixed(2)} ({isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile layout */}
+                  <div className="sm:hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {getRankIcon(rank)}
+                        <p className="text-sm font-bold text-foreground">{trader.userName}</p>
+                      </div>
+                      <p className="text-base font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        <span className="text-[10px] text-muted-foreground">
+                          {t.leaderboard.cash}: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(0)}</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {t.leaderboard.holdings}: <span className="text-foreground font-mono">${trader.holdingsValue.toFixed(0)}</span>
+                        </span>
+                        {trader.shortExposure !== 0 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {t.leaderboard.shorts}: <span className="text-foreground font-mono">${trader.shortExposure.toFixed(0)}</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {isPositive ? (
+                          <TrendingUp className="w-3 h-3 text-[#00C805]" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 text-[#FF5252]" />
+                        )}
+                        <span
+                          className="text-[10px] font-mono font-bold"
+                          style={{ color: isPositive ? "#00C805" : "#FF5252" }}
+                        >
+                          {isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%
                         </span>
                       </div>
                     </div>

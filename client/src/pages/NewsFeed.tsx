@@ -36,7 +36,7 @@ export default function NewsFeed() {
               <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">$DORI {t.nav.news}</span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.leaderboard}</Link>
             <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
             <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.sentiment}</Link>

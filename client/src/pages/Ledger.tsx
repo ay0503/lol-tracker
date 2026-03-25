@@ -46,19 +46,19 @@ export default function Ledger() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`} />
-            {t.common.refresh}
+            <span className="hidden sm:inline">{t.common.refresh}</span>
           </button>
         </div>
 
         {/* Ticker Legend */}
-        <div className="flex gap-3 mb-6 flex-wrap">
+        <div className="flex gap-2 sm:gap-3 mb-6 flex-wrap">
           {TICKERS.map(tk => (
-            <div key={tk.symbol} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/50">
+            <div key={tk.symbol} className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-secondary/50">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tk.color }} />
               <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: tk.color }}>
                 ${tk.symbol}
               </span>
-              <span className="text-[10px] text-muted-foreground">{translateTickerDescription(tk.symbol, tk.description, language)}</span>
+              <span className="text-[10px] text-muted-foreground hidden sm:inline">{translateTickerDescription(tk.symbol, tk.description, language)}</span>
             </div>
           ))}
         </div>
@@ -75,8 +75,9 @@ export default function Ledger() {
             ))}
           </div>
         ) : trades && trades.length > 0 ? (
-          <div className="space-y-1.5">
-            <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+          <>
+            {/* Desktop table header - hidden on mobile */}
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
               <div className="col-span-2">{t.ledger.user}</div>
               <div className="col-span-1">{t.ledger.type}</div>
               <div className="col-span-2">{t.ledger.ticker}</div>
@@ -86,77 +87,127 @@ export default function Ledger() {
               <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
             </div>
 
-            {trades.map((trade, i) => (
-              <motion.div
-                key={trade.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.02, duration: 0.3 }}
-                className="grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors"
-              >
-                <div className="col-span-2 flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-foreground">
-                      {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
-                    </span>
+            <div className="space-y-1.5">
+              {trades.map((trade, i) => (
+                <motion.div
+                  key={trade.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.02, duration: 0.3 }}
+                >
+                  {/* Desktop row */}
+                  <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                    <div className="col-span-2 flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-bold text-foreground">
+                          {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
+                        {String(trade.userName || t.common.anonymous)}
+                      </span>
+                    </div>
+
+                    <div className="col-span-1">
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                          trade.type === "buy"
+                            ? "bg-[#00C805]/15 text-[#00C805]"
+                            : "bg-[#FF5252]/15 text-[#FF5252]"
+                        }`}
+                      >
+                        {trade.type === "buy" ? (
+                          <ArrowUpRight className="w-3 h-3" />
+                        ) : (
+                          <ArrowDownRight className="w-3 h-3" />
+                        )}
+                        {trade.type === "buy" ? t.trading.buy : t.trading.sell}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2">
+                      <span
+                        className="text-xs font-bold font-[var(--font-mono)]"
+                        style={{ color: getTickerColor(trade.ticker) }}
+                      >
+                        ${trade.ticker}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2 text-right">
+                      <span className="text-xs text-foreground font-[var(--font-mono)]">
+                        {trade.shares.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2 text-right">
+                      <span className="text-xs text-muted-foreground font-[var(--font-mono)]">
+                        ${trade.pricePerShare.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="col-span-1 text-right">
+                      <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">
+                        ${trade.totalAmount.toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2 text-right">
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatTimeAgoFromDate(trade.createdAt, language)}
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
-                    {String(trade.userName || t.common.anonymous)}
-                  </span>
-                </div>
 
-                <div className="col-span-1">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                      trade.type === "buy"
-                        ? "bg-[#00C805]/15 text-[#00C805]"
-                        : "bg-[#FF5252]/15 text-[#FF5252]"
-                    }`}
-                  >
-                    {trade.type === "buy" ? (
-                      <ArrowUpRight className="w-3 h-3" />
-                    ) : (
-                      <ArrowDownRight className="w-3 h-3" />
-                    )}
-                    {trade.type === "buy" ? t.trading.buy : t.trading.sell}
-                  </span>
-                </div>
-
-                <div className="col-span-2">
-                  <span
-                    className="text-xs font-bold font-[var(--font-mono)]"
-                    style={{ color: getTickerColor(trade.ticker) }}
-                  >
-                    ${trade.ticker}
-                  </span>
-                </div>
-
-                <div className="col-span-2 text-right">
-                  <span className="text-xs text-foreground font-[var(--font-mono)]">
-                    {trade.shares.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="col-span-2 text-right">
-                  <span className="text-xs text-muted-foreground font-[var(--font-mono)]">
-                    ${trade.pricePerShare.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="col-span-1 text-right">
-                  <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">
-                    ${trade.totalAmount.toFixed(2)}
-                  </span>
-                </div>
-
-                <div className="col-span-2 text-right">
-                  <span className="text-[10px] text-muted-foreground">
-                    {formatTimeAgoFromDate(trade.createdAt, language)}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  {/* Mobile card */}
+                  <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold text-foreground">
+                            {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">
+                          {String(trade.userName || t.common.anonymous)}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            trade.type === "buy"
+                              ? "bg-[#00C805]/15 text-[#00C805]"
+                              : "bg-[#FF5252]/15 text-[#FF5252]"
+                          }`}
+                        >
+                          {trade.type === "buy" ? (
+                            <ArrowUpRight className="w-2.5 h-2.5" />
+                          ) : (
+                            <ArrowDownRight className="w-2.5 h-2.5" />
+                          )}
+                          {trade.type === "buy" ? t.trading.buy : t.trading.sell}
+                        </span>
+                      </div>
+                      <span className="text-xs text-foreground font-bold font-[var(--font-mono)]">
+                        ${trade.totalAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>
+                          ${trade.ticker}
+                        </span>
+                        <span className="text-muted-foreground font-[var(--font-mono)]">
+                          {trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground">
+                        {formatTimeAgoFromDate(trade.createdAt, language)}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
         ) : (
           <div className="text-center py-20">
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />

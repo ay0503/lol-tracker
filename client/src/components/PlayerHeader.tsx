@@ -110,7 +110,7 @@ export default function PlayerHeader() {
       <div className="mt-4">
         <div className="flex items-baseline gap-3">
           {currentPrice !== null ? (
-            <h2 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground font-[var(--font-heading)] tracking-tight tabular-nums">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground font-[var(--font-heading)] tracking-tight tabular-nums">
               ${currentPrice.toFixed(2)}
             </h2>
           ) : (
@@ -145,7 +145,7 @@ export default function PlayerHeader() {
       </div>
 
       {/* Secondary: Rank & Stats row */}
-      <div className="flex items-center gap-5 mt-5 flex-wrap">
+      <div className="flex items-center gap-3 sm:gap-5 mt-4 sm:mt-5 flex-wrap">
         {tier && division && lp !== undefined ? (
           <>
             <div className="flex items-center gap-2">

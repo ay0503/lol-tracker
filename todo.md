@@ -700,3 +700,18 @@
 - [x] Show remake indicator in match history UI (result mapped to "Remake" → gray MatchRow)
 - [x] Filter remakes from champion pool stats and streak calculations
 - [x] Include isRemake in matches.stored API response
+
+## Feature: Mobile Browser Optimization
+- [x] Audit all pages for mobile viewport issues
+- [x] Home page: hamburger menu, smaller hero price, stats grid 2-col, reduced card padding
+- [x] TradingPanel: market status bar grid layout, icon-only order tabs on small screens, reduced form padding
+- [x] Navbar: hamburger menu on mobile with all nav links + sign out + OP.GG
+- [x] Leaderboard: card layout on mobile (<sm), table on desktop
+- [x] Ledger: card layout on mobile (<sm), table on desktop
+- [x] Portfolio: card layout for holdings, smaller total value text, responsive stats
+- [x] News feed: already responsive (max-w-3xl container)
+- [x] Sentiment: comment headers flex-wrap, ticker select full width, smaller text sizes
+- [x] Login/Register: already responsive (max-w-md centered card)
+- [x] NotificationBell: responsive dropdown with max-w-[calc(100vw-2rem)]
+- [x] PriceRankLegend: stacks vertically on mobile
+- [x] PlayerHeader: responsive text sizes and rank row wrapping
