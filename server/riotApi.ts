@@ -323,6 +323,7 @@ const QUEUE_NAMES: Record<number, string> = {
   1400: "Ultimate Spellbook",
   1700: "Arena",
   1900: "Pick URF",
+  2400: "Ranked Solo/Duo",
 };
 
 export function getQueueName(queueId: number): string {

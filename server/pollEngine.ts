@@ -119,7 +119,7 @@ export async function pollNow(): Promise<PollResult> {
       playerDataForGame = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
       PUUID_CACHE.puuid = playerDataForGame.account.puuid;
       const activeGame = await getActiveGame(playerDataForGame.account.puuid);
-      rawIsInGame = !!activeGame && activeGame.gameQueueConfigId === 420;
+      rawIsInGame = !!activeGame;
     } catch (err: any) {
       console.warn("[Poll] Live game check failed:", err?.message);
       // On error, preserve previous state to avoid false game-end detection
