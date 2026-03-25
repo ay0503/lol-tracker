@@ -292,7 +292,7 @@ export interface CurrentGameInfo {
  */
 export async function getActiveGame(puuid: string): Promise<CurrentGameInfo | null> {
   try {
-    const url = `${NA1_URL}/lol/spectator/v5/active-games/by-puuid/${puuid}`;
+    const url = `${NA1_URL}/lol/spectator/v5/active-games/by-summoner/${puuid}`;
     console.log(`[RiotAPI] Spectator check: ${url.substring(0, 60)}...`);
     const res = await axios.get<CurrentGameInfo>(url, { headers: headers() });
     console.log(`[RiotAPI] Spectator: IN GAME (queue=${res.data.gameQueueConfigId}, length=${res.data.gameLength}s)`);
