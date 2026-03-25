@@ -431,3 +431,6 @@
 
 ## Fix: Limit Sell Ticker Options to Held Stocks
 - [x] Only show tickers the user holds shares in when selling
+
+## Fix: Auto-switch ticker when entering sell mode
+- [x] Auto-select first held ticker when switching to sell if current ticker is not held

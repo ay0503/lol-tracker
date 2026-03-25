@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -219,6 +219,14 @@ export default function TradingPanel() {
     }
     return TICKERS;
   }, [isSellMode, isCoverMode, heldTickers, shortedTickers]);
+
+  // Auto-switch to first available ticker when entering sell/cover mode
+  // if the currently selected ticker is not in the available list
+  useEffect(() => {
+    if (availableTickers.length > 0 && !availableTickers.find(tk => tk.symbol === selectedTicker)) {
+      setSelectedTicker(availableTickers[0].symbol as TickerSymbol);
+    }
+  }, [availableTickers, selectedTicker]);
 
   // Confirmation-aware trade handlers
   const executeMarketTrade = () => {
