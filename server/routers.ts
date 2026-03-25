@@ -844,6 +844,37 @@ export const appRouter = router({
         return { error: err?.message, status: err?.response?.status };
       }
     }),
+    /** Test Discord bot by sending a leaderboard summary */
+    testDiscord: adminProcedure.mutation(async () => {
+      const { notifyDailySummary, isDiscordConfigured } = await import("./discord");
+      if (!isDiscordConfigured()) return { success: false, message: "Discord not configured" };
+
+      const { users: allUsers, holdingsByUser } = await getLeaderboard();
+      const history = await getPriceHistory();
+      const latestSnap = history.length > 0 ? history[history.length - 1] : null;
+      const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : { DORI: 0 };
+
+      const rankings = allUsers.map(u => {
+        const cash = u.cashBalance ? parseFloat(u.cashBalance) : 200;
+        const userHolds = holdingsByUser.get(u.userId) ?? [];
+        let holdVal = 0, shortPnl = 0;
+        for (const h of userHolds) {
+          const p = (etfPrices as Record<string, number>)[h.ticker] || 0;
+          holdVal += parseFloat(h.shares) * p;
+          shortPnl += parseFloat(h.shortShares) * (parseFloat(h.shortAvgPrice) - p);
+        }
+        return { name: String(u.userName || "Unknown"), value: cash + holdVal + shortPnl };
+      }).sort((a, b) => b.value - a.value);
+
+      await notifyDailySummary(
+        latestSnap?.tier ?? "?", latestSnap?.division ?? "?",
+        latestSnap?.lp ?? 0, latestSnap ? parseFloat(latestSnap.price) : 0,
+        latestSnap?.wins ?? 0, latestSnap?.losses ?? 0,
+        rankings,
+      );
+
+      return { success: true, message: "Discord summary sent" };
+    }),
   }),
 
   // ─── Admin SQL Console (admin only) ───
