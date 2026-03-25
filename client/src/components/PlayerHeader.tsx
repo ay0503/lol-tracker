@@ -18,18 +18,19 @@ export default function PlayerHeader() {
   const { t, language } = useTranslation();
 
   const { data: livePlayer, isLoading: playerLoading } = trpc.player.current.useQuery(undefined, {
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   });
+  // Single source of truth for all current prices
   const { data: etfPrices, isLoading: priceLoading } = trpc.prices.etfPrices.useQuery(undefined, {
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   });
   // Get ~30 days of history for price change calculation
   const [thirtyDaysAgo] = useState(() => Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60);
   const { data: etfHistory } = trpc.prices.etfHistory.useQuery(
     { ticker: "DORI", since: thirtyDaysAgo },
-    { refetchInterval: 60_000, staleTime: 30_000 }
+    { refetchInterval: 30_000, staleTime: 15_000 }
   );
 
   const isLoading = playerLoading || priceLoading;

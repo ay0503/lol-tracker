@@ -124,9 +124,10 @@ export default function LPChart() {
 
   const since = useMemo(() => getRangeSince(activeRange), [activeRange]);
 
+  // Chart data from etfHistory — same computation engine as etfPrices
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
     { ticker: activeTicker as any, since },
-    { refetchInterval: 60_000, staleTime: 30_000 }
+    { refetchInterval: 30_000, staleTime: 15_000 }
   );
 
   /**

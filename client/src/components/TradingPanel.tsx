@@ -93,10 +93,10 @@ export default function TradingPanel() {
   const { data: liveGameData } = trpc.player.liveGame.useQuery(undefined, { refetchInterval: 30000 });
   const isTradingHalted = liveGameData?.inGame === true;
 
-  // Live ETF prices from backend
-  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { refetchInterval: 60000 });
-  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { refetchInterval: 60000 });
-  const { data: tradeHistory } = trpc.trading.history.useQuery(undefined, { refetchInterval: 30000 });
+  // Single source of truth for all current prices
+  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { refetchInterval: 30_000, staleTime: 15_000 });
+  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { refetchInterval: 30_000, staleTime: 15_000 });
+  const { data: tradeHistory } = trpc.trading.history.useQuery(undefined, { refetchInterval: 30_000, staleTime: 15_000 });
   const { data: pendingOrders } = trpc.trading.orders.useQuery(undefined, { refetchInterval: 15000 });
   const { data: marketStatus } = trpc.market.status.useQuery(undefined, { refetchInterval: 60000 });
 

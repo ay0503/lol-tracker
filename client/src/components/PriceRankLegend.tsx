@@ -57,12 +57,15 @@ export default function PriceRankLegend() {
 
   const TIERS = useMemo(() => getTiers(t), [t]);
 
-  const { data: latestPrice, isLoading } = trpc.prices.latest.useQuery(undefined, {
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+  const { data: etfPrices, isLoading } = trpc.prices.etfPrices.useQuery(undefined, {
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   });
 
-  const currentPrice = latestPrice ? parseFloat(latestPrice.price) : null;
+  // Use DORI price from etfPrices — single source of truth shared with PlayerHeader & TradingPanel
+  const currentPrice = etfPrices && Array.isArray(etfPrices)
+    ? (etfPrices.find((p: any) => p.ticker === "DORI")?.price ?? null)
+    : null;
 
   // Calculate marker position as percentage
   const markerPct = useMemo(() => {

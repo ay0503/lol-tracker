@@ -490,3 +490,12 @@
 - [x] Remove 5-cycle counter — bot runs every poll cycle
 - [x] Invert live game check — bot ONLY trades when player is in a live game
 - [x] Update tests to reflect new behavior (11 tests passing)
+
+## Audit: Single Source of Truth for All Prices
+- [x] Audit all backend endpoints that return prices (etfPrices, priceHistory, latestPrice, etc.)
+- [x] Audit all frontend components that display prices (PlayerHeader, TradingPanel, LPChart, stat cards)
+- [x] Identify discrepancies: PriceRankLegend used prices.latest, others used prices.etfPrices; client playerData.ts had 1100 LP cap vs server 1200
+- [x] Unify to single source of truth: ALL components now use prices.etfPrices for current prices
+- [x] Ensure chart data updates correctly: reduced refetchInterval to 30s / staleTime to 15s across all price-consuming components
+- [x] Fixed client-side totalLPToPrice formula to match server (1200 LP range)
+- [x] Backend cache invalidateAll() already runs after every poll, so 30s staleTime ensures fresh data within one poll cycle

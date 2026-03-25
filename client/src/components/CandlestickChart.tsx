@@ -185,7 +185,7 @@ export default function CandlestickChart({
   // Fetch full ETF history from backend (no time filter — we always load all for candlestick zoom)
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
     { ticker: ticker as any },
-    { refetchInterval: 60_000, staleTime: 30_000 }
+    { refetchInterval: 30_000, staleTime: 15_000 }
   );
 
   const allCandles = useRef<CandlestickData<Time>[]>([]);

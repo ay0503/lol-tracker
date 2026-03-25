@@ -28,8 +28,9 @@ export function tierToTotalLP(tier: string, division: string | number, lp: numbe
 }
 
 export function totalLPToPrice(totalLP: number): number {
-  const clampedLP = Math.max(0, Math.min(1100, totalLP));
-  return 10 + (clampedLP / 1100) * 90;
+  // Must match server-side formula in riotApi.ts: 0–1200 LP → $10–$100
+  const clampedLP = Math.max(0, Math.min(1200, totalLP));
+  return 10 + (clampedLP / 1200) * 90;
 }
 
 export function lpDataToPrice(d: LPDataPoint): number {
