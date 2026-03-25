@@ -124,19 +124,58 @@ describe("Bot Trader", () => {
     vi.clearAllMocks();
   });
 
-  describe("live game gating", () => {
-    it("should skip when no live game is active", async () => {
+  describe("always trades", () => {
+    it("should trade even when no live game is active", async () => {
       (cache.get as any).mockReturnValue(false); // no live game
+      setupBotRunMocks();
+
+      (invokeLLM as any).mockResolvedValue({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              action: "buy",
+              ticker: "DORI",
+              amount: 30,
+              reasoning: "Positioning for potential LP gain based on recent trends.",
+              sentiment: "bullish",
+              confidence: 65,
+            }),
+          },
+        }],
+      });
+      (executeTrade as any).mockResolvedValue({
+        portfolio: { cashBalance: "170.00" },
+        holding: { shares: "0.5882" },
+      });
+
       const result = await runBotTrader();
-      expect(result).toBe(false);
-      // Should not call any DB functions
-      expect(getOrCreatePortfolio).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+      expect(executeTrade).toHaveBeenCalled();
+      expect(postComment).toHaveBeenCalled();
     });
 
-    it("should skip when live game cache returns undefined", async () => {
+    it("should trade when live game cache returns undefined", async () => {
       (cache.get as any).mockReturnValue(undefined); // no cache entry
+      setupBotRunMocks();
+
+      (invokeLLM as any).mockResolvedValue({
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              action: "hold",
+              ticker: "DORI",
+              amount: 0,
+              reasoning: "Holding current positions.",
+              sentiment: "neutral",
+              confidence: 50,
+            }),
+          },
+        }],
+      });
+
       const result = await runBotTrader();
-      expect(result).toBe(false);
+      // hold returns true (bot ran, just chose to hold)
+      expect(result).toBe(true);
     });
 
     it("should trade when a live game IS active", async () => {

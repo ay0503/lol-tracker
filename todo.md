@@ -517,3 +517,8 @@
 ## Change: Disable Dividends
 - [x] Skip dividend distribution in poll engine (code commented out)
 - [x] Keep the code intact but commented/disabled for easy re-enable
+
+## Bug: Quant Bot Not Trading
+- [x] Investigated: bot was correctly skipping because player was not in a live game (previous change restricted bot to live-game-only)
+- [x] Fix: removed the live game restriction — bot now trades every poll cycle regardless of game status
+- [x] Updated tests to reflect new always-trade behavior (81 tests passing)

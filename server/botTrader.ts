@@ -530,18 +530,14 @@ async function postBotComment(
 
 /**
  * Run the bot trader. Called from the polling engine every cycle.
- * Only trades when a live game is detected — the bot speculates during games.
+ * Trades every cycle regardless of live game status.
  * Returns true if the bot traded, false if it skipped.
  */
 export async function runBotTrader(): Promise<boolean> {
-  // Only trade when a live game is active
   const isInGame = cache.get<boolean>("player.liveGame.check");
-  if (!isInGame) {
-    return false;
-  }
 
   console.log("[Bot] ═══════════════════════════════════════");
-  console.log("[Bot] QuantBot trading cycle — LIVE GAME detected!");
+  console.log(`[Bot] QuantBot trading cycle — ${isInGame ? "LIVE GAME" : "no live game"}`);
 
   try {
 
