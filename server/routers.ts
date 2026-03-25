@@ -34,24 +34,6 @@ const THIRTY_MIN = 30 * 60 * 1000;
 const TEN_MIN = 10 * 60 * 1000;
 const FIVE_MIN = 5 * 60 * 1000;
 
-/** Per-user trade cooldown (2 minutes) */
-const TRADE_COOLDOWN_MS = 2 * 60 * 1000;
-export const lastTradeTime = new Map<number, number>();
-
-function checkTradeCooldown(userId: number) {
-  const last = lastTradeTime.get(userId);
-  if (last) {
-    const elapsed = Date.now() - last;
-    if (elapsed < TRADE_COOLDOWN_MS) {
-      const remaining = Math.ceil((TRADE_COOLDOWN_MS - elapsed) / 1000);
-      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Trading cooldown: please wait ${remaining}s before your next trade.` });
-    }
-  }
-}
-
-function recordTrade(userId: number) {
-  lastTradeTime.set(userId, Date.now());
-}
 
 export const appRouter = router({
   system: systemRouter,
@@ -451,7 +433,6 @@ export const appRouter = router({
         shares: z.number().positive().finite(), pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
-        checkTradeCooldown(ctx.user.id);
         // Block trading during admin halt, live games, or market closed
         const market = await getMarketStatus();
         if (market.adminHalt) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted by admin." });
@@ -468,7 +449,7 @@ export const appRouter = router({
         }
 
         const result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, serverPrice);
-        recordTrade(ctx.user.id);
+
         // Invalidate ledger and leaderboard caches after trade
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
@@ -495,7 +476,7 @@ export const appRouter = router({
         pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
-        checkTradeCooldown(ctx.user.id);
+
         const market = await getMarketStatus();
         if (market.adminHalt) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted by admin." });
         const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
@@ -511,7 +492,7 @@ export const appRouter = router({
         }
 
         const result = await executeShort(ctx.user.id, input.ticker, input.shares, serverPrice);
-        recordTrade(ctx.user.id);
+
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
         return {
@@ -525,7 +506,7 @@ export const appRouter = router({
         pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
-        checkTradeCooldown(ctx.user.id);
+
         const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
@@ -540,7 +521,7 @@ export const appRouter = router({
         }
 
         const result = await executeCover(ctx.user.id, input.ticker, input.shares, serverPrice);
-        recordTrade(ctx.user.id);
+
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
         return {
