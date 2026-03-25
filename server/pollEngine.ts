@@ -245,6 +245,9 @@ export async function pollNow(): Promise<PollResult> {
     result.wins = wins;
     result.losses = losses;
 
+    // Get previous price snapshot BEFORE storing the new one (for LP change calculation)
+    const previousPrice = await getLatestPrice();
+
     // 2. Store price snapshot (throttled: only if price changed or 5 min elapsed)
     const now = Date.now();
     const priceChanged = lastSnapshotPrice === null || Math.abs(price - lastSnapshotPrice) >= 0.005;
@@ -268,7 +271,6 @@ export async function pollNow(): Promise<PollResult> {
 
     console.log(`[Poll] ${newMatchIds.length} new matches to process (${recentMatchIds.length - newMatchIds.length} already processed)`);
 
-    const previousPrice = await getLatestPrice();
     const prevPrice = previousPrice ? parseFloat(previousPrice.price) : price;
 
     for (const matchId of newMatchIds) {
@@ -316,18 +318,20 @@ export async function pollNow(): Promise<PollResult> {
           continue;
         }
 
-        // 4. Distribute dividends (DISABLED — kept for easy re-enable)
-        // try {
-        //   const reason = participant.win
-        //     ? `Win on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`
-        //     : `Loss on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`;
-        //
-        //   await distributeDividends(matchId, participant.win, reason);
-        //   await markMatchDividendsPaid(matchId);
-        //   result.dividendsPaid++;
-        // } catch (err: any) {
-        //   result.errors.push(`Dividend error for ${matchId}: ${err.message}`);
-        // }
+        // 4. Distribute dividends (base + share bonus + rubber banding)
+        try {
+          const reason = participant.win
+            ? `Win on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`
+            : `Loss on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`;
+          // Estimate LP change from previous snapshot
+          const lpChange = previousPrice ? totalLP - previousPrice.totalLP : 0;
+          const divResult = await distributeDividends(matchId, participant.win, reason, lpChange);
+          await markMatchDividendsPaid(matchId);
+          result.dividendsPaid += divResult.holdersCount;
+          console.log(`[Poll] Dividends: $${divResult.totalDistributed.toFixed(2)} to ${divResult.holdersCount} holders`);
+        } catch (err: any) {
+          result.errors.push(`Dividend error for ${matchId}: ${err.message}`);
+        }
 
         // 5. Generate AI meme news
         try {

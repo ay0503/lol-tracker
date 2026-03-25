@@ -429,60 +429,128 @@ export async function getNews(limit = 20) {
 
 // ─── Dividends ───
 
-export async function distributeDividends(matchId: string, isWin: boolean, reason: string) {
+/**
+ * Distribute dividends after a game.
+ * - Base: $0.10 per holder per game
+ * - Share bonus: direction-dependent, scaled by LP change
+ *   WIN: DORI $0.002, DDRI $0.003, TDRI $0.004 per LP per share
+ *   LOSS: SDRI $0.003, XDRI $0.004 per LP per share
+ * - Rubber banding multiplier based on portfolio value
+ * - Cap: $3 per user per game (after multiplier)
+ */
+const BASE_DIVIDEND = 0.10;
+const DIVIDEND_CAP = 3.00;
+const WIN_RATES: Record<string, number> = { DORI: 0.002, DDRI: 0.003, TDRI: 0.004 };
+const LOSS_RATES: Record<string, number> = { SDRI: 0.003, XDRI: 0.004 };
+
+function getRubberBandMultiplier(portfolioValue: number): number {
+  if (portfolioValue < 50) return 3;
+  if (portfolioValue < 100) return 2;
+  if (portfolioValue < 150) return 1.5;
+  if (portfolioValue <= 250) return 1;
+  if (portfolioValue <= 400) return 0.75;
+  return 0.5;
+}
+
+export async function distributeDividends(
+  matchId: string, isWin: boolean, reason: string, lpChange?: number,
+) {
   const db = await getDb();
+  const absLP = Math.abs(lpChange ?? 0);
+  const bonusRates = isWin ? WIN_RATES : LOSS_RATES;
 
-  // Only positive/leveraged tickers receive dividends (on wins only)
-  const winTickers = [
-    { ticker: "DORI", rate: 0.50 },
-    { ticker: "DDRI", rate: 0.75 },
-    { ticker: "TDRI", rate: 1.00 },
-  ];
+  // Get all users with any long holdings
+  const allHoldings = await db.select().from(holdings)
+    .where(sql`CAST(${holdings.shares} AS REAL) > 0`);
 
-  // No dividends on losses — inverse tickers don't receive payouts
-  if (!isWin) return { totalDistributed: 0, tickersPaid: [] };
-
-  const eligibleTickers = winTickers;
-  let totalDistributed = 0;
-
-  for (const { ticker, rate } of eligibleTickers) {
-    // SQLite: use CAST(... AS REAL) instead of CAST(... AS DECIMAL)
-    const holders = await db.select().from(holdings)
-      .where(and(eq(holdings.ticker, ticker), sql`CAST(${holdings.shares} AS REAL) > 0`));
-
-    for (const holder of holders) {
-      const sharesHeld = parseFloat(holder.shares);
-      if (sharesHeld <= 0) continue;
-
-      const payout = sharesHeld * rate;
-      totalDistributed += payout;
-
-      // Use per-user lock to prevent race with concurrent trades
-      await withUserLock(holder.userId, async () => {
-        const portfolio = await getOrCreatePortfolio(holder.userId);
-        const newCash = parseFloat(portfolio.cashBalance) + payout;
-        await db.update(portfolios).set({
-          cashBalance: newCash.toFixed(2),
-          totalDividends: (parseFloat(portfolio.totalDividends) + payout).toFixed(2),
-          updatedAt: new Date().toISOString(),
-        }).where(eq(portfolios.userId, holder.userId));
-
-        await db.insert(dividends).values({
-          userId: holder.userId, ticker, shares: sharesHeld.toFixed(4),
-          dividendPerShare: rate.toFixed(4), totalPayout: payout.toFixed(2),
-          reason, matchId,
-        });
-
-        await db.insert(trades).values({
-          userId: holder.userId, ticker, type: "dividend",
-          shares: sharesHeld.toFixed(4), pricePerShare: rate.toFixed(4),
-          totalAmount: payout.toFixed(2),
-        });
-      });
-    }
+  // Group by userId
+  const userHoldings = new Map<number, typeof allHoldings>();
+  for (const h of allHoldings) {
+    const arr = userHoldings.get(h.userId) ?? [];
+    arr.push(h);
+    userHoldings.set(h.userId, arr);
   }
 
-  return { totalDistributed, tickersPaid: eligibleTickers.map(t => t.ticker) };
+  let totalDistributed = 0;
+
+  for (const [userId, userHolds] of userHoldings) {
+    // Calculate share bonus across all tickers
+    let shareBonus = 0;
+    let primaryTicker = "DORI";
+    let primaryShares = 0;
+
+    for (const h of userHolds) {
+      const shares = parseFloat(h.shares);
+      if (shares <= 0) continue;
+      const rate = bonusRates[h.ticker];
+      if (rate && absLP > 0) {
+        const bonus = shares * rate * absLP;
+        shareBonus += bonus;
+        if (shares > primaryShares) {
+          primaryShares = shares;
+          primaryTicker = h.ticker;
+        }
+      }
+      if (shares > primaryShares && !rate) {
+        // Track largest holding even if wrong direction (for recording)
+        if (primaryShares === 0) {
+          primaryShares = shares;
+          primaryTicker = h.ticker;
+        }
+      }
+    }
+
+    // Get portfolio value for rubber banding
+    const portfolio = await getOrCreatePortfolio(userId);
+    const cash = parseFloat(portfolio.cashBalance);
+    // Approximate portfolio value as cash + sum of (shares * avgCost) — rough but avoids full ETF price computation
+    let holdingsValue = 0;
+    for (const h of userHolds) {
+      holdingsValue += parseFloat(h.shares) * parseFloat(h.avgCostBasis);
+    }
+    const approxPortfolioValue = cash + holdingsValue;
+
+    const multiplier = getRubberBandMultiplier(approxPortfolioValue);
+    let rawPayout = (BASE_DIVIDEND + shareBonus) * multiplier;
+    const payout = Math.min(rawPayout, DIVIDEND_CAP);
+
+    if (payout < 0.01) continue;
+
+    totalDistributed += payout;
+
+    await withUserLock(userId, async () => {
+      const freshPortfolio = await getOrCreatePortfolio(userId);
+      const newCash = parseFloat(freshPortfolio.cashBalance) + payout;
+      await db.update(portfolios).set({
+        cashBalance: newCash.toFixed(2),
+        totalDividends: (parseFloat(freshPortfolio.totalDividends) + payout).toFixed(2),
+        updatedAt: new Date().toISOString(),
+      }).where(eq(portfolios.userId, userId));
+
+      await db.insert(dividends).values({
+        userId, ticker: primaryTicker, shares: primaryShares.toFixed(4),
+        dividendPerShare: (payout / Math.max(primaryShares, 0.0001)).toFixed(4),
+        totalPayout: payout.toFixed(2),
+        reason: `${reason} [${multiplier}x rubber band]`, matchId,
+      });
+
+      await db.insert(trades).values({
+        userId, ticker: primaryTicker, type: "dividend",
+        shares: primaryShares.toFixed(4),
+        pricePerShare: (payout / Math.max(primaryShares, 0.0001)).toFixed(4),
+        totalAmount: payout.toFixed(2),
+      });
+
+      // Notify user
+      await db.insert(notifications).values({
+        userId, type: "dividend_received",
+        title: `Dividend: +$${payout.toFixed(2)}`,
+        message: `${isWin ? "Win" : "Loss"} dividend${multiplier !== 1 ? ` (${multiplier}x boost)` : ""}: +$${payout.toFixed(2)}`,
+      });
+    });
+  }
+
+  return { totalDistributed, holdersCount: userHoldings.size };
 }
 
 export async function getUserDividends(userId: number, limit = 50) {
