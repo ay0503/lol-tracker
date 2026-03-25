@@ -25,8 +25,8 @@ import { LineChart, CandlestickChart as CandlestickIcon, Loader2 } from "lucide-
 import { useTicker } from "@/contexts/TickerContext";
 
 type ChartView = "area" | "candlestick";
-type TimeRange = "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
-const TIME_RANGES: TimeRange[] = ["6H", "1D", "1W", "1M", "3M", "6M", "YTD", "ALL"];
+type TimeRange = "3H" | "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
+const TIME_RANGES: TimeRange[] = ["3H", "6H", "1D", "1W", "1M", "3M", "6M", "YTD", "ALL"];
 
 const TICKERS = [
   { symbol: "DORI", name: "DORI", description: "1x LP Tracker", color: "#00C805" },
@@ -51,6 +51,7 @@ function getRangeSince(range: TimeRange): number | undefined {
   const HOUR = 60 * 60 * 1000;
   const DAY = 24 * HOUR;
   switch (range) {
+    case "3H": return now - 3 * HOUR;
     case "6H": return now - 6 * HOUR;
     case "1D": return now - 1 * DAY;
     case "1W": return now - 7 * DAY;
@@ -68,7 +69,7 @@ function getRangeSince(range: TimeRange): number | undefined {
 
 /** Check if a time range is intraday (should show individual snapshots, not daily) */
 function isIntradayRange(range: TimeRange): boolean {
-  return range === "6H" || range === "1D";
+  return range === "3H" || range === "6H" || range === "1D";
 }
 
 /** Format a timestamp into a short date label (or time for intraday) */
@@ -299,12 +300,12 @@ export default function LPChart() {
           </button>
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto scrollbar-thin pb-0.5">
           {TIME_RANGES.map((range) => (
             <button
               key={range}
               onClick={() => setActiveRange(range)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-200 ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
                 activeRange === range
                   ? "text-foreground"
                   : "bg-transparent text-muted-foreground hover:text-foreground"
@@ -362,14 +363,15 @@ export default function LPChart() {
 
       {/* Area Chart */}
       {chartView === "area" && !isLoading && data.length > 0 && (
-        <div
-          style={{
-            width: "100%",
-            height: 380,
-            minWidth: 300,
-            minHeight: 300,
-          }}
-        >
+        <div className="overflow-x-auto scrollbar-thin">
+          <div
+            style={{
+              width: data.length > 20 && intraday ? Math.max(data.length * 40, 800) : "100%",
+              height: 380,
+              minWidth: 300,
+              minHeight: 300,
+            }}
+          >
           {mounted && (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -452,6 +454,7 @@ export default function LPChart() {
               </AreaChart>
             </ResponsiveContainer>
           )}
+          </div>
         </div>
       )}
 

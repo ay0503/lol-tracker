@@ -48,7 +48,7 @@ export interface LPDataPoint {
   price?: number;
 }
 
-export type TimeRange = "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
+export type TimeRange = "3H" | "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
 
 export interface ETFDataPoint {
   date: string;

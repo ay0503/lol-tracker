@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 
-type TimeRange = "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
+type TimeRange = "3H" | "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
 
 const TICKER_COLORS: Record<string, { color: string; inverse: boolean }> = {
   DORI: { color: "#00C805", inverse: false },
@@ -193,6 +193,7 @@ export default function CandlestickChart({
   // Compute how many candles to show for each time range
   const getRangeDays = useCallback((range: TimeRange): number => {
     switch (range) {
+      case "3H": return 1; // Show today's candle
       case "6H": return 1; // Show today's candle
       case "1D": return 1; // Show today's candle
       case "1W": return 7;

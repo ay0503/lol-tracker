@@ -558,3 +558,9 @@
 - [x] Filter price history data for these shorter timeframes (6 hours, 24 hours)
 - [x] Intraday ranges show individual poll snapshots (not collapsed to daily)
 - [x] X-axis shows time (e.g., 2:30 PM) for intraday, date for daily+ ranges
+
+## Change: Chart Intraday X-Axis, 3H Range, Scrollable
+- [x] Fix X-axis to show times (not dates) for intraday ranges (3H, 6H, 1D)
+- [x] Add 3H time range option across LPChart, CandlestickChart, and playerData.ts
+- [x] Make time range buttons scrollable on mobile
+- [x] Make area chart horizontally scrollable when intraday data has many points
