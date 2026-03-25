@@ -69,11 +69,82 @@ export async function notifyNewMatch(
   win: boolean,
   kda: string,
   price: number,
+  gameDuration: number,
+  cs: number,
 ): Promise<void> {
   const emoji = win ? "✅" : "❌";
+  const minutes = Math.floor(gameDuration / 60);
+  const seconds = gameDuration % 60;
   await sendMessage(
-    `${emoji} **${champion}** ${kda} — ${win ? "Victory" : "Defeat"} | $DORI: **$${price.toFixed(2)}**`
+    `${emoji} **${champion}** ${kda} | ${cs}CS | ${minutes}:${seconds.toString().padStart(2, "0")} — ${win ? "Victory" : "Defeat"} | $DORI: **$${price.toFixed(2)}**`
   );
+}
+
+export async function notifyRankChange(
+  tierBefore: string,
+  divBefore: string,
+  tierAfter: string,
+  divAfter: string,
+  isPromotion: boolean,
+): Promise<void> {
+  const emoji = isPromotion ? "⬆️" : "⬇️";
+  const label = isPromotion ? "PROMOTED" : "DEMOTED";
+  await sendMessage(
+    `${emoji} **${label}** — ${tierBefore} ${divBefore} → **${tierAfter} ${divAfter}**`
+  );
+}
+
+export async function notifyStreak(
+  type: "win" | "loss",
+  count: number,
+): Promise<void> {
+  if (type === "win") {
+    const emoji = count >= 5 ? "🔥🔥🔥" : count >= 3 ? "🔥" : "✨";
+    await sendMessage(`${emoji} **${count} WIN STREAK!** 목도리 도마뱀 is on fire`);
+  } else {
+    const emoji = count >= 5 ? "💀💀💀" : count >= 3 ? "💀" : "😬";
+    await sendMessage(`${emoji} **${count} LOSS STREAK...** 목도리 도마뱀 is tilting`);
+  }
+}
+
+export async function notifyBigPriceMove(
+  ticker: string,
+  priceBefore: number,
+  priceAfter: number,
+): Promise<void> {
+  const change = priceAfter - priceBefore;
+  const pct = priceBefore > 0 ? ((change / priceBefore) * 100).toFixed(1) : "0";
+  const emoji = change >= 0 ? "🚀" : "💥";
+  await sendMessage(
+    `${emoji} **$${ticker} ${change >= 0 ? "+" : ""}${pct}%** — $${priceBefore.toFixed(2)} → $${priceAfter.toFixed(2)}`
+  );
+}
+
+export async function notifyDailySummary(
+  tier: string,
+  division: string,
+  lp: number,
+  price: number,
+  wins: number,
+  losses: number,
+  leaderboard: { name: string; value: number }[],
+): Promise<void> {
+  const top3 = leaderboard.slice(0, 3)
+    .map((e, i) => `${["🥇", "🥈", "🥉"][i]} ${e.name}: $${e.value.toFixed(2)}`)
+    .join("\n");
+
+  const totalGames = wins + losses;
+  const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(0) : "0";
+
+  await sendMessage([
+    "📊 **Daily Summary**",
+    `Rank: **${tier} ${division} ${lp}LP**`,
+    `$DORI: **$${price.toFixed(2)}**`,
+    `Record: **${wins}W ${losses}L** (${winRate}% WR)`,
+    "",
+    "**Leaderboard Top 3:**",
+    top3,
+  ].join("\n"));
 }
 
 export { isConfigured as isDiscordConfigured };

@@ -20,12 +20,15 @@ import {
   markMatchNewsGenerated, distributeDividends, addNews, getPendingOrders,
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
-  getPriceHistory,
+  getPriceHistory, getRecentMatchesFromDB, getLeaderboard,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
 import { runBotTrader, ensureBotUser } from "./botTrader";
-import { notifyGameStart, notifyGameEnd, notifyNewMatch, isDiscordConfigured } from "./discord";
+import {
+  notifyGameStart, notifyGameEnd, notifyNewMatch, notifyRankChange,
+  notifyStreak, notifyBigPriceMove, notifyDailySummary, isDiscordConfigured,
+} from "./discord";
 
 // Player config
 const GAME_NAME = "목도리 도마뱀";
@@ -55,6 +58,13 @@ let preGameSnapshot: {
   price: number;
   timestamp: number;
 } | null = null;
+
+// Previous rank for rank-change detection
+let previousTier: string | null = null;
+let previousDivision: string | null = null;
+
+// Daily summary: track last summary date to send once per day
+let lastDailySummaryDate: string | null = null;
 
 // Game-end event stored in cache for frontend to poll
 export interface GameEndEvent {
@@ -331,6 +341,14 @@ export async function pollNow(): Promise<PollResult> {
         } catch (err: any) {
           result.errors.push(`News gen error for ${matchId}: ${err.message}`);
         }
+
+        // Discord: notify new match result
+        notifyNewMatch(
+          participant.championName, participant.win,
+          `${participant.kills}/${participant.deaths}/${participant.assists}`,
+          price, match.info.gameDuration,
+          participant.totalMinionsKilled + participant.neutralMinionsKilled,
+        );
       } catch (err: any) {
         result.errors.push(`Match process error ${matchId}: ${err.message}`);
       }
@@ -377,6 +395,76 @@ export async function pollNow(): Promise<PollResult> {
 
         // Discord notification
         notifyGameEnd(lpDelta, prevPriceVal, price);
+      }
+    }
+
+    // Discord: rank change detection
+    if (result.newMatches > 0 && previousTier !== null && previousDivision !== null) {
+      if (tier !== previousTier || division !== previousDivision) {
+        // Determine if promotion or demotion using totalLP
+        const prevTotalLP = tierToTotalLP(previousTier, previousDivision, 0);
+        const currTotalLP = tierToTotalLP(tier, division, 0);
+        notifyRankChange(previousTier, previousDivision, tier, division, currTotalLP > prevTotalLP);
+      }
+    }
+    previousTier = tier;
+    previousDivision = division;
+
+    // Discord: win/loss streak detection (from recent matches in DB)
+    if (result.newMatches > 0) {
+      try {
+        const recentForStreak = await getRecentMatchesFromDB(10);
+        const nonRemakes = recentForStreak.filter(m => !m.isRemake);
+        if (nonRemakes.length >= 3) {
+          const firstResult = nonRemakes[0].win;
+          let streakCount = 0;
+          for (const m of nonRemakes) {
+            if (m.win === firstResult) streakCount++;
+            else break;
+          }
+          if (streakCount >= 3) {
+            notifyStreak(firstResult ? "win" : "loss", streakCount);
+          }
+        }
+      } catch { /* non-critical */ }
+    }
+
+    // Discord: big price move (>5% from a single match)
+    if (result.newMatches > 0 && prevPrice > 0) {
+      const pricePctChange = Math.abs((price - prevPrice) / prevPrice) * 100;
+      if (pricePctChange >= 5) {
+        notifyBigPriceMove("DORI", prevPrice, price);
+      }
+    }
+
+    // Discord: daily summary (once per day, after 10 PM KST / 6 AM PT)
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+    const hourUTC = now.getUTCHours();
+    // Send at ~1 PM UTC (10 PM KST / 6 AM PT)
+    if (hourUTC >= 13 && lastDailySummaryDate !== todayKey) {
+      try {
+        const { users: allUsers, holdingsByUser } = await getLeaderboard();
+        const fullHist = await getPriceHistory();
+        const etfPrices = fullHist.length > 0 ? computeAllETFPricesSync(fullHist) : { DORI: price };
+
+        const rankings = allUsers.map(u => {
+          const cash = u.cashBalance ? parseFloat(u.cashBalance) : 200;
+          const userHoldings = holdingsByUser.get(u.userId) ?? [];
+          let holdVal = 0, shortPnl = 0;
+          for (const h of userHoldings) {
+            const p = (etfPrices as Record<string, number>)[h.ticker] || 0;
+            holdVal += parseFloat(h.shares) * p;
+            shortPnl += parseFloat(h.shortShares) * (parseFloat(h.shortAvgPrice) - p);
+          }
+          return { name: u.userName || "Unknown", value: cash + holdVal + shortPnl };
+        }).sort((a, b) => b.value - a.value);
+
+        await notifyDailySummary(tier, division, lp, price, wins, losses, rankings);
+        lastDailySummaryDate = todayKey;
+        console.log("[Poll] Daily summary sent to Discord");
+      } catch (err: any) {
+        console.warn("[Poll] Daily summary failed:", err?.message);
       }
     }
 
