@@ -58,8 +58,8 @@ export default function PriceRankLegend() {
   const TIERS = useMemo(() => getTiers(t), [t]);
 
   const { data: etfPrices, isLoading } = trpc.prices.etfPrices.useQuery(undefined, {
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   // Use DORI price from etfPrices — single source of truth shared with PlayerHeader & TradingPanel

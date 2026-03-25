@@ -265,8 +265,8 @@ export default function Portfolio() {
 
   // Single source of truth for all current prices
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const getLivePrice = (ticker: string): number => {

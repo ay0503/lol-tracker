@@ -252,12 +252,12 @@ export default function LPChart() {
   // Chart data from etfHistory
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
     { ticker: activeTicker as any, since },
-    { refetchInterval: 30_000, staleTime: 15_000 }
+    { refetchInterval: 60_000, staleTime: 30_000 }
   );
 
   // Current price from etfPrices — single source of truth shared with TradingPanel
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
-    refetchInterval: 30_000, staleTime: 15_000,
+    refetchInterval: 60_000, staleTime: 30_000,
   });
 
   /**

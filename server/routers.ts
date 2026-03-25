@@ -397,7 +397,9 @@ export const appRouter = router({
         since: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        return cache.getOrSet(`prices.etfHistory.${input.ticker}.${input.since ?? "all"}`, async () => {
+        // Normalize 'since' to 5-min buckets so cache keys align across requests
+        const sinceBucket = input.since ? Math.floor(input.since / 300) * 300 : "all";
+        return cache.getOrSet(`prices.etfHistory.${input.ticker}.${sinceBucket}`, async () => {
           const history = await getPriceHistory(input.since);
           return computeETFHistoryFromSnapshots(input.ticker, history);
         }, THIRTY_MIN);
@@ -642,10 +644,17 @@ export const appRouter = router({
     rankings: publicProcedure.query(async () => {
       return cache.getOrSet("leaderboard.rankings", async () => {
         const { users: allUsers, holdingsByUser } = await getLeaderboard();
-        const history = await getPriceHistory() ?? [];
-        const tickerPrices: Record<string, number> = history.length > 0
-          ? computeAllETFPricesSync(history)
-          : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
+        // Reuse cached ETF prices to avoid recomputing from full history
+        const cachedPrices = cache.get<{ ticker: string; price: number }[]>("prices.etfPrices");
+        let tickerPrices: Record<string, number>;
+        if (cachedPrices) {
+          tickerPrices = Object.fromEntries(cachedPrices.map(p => [p.ticker, p.price]));
+        } else {
+          const history = await getPriceHistory();
+          tickerPrices = history.length > 0
+            ? computeAllETFPricesSync(history)
+            : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
+        }
 
         const rankings = allUsers.map((u) => {
           const cash = u.cashBalance ? parseFloat(u.cashBalance) : 200;

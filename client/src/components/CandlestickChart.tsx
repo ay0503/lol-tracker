@@ -309,7 +309,7 @@ export default function CandlestickChart({
   // Fetch full ETF history from backend
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
     { ticker: ticker as any },
-    { refetchInterval: 30_000, staleTime: 15_000 }
+    { refetchInterval: 60_000, staleTime: 30_000 }
   );
 
   // Process data based on timeRange
