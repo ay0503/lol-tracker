@@ -4,7 +4,7 @@ import { createClient } from "@libsql/client";
 import {
   InsertUser, users, portfolios, holdings, trades, priceHistory,
   orders, comments, news, dividends, matches, marketStatus,
-  portfolioSnapshots, notifications,
+  portfolioSnapshots, notifications, bets,
   type Order, type InsertOrder
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -665,6 +665,88 @@ export async function pruneOldPriceHistory(): Promise<number> {
   const total = (hourlyResult.rowsAffected ?? 0) + (dailyResult.rowsAffected ?? 0);
   if (total > 0) console.log(`[DB] Pruned ${total} old price history rows`);
   return total;
+}
+
+// ─── Game Bets ───
+
+export async function placeBet(userId: number, prediction: "win" | "loss", amount: number) {
+  const db = await getDb();
+  // Check for existing pending bet
+  const existing = await db.select().from(bets).where(and(eq(bets.userId, userId), eq(bets.status, "pending"))).limit(1);
+  if (existing.length > 0) throw new Error("You already have a pending bet. Wait for the current game to end.");
+
+  // Deduct from cash
+  return withUserLock(userId, async () => {
+    const portfolio = await getOrCreatePortfolio(userId);
+    const cash = parseFloat(portfolio.cashBalance);
+    if (amount > cash) throw new Error(`Insufficient cash. You have $${cash.toFixed(2)}.`);
+
+    await db.update(portfolios).set({
+      cashBalance: (cash - amount).toFixed(2),
+      updatedAt: new Date().toISOString(),
+    }).where(eq(portfolios.userId, userId));
+
+    const [bet] = await db.insert(bets).values({
+      userId, prediction, amount: amount.toFixed(2),
+    }).returning();
+
+    return bet;
+  });
+}
+
+export async function getPendingBets() {
+  const db = await getDb();
+  return db.select().from(bets).where(eq(bets.status, "pending"));
+}
+
+export async function getUserBets(userId: number, limit = 20) {
+  const db = await getDb();
+  return db.select().from(bets).where(eq(bets.userId, userId)).orderBy(desc(bets.createdAt)).limit(limit);
+}
+
+export async function resolveBets(matchId: string, playerWon: boolean) {
+  const db = await getDb();
+  const pending = await db.select().from(bets).where(eq(bets.status, "pending"));
+  let resolved = 0;
+
+  for (const bet of pending) {
+    const betAmount = parseFloat(bet.amount);
+    const correctPrediction = (bet.prediction === "win" && playerWon) || (bet.prediction === "loss" && !playerWon);
+
+    if (correctPrediction) {
+      const payout = betAmount * 2;
+      await withUserLock(bet.userId, async () => {
+        const portfolio = await getOrCreatePortfolio(bet.userId);
+        const cash = parseFloat(portfolio.cashBalance);
+        await db.update(portfolios).set({
+          cashBalance: (cash + payout).toFixed(2),
+          updatedAt: new Date().toISOString(),
+        }).where(eq(portfolios.userId, bet.userId));
+      });
+
+      await db.update(bets).set({ status: "won", matchId, payout: payout.toFixed(2) }).where(eq(bets.id, bet.id));
+
+      await db.insert(notifications).values({
+        userId: bet.userId,
+        type: "system",
+        title: "Bet Won! 🎉",
+        message: `You bet $${betAmount.toFixed(2)} on ${bet.prediction.toUpperCase()} and won $${payout.toFixed(2)}!`,
+      });
+    } else {
+      // Cash already deducted on bet placement
+      await db.update(bets).set({ status: "lost", matchId }).where(eq(bets.id, bet.id));
+
+      await db.insert(notifications).values({
+        userId: bet.userId,
+        type: "system",
+        title: "Bet Lost",
+        message: `You bet $${betAmount.toFixed(2)} on ${bet.prediction.toUpperCase()} — better luck next time.`,
+      });
+    }
+    resolved++;
+  }
+
+  return resolved;
 }
 
 // ─── Live Stats (computed from stored matches) ───

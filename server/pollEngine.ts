@@ -21,6 +21,7 @@ import {
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
   getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory,
+  resolveBets,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
@@ -367,6 +368,14 @@ export async function pollNow(): Promise<PollResult> {
           price, match.info.gameDuration,
           participant.totalMinionsKilled + participant.neutralMinionsKilled,
         );
+
+        // Resolve pending bets against this match result
+        try {
+          const resolved = await resolveBets(matchId, participant.win);
+          if (resolved > 0) console.log(`[Poll] Resolved ${resolved} bet(s) for match ${matchId} (${participant.win ? "WIN" : "LOSS"})`);
+        } catch (err: any) {
+          result.errors.push(`Bet resolution error: ${err.message}`);
+        }
       } catch (err: any) {
         result.errors.push(`Match process error ${matchId}: ${err.message}`);
       }

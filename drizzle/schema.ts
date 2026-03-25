@@ -236,3 +236,21 @@ export const notifications = sqliteTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Game bets — users bet on WIN/LOSS before a match.
+ * Payout is 2x if correct, lose bet if wrong.
+ */
+export const bets = sqliteTable("bets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  prediction: text("prediction", { enum: ["win", "loss"] }).notNull(),
+  amount: text("amount").notNull(), // bet amount in dollars
+  status: text("status", { enum: ["pending", "won", "lost"] }).notNull().default("pending"),
+  matchId: text("matchId"), // resolved against this match
+  payout: text("payout"), // amount won (null if lost or pending)
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+});
+
+export type Bet = typeof bets.$inferSelect;
+export type InsertBet = typeof bets.$inferInsert;

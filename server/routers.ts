@@ -18,6 +18,7 @@ import {
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
   getRawClient, getDb, toggleAdminHalt,
+  placeBet, getUserBets, getPendingBets,
 } from "./db";
 import { users, portfolios } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -637,6 +638,39 @@ export const appRouter = router({
           return getNews(newsLimit);
         }, THIRTY_MIN);
       }),
+  }),
+
+  // ─── Game Bets ───
+  betting: router({
+    place: protectedProcedure
+      .input(z.object({
+        prediction: z.enum(["win", "loss"]),
+        amount: z.number().min(1).max(50).finite(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const bet = await placeBet(ctx.user.id, input.prediction, input.amount);
+        cache.invalidate("leaderboard.rankings");
+        return bet;
+      }),
+    myBets: protectedProcedure.query(async ({ ctx }) => {
+      const raw = await getUserBets(ctx.user.id);
+      return raw.map(b => ({
+        id: b.id, prediction: b.prediction,
+        amount: parseFloat(b.amount),
+        status: b.status, matchId: b.matchId,
+        payout: b.payout ? parseFloat(b.payout) : null,
+        createdAt: b.createdAt,
+      }));
+    }),
+    pending: publicProcedure.query(async () => {
+      const raw = await getPendingBets();
+      return {
+        total: raw.length,
+        winBets: raw.filter(b => b.prediction === "win").length,
+        lossBets: raw.filter(b => b.prediction === "loss").length,
+        totalPool: raw.reduce((s, b) => s + parseFloat(b.amount), 0),
+      };
+    }),
   }),
 
   // ─── Leaderboard — cached 10 min ───
