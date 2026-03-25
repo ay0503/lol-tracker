@@ -249,6 +249,7 @@ export const en = {
     enterValidAmount: "Enter a valid amount",
     enterValidTarget: "Enter a valid target price",
     enterValidStop: "Enter a valid stop price",
+    noHoldings: "No holdings to sell",
   },
 
   // ─── Notifications ───

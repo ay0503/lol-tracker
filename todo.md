@@ -428,3 +428,6 @@
 ## Fix: Hide Admin User from Leaderboard and Ledger
 - [x] Filter out admin users from leaderboard query
 - [x] Filter out admin users from ledger (all trades) query
+
+## Fix: Limit Sell Ticker Options to Held Stocks
+- [x] Only show tickers the user holds shares in when selling

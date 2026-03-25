@@ -186,6 +186,40 @@ export default function TradingPanel() {
     return pendingOrders.filter((o: any) => o.status === "pending");
   }, [pendingOrders]);
 
+  // Filter tickers: when selling, only show tickers the user holds
+  const heldTickers = useMemo(() => {
+    if (!portfolio?.holdings) return new Set<string>();
+    return new Set(
+      portfolio.holdings
+        .filter((h: any) => h.shares > 0)
+        .map((h: any) => h.ticker)
+    );
+  }, [portfolio]);
+
+  const shortedTickers = useMemo(() => {
+    if (!portfolio?.holdings) return new Set<string>();
+    return new Set(
+      portfolio.holdings
+        .filter((h: any) => h.shortShares > 0)
+        .map((h: any) => h.ticker)
+    );
+  }, [portfolio]);
+
+  const isSellMode = (orderTab === "market" && tradeType === "sell") || 
+    (orderTab === "limit" && tradeType === "sell") || 
+    orderTab === "stop_loss";
+  const isCoverMode = orderTab === "short" && tradeType === "sell";
+
+  const availableTickers = useMemo(() => {
+    if (isSellMode) {
+      return TICKERS.filter(tk => heldTickers.has(tk.symbol));
+    }
+    if (isCoverMode) {
+      return TICKERS.filter(tk => shortedTickers.has(tk.symbol));
+    }
+    return TICKERS;
+  }, [isSellMode, isCoverMode, heldTickers, shortedTickers]);
+
   // Confirmation-aware trade handlers
   const executeMarketTrade = () => {
     tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice });
@@ -378,7 +412,7 @@ export default function TradingPanel() {
                     exit={{ opacity: 0, y: -5 }}
                     className="absolute top-full left-0 right-0 mt-1 z-20 bg-card border border-border rounded-lg shadow-xl overflow-hidden"
                   >
-                    {TICKERS.map((tk) => {
+                    {availableTickers.length > 0 ? availableTickers.map((tk) => {
                       const tPrice = getLivePrice(tk.symbol);
                       const tkKey = tk.symbol.toLowerCase() as keyof typeof t.tickers;
                       return (
@@ -397,7 +431,11 @@ export default function TradingPanel() {
                           </span>
                         </button>
                       );
-                    })}
+                    }) : (
+                      <div className="px-4 py-3 text-xs text-muted-foreground text-center">
+                        {t.trading.noHoldings || "No holdings to sell"}
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

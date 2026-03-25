@@ -250,6 +250,7 @@ export const ko: TranslationKeys = {
     enterValidAmount: "유효한 금액을 입력하세요",
     enterValidTarget: "유효한 목표가를 입력하세요",
     enterValidStop: "유효한 손절가를 입력하세요",
+    noHoldings: "판매할 보유 종목이 없습니다",
   },
 
   // ─── Notifications ───
