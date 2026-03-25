@@ -82,6 +82,9 @@ export default function TradingPanel() {
   const [showHistory, setShowHistory] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmation | null>(null);
+  const [tradingLocked, setTradingLocked] = useState(false);
+  const lastTradeTime = useRef(0);
+  const TRADE_COOLDOWN_MS = 2000; // 2 second cooldown between trades
 
   const ORDER_TABS: { id: OrderTab; label: string; icon: any }[] = [
     { id: "market", label: t.trading.market, icon: TrendingUp },
@@ -241,17 +244,31 @@ export default function TradingPanel() {
     }
   }, [isSellMode, isCoverMode, availableTickers, selectedTicker]);
 
+  // Debounce guard for all trade actions
+  const guardedExecute = (fn: () => void) => {
+    const now = Date.now();
+    if (tradingLocked || now - lastTradeTime.current < TRADE_COOLDOWN_MS) {
+      toast.error("Please wait before placing another trade");
+      return;
+    }
+    lastTradeTime.current = now;
+    setTradingLocked(true);
+    fn();
+    // Unlock after cooldown (mutations also unlock via onSettled)
+    setTimeout(() => setTradingLocked(false), TRADE_COOLDOWN_MS);
+  };
+
   // Confirmation-aware trade handlers
   const executeMarketTrade = () => {
-    tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice });
+    guardedExecute(() => tradeMutation.mutate({ ticker: selectedTicker, type: tradeType, shares, pricePerShare: tickerPrice }));
   };
 
   const executeShort = () => {
-    shortMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+    guardedExecute(() => shortMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice }));
   };
 
   const executeCover = () => {
-    coverMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice });
+    guardedExecute(() => coverMutation.mutate({ ticker: selectedTicker, shares, pricePerShare: tickerPrice }));
   };
 
   const maybeConfirm = (type: string, action: () => void) => {
@@ -508,7 +525,7 @@ export default function TradingPanel() {
                     <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
                   ))}
                 </div>
-                <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
+                <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
                   {tradeMutation.isPending ? t.trading.processing : `${tradeType === "buy" ? t.trading.buyTicker : t.trading.sellTicker} $${selectedTicker}`}
                 </button>
               </>
@@ -586,7 +603,7 @@ export default function TradingPanel() {
                 </div>
                 <button
                   onClick={tradeType === "sell" ? handleShort : handleCover}
-                  disabled={(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted}
+                  disabled={(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted}
                   className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "sell" ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]"}`}
                 >
                   {(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) ? t.trading.processing : tradeType === "sell" ? `${t.trading.shortTicker} $${selectedTicker}` : `${t.trading.coverTicker} $${selectedTicker}`}

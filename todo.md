@@ -522,3 +522,12 @@
 - [x] Investigated: bot was correctly skipping because player was not in a live game (previous change restricted bot to live-game-only)
 - [x] Fix: removed the live game restriction — bot now trades every poll cycle regardless of game status
 - [x] Updated tests to reflect new always-trade behavior (81 tests passing)
+
+## Feature: Admin Reset User Cash
+- [x] Add admin endpoint `admin.resetUserCash` to reset a specific user's cash balance
+- [x] Support lookup by display name (e.g., "전준하") or userId, configurable cash amount (default $200)
+
+## Bug: Double-Click Buys Twice Without Subtracting
+- [x] Add server-side per-user mutex (withUserLock) on executeTrade, executeShort, executeCover — concurrent trades for same user are serialized
+- [x] Add frontend 2-second cooldown + tradingLocked state on all trade buttons
+- [x] Both layers prevent rapid double-click from executing two trades

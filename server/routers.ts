@@ -17,8 +17,10 @@ import {
   getPortfolioHistory, getUserNotifications, getUnreadNotificationCount,
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
-  getRawClient,
+  getRawClient, getDb,
 } from "./db";
+import { users, portfolios } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
   getActiveGame, getQueueName,
@@ -890,6 +892,46 @@ export const appRouter = router({
       const botId = await getBotUserId();
       return { traded, botUserId: botId };
     }),
+
+    /** Reset a user's cash balance (lookup by display name or user ID) */
+    resetUserCash: adminProcedure
+      .input(z.object({
+        displayName: z.string().optional(),
+        userId: z.number().optional(),
+        cashAmount: z.number().min(0).default(200),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        let userId: number | null = null;
+        let userName: string | null = null;
+
+        if (input.userId) {
+          const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+          if (user.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: `User with ID ${input.userId} not found` });
+          userId = user[0].id;
+          userName = user[0].displayName || user[0].name;
+        } else if (input.displayName) {
+          const allUsers = await db.select().from(users);
+          const match = allUsers.find(u => (u.displayName || u.name) === input.displayName);
+          if (!match) throw new TRPCError({ code: "NOT_FOUND", message: `User "${input.displayName}" not found` });
+          userId = match.id;
+          userName = match.displayName || match.name;
+        } else {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Provide either displayName or userId" });
+        }
+
+        // Update portfolio cash
+        const portfolio = await getOrCreatePortfolio(userId);
+        await db.update(portfolios).set({ cashBalance: input.cashAmount.toFixed(2) }).where(eq(portfolios.userId, userId));
+
+        return {
+          success: true,
+          userId,
+          userName,
+          previousCash: portfolio.cashBalance,
+          newCash: input.cashAmount.toFixed(2),
+        };
+      }),
   }),
 });
 
