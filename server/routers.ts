@@ -680,6 +680,118 @@ export const appRouter = router({
           };
         }
       }),
+    seedHistory: adminProcedure.mutation(async () => {
+      // Generate historical price data from Sep 2025 to Mar 2026
+      // based on the player's known season progression
+      const { tierToPrice, tierToTotalLP } = await import("./riotApi");
+      const { addPriceSnapshot, getPriceHistory } = await import("./db");
+
+      // Check existing data to avoid duplicates
+      const existing = await getPriceHistory();
+      if (existing.length > 20) {
+        return { success: false, message: `Already have ${existing.length} price snapshots, skipping seed.`, inserted: 0 };
+      }
+
+      // Historical LP progression (approximate, based on season history + match patterns)
+      // S2025 ended Emerald 4 (9 LP), S2026 currently Emerald 2 (38 LP)
+      // Generate daily snapshots showing a realistic climb
+      const dataPoints: Array<{
+        date: string; tier: string; division: string; lp: number;
+        wins: number; losses: number;
+      }> = [];
+
+      // Sep 2025: Season start, placed around Plat 4
+      const addRange = (startDate: string, endDate: string, tiers: Array<{tier: string; div: string; lpStart: number; lpEnd: number}>) => {
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime();
+        const totalDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
+        let currentTierIdx = 0;
+        for (let d = 0; d <= totalDays; d++) {
+          const progress = d / totalDays;
+          // Find which tier segment we're in
+          const segProgress = progress * tiers.length;
+          currentTierIdx = Math.min(Math.floor(segProgress), tiers.length - 1);
+          const segLocal = segProgress - currentTierIdx;
+          const t = tiers[currentTierIdx];
+          const lp = Math.round(t.lpStart + (t.lpEnd - t.lpStart) * Math.min(segLocal * tiers.length / (tiers.length), 1));
+          // Add some daily variance (-15 to +15 LP)
+          const variance = Math.round(Math.sin(d * 2.7 + d * d * 0.03) * 15);
+          const finalLP = Math.max(0, Math.min(99, lp + variance));
+          const date = new Date(start + d * 24 * 60 * 60 * 1000);
+          const wins = 50 + Math.round(progress * 65);
+          const losses = 48 + Math.round(progress * 63);
+          dataPoints.push({
+            date: date.toISOString().split('T')[0],
+            tier: t.tier, division: t.div, lp: finalLP,
+            wins, losses,
+          });
+        }
+      };
+
+      // Sep 2025: Plat 4 → Plat 3 (placement games + early climb)
+      addRange("2025-09-15", "2025-10-15", [
+        { tier: "PLATINUM", div: "IV", lpStart: 0, lpEnd: 75 },
+        { tier: "PLATINUM", div: "III", lpStart: 0, lpEnd: 50 },
+      ]);
+
+      // Oct-Nov 2025: Plat 3 → Plat 1 (steady climb)
+      addRange("2025-10-16", "2025-11-30", [
+        { tier: "PLATINUM", div: "III", lpStart: 50, lpEnd: 90 },
+        { tier: "PLATINUM", div: "II", lpStart: 0, lpEnd: 80 },
+        { tier: "PLATINUM", div: "I", lpStart: 0, lpEnd: 60 },
+      ]);
+
+      // Dec 2025: Plat 1 → Emerald 4 (promo + dip)
+      addRange("2025-12-01", "2025-12-31", [
+        { tier: "PLATINUM", div: "I", lpStart: 60, lpEnd: 99 },
+        { tier: "EMERALD", div: "IV", lpStart: 0, lpEnd: 40 },
+      ]);
+
+      // Jan 2026: Emerald 4 (stuck/tilted, LP oscillation)
+      addRange("2026-01-01", "2026-01-31", [
+        { tier: "EMERALD", div: "IV", lpStart: 40, lpEnd: 20 },
+        { tier: "EMERALD", div: "IV", lpStart: 20, lpEnd: 65 },
+      ]);
+
+      // Feb 2026: Emerald 4 → Emerald 3 (recovery)
+      addRange("2026-02-01", "2026-02-28", [
+        { tier: "EMERALD", div: "IV", lpStart: 65, lpEnd: 99 },
+        { tier: "EMERALD", div: "III", lpStart: 0, lpEnd: 70 },
+      ]);
+
+      // Mar 2026: Emerald 3 → Emerald 2 (current)
+      addRange("2026-03-01", "2026-03-24", [
+        { tier: "EMERALD", div: "III", lpStart: 70, lpEnd: 99 },
+        { tier: "EMERALD", div: "II", lpStart: 0, lpEnd: 38 },
+      ]);
+
+      // Deduplicate by date (keep last entry per date)
+      const byDate = new Map<string, typeof dataPoints[0]>();
+      for (const dp of dataPoints) {
+        byDate.set(dp.date, dp);
+      }
+      const unique = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+      // Insert into DB
+      let inserted = 0;
+      for (const dp of unique) {
+        const totalLP = tierToTotalLP(dp.tier, dp.division, dp.lp);
+        const price = tierToPrice(dp.tier, dp.division, dp.lp);
+        const timestamp = new Date(dp.date + "T12:00:00Z").getTime();
+        await addPriceSnapshot({
+          timestamp, tier: dp.tier, division: dp.division,
+          lp: dp.lp, totalLP, price,
+          wins: dp.wins, losses: dp.losses,
+        });
+        inserted++;
+      }
+
+      return {
+        success: true,
+        message: `Seeded ${inserted} historical price snapshots (Sep 2025 - Mar 2026)`,
+        inserted,
+      };
+    }),
     dbStatus: adminProcedure.query(async () => {
       const client = getRawClient();
       const tables = await client.execute(

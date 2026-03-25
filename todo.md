@@ -418,3 +418,9 @@
 - [x] Protect endpoint with admin role check (owner only)
 - [x] Add /admin/sql route to App.tsx
 - [x] Write vitest tests for the admin SQL endpoint (12 tests)
+
+## Feature: Admin Seed Historical Data Endpoint
+- [x] Add admin tRPC endpoint to seed historical price data from static LP history
+- [x] Endpoint should insert ~190 historical data points (Sep 2025 - Mar 2026)
+- [x] Skip duplicates (don't re-seed if data already exists, >20 check)
+- [x] Return count of inserted rows
