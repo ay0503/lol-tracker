@@ -342,6 +342,50 @@ export async function pollNow(): Promise<PollResult> {
       }
     }
 
+    // Fallback game-end event: if new non-remake matches were found but no
+    // spectator-based event was emitted (e.g., spectator API missed the game
+    // start), generate the banner from price history instead.
+    const existingEvent = cache.get<GameEndEvent>("player.gameEndEvent");
+    if (result.newMatches > 0 && !existingEvent) {
+      // Get the second-to-last snapshot (the one before this poll added the current one)
+      const recentSnapshots = await getPriceHistory(Date.now() - 4 * 60 * 60 * 1000);
+      // Find the last snapshot that has different LP from current (i.e., the pre-game state)
+      const preGameSnap = [...recentSnapshots].reverse().find(s => s.totalLP !== totalLP);
+
+      if (preGameSnap) {
+        const prevLp = preGameSnap.lp;
+        const prevTotalLP = preGameSnap.totalLP;
+        const prevTier = preGameSnap.tier;
+        const prevDivision = preGameSnap.division;
+        const prevPriceVal = parseFloat(preGameSnap.price);
+
+        const lpDelta = totalLP - prevTotalLP;
+        const priceChangeVal = price - prevPriceVal;
+        const priceChangePctVal = prevPriceVal > 0 ? (priceChangeVal / prevPriceVal) * 100 : 0;
+
+        const fallbackEvent: GameEndEvent = {
+          lpBefore: prevLp,
+          lpAfter: lp,
+          lpDelta,
+          tierBefore: prevTier,
+          divisionBefore: prevDivision,
+          tierAfter: tier,
+          divisionAfter: division,
+          priceBefore: prevPriceVal,
+          priceAfter: price,
+          priceChange: priceChangeVal,
+          priceChangePct: priceChangePctVal,
+          timestamp: Date.now(),
+        };
+
+        cache.set("player.gameEndEvent", fallbackEvent, 10 * 60 * 1000);
+        console.log(`[Poll] Game END event (fallback from match): LP ${prevLp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${prevPriceVal.toFixed(2)} → $${price.toFixed(2)}`);
+
+        // Discord notification
+        notifyGameEnd(lpDelta, prevPriceVal, price);
+      }
+    }
+
     // 6. Execute pending orders
     // Compute ETF prices from full history (unified compounding)
     console.log("[Poll] Computing ETF prices from full history...");
