@@ -580,3 +580,24 @@
 
 ## Change: Disable Bot Sentiment Comments
 - [x] Commented out postBotComment calls in both runBotTrader and forceRunBot
+
+## Audit: Short/Cover Logic and Calculations
+- [ ] Audit executeShort: margin calculation, collateral requirements, share tracking
+- [ ] Audit executeCover: P&L calculation, cash return, share reduction
+- [ ] Audit portfolio valuation: how short positions affect total portfolio value
+- [ ] Audit leaderboard: does it correctly account for short P&L?
+- [ ] Audit ETF pricing: do inverse/leveraged ETFs correctly reflect in short positions?
+- [ ] Check edge cases: covering more than shorted, shorting with insufficient margin, zero-price scenarios
+
+## Audit: Race Conditions
+- [ ] Evaluate concurrent trade execution (multiple users trading simultaneously)
+- [ ] Evaluate poll engine vs user trades (price updates during trade execution)
+- [ ] Evaluate bot trader vs user trades (bot and user trading same ticker simultaneously)
+- [ ] Evaluate portfolio snapshot vs active trades
+- [ ] Check for TOCTOU (time-of-check-time-of-use) bugs in balance/share checks
+- [ ] Fix any identified race conditions
+
+## Bug: Candlestick Chart Broken for 3H/6H/1D
+- [x] Fix data grouping: switched from YYYY-MM-DD strings to Unix timestamps (seconds), group into 10m/15m/30m candles for 3H/6H/1D
+- [x] Fix x-axis: lightweight-charts now shows times natively with timeVisible: true
+- [x] Fix scrolling: chart uses fitContent() and proper barSpacing for intraday

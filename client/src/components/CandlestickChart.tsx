@@ -3,7 +3,7 @@
  * Converts backend ETF price history into OHLC candlestick format.
  * Supports all tickers: DORI, DDRI, TDRI, SDRI, XDRI.
  * Includes drawing/annotation tools: trend lines, horizontal lines, text markers.
- * Now fully wired to backend data — no static fallbacks.
+ * Supports intraday (3H/6H/1D) and daily+ timeframes.
  */
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
@@ -42,6 +42,8 @@ const TICKER_COLORS: Record<string, { color: string; inverse: boolean }> = {
   XDRI: { color: "#FF1744", inverse: true },
 };
 
+const INTRADAY_RANGES = new Set<TimeRange>(["3H", "6H", "1D"]);
+
 interface CandlestickChartProps {
   timeRange?: TimeRange;
   onVisibleRangeChange?: (range: TimeRange | null) => void;
@@ -57,92 +59,116 @@ interface ETFHistoryPoint {
   totalLP: number;
 }
 
-// Convert timestamp to YYYY-MM-DD for lightweight-charts
-function tsToDateStr(ts: number): string {
-  const d = new Date(ts);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+// ─── Candle interval in ms for each intraday range ───
+function getCandleIntervalMs(range: TimeRange): number {
+  switch (range) {
+    case "3H": return 10 * 60 * 1000;  // 10-minute candles
+    case "6H": return 15 * 60 * 1000;  // 15-minute candles
+    case "1D": return 30 * 60 * 1000;  // 30-minute candles
+    default: return 24 * 60 * 60 * 1000; // daily candles
+  }
 }
 
-// Convert ETF history points to OHLC candlestick format
-function generateCandlestickData(data: ETFHistoryPoint[]): CandlestickData<Time>[] {
+// ─── Get the time cutoff for a range ───
+function getRangeCutoffMs(range: TimeRange): number {
+  const now = Date.now();
+  switch (range) {
+    case "3H": return now - 3 * 60 * 60 * 1000;
+    case "6H": return now - 6 * 60 * 60 * 1000;
+    case "1D": return now - 24 * 60 * 60 * 1000;
+    case "1W": return now - 7 * 24 * 60 * 60 * 1000;
+    case "1M": return now - 30 * 24 * 60 * 60 * 1000;
+    case "3M": return now - 90 * 24 * 60 * 60 * 1000;
+    case "6M": return now - 180 * 24 * 60 * 60 * 1000;
+    case "YTD": {
+      const jan1 = new Date(new Date().getFullYear(), 0, 1).getTime();
+      return jan1;
+    }
+    case "ALL": return 0;
+    default: return now - 30 * 24 * 60 * 60 * 1000;
+  }
+}
+
+// ─── Generate candle data using Unix timestamps (seconds) ───
+// Groups data points into buckets based on the interval
+function generateCandleData(
+  data: ETFHistoryPoint[],
+  intervalMs: number
+): CandlestickData<Time>[] {
+  if (data.length === 0) return [];
+
+  const buckets = new Map<number, ETFHistoryPoint[]>();
+
+  for (const point of data) {
+    // Floor timestamp to the interval bucket
+    const bucketKey = Math.floor(point.timestamp / intervalMs) * intervalMs;
+    if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
+    buckets.get(bucketKey)!.push(point);
+  }
+
+  // Sort bucket keys chronologically
+  const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
+
   const result: CandlestickData<Time>[] = [];
-  const seenDates = new Set<string>();
+  let prevClose: number | null = null;
 
-  for (let i = 0; i < data.length; i++) {
-    const point = data[i];
-    const prev = i > 0 ? data[i - 1] : null;
+  for (const key of sortedKeys) {
+    const points = buckets.get(key)!;
+    const prices = points.map(p => p.price);
 
-    const closePrice = point.price;
-    const openPrice = prev ? prev.price : closePrice - 0.5;
+    const open = prevClose ?? prices[0];
+    const close = prices[prices.length - 1];
+    const high = Math.max(...prices, open, close);
+    const low = Math.min(...prices, open, close);
 
-    // Simulate intraday volatility
-    const volatility = Math.abs(closePrice - openPrice) * 0.3 + 0.5;
-    const seed1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
-    const rand1 = seed1 - Math.floor(seed1);
-    const seed2 = Math.sin(i * 43.2316 + 12.989) * 23421.6312;
-    const rand2 = seed2 - Math.floor(seed2);
-    const high = Math.max(openPrice, closePrice) + rand1 * volatility;
-    const low = Math.min(openPrice, closePrice) - rand2 * volatility;
+    // Add small simulated volatility for visual interest
+    const seed1 = Math.sin(key * 0.0001 + 78.233) * 43758.5453;
+    const rand1 = (seed1 - Math.floor(seed1)) * 0.3;
+    const seed2 = Math.sin(key * 0.0002 + 12.989) * 23421.6312;
+    const rand2 = (seed2 - Math.floor(seed2)) * 0.3;
 
-    const dateStr = tsToDateStr(point.timestamp);
+    const adjustedHigh = high + rand1;
+    const adjustedLow = Math.max(low - rand2, 0.01);
 
-    // Deduplicate: lightweight-charts requires strictly ascending unique times
-    if (seenDates.has(dateStr)) continue;
-    seenDates.add(dateStr);
+    // lightweight-charts expects Unix timestamp in SECONDS for UTCTimestamp
+    const timeSec = Math.floor(key / 1000) as unknown as Time;
 
     result.push({
-      time: dateStr as Time,
-      open: Math.round(openPrice * 100) / 100,
-      high: Math.round(Math.max(high, 0.01) * 100) / 100,
-      low: Math.round(Math.max(low, 0.01) * 100) / 100,
-      close: Math.round(closePrice * 100) / 100,
+      time: timeSec,
+      open: Math.round(open * 100) / 100,
+      high: Math.round(adjustedHigh * 100) / 100,
+      low: Math.round(adjustedLow * 100) / 100,
+      close: Math.round(close * 100) / 100,
     });
+
+    prevClose = close;
   }
 
   return result;
 }
 
-// Generate volume data from ETF history
-function generateVolumeData(data: ETFHistoryPoint[]) {
-  const seenDates = new Set<string>();
+// ─── Generate volume data ───
+function generateVolumeData(candles: CandlestickData<Time>[]) {
+  return candles.map((candle, i) => {
+    const change = candle.close - candle.open;
+    const seed = Math.sin(i * 7.234 + 3.456) * 12345.6789;
+    const rand = seed - Math.floor(seed);
 
-  return data
-    .map((point, i) => {
-      const prev = i > 0 ? data[i - 1] : null;
-      const change = prev ? point.price - prev.price : 0;
-      const dateStr = tsToDateStr(point.timestamp);
-
-      if (seenDates.has(dateStr)) return null;
-      seenDates.add(dateStr);
-
-      const seed = Math.sin(i * 7.234 + 3.456) * 12345.6789;
-      const rand = seed - Math.floor(seed);
-
-      return {
-        time: dateStr as Time,
-        value: Math.abs(change) * 0.5 + rand * 5 + 2,
-        color: change >= 0 ? "rgba(0, 200, 5, 0.3)" : "rgba(255, 82, 82, 0.3)",
-      };
-    })
-    .filter(Boolean) as { time: Time; value: number; color: string }[];
-}
-
-// Get the date string for N days ago from the last data point
-function getDateNDaysAgo(allCandles: CandlestickData<Time>[], days: number): string | null {
-  if (allCandles.length === 0) return null;
-  const targetIdx = Math.max(0, allCandles.length - days);
-  return allCandles[targetIdx].time as string;
+    return {
+      time: candle.time,
+      value: Math.abs(change) * 0.5 + rand * 5 + 2,
+      color: change >= 0 ? "rgba(0, 200, 5, 0.3)" : "rgba(255, 82, 82, 0.3)",
+    };
+  });
 }
 
 // Determine which time range label best matches a visible range span
-function detectTimeRange(visibleDays: number): TimeRange | null {
-  if (visibleDays <= 9) return "1W";
-  if (visibleDays <= 40) return "1M";
-  if (visibleDays <= 100) return "3M";
-  if (visibleDays <= 190) return "6M";
+function detectTimeRange(visibleBars: number, isIntraday: boolean): TimeRange | null {
+  if (isIntraday) return null; // Don't auto-detect for intraday
+  if (visibleBars <= 9) return "1W";
+  if (visibleBars <= 40) return "1M";
+  if (visibleBars <= 100) return "3M";
+  if (visibleBars <= 190) return "6M";
   return "ALL";
 }
 
@@ -173,42 +199,44 @@ export default function CandlestickChart({
   const [showTextInput, setShowTextInput] = useState(false);
   const markersRef = useRef<SeriesMarker<Time>[]>([]);
   const isSettingRangeRef = useRef(false);
+  const allCandles = useRef<CandlestickData<Time>[]>([]);
 
-  // Get ticker color
-  // Candle colors: green for up (close > open), red for down (close < open)
-  // For inverse tickers, the inverse price movement is already baked into the data,
-  // so candle colors should still follow the standard green-up/red-down convention.
-  const tickerMeta = TICKER_COLORS[ticker] || TICKER_COLORS.DORI;
+  const isIntraday = INTRADAY_RANGES.has(timeRange);
+
+  // Candle colors: green for up, red for down
   const upColor = "#00C805";
   const downColor = "#FF5252";
 
-  // Fetch full ETF history from backend (no time filter — we always load all for candlestick zoom)
+  // Fetch full ETF history from backend
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
     { ticker: ticker as any },
     { refetchInterval: 30_000, staleTime: 15_000 }
   );
 
-  const allCandles = useRef<CandlestickData<Time>[]>([]);
+  // Process data based on timeRange
+  const { candles, volumes } = useMemo(() => {
+    if (!etfHistory || etfHistory.length === 0) return { candles: [], volumes: [] };
 
-  // Compute how many candles to show for each time range
-  const getRangeDays = useCallback((range: TimeRange): number => {
-    switch (range) {
-      case "3H": return 1; // Show today's candle
-      case "6H": return 1; // Show today's candle
-      case "1D": return 1; // Show today's candle
-      case "1W": return 7;
-      case "1M": return 30;
-      case "3M": return 90;
-      case "6M": return 180;
-      case "YTD": return 83;
-      case "ALL": return 9999;
-      default: return 30;
-    }
-  }, []);
+    const cutoff = getRangeCutoffMs(timeRange);
+    const filtered = etfHistory.filter(p => p.timestamp >= cutoff);
 
-  // Initialize chart once, recreate when ticker, language, or data changes
+    // Use appropriate candle interval
+    const intervalMs = INTRADAY_RANGES.has(timeRange)
+      ? getCandleIntervalMs(timeRange)
+      : 24 * 60 * 60 * 1000;
+
+    const candleData = generateCandleData(
+      filtered.length > 0 ? filtered : etfHistory,
+      intervalMs
+    );
+    const volumeData = generateVolumeData(candleData);
+
+    return { candles: candleData, volumes: volumeData };
+  }, [etfHistory, timeRange]);
+
+  // Initialize chart — recreate when ticker, language, timeRange, or data changes
   useEffect(() => {
-    if (!chartContainerRef.current || !etfHistory || etfHistory.length === 0) return;
+    if (!chartContainerRef.current || candles.length === 0) return;
 
     // Clear previous annotations state
     setAnnotations([]);
@@ -242,29 +270,16 @@ export default function CandlestickChart({
       },
       timeScale: {
         borderColor: "rgba(42, 45, 56, 0.8)",
-        timeVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
         rightOffset: 2,
-        barSpacing: 8,
-        tickMarkFormatter: (time: any) => {
-          if (typeof time === "string") {
-            const parts = time.split("-");
-            if (parts.length === 3) {
-              const month = parseInt(parts[1], 10);
-              const day = parseInt(parts[2], 10);
-              if (language === "ko") {
-                return `${month}\uc6d4 ${day}\uc77c`;
-              }
-              const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-              return `${months[month - 1]} ${day}`;
-            }
-          }
-          return String(time);
-        },
+        barSpacing: isIntraday ? 12 : 8,
+        minBarSpacing: isIntraday ? 6 : 4,
       },
       handleScroll: { vertTouchDrag: false },
     });
 
-    // Candlestick series with FULL data
+    // Candlestick series
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor,
       downColor,
@@ -274,11 +289,10 @@ export default function CandlestickChart({
       wickUpColor: upColor,
     });
 
-    const candleData = generateCandlestickData(etfHistory);
-    allCandles.current = candleData;
-    candlestickSeries.setData(candleData);
+    allCandles.current = candles;
+    candlestickSeries.setData(candles);
 
-    // Volume histogram with FULL data
+    // Volume histogram
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
       priceScaleId: "volume",
@@ -288,23 +302,10 @@ export default function CandlestickChart({
       scaleMargins: { top: 0.8, bottom: 0 },
     });
 
-    const volumeData = generateVolumeData(etfHistory);
-    volumeSeries.setData(volumeData);
+    volumeSeries.setData(volumes);
 
-    // Set initial visible range based on timeRange prop
-    const days = getRangeDays(timeRange);
-    if (timeRange === "ALL" || days >= candleData.length) {
-      chart.timeScale().fitContent();
-    } else {
-      const fromDate = getDateNDaysAgo(candleData, days);
-      const toDate = candleData[candleData.length - 1]?.time as string;
-      if (fromDate && toDate) {
-        chart.timeScale().setVisibleRange({
-          from: fromDate as Time,
-          to: toDate as Time,
-        });
-      }
-    }
+    // Fit content to show all candles
+    chart.timeScale().fitContent();
 
     // Listen for visible range changes to sync UI pills
     if (onVisibleRangeChange) {
@@ -312,8 +313,8 @@ export default function CandlestickChart({
         if (isSettingRangeRef.current) return;
         if (!logicalRange) return;
         const visibleBars = Math.round(logicalRange.to - logicalRange.from);
-        const detected = detectTimeRange(visibleBars);
-        onVisibleRangeChange(detected);
+        const detected = detectTimeRange(visibleBars, isIntraday);
+        if (detected) onVisibleRangeChange(detected);
       });
     }
 
@@ -340,35 +341,7 @@ export default function CandlestickChart({
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [ticker, language, etfHistory]);
-
-  // Update visible range when timeRange prop changes (without recreating chart)
-  useEffect(() => {
-    if (!chartRef.current || allCandles.current.length === 0) return;
-
-    isSettingRangeRef.current = true;
-
-    const days = getRangeDays(timeRange);
-    const candleData = allCandles.current;
-
-    if (timeRange === "ALL" || days >= candleData.length) {
-      chartRef.current.timeScale().fitContent();
-    } else {
-      const fromDate = getDateNDaysAgo(candleData, days);
-      const toDate = candleData[candleData.length - 1]?.time as string;
-      if (fromDate && toDate) {
-        chartRef.current.timeScale().setVisibleRange({
-          from: fromDate as Time,
-          to: toDate as Time,
-        });
-      }
-    }
-
-    // Reset flag after a short delay to allow the range change to propagate
-    setTimeout(() => {
-      isSettingRangeRef.current = false;
-    }, 100);
-  }, [timeRange, getRangeDays]);
+  }, [ticker, language, candles, volumes, isIntraday]);
 
   // Add horizontal line
   const addHorizontalLine = useCallback(
@@ -419,19 +392,8 @@ export default function CandlestickChart({
     const candleData = allCandles.current;
     if (candleData.length < 2) return;
 
-    // Use visible range for trend line endpoints
-    const visibleRange = chartRef.current.timeScale().getVisibleRange();
-    let startCandle = candleData[0];
-    let endCandle = candleData[candleData.length - 1];
-
-    if (visibleRange) {
-      const fromStr = visibleRange.from as string;
-      const toStr = visibleRange.to as string;
-      const visibleStart = candleData.find((c) => (c.time as string) >= fromStr);
-      const visibleEnd = [...candleData].reverse().find((c) => (c.time as string) <= toStr);
-      if (visibleStart) startCandle = visibleStart;
-      if (visibleEnd) endCandle = visibleEnd;
-    }
+    const startCandle = candleData[0];
+    const endCandle = candleData[candleData.length - 1];
 
     const lineData: LineData<Time>[] = [
       { time: startCandle.time, value: startCandle.open },
