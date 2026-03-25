@@ -1,6 +1,6 @@
 /**
  * LP Polling Engine
- * Runs every 20 minutes to:
+ * Runs every 2 minutes to:
  * 1. Fetch current LP from Riot API
  * 2. Store price snapshot
  * 3. Fetch new matches and store them
@@ -28,8 +28,8 @@ const GAME_NAME = "목도리 도마뱀";
 const TAG_LINE = "dori";
 const PUUID_CACHE: { puuid?: string } = {};
 
-// Polling interval (20 minutes)
-const POLL_INTERVAL_MS = 20 * 60 * 1000;
+// Polling interval (2 minutes)
+const POLL_INTERVAL_MS = 2 * 60 * 1000;
 
 let pollTimer: NodeJS.Timeout | null = null;
 let isPolling = false;
@@ -375,7 +375,7 @@ export function startPolling() {
     pollNow().catch(err => console.error("[Poll] Initial poll failed:", err));
   }, 3000);
 
-  // Then every 20 minutes
+  // Then every 2 minutes
   pollTimer = setInterval(() => {
     pollNow().catch(err => console.error("[Poll] Scheduled poll failed:", err));
   }, POLL_INTERVAL_MS);

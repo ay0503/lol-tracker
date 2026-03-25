@@ -175,9 +175,12 @@ export default function CandlestickChart({
   const isSettingRangeRef = useRef(false);
 
   // Get ticker color
+  // Candle colors: green for up (close > open), red for down (close < open)
+  // For inverse tickers, the inverse price movement is already baked into the data,
+  // so candle colors should still follow the standard green-up/red-down convention.
   const tickerMeta = TICKER_COLORS[ticker] || TICKER_COLORS.DORI;
-  const upColor = tickerMeta.inverse ? "#FF5252" : tickerMeta.color;
-  const downColor = tickerMeta.inverse ? tickerMeta.color : "#FF5252";
+  const upColor = "#00C805";
+  const downColor = "#FF5252";
 
   // Fetch full ETF history from backend (no time filter — we always load all for candlestick zoom)
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(

@@ -1,7 +1,7 @@
 /**
  * Simple in-memory cache with TTL and manual invalidation.
  * Used to avoid redundant DB queries for data that only changes
- * when the polling engine runs (every ~20 minutes).
+ * when the polling engine runs (every ~2 minutes).
  *
  * Usage:
  *   const data = await cache.getOrSet("player.current", () => fetchFromDB(), 30 * 60 * 1000);

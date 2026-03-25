@@ -665,7 +665,7 @@ export const appRouter = router({
     }),
     start: publicProcedure.mutation(() => {
       startPolling();
-      return { success: true, message: "Polling started (every 20 minutes)" };
+      return { success: true, message: "Polling started (every 2 minutes)" };
     }),
     stop: publicProcedure.mutation(() => {
       stopPolling();

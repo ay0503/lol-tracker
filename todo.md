@@ -444,3 +444,9 @@
 ## Bug: Users only see DORI ticker despite buying different stocks
 - [x] Audit auto-switch useEffect in TradingPanel for unintended ticker resets
 - [x] Fix: replaced reactive useEffect with mode-transition-aware logic using useRef
+
+## Bug: Inverse ticker candle charts are all red
+- [x] Fix candle color logic for inverse tickers ($SDRI, $XDRI) - now uses standard green-up/red-down for all tickers
+
+## Change: Reduce poll interval to 2 minutes
+- [x] Change match/update polling interval from 20 min to 2 min
