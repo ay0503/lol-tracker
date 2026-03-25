@@ -307,6 +307,45 @@ export default function CandlestickChart({
     // Fit content to show all candles
     chart.timeScale().fitContent();
 
+    // Smart zoom for intraday: scroll to the region with the most price movement
+    if (isIntraday && candles.length > 5) {
+      const prices = candles.map(c => c.close);
+      const totalRange = Math.max(...prices) - Math.min(...prices);
+      if (totalRange > 0.01) {
+        const threshold = totalRange * 0.05;
+        const basePrice = prices[0];
+        let firstChangeIdx = 0;
+        let lastChangeIdx = candles.length - 1;
+
+        for (let i = 0; i < prices.length; i++) {
+          if (Math.abs(prices[i] - basePrice) > threshold) {
+            firstChangeIdx = i;
+            break;
+          }
+        }
+        for (let i = prices.length - 1; i >= 0; i--) {
+          if (Math.abs(prices[i] - prices[prices.length - 1]) > threshold ||
+              Math.abs(prices[i] - basePrice) > threshold) {
+            lastChangeIdx = i;
+            break;
+          }
+        }
+
+        const activeLen = lastChangeIdx - firstChangeIdx;
+        const buffer = Math.max(1, Math.floor(activeLen * 0.15));
+        const startIdx = Math.max(0, firstChangeIdx - buffer);
+        const endIdx = Math.min(candles.length - 1, lastChangeIdx + buffer);
+
+        // Only zoom if we'd skip a significant flat portion (>30% of candles)
+        if ((endIdx - startIdx + 1) < candles.length * 0.7) {
+          chart.timeScale().setVisibleLogicalRange({
+            from: startIdx,
+            to: endIdx,
+          });
+        }
+      }
+    }
+
     // Listen for visible range changes to sync UI pills
     if (onVisibleRangeChange) {
       chart.timeScale().subscribeVisibleLogicalRangeChange((logicalRange) => {

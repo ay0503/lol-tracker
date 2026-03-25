@@ -622,3 +622,9 @@
 ## Verify: Admin Table Edits Actually Modify Database
 - [x] Confirmed: all admin CRUD endpoints (updateRow, deleteRow, insertRow) execute real SQL via getRawClient().execute()
 - [x] Note: SQL is string-concatenated (not parameterized) — acceptable for admin-only but noted as risk
+
+## Feature: Smart Chart Zoom for Intraday Views
+- [x] For 3H/6H/1D views, detect the region where price actually changed (5% threshold of total range)
+- [x] Area chart: auto-trim flat data points, keeping 15% buffer context on each side
+- [x] Candlestick chart: auto-scroll visible range to the active price region
+- [x] Only triggers when >30% of points would be trimmed (avoids unnecessary zoom on active data)

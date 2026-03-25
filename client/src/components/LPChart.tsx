@@ -168,8 +168,49 @@ export default function LPChart() {
     let points: typeof filtered;
 
     if (intraday) {
-      // For 6H/1D: show every individual snapshot (no daily collapse)
+      // For 3H/6H/1D: show every individual snapshot (no daily collapse)
       points = [...filtered].sort((a, b) => a.timestamp - b.timestamp);
+
+      // Smart zoom: find the region where price actually changed and focus on it
+      if (points.length > 3) {
+        const prices = points.map(p => p.price);
+        const totalRange = Math.max(...prices) - Math.min(...prices);
+        // Only smart-zoom if there's meaningful price variation
+        if (totalRange > 0.01) {
+          // Find first and last index where price differs from the initial flat value
+          const threshold = totalRange * 0.05; // 5% of total range = "meaningful change"
+          const basePrice = prices[0];
+          let firstChangeIdx = 0;
+          let lastChangeIdx = points.length - 1;
+
+          for (let i = 0; i < prices.length; i++) {
+            if (Math.abs(prices[i] - basePrice) > threshold) {
+              firstChangeIdx = i;
+              break;
+            }
+          }
+
+          for (let i = prices.length - 1; i >= 0; i--) {
+            if (Math.abs(prices[i] - prices[prices.length - 1]) > threshold ||
+                Math.abs(prices[i] - basePrice) > threshold) {
+              lastChangeIdx = i;
+              break;
+            }
+          }
+
+          // Add context buffer: ~15% of the active range on each side, minimum 2 points
+          const activeLen = lastChangeIdx - firstChangeIdx;
+          const buffer = Math.max(2, Math.floor(activeLen * 0.15));
+          const startIdx = Math.max(0, firstChangeIdx - buffer);
+          const endIdx = Math.min(points.length - 1, lastChangeIdx + buffer);
+
+          // Only trim if we'd actually remove a significant flat portion (>30% of points)
+          const trimmedLen = endIdx - startIdx + 1;
+          if (trimmedLen < points.length * 0.7) {
+            points = points.slice(startIdx, endIdx + 1);
+          }
+        }
+      }
     } else {
       // Collapse to one point per day — keep the LAST snapshot of each day
       const dayMap = new Map<string, typeof filtered[0]>();
