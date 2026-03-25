@@ -452,9 +452,9 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // Discord: daily summary (once per day, after 10 PM KST / 6 AM PT)
-    const now = new Date();
-    const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-    const hourUTC = now.getUTCHours();
+    const nowDate = new Date();
+    const todayKey = `${nowDate.getFullYear()}-${nowDate.getMonth()}-${nowDate.getDate()}`;
+    const hourUTC = nowDate.getUTCHours();
     // Send at ~1 PM UTC (10 PM KST / 6 AM PT)
     if (hourUTC >= 13 && lastDailySummaryDate !== todayKey) {
       try {

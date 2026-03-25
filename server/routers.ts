@@ -687,6 +687,33 @@ export const appRouter = router({
         return rankings;
       }, TEN_MIN);
     }),
+    /** Public user profile: trades + holdings for any user */
+    userProfile: publicProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const trades = await getUserTrades(input.userId, 20);
+        const holdings = await getUserHoldings(input.userId);
+        const history = await getPortfolioHistory(input.userId, Date.now() - 7 * 24 * 60 * 60 * 1000);
+        return {
+          trades: trades.map(t => ({
+            ticker: t.ticker, type: t.type,
+            shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
+            totalAmount: parseFloat(t.totalAmount),
+            createdAt: t.createdAt,
+          })),
+          holdings: holdings.map(h => ({
+            ticker: h.ticker,
+            shares: parseFloat(h.shares),
+            avgCostBasis: parseFloat(h.avgCostBasis),
+            shortShares: parseFloat(h.shortShares),
+            shortAvgPrice: parseFloat(h.shortAvgPrice),
+          })).filter(h => h.shares > 0 || h.shortShares > 0),
+          portfolioHistory: history.map(s => ({
+            totalValue: parseFloat(s.totalValue),
+            timestamp: Number(s.timestamp),
+          })),
+        };
+      }),
   }),
 
   // ─── Portfolio History (user-specific, no server cache) ───
