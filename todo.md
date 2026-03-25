@@ -395,3 +395,6 @@
 - [x] Write railway.toml configuration
 - [x] Write full Vercel + Railway deployment guide (DEPLOYMENT_GUIDE.md)
 - [x] Add environment variable documentation for split deployment
+
+## Bug: Line graph extends past current date
+- [ ] Fix LPChart line graph to stop at the current date instead of continuing endlessly

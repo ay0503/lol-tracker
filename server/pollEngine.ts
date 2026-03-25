@@ -370,8 +370,10 @@ export function startPolling() {
 
   console.log(`[Poll] Starting polling every ${POLL_INTERVAL_MS / 1000 / 60} minutes`);
 
-  // Run immediately on start
-  pollNow().catch(err => console.error("[Poll] Initial poll failed:", err));
+  // Small delay before first poll to ensure DB is ready (migrations may still be settling)
+  setTimeout(() => {
+    pollNow().catch(err => console.error("[Poll] Initial poll failed:", err));
+  }, 3000);
 
   // Then every 20 minutes
   pollTimer = setInterval(() => {

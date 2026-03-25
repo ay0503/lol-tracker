@@ -126,9 +126,11 @@ RUN mkdir -p /app/data
 
 ENV NODE_ENV=production
 ENV PORT=3000
+# Default DATABASE_PATH to the persistent volume mount
+ENV DATABASE_PATH=/app/data/lol-tracker.db
 EXPOSE 3000
-# Migrations run at startup so they can access the persistent volume
-CMD ["sh", "-c", "pnpm db:push && node dist/index.js"]
+# Migrations run at startup so they target the volume-mounted DB
+CMD ["sh", "-c", "DATABASE_PATH=/app/data/lol-tracker.db pnpm db:push && node dist/index.js"]
 ```
 
 ---

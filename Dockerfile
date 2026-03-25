@@ -23,12 +23,14 @@ COPY --from=build /app/pnpm-lock.yaml ./
 COPY --from=build /app/patches ./patches
 COPY --from=build /app/drizzle.config.ts ./
 
-# Create data directory for SQLite
+# Create data directory for SQLite (Railway volume mounts here)
 RUN mkdir -p /app/data
 
 ENV NODE_ENV=production
 ENV PORT=3000
+# Default DATABASE_PATH to the persistent volume mount
+ENV DATABASE_PATH=/app/data/lol-tracker.db
 EXPOSE 3000
 
-# Run migrations then start the server
-CMD ["sh", "-c", "pnpm db:push && node dist/index.js"]
+# Run migrations against the volume-mounted DB, then start the server
+CMD ["sh", "-c", "DATABASE_PATH=/app/data/lol-tracker.db pnpm db:push && node dist/index.js"]
