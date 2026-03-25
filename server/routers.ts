@@ -442,7 +442,7 @@ export const appRouter = router({
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed: " + (market.reason || "") });
 
         // Server-side price validation: compute real ETF price and reject stale client prices
-        const history = await getPriceHistory();
+        const history = await getPriceHistory() ?? [];
         const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
         const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
         if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
@@ -488,7 +488,7 @@ export const appRouter = router({
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
 
         // Server-side price validation
-        const history = await getPriceHistory();
+        const history = await getPriceHistory() ?? [];
         const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
         const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
         if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
@@ -521,7 +521,7 @@ export const appRouter = router({
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
 
         // Server-side price validation
-        const history = await getPriceHistory();
+        const history = await getPriceHistory() ?? [];
         const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
         const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
         if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {

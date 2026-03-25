@@ -539,13 +539,6 @@ export async function runBotTrader(): Promise<boolean> {
   console.log("[Bot] ═══════════════════════════════════════");
   console.log(`[Bot] QuantBot trading cycle — ${isInGame ? "LIVE GAME" : "no live game"}`);
 
-  // Respect market halt — same rules as human traders
-  if (isInGame) {
-    console.log("[Bot] Market halted (live game) — skipping trade cycle");
-    console.log("[Bot] ═══════════════════════════════════════");
-    return false;
-  }
-
   try {
 
     // Ensure bot user exists

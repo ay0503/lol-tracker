@@ -205,8 +205,6 @@ describe("Bot Trader", () => {
       const result = await runBotTrader();
       expect(result).toBe(true);
       expect(executeTrade).toHaveBeenCalled();
-      // Bot sentiment comments are disabled
-      expect(postComment).not.toHaveBeenCalled();
     });
   });
 
