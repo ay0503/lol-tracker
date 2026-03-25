@@ -394,7 +394,8 @@ export default function CandlestickChart({
           },
         }),
       },
-      handleScroll: { vertTouchDrag: false },
+      handleScroll: { vertTouchDrag: false, mouseWheel: true, pressedMouseMove: true },
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
     });
 
     // Candlestick series

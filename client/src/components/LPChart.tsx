@@ -6,7 +6,7 @@
  * Uses numerical timestamp X-axis for proper temporal spacing.
  * Collapses intraday snapshots to one point per day (last snapshot wins).
  */
-import { useMemo, useEffect, useCallback, useState } from "react";
+import { useMemo, useEffect, useCallback, useState, useRef } from "react";
 import {
   AreaChart,
   Area,
@@ -240,6 +240,9 @@ export default function LPChart() {
   const [activeRange, setActiveRange] = useState<TimeRange>("1M");
   const { activeTicker, setActiveTicker } = useTicker();
   const [mounted, setMounted] = useState(false);
+  const lineChartRef = useRef<HTMLDivElement>(null);
+  // Zoom state: [startIndex, endIndex] as fraction of data length (0-1)
+  const [zoomRange, setZoomRange] = useState<[number, number]>([0, 1]);
 
   const tickerInfo = TICKERS.find((tk) => tk.symbol === activeTicker) || TICKERS[0];
   const tickerColor = tickerInfo.color;
@@ -352,6 +355,44 @@ export default function LPChart() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Reset zoom when range or ticker changes
+  useEffect(() => { setZoomRange([0, 1]); }, [activeRange, activeTicker]);
+
+  // Wheel zoom handler for line chart
+  useEffect(() => {
+    const el = lineChartRef.current;
+    if (!el || chartView !== "area") return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only zoom on pinch (ctrlKey) or trackpad pinch gesture
+      if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+
+      setZoomRange(([start, end]) => {
+        const range = end - start;
+        const zoomFactor = e.deltaY > 0 ? 0.1 : -0.1; // zoom out : zoom in
+        const mouseXFrac = e.offsetX / el.clientWidth;
+        const center = start + range * mouseXFrac;
+
+        const newRange = Math.max(0.05, Math.min(1, range + range * zoomFactor));
+        let newStart = center - newRange * mouseXFrac;
+        let newEnd = center + newRange * (1 - mouseXFrac);
+
+        // Clamp to [0, 1]
+        if (newStart < 0) { newEnd -= newStart; newStart = 0; }
+        if (newEnd > 1) { newStart -= (newEnd - 1); newEnd = 1; }
+        newStart = Math.max(0, newStart);
+        newEnd = Math.min(1, newEnd);
+
+        return [newStart, newEnd];
+      });
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [chartView]);
+
   const handleVisibleRangeChange = useCallback(
     (detectedRange: TimeRange | null) => {
       if (detectedRange && detectedRange !== activeRange) {
@@ -369,18 +410,26 @@ export default function LPChart() {
   const isPositive = priceChange >= 0;
   const chartColor = isPositive ? tickerColor : "#FF5252";
 
-  const minPrice = data.length > 0 ? Math.min(...data.map((d) => d.price)) : 0;
-  const maxPrice = data.length > 0 ? Math.max(...data.map((d) => d.price)) : 100;
+  // Apply zoom to data
+  const zoomedData = useMemo(() => {
+    if (data.length === 0 || (zoomRange[0] === 0 && zoomRange[1] === 1)) return data;
+    const startIdx = Math.floor(zoomRange[0] * data.length);
+    const endIdx = Math.ceil(zoomRange[1] * data.length);
+    return data.slice(startIdx, endIdx);
+  }, [data, zoomRange]);
+
+  const minPrice = zoomedData.length > 0 ? Math.min(...zoomedData.map((d) => d.price)) : 0;
+  const maxPrice = zoomedData.length > 0 ? Math.max(...zoomedData.map((d) => d.price)) : 100;
   const padding = Math.max(2, (maxPrice - minPrice) * 0.15);
 
   // X-axis domain: for intraday use timestamp range, for compressed use index range
   const xDomain = useMemo(() => {
-    if (data.length === 0) return [0, 1];
-    return [data[0].ts, data[data.length - 1].ts];
-  }, [data]);
+    if (zoomedData.length === 0) return [0, 1];
+    return [zoomedData[0].ts, zoomedData[zoomedData.length - 1].ts];
+  }, [zoomedData]);
 
   // Smart ticks: only show labels at meaningful change points
-  const smartTicks = useMemo(() => generateSmartTicks(data, activeRange), [data, activeRange]);
+  const smartTicks = useMemo(() => generateSmartTicks(zoomedData, activeRange), [zoomedData, activeRange]);
 
   const gradientId = `lpGradient-${activeTicker}`;
 
@@ -526,10 +575,10 @@ export default function LPChart() {
 
       {/* Area Chart */}
       {chartView === "area" && !isLoading && data.length > 0 && (
-        <div className="overflow-x-auto scrollbar-thin">
+        <div className="overflow-x-auto scrollbar-thin" ref={lineChartRef}>
           <div
             style={{
-              width: data.length > 20 && intraday ? Math.max(data.length * 40, 800) : "100%",
+              width: zoomedData.length > 20 && intraday ? Math.max(zoomedData.length * 40, 800) : "100%",
               height: 380,
               minWidth: 300,
               minHeight: 300,
@@ -538,7 +587,7 @@ export default function LPChart() {
           {mounted && (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={data}
+                data={zoomedData}
                 margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
               >
                 <defs>
