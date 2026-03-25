@@ -25,8 +25,8 @@ import { LineChart, CandlestickChart as CandlestickIcon, Loader2 } from "lucide-
 import { useTicker } from "@/contexts/TickerContext";
 
 type ChartView = "area" | "candlestick";
-type TimeRange = "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
-const TIME_RANGES: TimeRange[] = ["1W", "1M", "3M", "6M", "YTD", "ALL"];
+type TimeRange = "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
+const TIME_RANGES: TimeRange[] = ["6H", "1D", "1W", "1M", "3M", "6M", "YTD", "ALL"];
 
 const TICKERS = [
   { symbol: "DORI", name: "DORI", description: "1x LP Tracker", color: "#00C805" },
@@ -48,8 +48,11 @@ interface ChartDataPoint {
 
 function getRangeSince(range: TimeRange): number | undefined {
   const now = Date.now();
-  const DAY = 24 * 60 * 60 * 1000;
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
   switch (range) {
+    case "6H": return now - 6 * HOUR;
+    case "1D": return now - 1 * DAY;
     case "1W": return now - 7 * DAY;
     case "1M": return now - 30 * DAY;
     case "3M": return now - 90 * DAY;
@@ -63,9 +66,24 @@ function getRangeSince(range: TimeRange): number | undefined {
   }
 }
 
-/** Format a timestamp into a short date label */
-function formatTimestamp(ts: number, language: string): string {
+/** Check if a time range is intraday (should show individual snapshots, not daily) */
+function isIntradayRange(range: TimeRange): boolean {
+  return range === "6H" || range === "1D";
+}
+
+/** Format a timestamp into a short date label (or time for intraday) */
+function formatTimestamp(ts: number, language: string, intraday: boolean = false): string {
   const d = new Date(ts);
+  if (intraday) {
+    const hours = d.getHours();
+    const mins = String(d.getMinutes()).padStart(2, "0");
+    if (language === "ko") {
+      return `${hours}:${mins}`;
+    }
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const h12 = hours % 12 || 12;
+    return `${h12}:${mins} ${ampm}`;
+  }
   if (language === "ko") {
     return `${d.getMonth() + 1}월 ${d.getDate()}일`;
   }
@@ -137,6 +155,8 @@ export default function LPChart() {
    * 2. Collapse multiple intraday snapshots to one per day (last snapshot wins)
    * 3. Mark the last point for the endpoint dot
    */
+  const intraday = isIntradayRange(activeRange);
+
   const data: ChartDataPoint[] = useMemo(() => {
     if (!etfHistory || etfHistory.length === 0) return [];
 
@@ -144,23 +164,29 @@ export default function LPChart() {
     const filtered = etfHistory.filter((p) => p.timestamp <= now);
     if (filtered.length === 0) return [];
 
-    // Collapse to one point per day — keep the LAST snapshot of each day
-    const dayMap = new Map<string, typeof filtered[0]>();
-    for (const p of filtered) {
-      const key = dateKey(p.timestamp);
-      dayMap.set(key, p); // overwrites earlier snapshots, keeping the last
+    let points: typeof filtered;
+
+    if (intraday) {
+      // For 6H/1D: show every individual snapshot (no daily collapse)
+      points = [...filtered].sort((a, b) => a.timestamp - b.timestamp);
+    } else {
+      // Collapse to one point per day — keep the LAST snapshot of each day
+      const dayMap = new Map<string, typeof filtered[0]>();
+      for (const p of filtered) {
+        const key = dateKey(p.timestamp);
+        dayMap.set(key, p); // overwrites earlier snapshots, keeping the last
+      }
+      points = Array.from(dayMap.values()).sort((a, b) => a.timestamp - b.timestamp);
     }
 
-    const dailyPoints = Array.from(dayMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-
-    return dailyPoints.map((p, i) => ({
+    return points.map((p, i) => ({
       ts: p.timestamp,
-      date: formatTimestamp(p.timestamp, language),
+      date: formatTimestamp(p.timestamp, language, intraday),
       price: p.price,
       label: `$${p.price.toFixed(2)}`,
-      isLast: i === dailyPoints.length - 1,
+      isLast: i === points.length - 1,
     }));
-  }, [etfHistory, language]);
+  }, [etfHistory, language, intraday]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
@@ -383,7 +409,7 @@ export default function LPChart() {
                     fontFamily: "'JetBrains Mono', monospace",
                   }}
                   dy={10}
-                  tickFormatter={(ts: number) => formatTimestamp(ts, language)}
+                  tickFormatter={(ts: number) => formatTimestamp(ts, language, intraday)}
                   tickCount={7}
                 />
                 <YAxis

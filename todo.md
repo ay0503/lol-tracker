@@ -552,3 +552,9 @@
 - [x] Backend endpoints: tableSchema, tableRows, updateRow, deleteRow, insertRow
 - [x] Quick actions: reset user cash, run bot, view DB stats
 - [x] Protect with admin role check (redirects non-admin users)
+
+## Feature: Add 6h and 1d Chart Time Ranges
+- [x] Add 6H and 1D options to time range selector in LPChart, CandlestickChart, and playerData.ts
+- [x] Filter price history data for these shorter timeframes (6 hours, 24 hours)
+- [x] Intraday ranges show individual poll snapshots (not collapsed to daily)
+- [x] X-axis shows time (e.g., 2:30 PM) for intraday, date for daily+ ranges
