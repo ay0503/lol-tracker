@@ -23,7 +23,7 @@ export default function Sentiment() {
   const { user, isAuthenticated } = useAuth();
   const [content, setContent] = useState("");
   const [sentiment, setSentiment] = useState<"bullish" | "bearish" | "neutral">("bullish");
-  const [ticker, setTicker] = useState<string>("DORI");
+  const [ticker, setTicker] = useState<"DORI" | "DDRI" | "TDRI" | "SDRI" | "XDRI">("DORI");
 
   const { data: comments, isLoading, refetch } = trpc.comments.list.useQuery({ limit: 50 });
   const postComment = trpc.comments.post.useMutation({
@@ -132,7 +132,7 @@ export default function Sentiment() {
             <div className="flex gap-2 mb-3">
               <select
                 value={ticker}
-                onChange={(e) => setTicker(e.target.value)}
+                onChange={(e) => setTicker(e.target.value as typeof ticker)}
                 className="bg-secondary border border-border rounded-lg px-3 py-2 text-xs text-foreground"
               >
                 <option value="DORI">$DORI — {t.tickers.dori}</option>
