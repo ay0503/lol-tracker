@@ -758,6 +758,22 @@ export const appRouter = router({
       stopPolling();
       return { success: true, message: "Polling stopped" };
     }),
+    /** Diagnostic: check live game status directly from Riot API (bypasses cache) */
+    checkLiveGame: adminProcedure.query(async () => {
+      try {
+        const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
+        const puuid = account.account.puuid;
+        const game = await getActiveGame(puuid);
+        const cachedStatus = cache.get<boolean>("player.liveGame.check");
+        return {
+          puuid,
+          apiResult: game ? { inGame: true, queueId: game.gameQueueConfigId, gameLength: game.gameLength } : { inGame: false },
+          cachedConfirmed: cachedStatus ?? null,
+        };
+      } catch (err: any) {
+        return { error: err?.message, status: err?.response?.status };
+      }
+    }),
   }),
 
   // ─── Admin SQL Console (admin only) ───
