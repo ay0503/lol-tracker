@@ -151,7 +151,8 @@ describe("Bot Trader", () => {
       const result = await runBotTrader();
       expect(result).toBe(true);
       expect(executeTrade).toHaveBeenCalled();
-      expect(postComment).toHaveBeenCalled();
+      // Bot sentiment comments are disabled
+      expect(postComment).not.toHaveBeenCalled();
     });
 
     it("should trade when live game cache returns undefined", async () => {
@@ -204,7 +205,8 @@ describe("Bot Trader", () => {
       const result = await runBotTrader();
       expect(result).toBe(true);
       expect(executeTrade).toHaveBeenCalled();
-      expect(postComment).toHaveBeenCalled();
+      // Bot sentiment comments are disabled
+      expect(postComment).not.toHaveBeenCalled();
     });
   });
 
@@ -230,7 +232,8 @@ describe("Bot Trader", () => {
 
       const result = await forceRunBot();
       expect(result).toBe(true);
-      expect(postComment).toHaveBeenCalled();
+      // Bot sentiment comments are disabled
+      expect(postComment).not.toHaveBeenCalled();
     });
   });
 
@@ -289,8 +292,8 @@ describe("Bot Trader", () => {
 
       const result = await runBotTrader();
       expect(result).toBe(true);
-      // Should still post a comment with fallback reasoning
-      expect(postComment).toHaveBeenCalled();
+      // Bot sentiment comments are disabled
+      expect(postComment).not.toHaveBeenCalled();
     });
 
     it("should handle short selling decision", async () => {

@@ -564,3 +564,19 @@
 - [x] Add 3H time range option across LPChart, CandlestickChart, and playerData.ts
 - [x] Make time range buttons scrollable on mobile
 - [x] Make area chart horizontally scrollable when intraday data has many points
+
+## Bug: Admin Page Redirects to Home on Self-Hosted
+- [ ] Admin page at /admin redirects non-admin users back to home — user may not have admin role set
+- [ ] Investigate: user.role check on line 713 — if user role is not "admin" it navigates to "/"
+- [ ] Fix: either user needs admin role, or the auth check needs adjustment for self-hosted
+
+## Task: Set 윤여균 as Admin
+- [ ] Update user role to admin for displayName "윤여균"
+
+## Bug: Bot Not Trading on Self-Hosted Platform
+- [ ] Investigate why bot trades on Manus but not on self-hosted
+- [ ] Check if bot initialization depends on env vars not present in self-hosted
+- [ ] Fix the issue
+
+## Change: Disable Bot Sentiment Comments
+- [x] Commented out postBotComment calls in both runBotTrader and forceRunBot

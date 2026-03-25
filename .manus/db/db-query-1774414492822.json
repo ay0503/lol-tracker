@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, displayName, role, email FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4RDapMJqQiukiqZ.root --database EqpY4GjGxu3PtSNi8r37GF --execute SELECT id, displayName, role, email FROM users;",
+  "rows": [
+    {
+      "id": "60963",
+      "displayName": "테스트유저",
+      "role": "user",
+      "email": "test@example.com"
+    },
+    {
+      "id": "150001",
+      "displayName": "NULL",
+      "role": "user",
+      "email": "ayoun@meta.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdisplayName\trole\temail\n60963\t테스트유저\tuser\ttest@example.com\n150001\tNULL\tuser\tayoun@meta.com\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

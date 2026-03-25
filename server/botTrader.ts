@@ -568,8 +568,8 @@ export async function runBotTrader(): Promise<boolean> {
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
     console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
 
-    // Post sentiment comment
-    await postBotComment(botUserId, decision, result);
+    // Bot sentiment comments disabled
+    // await postBotComment(botUserId, decision, result);
 
     console.log("[Bot] ═══════════════════════════════════════");
     return true;
@@ -615,7 +615,8 @@ export async function forceRunBot(): Promise<boolean> {
     console.log(`[Bot] Decision: ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} (confidence: ${decision.confidence}%, sentiment: ${decision.sentiment})`);
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
     console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
-    await postBotComment(botUserId, decision, result);
+    // Bot sentiment comments disabled
+    // await postBotComment(botUserId, decision, result);
     console.log("[Bot] ═══════════════════════════════════════");
     return true;
   } catch (err) {
