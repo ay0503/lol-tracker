@@ -1028,6 +1028,7 @@ export const appRouter = router({
           sql: `UPDATE "${tableName}" SET ${setClauses} WHERE id = ?`,
           args: [input.id],
         });
+        cache.invalidateAll();
         return { success: true, rowsAffected: result.rowsAffected };
       }),
 
@@ -1044,6 +1045,7 @@ export const appRouter = router({
           sql: `DELETE FROM "${tableName}" WHERE id = ?`,
           args: [input.id],
         });
+        cache.invalidateAll();
         return { success: true, rowsAffected: result.rowsAffected };
       }),
 
@@ -1061,6 +1063,7 @@ export const appRouter = router({
         const result = await client.execute(
           `INSERT INTO "${tableName}" (${cols.join(', ')}) VALUES (${vals.join(', ')})`
         );
+        cache.invalidateAll();
         return { success: true, rowsAffected: result.rowsAffected };
       }),
 
@@ -1094,6 +1097,7 @@ export const appRouter = router({
         // Update portfolio cash
         const portfolio = await getOrCreatePortfolio(userId);
         await db.update(portfolios).set({ cashBalance: input.cashAmount.toFixed(2) }).where(eq(portfolios.userId, userId));
+        cache.invalidateAll();
 
         return {
           success: true,
