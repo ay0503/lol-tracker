@@ -25,6 +25,7 @@ import {
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
 import { runBotTrader, ensureBotUser } from "./botTrader";
+import { notifyGameStart, notifyGameEnd, notifyNewMatch, isDiscordConfigured } from "./discord";
 
 // Player config
 const GAME_NAME = "목도리 도마뱀";
@@ -156,6 +157,15 @@ export async function pollNow(): Promise<PollResult> {
           };
           console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
         }
+
+        // Discord notification for game start
+        try {
+          const activeGame = await getActiveGame(playerDataForGame.account.puuid);
+          const participant = activeGame?.participants.find(p => p.puuid === playerDataForGame.account.puuid);
+          const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
+          const gameMode = activeGame ? queueNames[activeGame.gameQueueConfigId] ?? "Unknown" : undefined;
+          notifyGameStart(participant?.championId ? `ID ${participant.championId}` : undefined, gameMode);
+        } catch { /* non-critical */ }
       } catch (err: any) {
         console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
       }
@@ -206,6 +216,9 @@ export async function pollNow(): Promise<PollResult> {
       // Store in cache with 10-minute TTL so frontend can poll for it
       cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
       console.log(`[Poll] Game END event: LP ${preGameSnapshot.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${preGameSnapshot.price.toFixed(2)} → $${price.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(2)})`);
+
+      // Discord notification for game end
+      notifyGameEnd(lpDelta, preGameSnapshot.price, price);
 
       // Clear pre-game snapshot
       preGameSnapshot = null;
@@ -514,6 +527,7 @@ export function startPolling() {
   }
 
   console.log(`[Poll] Starting polling every ${POLL_INTERVAL_MS / 1000 / 60} minutes`);
+  console.log(`[Poll] Discord notifications: ${isDiscordConfigured() ? "enabled" : "disabled (set DISCORD_BOT_TOKEN + DISCORD_CHANNEL_ID)"}`);
 
   // Small delay before first poll to ensure DB is ready (migrations may still be settling)
   setTimeout(() => {

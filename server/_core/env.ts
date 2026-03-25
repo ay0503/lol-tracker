@@ -13,4 +13,7 @@ export const ENV = {
   // CORS: set to frontend URL when hosting frontend separately (e.g., behind a reverse proxy)
   // Leave empty for same-origin deployment
   corsOrigin: process.env.CORS_ORIGIN ?? "",
+  // Discord bot notifications
+  discordBotToken: process.env.DISCORD_BOT_TOKEN ?? "",
+  discordChannelId: process.env.DISCORD_CHANNEL_ID ?? "",
 };
