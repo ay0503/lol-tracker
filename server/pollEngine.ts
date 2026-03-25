@@ -32,8 +32,8 @@ const GAME_NAME = "목도리 도마뱀";
 const TAG_LINE = "dori";
 const PUUID_CACHE: { puuid?: string } = {};
 
-// Polling interval (2 minutes)
-const POLL_INTERVAL_MS = 2 * 60 * 1000;
+// Polling interval (30 seconds)
+const POLL_INTERVAL_MS = 30 * 1000;
 
 let pollTimer: NodeJS.Timeout | null = null;
 let isPolling = false;
@@ -112,24 +112,37 @@ export async function pollNow(): Promise<PollResult> {
     // 1. Check live game status with two-consecutive-confirmation
     // The confirmed status only flips when two consecutive raw checks agree.
     // This prevents false toggles and provides a natural ~2 min delay.
+    // 1. Fetch player data (single call, reused for game check + LP)
+    console.log("[Poll] Fetching player data...");
+    let playerData: Awaited<ReturnType<typeof fetchFullPlayerData>>;
+    try {
+      playerData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
+      PUUID_CACHE.puuid = playerData.account.puuid;
+    } catch (err: any) {
+      result.errors.push(`Failed to fetch player data: ${err.message}`);
+      return result;
+    }
+
+    if (!playerData.soloEntry) {
+      result.errors.push("No solo/duo ranked data found");
+      return result;
+    }
+
+    // 2. Check live game status with two-consecutive-confirmation
     console.log("[Poll] Checking live game status...");
     let rawIsInGame = false;
-    let playerDataForGame: Awaited<ReturnType<typeof fetchFullPlayerData>> | null = null;
+    let activeGameData: Awaited<ReturnType<typeof getActiveGame>> = null;
     try {
-      playerDataForGame = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
-      PUUID_CACHE.puuid = playerDataForGame.account.puuid;
-      const activeGame = await getActiveGame(playerDataForGame.account.puuid);
-      rawIsInGame = !!activeGame;
+      activeGameData = await getActiveGame(playerData.account.puuid);
+      rawIsInGame = !!activeGameData;
     } catch (err: any) {
       console.warn("[Poll] Live game check failed:", err?.message);
-      // On error, preserve previous state to avoid false game-end detection
       rawIsInGame = previousRawIsInGame ?? false;
     }
 
     // Two-consecutive-confirmation logic
     const wasConfirmedInGame = confirmedIsInGame;
     if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
-      // Two consecutive polls agree on a NEW status — flip confirmed
       confirmedIsInGame = rawIsInGame;
       console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
     } else if (rawIsInGame !== previousRawIsInGame) {
@@ -140,48 +153,33 @@ export async function pollNow(): Promise<PollResult> {
     previousRawIsInGame = rawIsInGame;
 
     // Track game-start: capture pre-game LP/price snapshot
-    // Reuse playerDataForGame from the live-game check above to avoid a duplicate API call
-    if (!wasConfirmedInGame && confirmedIsInGame && playerDataForGame) {
+    if (!wasConfirmedInGame && confirmedIsInGame) {
       try {
-        const snapEntry = playerDataForGame.soloEntry;
-        if (snapEntry) {
-          const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
-          const snapPrice = tierToPrice(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
-          preGameSnapshot = {
-            lp: snapEntry.leaguePoints,
-            tier: snapEntry.tier,
-            division: snapEntry.rank,
-            totalLP: snapTotalLP,
-            price: snapPrice,
-            timestamp: Date.now(),
-          };
-          console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
-        }
+        const snapEntry = playerData.soloEntry;
+        const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
+        const snapPrice = tierToPrice(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
+        preGameSnapshot = {
+          lp: snapEntry.leaguePoints,
+          tier: snapEntry.tier,
+          division: snapEntry.rank,
+          totalLP: snapTotalLP,
+          price: snapPrice,
+          timestamp: Date.now(),
+        };
+        console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
 
-        // Discord notification for game start
-        try {
-          const activeGame = await getActiveGame(playerDataForGame.account.puuid);
-          const participant = activeGame?.participants.find(p => p.puuid === playerDataForGame.account.puuid);
-          const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
-          const gameMode = activeGame ? queueNames[activeGame.gameQueueConfigId] ?? "Unknown" : undefined;
-          notifyGameStart(participant?.championId ? `ID ${participant.championId}` : undefined, gameMode);
-        } catch { /* non-critical */ }
+        // Discord notification — reuse activeGameData instead of re-fetching
+        const participant = activeGameData?.participants.find(p => p.puuid === playerData.account.puuid);
+        const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
+        const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
+        notifyGameStart(participant?.championId ? `ID ${participant.championId}` : undefined, gameMode);
       } catch (err: any) {
         console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
       }
     }
 
     // Update the cache with the CONFIRMED status (used by trade endpoints + bot)
-    cache.set("player.liveGame.check", confirmedIsInGame, 150_000); // 2.5 min TTL
-
-    // 2. Fetch current player data
-    console.log("[Poll] Fetching player data...");
-    const playerData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
-    PUUID_CACHE.puuid = playerData.account.puuid;
-
-    if (!playerData.soloEntry) {
-      result.errors.push("No solo/duo ranked data found");
-      return result;
+    cache.set("player.liveGame.check", confirmedIsInGame, 45_000); // 45s TTL (slightly > poll interval)
     }
 
     const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
@@ -473,7 +471,7 @@ export async function pollNow(): Promise<PollResult> {
     const savedGameEndEvent = cache.get<GameEndEvent>("player.gameEndEvent");
     cache.invalidateAll();
     // Re-set confirmed live game status so trade blocking persists between polls
-    cache.set("player.liveGame.check", confirmedIsInGame, 150_000);
+    cache.set("player.liveGame.check", confirmedIsInGame, 45_000);
     // Re-set game-end event if it exists (survives cache clear)
     if (savedGameEndEvent) {
       cache.set("player.gameEndEvent", savedGameEndEvent, 10 * 60 * 1000);
@@ -585,7 +583,7 @@ export function startPolling() {
     return;
   }
 
-  console.log(`[Poll] Starting polling every ${POLL_INTERVAL_MS / 1000 / 60} minutes`);
+  console.log(`[Poll] Starting polling every ${POLL_INTERVAL_MS / 1000}s`);
   console.log(`[Poll] Discord notifications: ${isDiscordConfigured() ? "enabled" : "disabled (set DISCORD_BOT_TOKEN + DISCORD_CHANNEL_ID)"}`);
 
   // Small delay before first poll to ensure DB is ready (migrations may still be settling)
