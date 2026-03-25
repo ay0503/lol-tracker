@@ -44,7 +44,8 @@ describe("LP-to-Price mapping", () => {
 });
 
 describe("Riot API key validation", () => {
-  it("can fetch account by riot id (validates API key)", async () => {
+  const hasApiKey = !!process.env.RIOT_API_KEY;
+  it.skipIf(!hasApiKey)("can fetch account by riot id (validates API key)", async () => {
     // This test validates the RIOT_API_KEY env var is working
     // by making a real API call to get the player's PUUID
     try {
