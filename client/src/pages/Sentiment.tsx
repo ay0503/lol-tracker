@@ -40,13 +40,43 @@ export default function Sentiment() {
     postComment.mutate({ content: content.trim(), ticker, sentiment });
   };
 
-  const sentimentCounts = { bullish: 0, bearish: 0, neutral: 0 };
+  // Normalize sentiment to $DORI-equivalent: bullish on inverse = bearish on DORI,
+  // weighted by leverage (2x/3x count more than 1x)
+  const TICKER_WEIGHT: Record<string, { inverse: boolean; leverage: number }> = {
+    DORI: { inverse: false, leverage: 1 },
+    DDRI: { inverse: false, leverage: 2 },
+    TDRI: { inverse: false, leverage: 3 },
+    SDRI: { inverse: true, leverage: 2 },
+    XDRI: { inverse: true, leverage: 3 },
+  };
+
+  let bullishScore = 0;
+  let bearishScore = 0;
+  let totalWeight = 0;
+  const rawCounts = { bullish: 0, bearish: 0, neutral: 0 };
+
   comments?.forEach((c) => {
-    if (c.sentiment in sentimentCounts) sentimentCounts[c.sentiment as keyof typeof sentimentCounts]++;
+    if (c.sentiment in rawCounts) rawCounts[c.sentiment as keyof typeof rawCounts]++;
+    if (c.sentiment === "neutral") return;
+
+    const tw = TICKER_WEIGHT[c.ticker ?? "DORI"] ?? TICKER_WEIGHT.DORI;
+    const weight = tw.leverage;
+    // If ticker is inverse, flip the sentiment for DORI-equivalent
+    const effectiveBullish = tw.inverse
+      ? c.sentiment === "bearish"
+      : c.sentiment === "bullish";
+
+    if (effectiveBullish) {
+      bullishScore += weight;
+    } else {
+      bearishScore += weight;
+    }
+    totalWeight += weight;
   });
+
   const totalComments = (comments?.length || 0);
-  const bullishPct = totalComments > 0 ? (sentimentCounts.bullish / totalComments) * 100 : 50;
-  const bearishPct = totalComments > 0 ? (sentimentCounts.bearish / totalComments) * 100 : 50;
+  const bullishPct = totalWeight > 0 ? (bullishScore / totalWeight) * 100 : 50;
+  const bearishPct = totalWeight > 0 ? (bearishScore / totalWeight) * 100 : 50;
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,9 +122,9 @@ export default function Sentiment() {
             <span className="text-xs font-bold" style={{ color: "#FF5252" }}>{bearishPct.toFixed(0)}% {"\uD83D\uDC3B"}</span>
           </div>
           <div className="flex justify-center gap-4 text-xs text-muted-foreground">
-            <span>{t.sentiment.bullish}: {sentimentCounts.bullish}</span>
-            <span>{t.sentiment.neutral}: {sentimentCounts.neutral}</span>
-            <span>{t.sentiment.bearish}: {sentimentCounts.bearish}</span>
+            <span>{t.sentiment.bullish}: {rawCounts.bullish}</span>
+            <span>{t.sentiment.neutral}: {rawCounts.neutral}</span>
+            <span>{t.sentiment.bearish}: {rawCounts.bearish}</span>
           </div>
         </div>
 
