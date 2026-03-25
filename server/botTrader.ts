@@ -492,14 +492,18 @@ async function executeDecision(
 
 // ─── Sentiment Comment (Korean meme trader style) ───
 
-// Rate limit: max 1 comment per 30 minutes
-let lastCommentTime = 0;
-const COMMENT_COOLDOWN_MS = 30 * 60 * 1000;
+// Rate limit: max 2 comments per day
+let commentTimesToday: number[] = [];
+const MAX_COMMENTS_PER_DAY = 2;
 
-// Only comment ~30% of the time even when cooldown is clear
 function shouldComment(): boolean {
-  if (Date.now() - lastCommentTime < COMMENT_COOLDOWN_MS) return false;
-  return Math.random() < 0.3;
+  const now = Date.now();
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+  // Reset daily counter
+  commentTimesToday = commentTimesToday.filter(t => t >= todayStart);
+  if (commentTimesToday.length >= MAX_COMMENTS_PER_DAY) return false;
+  // Random chance so comments are spread out, not back-to-back
+  return Math.random() < 0.15;
 }
 
 function pickRandom<T>(arr: T[]): T {
@@ -530,6 +534,14 @@ function generateKoreanComment(
     "ㅋㅋ 숏충이들 다 울고있겠네",
     "이 가격에 안사면 후회한다 진짜",
     "현석이 폼 미쳤음 풀매수 간다",
+    "숏충이들 ㅈ됐다 ㅋㅋㅋㅋ",
+    "현석이 개캐리네 ㅅㅂ 미쳤다",
+    "롱 좆댔으면 개추요",
+    "ㅋㅋ 숏충이 버러지들 울어라",
+    "개쩐다 현석이 ㄹㅇ 사기캐",
+    "안사는놈들 ㅈㅂㅈㅂ",
+    "ㅅㅂ 진작 올인할걸 ㅋㅋ",
+    "현석이 존나 잘하네 미쳤다",
   ];
 
   // Bearish comments (when shorting / loss streak / pessimistic)
@@ -544,6 +556,16 @@ function generateKoreanComment(
     "솔랭 왜 돌리는건지 모르겠다 진심",
     "LP 녹는거 실시간으로 보는중",
     "손절각 잡아야되나... 고민중",
+    "ㅋㅋ 롱충이들 ㅈ됐네",
+    "현석이 ㅈ밥이네 ㅅㅂ",
+    "버러지 같은 팀운 ㅋㅋ",
+    "ㅅㅂ 이게 뭐냐 ㅋㅋㅋ 숏 간다",
+    "롱충이들 존나 불쌍하다",
+    "개좆같네 ㄹㅇ 손절 각",
+    "ㅈ같은 라인전 보소 ㅋㅋ",
+    "이 새끼 또 졌어? 숏 풀매수",
+    "시발 팀 뭐하냐 진짜",
+    "ㅋㅋㅋ 망했다 그냥",
   ];
 
   // Neutral / hold comments
@@ -553,6 +575,9 @@ function generateKoreanComment(
     "추세 확인하고 진입할 예정",
     "현금 들고 기다리는게 답인듯",
     "다음 게임 결과 보고 판단하겠음",
+    "ㅁㅊ 뭘 사야될지 모르겠네",
+    "씨발 어캐해 이거",
+    "개애매하다 ㅋㅋ 걍 관망",
   ];
 
   // After a specific match result
@@ -561,6 +586,9 @@ function generateKoreanComment(
     "승리 ㄴㅇㅅ 추매 각",
     "역시 현석이 믿고 롱",
     "이기니까 기분이 좋다 추매 ㄱ",
+    lastKda ? `${lastKda} ㅋㅋ 개쩔어 ㅅㅂ` : "ㄴㅇㅅ 개캐리",
+    "ㅋㅋㅋ 숏충이 버러지들 오늘도 울었다",
+    "현석이 존나 잘했다 ㄹㅇ",
   ];
 
   const postLossComments = [
@@ -568,6 +596,10 @@ function generateKoreanComment(
     "팀 탓 ㄹㅇ 현석이 잘했는데",
     "바텀 차이 ㅈㄴ 심하네",
     "다음판은 이기겠지... 아마도...",
+    lastKda ? `${lastKda} ㅋㅋ 이게 사람이냐` : "ㅈ됐다 ㅋㅋ",
+    "ㅅㅂ 현석이 뭐하냐 진짜",
+    "버러지네 ㄹㅇ ㅋㅋㅋ",
+    "ㅈ같은 겜 보소 존나 역겹네",
   ];
 
   if (decision.action === "hold") {
@@ -604,7 +636,7 @@ async function postBotComment(
     const { content, ticker, sentiment } = generateKoreanComment(decision, tradeResult, ctx);
 
     await postComment(botUserId, content, ticker, sentiment);
-    lastCommentTime = Date.now();
+    commentTimesToday.push(Date.now());
     console.log(`[Bot] Posted comment: ${content}`);
   } catch (err) {
     console.error("[Bot] Failed to post comment:", err);
