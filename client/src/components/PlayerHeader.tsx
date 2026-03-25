@@ -21,7 +21,7 @@ export default function PlayerHeader() {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
-  const { data: latestPrice, isLoading: priceLoading } = trpc.prices.latest.useQuery(undefined, {
+  const { data: etfPrices, isLoading: priceLoading } = trpc.prices.etfPrices.useQuery(undefined, {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
@@ -34,8 +34,10 @@ export default function PlayerHeader() {
 
   const isLoading = playerLoading || priceLoading;
 
-  // Compute current price from live data
-  const currentPrice = latestPrice ? parseFloat(latestPrice.price) : null;
+  // Compute current price from live ETF prices (same source as trading panel)
+  const currentPrice = etfPrices && Array.isArray(etfPrices)
+    ? (etfPrices.find((p: any) => p.ticker === "DORI")?.price ?? null)
+    : null;
 
   // First price from ETF history for change calculation
   const firstPrice = etfHistory && etfHistory.length > 0 ? etfHistory[0].price : null;

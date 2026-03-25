@@ -427,11 +427,12 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
       .query(async ({ ctx, input }) => {
         const raw = await getUserTrades(ctx.user.id, input?.limit ?? 50);
-        return raw.map((t) => ({
-          id: t.id, ticker: t.ticker, type: t.type,
-          shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
-          totalAmount: parseFloat(t.totalAmount), createdAt: t.createdAt,
-        }));
+         return raw.map((t) => ({
+           id: t.id, ticker: t.ticker, type: t.type,
+           shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
+           totalAmount: parseFloat(t.totalAmount),
+           createdAt: typeof t.createdAt === 'string' && !t.createdAt.endsWith('Z') ? t.createdAt + 'Z' : (t.createdAt ?? null),
+         }));
       }),
 
     short: protectedProcedure
@@ -542,12 +543,13 @@ export const appRouter = router({
         const limit = input?.limit ?? 100;
         return cache.getOrSet(`ledger.all`, async () => {
           const raw = await getAllTrades(limit);
-          return raw.map((t) => ({
-            id: t.id, userName: t.userName ?? "Anonymous",
-            ticker: t.ticker, type: t.type,
-            shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
-            totalAmount: parseFloat(t.totalAmount), createdAt: t.createdAt,
-          }));
+           return raw.map((t) => ({
+             id: t.id, userName: t.userName ?? "Anonymous",
+             ticker: t.ticker, type: t.type,
+             shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
+             totalAmount: parseFloat(t.totalAmount),
+             createdAt: typeof t.createdAt === 'string' && !t.createdAt.endsWith('Z') ? t.createdAt + 'Z' : (t.createdAt ?? null),
+           }));
         }, FIVE_MIN);
       }),
   }),

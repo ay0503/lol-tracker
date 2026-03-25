@@ -78,11 +78,12 @@ export default function Ledger() {
           <div className="space-y-1.5">
             <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
               <div className="col-span-2">{t.ledger.user}</div>
-              <div className="col-span-2">{t.ledger.type}</div>
+              <div className="col-span-1">{t.ledger.type}</div>
               <div className="col-span-2">{t.ledger.ticker}</div>
               <div className="col-span-2 text-right">{t.ledger.shares}</div>
               <div className="col-span-2 text-right">{t.ledger.price}</div>
-              <div className="col-span-2 text-right">{t.ledger.total}</div>
+              <div className="col-span-1 text-right">{t.ledger.total}</div>
+              <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
             </div>
 
             {trades.map((trade, i) => (
@@ -93,7 +94,7 @@ export default function Ledger() {
                 transition={{ delay: i * 0.02, duration: 0.3 }}
                 className="grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors"
               >
-                <div className="col-span-2 flex items-center gap-2">
+                <div className="col-span-2 flex items-center gap-2 min-w-0">
                   <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
                     <span className="text-[10px] font-bold text-foreground">
                       {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
@@ -104,7 +105,7 @@ export default function Ledger() {
                   </span>
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <span
                     className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
                       trade.type === "buy"
@@ -142,15 +143,16 @@ export default function Ledger() {
                   </span>
                 </div>
 
+                <div className="col-span-1 text-right">
+                  <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">
+                    ${trade.totalAmount.toFixed(2)}
+                  </span>
+                </div>
+
                 <div className="col-span-2 text-right">
-                  <div>
-                    <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">
-                      ${trade.totalAmount.toFixed(2)}
-                    </span>
-                    <p className="text-[10px] text-muted-foreground">
-                      {formatTimeAgoFromDate(trade.createdAt, language)}
-                    </p>
-                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatTimeAgoFromDate(trade.createdAt, language)}
+                  </span>
                 </div>
               </motion.div>
             ))}

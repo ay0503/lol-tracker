@@ -461,3 +461,11 @@
 
 ## Enhancement: Poll live game status in polling engine
 - [x] Add live game check to pollEngine so trade block cache is always fresh (with cache preservation across invalidateAll)
+
+## Bug: Fix timestamps in the Ledger page
+- [x] Ensure trades store proper timestamps in DB (UTC Z suffix added)
+- [x] Display formatted timestamps on Ledger page (separate Time column)
+
+## Bug: Price desync between chart header and trading panel
+- [x] Investigate why chart header price differs from trading panel buy price
+- [x] Sync both to use the same etfPrices endpoint
