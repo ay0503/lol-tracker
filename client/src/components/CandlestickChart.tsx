@@ -426,9 +426,9 @@ export default function CandlestickChart({
           markers.push({
             time: candles[i].time,
             position: "belowBar",
-            color: "rgba(255, 193, 7, 0.7)",
-            shape: "arrowUp",
-            text: `⏭ ${gapLabel}`,
+            color: "rgba(107, 114, 128, 0.5)",
+            shape: "square",
+            text: gapLabel,
           });
         }
         // Day separator for non-intraday compressed charts
