@@ -92,6 +92,125 @@ function formatTimestamp(ts: number, language: string, intraday: boolean = false
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
+/**
+ * Format a tick label that only shows the "change" — e.g., when the month changes
+ * show the month name, when only the day changes show just the day number.
+ * For intraday, show only when the hour changes.
+ */
+function formatSmartTickLabel(ts: number, language: string, range: TimeRange): string {
+  const d = new Date(ts);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  if (isIntradayRange(range)) {
+    const hours = d.getHours();
+    if (language === "ko") {
+      return `${hours}시`;
+    }
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const h12 = hours % 12 || 12;
+    return `${h12} ${ampm}`;
+  }
+
+  // For longer ranges, show "Mon DD" or "M월 D일"
+  if (language === "ko") {
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
+ * Generate evenly-spaced, meaningful tick positions for the x-axis.
+ * Instead of letting Recharts auto-pick ticks (which creates clutter),
+ * we select ~5-7 ticks at meaningful boundaries:
+ * - Intraday: every N hours (showing only when hour changes)
+ * - 1W: one tick per day
+ * - 1M: ~5-6 ticks at week boundaries
+ * - 3M+: one tick per month change
+ */
+function generateSmartTicks(data: ChartDataPoint[], range: TimeRange): number[] {
+  if (data.length < 2) return data.map(d => d.ts);
+
+  const first = data[0].ts;
+  const last = data[data.length - 1].ts;
+  const span = last - first;
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+
+  if (isIntradayRange(range)) {
+    // For intraday: pick ticks at each distinct hour boundary
+    const seen = new Set<number>();
+    const ticks: number[] = [];
+    for (const pt of data) {
+      const d = new Date(pt.ts);
+      const hourKey = d.getFullYear() * 1000000 + (d.getMonth() + 1) * 10000 + d.getDate() * 100 + d.getHours();
+      if (!seen.has(hourKey)) {
+        seen.add(hourKey);
+        ticks.push(pt.ts);
+      }
+    }
+    // If too many ticks, thin them out to ~6-8
+    if (ticks.length > 8) {
+      const step = Math.ceil(ticks.length / 7);
+      return ticks.filter((_, i) => i % step === 0);
+    }
+    return ticks;
+  }
+
+  if (range === "1W") {
+    // One tick per day
+    const seen = new Set<string>();
+    const ticks: number[] = [];
+    for (const pt of data) {
+      const key = dateKey(pt.ts);
+      if (!seen.has(key)) {
+        seen.add(key);
+        ticks.push(pt.ts);
+      }
+    }
+    return ticks;
+  }
+
+  if (range === "1M") {
+    // ~5-6 evenly spaced ticks
+    const TARGET = 6;
+    const step = Math.floor(data.length / TARGET);
+    if (step <= 1) return data.map(d => d.ts);
+    const ticks: number[] = [];
+    for (let i = 0; i < data.length; i += step) {
+      ticks.push(data[i].ts);
+    }
+    // Always include the last point
+    if (ticks[ticks.length - 1] !== last) {
+      ticks.push(last);
+    }
+    return ticks;
+  }
+
+  // 3M, 6M, YTD, ALL: show one tick per month boundary
+  const seen = new Set<string>();
+  const ticks: number[] = [];
+  for (const pt of data) {
+    const d = new Date(pt.ts);
+    const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!seen.has(monthKey)) {
+      seen.add(monthKey);
+      ticks.push(pt.ts);
+    }
+  }
+  // If only 1-2 ticks, fall back to evenly spaced
+  if (ticks.length < 3) {
+    const TARGET = 5;
+    const step = Math.floor(data.length / TARGET);
+    if (step <= 1) return data.map(d => d.ts);
+    const result: number[] = [];
+    for (let i = 0; i < data.length; i += step) {
+      result.push(data[i].ts);
+    }
+    return result;
+  }
+  return ticks;
+}
+
 /** Get a date-only key (YYYY-MM-DD) from a timestamp for deduplication */
 function dateKey(ts: number): string {
   const d = new Date(ts);
@@ -259,6 +378,9 @@ export default function LPChart() {
     if (data.length === 0) return [0, 1];
     return [data[0].ts, data[data.length - 1].ts];
   }, [data]);
+
+  // Smart ticks: only show labels at meaningful change points
+  const smartTicks = useMemo(() => generateSmartTicks(data, activeRange), [data, activeRange]);
 
   const gradientId = `lpGradient-${activeTicker}`;
 
@@ -452,8 +574,8 @@ export default function LPChart() {
                     fontFamily: "'JetBrains Mono', monospace",
                   }}
                   dy={10}
-                  tickFormatter={(ts: number) => formatTimestamp(ts, language, intraday)}
-                  tickCount={7}
+                  ticks={smartTicks}
+                  tickFormatter={(ts: number) => formatSmartTickLabel(ts, language, activeRange)}
                 />
                 <YAxis
                   domain={[minPrice - padding, maxPrice + padding]}

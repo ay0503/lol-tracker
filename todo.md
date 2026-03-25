@@ -661,3 +661,13 @@
 - [x] Fixed: Home.tsx 'LIVE' text, 'Rank' label, 'Perfect' KDA, 'Ranked Solo', tooltip titles
 - [x] Fixed: MatchRow 'CS' label
 - [x] Added 15 new i18n keys to en.ts and ko.ts
+
+## Change: Clean Up Chart X-Axis Labels
+- [x] Even out x-axis label spacing across all time ranges
+- [x] Only show labels at meaningful change points (e.g., when hour/date changes), not every data point
+- [x] Remove redundant/unnecessary labels that clutter the axis
+- [x] Intraday (3H/6H/1D): show only when hour changes, max ~7 labels
+- [x] 1W: one label per day
+- [x] 1M: ~6 evenly spaced labels
+- [x] 3M/6M/YTD/ALL: one label per month boundary
+- [x] Compact format: M/D for Korean, "Mon D" for English
