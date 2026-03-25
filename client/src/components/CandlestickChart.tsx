@@ -121,8 +121,8 @@ function generateCandleData(
 
   const sortedKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
 
-  // First pass: generate all candles with real timestamps
-  const rawCandles: { candle: CandlestickData<Time>; originalTs: number }[] = [];
+  // First pass: generate raw OHLC per bucket
+  const rawBuckets: { open: number; close: number; high: number; low: number; ts: number }[] = [];
   let prevClose: number | null = null;
 
   for (const key of sortedKeys) {
@@ -134,29 +134,60 @@ function generateCandleData(
     const high = Math.max(...prices, open, close);
     const low = Math.min(...prices, open, close);
 
-    // Add small simulated volatility for visual interest
-    const seed1 = Math.sin(key * 0.0001 + 78.233) * 43758.5453;
-    const rand1 = (seed1 - Math.floor(seed1)) * 0.3;
-    const seed2 = Math.sin(key * 0.0002 + 12.989) * 23421.6312;
-    const rand2 = (seed2 - Math.floor(seed2)) * 0.3;
+    rawBuckets.push({ open, close, high, low, ts: key });
+    prevClose = close;
+  }
 
-    const adjustedHigh = high + rand1;
-    const adjustedLow = Math.max(low - rand2, 0.01);
+  // Second pass: merge consecutive flat candles (same open & close price)
+  // This collapses idle periods where price doesn't change into a single candle
+  const merged: typeof rawBuckets = [];
+  for (const bucket of rawBuckets) {
+    const prev = merged[merged.length - 1];
+    const isFlat = Math.abs(bucket.close - bucket.open) < 0.005 &&
+                   Math.abs(bucket.high - bucket.low) < 0.005;
+    const prevIsFlat = prev &&
+                       Math.abs(prev.close - prev.open) < 0.005 &&
+                       Math.abs(bucket.close - prev.close) < 0.005;
 
-    const timeSec = Math.floor(key / 1000) as unknown as Time;
+    if (prev && isFlat && prevIsFlat) {
+      // Extend previous candle's timestamp to latest, keep same price
+      prev.ts = bucket.ts;
+      prev.close = bucket.close;
+    } else {
+      merged.push({ ...bucket });
+    }
+  }
+
+  // Third pass: build candle objects with simulated volatility only for non-flat candles
+  const rawCandles: { candle: CandlestickData<Time>; originalTs: number }[] = [];
+  for (const b of merged) {
+    const hasMovement = Math.abs(b.close - b.open) >= 0.005 || Math.abs(b.high - b.low) >= 0.01;
+
+    let adjustedHigh = b.high;
+    let adjustedLow = b.low;
+
+    if (hasMovement) {
+      // Add small simulated volatility for visual interest on active candles
+      const seed1 = Math.sin(b.ts * 0.0001 + 78.233) * 43758.5453;
+      const rand1 = (seed1 - Math.floor(seed1)) * 0.3;
+      const seed2 = Math.sin(b.ts * 0.0002 + 12.989) * 23421.6312;
+      const rand2 = (seed2 - Math.floor(seed2)) * 0.3;
+      adjustedHigh = b.high + rand1;
+      adjustedLow = Math.max(b.low - rand2, 0.01);
+    }
+
+    const timeSec = Math.floor(b.ts / 1000) as unknown as Time;
 
     rawCandles.push({
       candle: {
         time: timeSec,
-        open: Math.round(open * 100) / 100,
+        open: Math.round(b.open * 100) / 100,
         high: Math.round(adjustedHigh * 100) / 100,
         low: Math.round(adjustedLow * 100) / 100,
-        close: Math.round(close * 100) / 100,
+        close: Math.round(b.close * 100) / 100,
       },
-      originalTs: key,
+      originalTs: b.ts,
     });
-
-    prevClose = close;
   }
 
   // Filter out flat/barely-change candles for all views.
