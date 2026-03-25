@@ -12,6 +12,7 @@ import Portfolio from "./pages/Portfolio";
 import Leaderboard from "./pages/Leaderboard";
 import NewsFeed from "./pages/NewsFeed";
 import Sentiment from "./pages/Sentiment";
+import AdminSQL from "./pages/AdminSQL";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path={"/leaderboard"} component={Leaderboard} />
       <Route path={"/news"} component={NewsFeed} />
       <Route path={"/sentiment"} component={Sentiment} />
+      <Route path={"/admin/sql"} component={AdminSQL} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

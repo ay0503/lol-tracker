@@ -1,7 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -17,6 +17,7 @@ import {
   getPortfolioHistory, getUserNotifications, getUnreadNotificationCount,
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
+  getRawClient,
 } from "./db";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
@@ -638,6 +639,62 @@ export const appRouter = router({
     stop: publicProcedure.mutation(() => {
       stopPolling();
       return { success: true, message: "Polling stopped" };
+    }),
+  }),
+
+  // ─── Admin SQL Console (admin only) ───
+  admin: router({
+    sql: adminProcedure
+      .input(z.object({ query: z.string().min(1).max(10000) }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        const startTime = Date.now();
+        try {
+          const result = await client.execute(input.query);
+          const duration = Date.now() - startTime;
+          return {
+            success: true,
+            columns: result.columns,
+            rows: result.rows.map(row => {
+              // Convert Row to plain object
+              const obj: Record<string, unknown> = {};
+              result.columns.forEach((col, i) => {
+                obj[col] = row[i];
+              });
+              return obj;
+            }),
+            rowCount: result.rows.length,
+            rowsAffected: result.rowsAffected,
+            duration,
+          };
+        } catch (err: any) {
+          const duration = Date.now() - startTime;
+          return {
+            success: false,
+            error: err.message || String(err),
+            columns: [],
+            rows: [],
+            rowCount: 0,
+            rowsAffected: 0,
+            duration,
+          };
+        }
+      }),
+    dbStatus: adminProcedure.query(async () => {
+      const client = getRawClient();
+      const tables = await client.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%' ORDER BY name"
+      );
+      const stats: Array<{ table: string; count: number }> = [];
+      for (const row of tables.rows) {
+        const tableName = row[0] as string;
+        const countResult = await client.execute(`SELECT COUNT(*) as c FROM "${tableName}"`);
+        stats.push({ table: tableName, count: Number(countResult.rows[0][0]) });
+      }
+      return {
+        tables: stats,
+        dbPath: process.env.DATABASE_PATH || "./data/lol-tracker.db",
+      };
     }),
   }),
 });

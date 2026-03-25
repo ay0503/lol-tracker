@@ -1,0 +1,5 @@
+Admin SQL page redirected to home page because:
+1. User is not logged in (shows "로그인" / Login button)
+2. The page requires admin role, so it redirects non-admin/non-logged-in users to /
+
+Need to log in as admin to test the page.

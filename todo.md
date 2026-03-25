@@ -411,3 +411,10 @@
 - [x] Update frontend health check to use same-origin /api/health
 - [x] Remove cross-origin cookie/credentials config (cookies now sameSite: lax)
 - [x] Update DEPLOYMENT_GUIDE.md with Vercel rewrites instructions
+
+## Feature: Admin SQL Console
+- [x] Add admin-protected tRPC endpoint to execute arbitrary SQL queries
+- [x] Build browser UI page at /admin/sql with query textarea, run button, and results table
+- [x] Protect endpoint with admin role check (owner only)
+- [x] Add /admin/sql route to App.tsx
+- [x] Write vitest tests for the admin SQL endpoint (12 tests)

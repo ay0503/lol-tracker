@@ -12,6 +12,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _rawClient: ReturnType<typeof createClient> | null = null;
 
 export function getDbSync() {
   if (!_db) {
@@ -19,12 +20,18 @@ export function getDbSync() {
     // Ensure the directory exists
     const dir = dirname(dbPath);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    const client = createClient({ url: `file:${dbPath}` });
-    _db = drizzle(client);
+    _rawClient = createClient({ url: `file:${dbPath}` });
+    _db = drizzle(_rawClient);
     // Enable WAL mode for better concurrent read performance
-    client.executeMultiple("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
+    _rawClient.executeMultiple("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
   }
   return _db;
+}
+
+/** Get the raw libsql client for executing arbitrary SQL (admin use only) */
+export function getRawClient() {
+  if (!_rawClient) getDbSync(); // ensure initialized
+  return _rawClient!;
 }
 
 export async function getDb() {
