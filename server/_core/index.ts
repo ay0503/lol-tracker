@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startPolling } from "../pollEngine";
+import { ensureBotUser } from "../botTrader";
 import { ENV } from "./env";
 
 // Programmatic migration — runs at app startup, after volumes are mounted
@@ -196,8 +197,15 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Initialize bot user before starting polling
+    try {
+      const botId = await ensureBotUser();
+      console.log(`[Server] QuantBot initialized (userId: ${botId})`);
+    } catch (err) {
+      console.error("[Server] Failed to initialize QuantBot:", err);
+    }
     startPolling();
   });
 }

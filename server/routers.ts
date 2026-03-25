@@ -24,6 +24,7 @@ import {
   getActiveGame, getQueueName,
 } from "./riotApi";
 import { pollNow, getPollStatus, startPolling, stopPolling } from "./pollEngine";
+import { forceRunBot, getBotUserId } from "./botTrader";
 import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSnapshots } from "./etfPricing";
 
 /** Cache TTL constants */
@@ -873,6 +874,13 @@ export const appRouter = router({
         tables: stats,
         dbPath: process.env.DATABASE_PATH || "./data/lol-tracker.db",
       };
+    }),
+
+    /** Force-run the AI bot trader immediately (bypasses 10-min cycle) */
+    runBot: adminProcedure.mutation(async () => {
+      const traded = await forceRunBot();
+      const botId = await getBotUserId();
+      return { traded, botUserId: botId };
     }),
   }),
 });

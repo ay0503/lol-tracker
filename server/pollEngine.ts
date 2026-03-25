@@ -24,6 +24,7 @@ import {
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
+import { runBotTrader, ensureBotUser } from "./botTrader";
 
 // Player config
 const GAME_NAME = "목도리 도마뱀";
@@ -258,7 +259,18 @@ export async function pollNow(): Promise<PollResult> {
       result.errors.push(`Portfolio snapshot error: ${err.message}`);
     }
 
-    // 8. Update market status based on recent activity
+    // 8. Run AI bot trader (every 5th poll cycle = 10 min)
+    try {
+      const botTraded = await runBotTrader();
+      if (botTraded) {
+        console.log("[Poll] Bot trader executed a trade");
+      }
+    } catch (err: any) {
+      result.errors.push(`Bot trader error: ${err.message}`);
+      console.error("[Poll] Bot trader error:", err);
+    }
+
+    // 9. Update market status based on recent activity
     const hasRecentGame = recentMatches.some(m => {
       const endTime = m.info.gameEndTimestamp || (m.info.gameCreation + m.info.gameDuration * 1000);
       return Date.now() - endTime < 60 * 60 * 1000; // within last hour

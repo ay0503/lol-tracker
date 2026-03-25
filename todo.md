@@ -469,3 +469,19 @@
 ## Bug: Price desync between chart header and trading panel
 - [x] Investigate why chart header price differs from trading panel buy price
 - [x] Sync both to use the same etfPrices endpoint
+
+## Feature: AI Quant Bot Trader
+- [x] Create bot user in DB on server startup (displayName: "QuantBot 🤖", role: user)
+- [x] Build AI bot module (server/botTrader.ts) with market analysis logic
+- [x] Gather market data for AI prompt: price history, recent matches, LP trend, win streaks, current holdings
+- [x] Send data to OpenAI API with quant-style system prompt for trade decisions
+- [x] Parse AI response into actionable trades (buy/sell/short/cover with ticker and amount)
+- [x] Execute trades using existing db helpers (respects live game halt)
+- [x] Post analytical sentiment comments from bot perspective
+- [x] Integrate into polling engine on 10-min cycle (every 5th poll)
+- [x] Handle errors gracefully (API failures → fallback momentum strategy, insufficient funds → capped trades)
+- [x] Bot competes on leaderboard as regular user
+- [x] Admin endpoint to force-run bot (admin.runBot)
+- [x] Fallback to BUILT_IN_FORGE_API if OPENAI env vars not set
+- [x] 11 vitest tests for bot trader module (all passing)
+- [x] Full test suite: 81 tests passing
