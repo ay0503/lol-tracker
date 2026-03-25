@@ -652,8 +652,8 @@ export const appRouter = router({
   leaderboard: router({
     rankings: publicProcedure.query(async () => {
       return cache.getOrSet("leaderboard.rankings", async () => {
-        const { users: allUsers, holdings: allHoldings } = await getLeaderboard();
-        const history = await getPriceHistory();
+        const { users: allUsers, holdingsByUser } = await getLeaderboard();
+        const history = await getPriceHistory() ?? [];
         const tickerPrices: Record<string, number> = history.length > 0
           ? computeAllETFPricesSync(history)
           : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
@@ -661,7 +661,7 @@ export const appRouter = router({
         const rankings = allUsers.map((u) => {
           const cash = u.cashBalance ? parseFloat(u.cashBalance) : 200;
           const totalDivs = u.totalDividends ? parseFloat(u.totalDividends) : 0;
-          const userHoldings = allHoldings.filter((h) => h.userId === u.userId);
+          const userHoldings = holdingsByUser.get(u.userId) ?? [];
 
           let holdingsValue = 0;
           let shortExposure = 0;

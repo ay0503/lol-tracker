@@ -41,7 +41,6 @@ vi.mock("./pollEngine", () => ({
   getPollStatus: vi.fn(),
   startPolling: vi.fn(),
   stopPolling: vi.fn(),
-  getETFPrice: vi.fn(),
 }));
 
 import {

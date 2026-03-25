@@ -237,8 +237,6 @@ export async function pollNow(): Promise<PollResult> {
       const participant = match.info.participants.find(p => p.puuid === puuid);
       if (!participant) continue;
 
-      const matchPrice = tierToPrice(tier, division, lp); // approximate
-
       try {
         await addMatch({
           matchId,

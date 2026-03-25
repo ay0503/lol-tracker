@@ -75,6 +75,12 @@ async function startServer() {
   console.log("[Server] Mode:", ENV.corsOrigin ? "SPLIT (backend only, frontend served separately)" : "SAME-ORIGIN (full stack)");
   console.log("[Server] ───────────────────────────────────────");
 
+  // ─── Block startup with insecure JWT secret in production ─────────────────
+  if (ENV.isProduction && ENV.cookieSecret === "change-me-in-production") {
+    console.error("[Server] FATAL: JWT_SECRET must be set in production. Using the default secret allows token forgery. Exiting.");
+    process.exit(1);
+  }
+
   // ─── Run migrations before anything else ──────────────────────────────────
   await runMigrations();
 

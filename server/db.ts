@@ -563,9 +563,20 @@ export async function getLeaderboard() {
   }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId))
     .where(ne(users.role, 'admin'));
 
-  const allHoldings = await db.select().from(holdings);
+  // Only fetch holdings for non-admin users, grouped by userId for O(1) lookup
+  const userIds = allUsers.map(u => u.userId);
+  const allHoldings = userIds.length > 0
+    ? await db.select().from(holdings).where(sql`${holdings.userId} IN (${sql.join(userIds, sql`, `)})`)
+    : [];
 
-  return { users: allUsers, holdings: allHoldings };
+  const holdingsByUser = new Map<number, typeof allHoldings>();
+  for (const h of allHoldings) {
+    const arr = holdingsByUser.get(h.userId) ?? [];
+    arr.push(h);
+    holdingsByUser.set(h.userId, arr);
+  }
+
+  return { users: allUsers, holdingsByUser };
 }
 
 // ─── Price History ───

@@ -65,19 +65,6 @@ export const TICKERS = [
   { symbol: "XDRI", name: "XDRI", description: "3x Inverse LP", leverage: 3, inverse: true, color: "#FF1744" },
 ] as const;
 
-export function getETFPrice(ticker: string, currentPrice: number, previousPrice: number): number {
-  if (previousPrice <= 0) return currentPrice;
-  const pctChange = (currentPrice - previousPrice) / previousPrice;
-  switch (ticker) {
-    case "DORI": return currentPrice;
-    case "DDRI": return previousPrice * (1 + pctChange * 2);
-    case "TDRI": return previousPrice * (1 + pctChange * 3);
-    case "SDRI": return previousPrice * (1 + pctChange * -2);
-    case "XDRI": return previousPrice * (1 + pctChange * -3);
-    default: return currentPrice;
-  }
-}
-
 // ─── Season History (static — no Riot API for past seasons) ───
 
 export interface SeasonTier {
