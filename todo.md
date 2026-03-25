@@ -678,3 +678,9 @@
 - [x] Optimize x-axis labels for compressed timelines — real dates mapped from sequential indices
 - [x] Fixed time range pill feedback loop (suppress auto-detection for 500ms after chart init)
 - [x] Verified all time ranges: 3H, 6H, 1D (intraday real timestamps), 1W, 1M, 3M, 6M, YTD, ALL (compressed)
+
+## Bug Fix: LP Change Across Tier/Division Boundaries
+- [x] Fix LP change calculation when tier/division changes (e.g., Emerald 2 10LP -> Emerald 3 96LP is -14 LP, not +86)
+- [x] Use totalLP (absolute LP across all tiers) difference instead of raw LP difference in pollEngine.ts
+- [x] Updated PostGameBanner subtitle to show full tier+division alongside LP (e.g., "EMERALD II 10LP → EMERALD III 96LP")
+- [x] Verified: price change was already correct (uses tierToPrice which accounts for tier/division)

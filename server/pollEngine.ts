@@ -179,7 +179,9 @@ export async function pollNow(): Promise<PollResult> {
 
     // Emit game-end event now that we have current LP/price
     if (wasConfirmedInGame && !confirmedIsInGame && preGameSnapshot) {
-      const lpDelta = lp - preGameSnapshot.lp;
+      // Use totalLP (absolute LP across all tiers) for accurate delta calculation
+      // Raw LP difference is wrong when tier/division changes (e.g., Emerald 2 10LP -> Emerald 3 96LP = -14 LP, not +86)
+      const lpDelta = totalLP - preGameSnapshot.totalLP;
       const priceChange = price - preGameSnapshot.price;
       const priceChangePct = preGameSnapshot.price > 0
         ? (priceChange / preGameSnapshot.price) * 100

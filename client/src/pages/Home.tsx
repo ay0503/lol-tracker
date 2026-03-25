@@ -315,7 +315,7 @@ function PostGameBanner() {
                 <span className="text-xs text-muted-foreground">LP</span>
               </div>
               <span className="text-[10px] text-muted-foreground mt-0.5">
-                {event.lpBefore} → {event.lpAfter}
+                {event.tierBefore} {event.divisionBefore} {event.lpBefore}LP → {event.tierAfter} {event.divisionAfter} {event.lpAfter}LP
               </span>
             </div>
 
