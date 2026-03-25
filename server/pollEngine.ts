@@ -68,6 +68,10 @@ let lastSnapshotPrice: number | null = null;
 let lastSnapshotTime = 0;
 const SNAPSHOT_MIN_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
+// Portfolio snapshot throttling: every 10 minutes
+let lastPortfolioSnapshotTime = 0;
+const PORTFOLIO_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
+
 // Daily summary: track last summary date to send once per day
 let lastDailySummaryDate: string | null = null;
 
@@ -536,8 +540,12 @@ export async function pollNow(): Promise<PollResult> {
 
     // 7. Record portfolio snapshots for P&L charting
     try {
-      await recordPortfolioSnapshots(currentETFPrices as Record<string, number>);
-      console.log("[Poll] Portfolio snapshots recorded");
+      const nowMs = Date.now();
+      if (nowMs - lastPortfolioSnapshotTime >= PORTFOLIO_SNAPSHOT_INTERVAL_MS) {
+        await recordPortfolioSnapshots(currentETFPrices as Record<string, number>);
+        lastPortfolioSnapshotTime = nowMs;
+        console.log("[Poll] Portfolio snapshots recorded");
+      }
     } catch (err: any) {
       result.errors.push(`Portfolio snapshot error: ${err.message}`);
     }
