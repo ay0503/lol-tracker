@@ -1,6 +1,6 @@
 import "dotenv/config";
 import express from "express";
-import cors from "cors";
+// cors handled manually below
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -121,23 +121,35 @@ async function startServer() {
 
   // ─── CORS Configuration ───────────────────────────────────────────────────
   if (ENV.corsOrigin) {
-    app.use(cors({
-      origin: (requestOrigin, callback) => {
-        if (!requestOrigin) {
-          callback(null, true);
-          return;
-        }
-        if (requestOrigin === ENV.corsOrigin) {
-          callback(null, true);
-        } else {
-          console.error(`[CORS] ✗ BLOCKED request from origin: "${requestOrigin}" (allowed: "${ENV.corsOrigin}")`);
-          callback(new Error(`CORS: Origin ${requestOrigin} not allowed`));
-        }
-      },
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-    }));
+    // Explicit preflight handler — runs FIRST, before any other middleware
+    // This ensures OPTIONS requests always get correct CORS headers
+    app.options("*", (req, res) => {
+      const origin = req.headers.origin;
+      console.log(`[CORS] Preflight OPTIONS from: ${origin || "(no origin)"}`);
+      if (origin === ENV.corsOrigin) {
+        res.setHeader("Access-Control-Allow-Origin", ENV.corsOrigin);
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        res.setHeader("Access-Control-Max-Age", "86400"); // Cache preflight for 24h
+        res.status(204).end();
+      } else {
+        console.warn(`[CORS] ⚠️ Preflight BLOCKED from: ${origin}`);
+        res.status(403).end();
+      }
+    });
+
+    // CORS middleware for all other requests
+    app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      if (origin === ENV.corsOrigin) {
+        res.setHeader("Access-Control-Allow-Origin", ENV.corsOrigin);
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+      } else if (origin) {
+        console.error(`[CORS] ✗ BLOCKED request from origin: "${origin}" (allowed: "${ENV.corsOrigin}")`);
+      }
+      next();
+    });
     console.log(`[CORS] Enabled for origin: ${ENV.corsOrigin}`);
   } else {
     console.log("[CORS] Disabled (same-origin mode)");
