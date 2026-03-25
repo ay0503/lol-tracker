@@ -98,6 +98,7 @@ interface CandleMeta {
   originalTs: number;
   isNewDay: boolean;
   dayLabel: string;
+  timeGapHours: number; // hours since previous candle, 0 if first
 }
 
 // ─── Generate candle data using Unix timestamps (seconds) ───
@@ -206,52 +207,42 @@ function generateCandleData(
   // Keep at least some candles — if filtering removed too many, use originals
   const toUse = filtered.length >= 3 ? filtered : rawCandles;
 
-  if (isIntraday) {
-    // For intraday: use real timestamps
+  // Helper to compute time gap in hours from previous candle
+  function buildMeta(items: typeof toUse): CandleMeta[] {
     const meta: CandleMeta[] = [];
     let prevDay = "";
-    for (const rc of toUse) {
+    for (let i = 0; i < items.length; i++) {
+      const rc = items[i];
       const d = new Date(rc.originalTs);
       const day = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const gapMs = i > 0 ? rc.originalTs - items[i - 1].originalTs : 0;
       meta.push({
         originalTs: rc.originalTs,
         isNewDay: day !== prevDay,
         dayLabel: `${d.getMonth() + 1}/${d.getDate()}`,
+        timeGapHours: gapMs / (1000 * 60 * 60),
       });
       prevDay = day;
     }
-    return { candles: toUse.map(rc => rc.candle), meta };
+    return meta;
+  }
+
+  if (isIntraday) {
+    return { candles: toUse.map(rc => rc.candle), meta: buildMeta(toUse) };
   }
 
   // Reassign sequential fake timestamps (1 day apart) to compress gaps
-  // Use a base date far in the past to avoid conflicts
-  const BASE_TS = new Date(2020, 0, 1).getTime() / 1000; // Jan 1 2020 in seconds
+  const BASE_TS = new Date(2020, 0, 1).getTime() / 1000;
   const DAY_SEC = 86400;
 
   const result: CandlestickData<Time>[] = [];
-  const meta: CandleMeta[] = [];
-  let prevDay = "";
-
   for (let i = 0; i < toUse.length; i++) {
     const rc = toUse[i];
     const fakeTime = (BASE_TS + i * DAY_SEC) as unknown as Time;
-
-    result.push({
-      ...rc.candle,
-      time: fakeTime,
-    });
-
-    const d = new Date(rc.originalTs);
-    const day = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    meta.push({
-      originalTs: rc.originalTs,
-      isNewDay: day !== prevDay,
-      dayLabel: `${d.getMonth() + 1}/${d.getDate()}`,
-    });
-    prevDay = day;
+    result.push({ ...rc.candle, time: fakeTime });
   }
 
-  return { candles: result, meta };
+  return { candles: result, meta: buildMeta(toUse) };
 }
 
 // ─── Generate volume data ───
@@ -419,12 +410,30 @@ export default function CandlestickChart({
     allCandles.current = candles;
     candlestickSeries.setData(candles);
 
-    // Add day separator markers for non-intraday compressed charts
-    if (!isIntraday && candleMeta.length > 0) {
-      const dayMarkers: SeriesMarker<Time>[] = [];
+    // Add markers: zigzag for time gaps >4h, day separators for non-intraday
+    {
+      const markers: SeriesMarker<Time>[] = [];
+      const TIME_GAP_THRESHOLD = 4; // hours
+
       for (let i = 0; i < candleMeta.length; i++) {
-        if (candleMeta[i].isNewDay && i > 0) {
-          dayMarkers.push({
+        const m = candleMeta[i];
+
+        // Zigzag marker for time gaps >4 hours
+        if (m.timeGapHours >= TIME_GAP_THRESHOLD) {
+          const gapLabel = m.timeGapHours >= 24
+            ? `${Math.round(m.timeGapHours / 24)}d`
+            : `${Math.round(m.timeGapHours)}h`;
+          markers.push({
+            time: candles[i].time,
+            position: "belowBar",
+            color: "rgba(255, 193, 7, 0.7)",
+            shape: "arrowUp",
+            text: `⏭ ${gapLabel}`,
+          });
+        }
+        // Day separator for non-intraday compressed charts
+        else if (!isIntraday && m.isNewDay && i > 0) {
+          markers.push({
             time: candles[i].time,
             position: "belowBar",
             color: "rgba(107, 114, 128, 0.6)",
@@ -433,9 +442,10 @@ export default function CandlestickChart({
           });
         }
       }
-      if (dayMarkers.length > 0) {
-        markersPluginRef.current = createSeriesMarkers(candlestickSeries, dayMarkers);
-        markersRef.current = dayMarkers;
+
+      if (markers.length > 0) {
+        markersPluginRef.current = createSeriesMarkers(candlestickSeries, markers);
+        markersRef.current = markers;
       }
     }
 
