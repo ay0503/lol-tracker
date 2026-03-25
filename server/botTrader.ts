@@ -441,7 +441,7 @@ async function executeDecision(
         const portfolio = await getOrCreatePortfolio(botUserId);
         const cash = parseFloat(portfolio.cashBalance);
         // Cap at available cash
-        const maxAmount = Math.min(decision.amount, cash * 0.95); // Leave 5% buffer
+        const maxAmount = Math.min(decision.amount, cash * 0.40); // Enforce 40% max per trade
         if (maxAmount < 1) return { success: false, message: `Insufficient cash ($${cash.toFixed(2)}) for buy` };
         const buyShares = maxAmount / price;
         await executeTrade(botUserId, ticker, "buy", buyShares, price);
@@ -463,7 +463,7 @@ async function executeDecision(
         const portfolio = await getOrCreatePortfolio(botUserId);
         const cash = parseFloat(portfolio.cashBalance);
         // Shorting requires 50% margin
-        const maxShortAmount = cash * 2 * 0.8; // Use 80% of max margin
+        const maxShortAmount = Math.min(decision.amount, cash * 0.40); // Enforce 40% max per trade
         const shortAmount = Math.min(decision.amount, maxShortAmount);
         if (shortAmount < 1) return { success: false, message: `Insufficient margin for short ($${cash.toFixed(2)} cash)` };
         const shortShares = shortAmount / price;
@@ -538,6 +538,13 @@ export async function runBotTrader(): Promise<boolean> {
 
   console.log("[Bot] ═══════════════════════════════════════");
   console.log(`[Bot] QuantBot trading cycle — ${isInGame ? "LIVE GAME" : "no live game"}`);
+
+  // Respect market halt — same rules as human traders
+  if (isInGame) {
+    console.log("[Bot] Market halted (live game) — skipping trade cycle");
+    console.log("[Bot] ═══════════════════════════════════════");
+    return false;
+  }
 
   try {
 

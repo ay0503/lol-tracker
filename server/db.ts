@@ -139,24 +139,26 @@ export async function getUserHoldings(userId: number) {
 // ─── Trade Execution ───
 
 // Per-user mutex to prevent concurrent duplicate trades (e.g., double-click)
-const userTradeLocks = new Map<number, Promise<any>>();
+// Uses a queue-based pattern: each call chains onto the previous one, ensuring serialization.
+const userTradeLocks = new Map<number, { queue: Promise<void> }>();
 
 async function withUserLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
-  // Wait for any pending trade for this user to complete
-  const pending = userTradeLocks.get(userId);
-  if (pending) {
-    try { await pending; } catch { /* ignore previous errors */ }
+  let entry = userTradeLocks.get(userId);
+  if (!entry) {
+    entry = { queue: Promise.resolve() };
+    userTradeLocks.set(userId, entry);
   }
-  // Execute and store the promise so subsequent calls wait
-  const promise = fn();
-  userTradeLocks.set(userId, promise);
+
+  let resolve: () => void;
+  const nextSlot = new Promise<void>(r => { resolve = r; });
+  const waitForTurn = entry.queue;
+  entry.queue = nextSlot;
+
+  await waitForTurn;
   try {
-    return await promise;
+    return await fn();
   } finally {
-    // Clean up if this is still the latest lock
-    if (userTradeLocks.get(userId) === promise) {
-      userTradeLocks.delete(userId);
-    }
+    resolve!();
   }
 }
 
@@ -166,35 +168,50 @@ export function executeTrade(
   return withUserLock(userId, async () => {
     const db = await getDb();
 
-    const portfolio = await getOrCreatePortfolio(userId);
-    const holding = await getOrCreateHolding(userId, ticker);
-    const totalAmount = shares * pricePerShare;
-    const currentCash = parseFloat(portfolio.cashBalance);
-    const currentShares = parseFloat(holding.shares);
-    const currentAvgCost = parseFloat(holding.avgCostBasis);
+    // Wrap in a transaction for atomicity
+    return db.transaction(async (tx) => {
+      const [portfolio] = await tx.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
+      if (!portfolio) throw new Error("Portfolio not found");
 
-    if (type === "buy") {
-      if (totalAmount > currentCash) throw new Error("Insufficient funds");
-      await db.update(portfolios).set({ cashBalance: (currentCash - totalAmount).toFixed(2) }).where(eq(portfolios.userId, userId));
-      const newShares = currentShares + shares;
-      const newAvgCost = currentShares > 0 ? ((currentAvgCost * currentShares) + (pricePerShare * shares)) / newShares : pricePerShare;
-      await db.update(holdings).set({ shares: newShares.toFixed(4), avgCostBasis: newAvgCost.toFixed(4) })
-        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
-    } else {
-      if (shares > currentShares) throw new Error("Insufficient shares");
-      await db.update(portfolios).set({ cashBalance: (currentCash + totalAmount).toFixed(2) }).where(eq(portfolios.userId, userId));
-      await db.update(holdings).set({ shares: (currentShares - shares).toFixed(4) })
-        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
-    }
+      const existingHolding = await tx.select().from(holdings)
+        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+      let holding = existingHolding[0];
+      if (!holding) {
+        await tx.insert(holdings).values({ userId, ticker, shares: "0.0000", avgCostBasis: "0.0000", shortShares: "0.0000", shortAvgPrice: "0.0000" });
+        const created = await tx.select().from(holdings)
+          .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+        holding = created[0];
+      }
 
-    await db.insert(trades).values({
-      userId, ticker, type, shares: shares.toFixed(4),
-      pricePerShare: pricePerShare.toFixed(4), totalAmount: totalAmount.toFixed(2),
+      const totalAmount = shares * pricePerShare;
+      const currentCash = parseFloat(portfolio.cashBalance);
+      const currentShares = parseFloat(holding.shares);
+      const currentAvgCost = parseFloat(holding.avgCostBasis);
+
+      if (type === "buy") {
+        if (totalAmount > currentCash) throw new Error("Insufficient funds");
+        await tx.update(portfolios).set({ cashBalance: (currentCash - totalAmount).toFixed(2) }).where(eq(portfolios.userId, userId));
+        const newShares = currentShares + shares;
+        const newAvgCost = currentShares > 0 ? ((currentAvgCost * currentShares) + (pricePerShare * shares)) / newShares : pricePerShare;
+        await tx.update(holdings).set({ shares: newShares.toFixed(4), avgCostBasis: newAvgCost.toFixed(4) })
+          .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
+      } else {
+        if (shares > currentShares) throw new Error("Insufficient shares");
+        await tx.update(portfolios).set({ cashBalance: (currentCash + totalAmount).toFixed(2) }).where(eq(portfolios.userId, userId));
+        await tx.update(holdings).set({ shares: (currentShares - shares).toFixed(4) })
+          .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
+      }
+
+      await tx.insert(trades).values({
+        userId, ticker, type, shares: shares.toFixed(4),
+        pricePerShare: pricePerShare.toFixed(4), totalAmount: totalAmount.toFixed(2),
+      });
+
+      const [updatedPortfolio] = await tx.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
+      const [updatedHolding] = await tx.select().from(holdings)
+        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+      return { portfolio: updatedPortfolio, holding: updatedHolding };
     });
-
-    const updatedPortfolio = await getOrCreatePortfolio(userId);
-    const updatedHolding = await getOrCreateHolding(userId, ticker);
-    return { portfolio: updatedPortfolio, holding: updatedHolding };
   });
 }
 
@@ -206,36 +223,51 @@ export function executeShort(
   return withUserLock(userId, async () => {
     const db = await getDb();
 
-    const portfolio = await getOrCreatePortfolio(userId);
-    const holding = await getOrCreateHolding(userId, ticker);
-    const totalAmount = shares * pricePerShare;
-    const currentCash = parseFloat(portfolio.cashBalance);
-    const currentShortShares = parseFloat(holding.shortShares);
-    const currentShortAvg = parseFloat(holding.shortAvgPrice);
+    return db.transaction(async (tx) => {
+      const [portfolio] = await tx.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
+      if (!portfolio) throw new Error("Portfolio not found");
 
-    const marginRequired = totalAmount * 0.5;
-    if (marginRequired > currentCash) throw new Error("Insufficient margin. Need 50% collateral.");
+      const existingHolding = await tx.select().from(holdings)
+        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+      let holding = existingHolding[0];
+      if (!holding) {
+        await tx.insert(holdings).values({ userId, ticker, shares: "0.0000", avgCostBasis: "0.0000", shortShares: "0.0000", shortAvgPrice: "0.0000" });
+        const created = await tx.select().from(holdings)
+          .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+        holding = created[0];
+      }
 
-    // Lock margin then credit sale proceeds
-    const newCash = currentCash - marginRequired + totalAmount;
-    await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
+      const totalAmount = shares * pricePerShare;
+      const currentCash = parseFloat(portfolio.cashBalance);
+      const currentShortShares = parseFloat(holding.shortShares);
+      const currentShortAvg = parseFloat(holding.shortAvgPrice);
 
-    const newShortShares = currentShortShares + shares;
-    const newShortAvg = currentShortShares > 0
-      ? ((currentShortAvg * currentShortShares) + (pricePerShare * shares)) / newShortShares
-      : pricePerShare;
+      const marginRequired = totalAmount * 0.5;
+      if (marginRequired > currentCash) throw new Error("Insufficient margin. Need 50% collateral.");
 
-    await db.update(holdings).set({
-      shortShares: newShortShares.toFixed(4),
-      shortAvgPrice: newShortAvg.toFixed(4),
-    }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
+      const newCash = currentCash - marginRequired + totalAmount;
+      await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
 
-    await db.insert(trades).values({
-      userId, ticker, type: "short", shares: shares.toFixed(4),
-      pricePerShare: pricePerShare.toFixed(4), totalAmount: totalAmount.toFixed(2),
+      const newShortShares = currentShortShares + shares;
+      const newShortAvg = currentShortShares > 0
+        ? ((currentShortAvg * currentShortShares) + (pricePerShare * shares)) / newShortShares
+        : pricePerShare;
+
+      await tx.update(holdings).set({
+        shortShares: newShortShares.toFixed(4),
+        shortAvgPrice: newShortAvg.toFixed(4),
+      }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
+
+      await tx.insert(trades).values({
+        userId, ticker, type: "short", shares: shares.toFixed(4),
+        pricePerShare: pricePerShare.toFixed(4), totalAmount: totalAmount.toFixed(2),
+      });
+
+      const [updatedPortfolio] = await tx.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
+      const [updatedHolding] = await tx.select().from(holdings)
+        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+      return { portfolio: updatedPortfolio, holding: updatedHolding };
     });
-
-    return { portfolio: await getOrCreatePortfolio(userId), holding: await getOrCreateHolding(userId, ticker) };
   });
 }
 
@@ -245,33 +277,41 @@ export function executeCover(
   return withUserLock(userId, async () => {
     const db = await getDb();
 
-    const portfolio = await getOrCreatePortfolio(userId);
-    const holding = await getOrCreateHolding(userId, ticker);
-    const totalCost = shares * pricePerShare;
-    const currentCash = parseFloat(portfolio.cashBalance);
-    const currentShortShares = parseFloat(holding.shortShares);
-    const currentShortAvg = parseFloat(holding.shortAvgPrice);
+    return db.transaction(async (tx) => {
+      const [portfolio] = await tx.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
+      if (!portfolio) throw new Error("Portfolio not found");
 
-    if (shares > currentShortShares) throw new Error("Cannot cover more shares than shorted");
+      const [holding] = await tx.select().from(holdings)
+        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+      if (!holding) throw new Error("No holding found");
 
-    // Return the margin that was locked when the short was opened
-    // Original short: locked margin = shortAvgPrice * shares * 0.5
-    const marginReturn = shares * currentShortAvg * 0.5;
-    const newCash = currentCash - totalCost + marginReturn;
+      const totalCost = shares * pricePerShare;
+      const currentCash = parseFloat(portfolio.cashBalance);
+      const currentShortShares = parseFloat(holding.shortShares);
+      const currentShortAvg = parseFloat(holding.shortAvgPrice);
 
-    if (newCash < 0) throw new Error("Insufficient funds to cover (after margin return)");
+      if (shares > currentShortShares) throw new Error("Cannot cover more shares than shorted");
 
-    await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
-    await db.update(holdings).set({
-      shortShares: (currentShortShares - shares).toFixed(4),
-    }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
+      const marginReturn = shares * currentShortAvg * 0.5;
+      const newCash = currentCash - totalCost + marginReturn;
 
-    await db.insert(trades).values({
-      userId, ticker, type: "cover", shares: shares.toFixed(4),
-      pricePerShare: pricePerShare.toFixed(4), totalAmount: totalCost.toFixed(2),
+      if (newCash < 0) throw new Error("Insufficient funds to cover (after margin return)");
+
+      await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
+      await tx.update(holdings).set({
+        shortShares: (currentShortShares - shares).toFixed(4),
+      }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
+
+      await tx.insert(trades).values({
+        userId, ticker, type: "cover", shares: shares.toFixed(4),
+        pricePerShare: pricePerShare.toFixed(4), totalAmount: totalCost.toFixed(2),
+      });
+
+      const [updatedPortfolio] = await tx.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
+      const [updatedHolding] = await tx.select().from(holdings)
+        .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker))).limit(1);
+      return { portfolio: updatedPortfolio, holding: updatedHolding };
     });
-
-    return { portfolio: await getOrCreatePortfolio(userId), holding: await getOrCreateHolding(userId, ticker) };
   });
 }
 
@@ -314,9 +354,10 @@ export async function getPendingOrders() {
 
 export async function fillOrder(orderId: number, filledPrice: number) {
   const db = await getDb();
-  await db.update(orders).set({
+  const result = await db.update(orders).set({
     status: "filled", filledAt: new Date().toISOString(), filledPrice: filledPrice.toFixed(4),
-  }).where(eq(orders.id, orderId));
+  }).where(and(eq(orders.id, orderId), eq(orders.status, "pending")));
+  return result;
 }
 
 // ─── Trade History ───

@@ -37,8 +37,12 @@ const FIVE_MIN = 5 * 60 * 1000;
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    me: publicProcedure.query((opts) => {
+      if (!opts.ctx.user) return null;
+      const { passwordHash, openId, ...safeUser } = opts.ctx.user;
+      return safeUser;
+    }),
+    logout: protectedProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
@@ -132,7 +136,7 @@ export const appRouter = router({
         }
       }, THIRTY_MIN);
     }),
-    refresh: publicProcedure.mutation(async () => {
+    refresh: adminProcedure.mutation(async () => {
       try {
         const data = await fetchFullPlayerData("목도리 도마뱀", "dori");
         if (data.soloEntry) {
@@ -186,7 +190,7 @@ export const appRouter = router({
       // Confirmed in-game — fetch game details for the UI banner
       return cache.getOrSet("player.liveGame.details", async () => {
         try {
-          const account = await fetchFullPlayerData("목도리 도마뱰", "dori");
+          const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
           const game = await getActiveGame(account.account.puuid);
           if (!game) return { inGame: true as const }; // confirmed but details unavailable
 
@@ -218,7 +222,7 @@ export const appRouter = router({
       const event = cache.get<GameEndEvent>("player.gameEndEvent");
       return event || null;
     }),
-    dismissGameEndEvent: publicProcedure.mutation(() => {
+    dismissGameEndEvent: protectedProcedure.mutation(() => {
       // Allows frontend to dismiss the banner by clearing the cache entry
       cache.invalidate("player.gameEndEvent");
       return { success: true };
@@ -422,7 +426,7 @@ export const appRouter = router({
     trade: protectedProcedure
       .input(z.object({
         ticker: z.enum(TICKERS), type: z.enum(["buy", "sell"]),
-        shares: z.number().positive(), pricePerShare: z.number().positive(),
+        shares: z.number().positive().finite(), pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
         // Block trading during live games
@@ -435,8 +439,17 @@ export const appRouter = router({
         }, 30_000);
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
-        if (!market.isOpen) throw new Error("Market is currently closed: " + (market.reason || ""));
-        const result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, input.pricePerShare);
+        if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed: " + (market.reason || "") });
+
+        // Server-side price validation: compute real ETF price and reject stale client prices
+        const history = await getPriceHistory();
+        const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
+        const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
+        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
+        }
+
+        const result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, serverPrice);
         // Invalidate ledger and leaderboard caches after trade
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
@@ -459,8 +472,8 @@ export const appRouter = router({
 
     short: protectedProcedure
       .input(z.object({
-        ticker: z.enum(TICKERS), shares: z.number().positive(),
-        pricePerShare: z.number().positive(),
+        ticker: z.enum(TICKERS), shares: z.number().positive().finite(),
+        pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
         const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
@@ -472,8 +485,17 @@ export const appRouter = router({
         }, 30_000);
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
-        if (!market.isOpen) throw new Error("Market is currently closed");
-        const result = await executeShort(ctx.user.id, input.ticker, input.shares, input.pricePerShare);
+        if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
+
+        // Server-side price validation
+        const history = await getPriceHistory();
+        const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
+        const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
+        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
+        }
+
+        const result = await executeShort(ctx.user.id, input.ticker, input.shares, serverPrice);
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
         return {
@@ -483,8 +505,8 @@ export const appRouter = router({
       }),
     cover: protectedProcedure
       .input(z.object({
-        ticker: z.enum(TICKERS), shares: z.number().positive(),
-        pricePerShare: z.number().positive(),
+        ticker: z.enum(TICKERS), shares: z.number().positive().finite(),
+        pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
         const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
@@ -496,8 +518,17 @@ export const appRouter = router({
         }, 30_000);
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
-        if (!market.isOpen) throw new Error("Market is currently closed");
-        const result = await executeCover(ctx.user.id, input.ticker, input.shares, input.pricePerShare);
+        if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
+
+        // Server-side price validation
+        const history = await getPriceHistory();
+        const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
+        const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
+        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.02) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
+        }
+
+        const result = await executeCover(ctx.user.id, input.ticker, input.shares, serverPrice);
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
         return {
@@ -510,8 +541,8 @@ export const appRouter = router({
       .input(z.object({
         ticker: z.enum(TICKERS),
         orderType: z.enum(["limit_buy", "limit_sell", "stop_loss"]),
-        shares: z.number().positive(),
-        targetPrice: z.number().positive(),
+        shares: z.number().positive().finite(),
+        targetPrice: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
         const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
@@ -563,7 +594,7 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(500).default(100) }).optional())
       .query(async ({ input }) => {
         const limit = input?.limit ?? 100;
-        return cache.getOrSet(`ledger.all`, async () => {
+        return cache.getOrSet(`ledger.all.${limit}`, async () => {
           const raw = await getAllTrades(limit);
            return raw.map((t) => ({
              id: t.id, userName: t.userName ?? "Anonymous",
@@ -582,7 +613,7 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
       .query(async ({ input }) => {
         const limit = input?.limit ?? 50;
-        return cache.getOrSet(`comments.list`, async () => {
+        return cache.getOrSet(`comments.list.${limit}`, async () => {
           const raw = await getComments(limit);
           return raw.map((c) => ({
             id: c.id, userId: c.userId,
@@ -595,7 +626,7 @@ export const appRouter = router({
     post: protectedProcedure
       .input(z.object({
         content: z.string().min(1).max(500),
-        ticker: z.string().nullable().default(null),
+        ticker: z.enum(TICKERS).nullable().default(null),
         sentiment: z.enum(["bullish", "bearish", "neutral"]).default("neutral"),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -610,8 +641,9 @@ export const appRouter = router({
     feed: publicProcedure
       .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
       .query(async ({ input }) => {
-        return cache.getOrSet("news.feed", async () => {
-          return getNews(input?.limit ?? 20);
+        const newsLimit = input?.limit ?? 20;
+        return cache.getOrSet(`news.feed.${newsLimit}`, async () => {
+          return getNews(newsLimit);
         }, THIRTY_MIN);
       }),
   }),
@@ -713,18 +745,18 @@ export const appRouter = router({
 
   // ─── Polling Control ───
   poll: router({
-    status: publicProcedure.query(() => {
+    status: adminProcedure.query(() => {
       return getPollStatus();
     }),
-    trigger: publicProcedure.mutation(async () => {
+    trigger: adminProcedure.mutation(async () => {
       const result = await pollNow();
       return result;
     }),
-    start: publicProcedure.mutation(() => {
+    start: adminProcedure.mutation(() => {
       startPolling();
       return { success: true, message: "Polling started (every 2 minutes)" };
     }),
-    stop: publicProcedure.mutation(() => {
+    stop: adminProcedure.mutation(() => {
       stopPolling();
       return { success: true, message: "Polling stopped" };
     }),
@@ -967,9 +999,10 @@ export const appRouter = router({
         const setClauses = Object.entries(input.updates)
           .map(([key, val]) => `"${key.replace(/"/g, '')}" = ${val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`}`)
           .join(', ');
-        const result = await client.execute(
-          `UPDATE "${tableName}" SET ${setClauses} WHERE id = ${typeof input.id === 'string' ? `'${input.id}'` : input.id}`
-        );
+        const result = await client.execute({
+          sql: `UPDATE "${tableName}" SET ${setClauses} WHERE id = ?`,
+          args: [input.id],
+        });
         return { success: true, rowsAffected: result.rowsAffected };
       }),
 
@@ -982,9 +1015,10 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const client = getRawClient();
         const tableName = input.table.replace(/"/g, '');
-        const result = await client.execute(
-          `DELETE FROM "${tableName}" WHERE id = ${typeof input.id === 'string' ? `'${input.id}'` : input.id}`
-        );
+        const result = await client.execute({
+          sql: `DELETE FROM "${tableName}" WHERE id = ?`,
+          args: [input.id],
+        });
         return { success: true, rowsAffected: result.rowsAffected };
       }),
 
@@ -1010,7 +1044,7 @@ export const appRouter = router({
       .input(z.object({
         displayName: z.string().optional(),
         userId: z.number().optional(),
-        cashAmount: z.number().min(0).default(200),
+        cashAmount: z.number().min(0).finite().default(200),
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();

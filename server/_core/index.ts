@@ -156,19 +156,14 @@ async function startServer() {
     console.log("[CORS] Disabled (same-origin mode)");
   }
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "1mb" }));
+  app.use(express.urlencoded({ limit: "1mb", extended: true }));
 
   // Health check endpoint
-  app.get("/api/health", (req, res) => {
-    const origin = req.headers.origin || "(no origin)";
-    console.log(`[Health] Check from origin: ${origin}`);
+  app.get("/api/health", (_req, res) => {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      cors_origin: ENV.corsOrigin || "(same-origin)",
-      database: ENV.databasePath,
-      mode: ENV.corsOrigin ? "split" : "same-origin",
     });
   });
 

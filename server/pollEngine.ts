@@ -120,8 +120,8 @@ export async function pollNow(): Promise<PollResult> {
       rawIsInGame = !!activeGame;
     } catch (err: any) {
       console.warn("[Poll] Live game check failed:", err?.message);
-      // On error, treat as not-in-game (don't block trading)
-      rawIsInGame = false;
+      // On error, preserve previous state to avoid false game-end detection
+      rawIsInGame = previousRawIsInGame ?? false;
     }
 
     // Two-consecutive-confirmation logic
