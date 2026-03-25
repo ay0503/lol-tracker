@@ -450,13 +450,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         checkTradeCooldown(ctx.user.id);
         // Block trading during live games
-        const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
-          try {
-            const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-            const game = await getActiveGame(account.account.puuid);
-            return !!game;
-          } catch { return false; }
-        }, 30_000);
+        const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed: " + (market.reason || "") });
@@ -498,13 +492,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         checkTradeCooldown(ctx.user.id);
-        const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
-          try {
-            const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-            const game = await getActiveGame(account.account.puuid);
-            return !!game;
-          } catch { return false; }
-        }, 30_000);
+        const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
@@ -533,13 +521,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         checkTradeCooldown(ctx.user.id);
-        const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
-          try {
-            const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-            const game = await getActiveGame(account.account.puuid);
-            return !!game;
-          } catch { return false; }
-        }, 30_000);
+        const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         const market = await getMarketStatus();
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
@@ -570,13 +552,7 @@ export const appRouter = router({
         targetPrice: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
-          try {
-            const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-            const game = await getActiveGame(account.account.puuid);
-            return !!game;
-          } catch { return false; }
-        }, 30_000);
+        const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Orders can be placed after the match ends." });
         const order = await createOrder({
           userId: ctx.user.id, ticker: input.ticker,

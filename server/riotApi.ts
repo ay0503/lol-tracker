@@ -299,7 +299,7 @@ export async function getActiveGame(puuid: string): Promise<CurrentGameInfo | nu
     // 404 means player is not in a game
     if (err?.response?.status === 404) return null;
     console.warn("[RiotAPI] Spectator check failed:", err?.message);
-    return null;
+    throw err; // Re-throw so pollEngine can preserve previous state on API errors
   }
 }
 
