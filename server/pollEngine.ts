@@ -109,9 +109,6 @@ export async function pollNow(): Promise<PollResult> {
   };
 
   try {
-    // 1. Check live game status with two-consecutive-confirmation
-    // The confirmed status only flips when two consecutive raw checks agree.
-    // This prevents false toggles and provides a natural ~2 min delay.
     // 1. Fetch player data (single call, reused for game check + LP)
     console.log("[Poll] Fetching player data...");
     let playerData: Awaited<ReturnType<typeof fetchFullPlayerData>>;
@@ -180,7 +177,6 @@ export async function pollNow(): Promise<PollResult> {
 
     // Update the cache with the CONFIRMED status (used by trade endpoints + bot)
     cache.set("player.liveGame.check", confirmedIsInGame, 45_000); // 45s TTL (slightly > poll interval)
-    }
 
     const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
     const totalLP = tierToTotalLP(tier, division, lp);
