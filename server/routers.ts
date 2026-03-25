@@ -36,7 +36,7 @@ const FIVE_MIN = 5 * 60 * 1000;
 
 /** Per-user trade cooldown (2 minutes) */
 const TRADE_COOLDOWN_MS = 2 * 60 * 1000;
-const lastTradeTime = new Map<number, number>();
+export const lastTradeTime = new Map<number, number>();
 
 function checkTradeCooldown(userId: number) {
   const last = lastTradeTime.get(userId);

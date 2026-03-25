@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { appRouter } from "./routers";
+import { appRouter, lastTradeTime } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import { cache } from "./cache";
 
@@ -108,6 +108,7 @@ describe("trading.portfolio", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
   });
 
   it("returns portfolio with holdings for authenticated user", async () => {
@@ -181,6 +182,7 @@ describe("trading.trade", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
     // Default: market is open
     (getMarketStatus as any).mockResolvedValue({ isOpen: true, reason: null, lastActivity: null });
   });
@@ -286,6 +288,7 @@ describe("trading.short", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
     (getMarketStatus as any).mockResolvedValue({ isOpen: true, reason: null, lastActivity: null });
   });
 
@@ -333,6 +336,7 @@ describe("trading.orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
   });
 
   it("creates a limit buy order", async () => {
@@ -397,6 +401,7 @@ describe("comments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
   });
 
   it("posts a comment", async () => {
@@ -445,6 +450,7 @@ describe("trading.history", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
   });
 
   it("returns trade history with ticker field", async () => {
@@ -497,6 +503,7 @@ describe("ledger.all", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
   });
 
   it("returns all trades from all users (public)", async () => {
@@ -539,6 +546,7 @@ describe("prices.etfPrices", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cache.invalidateAll();
+    lastTradeTime.clear();
   });
 
   it("calculates ETF prices from base DORI price", async () => {

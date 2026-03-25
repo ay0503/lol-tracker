@@ -570,10 +570,9 @@ export async function getLeaderboard() {
     userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
     cashBalance: portfolios.cashBalance,
     totalDividends: portfolios.totalDividends,
-  }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId))
-    .where(ne(users.role, 'admin'));
+  }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId));
 
-  // Only fetch holdings for non-admin users, grouped by userId for O(1) lookup
+  // Fetch holdings for all users, grouped by userId for O(1) lookup
   const userIds = allUsers.map(u => u.userId);
   const allHoldings = userIds.length > 0
     ? await db.select().from(holdings).where(sql`${holdings.userId} IN (${sql.join(userIds, sql`, `)})`)
