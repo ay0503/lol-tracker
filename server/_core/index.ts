@@ -33,16 +33,88 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // CORS: enable when frontend is hosted separately (e.g., Vercel + Railway)
-  // Set CORS_ORIGIN env var to the frontend URL (e.g., https://your-app.vercel.app)
+  // ─── Startup Diagnostics ──────────────────────────────────────────────────
+  console.log("[Server] ─── Backend Startup Diagnostics ───");
+  console.log("[Server] NODE_ENV:", process.env.NODE_ENV || "(not set)");
+  console.log("[Server] DATABASE_PATH:", ENV.databasePath);
+  console.log("[Server] CORS_ORIGIN:", ENV.corsOrigin || "(not set — same-origin mode)");
+  console.log("[Server] RIOT_API_KEY:", ENV.riotApiKey ? `${ENV.riotApiKey.slice(0, 8)}...` : "(not set)");
+  console.log("[Server] JWT_SECRET:", ENV.cookieSecret === "change-me-in-production" ? "⚠️ USING DEFAULT (insecure)" : "✓ Custom secret set");
+  console.log("[Server] OPENAI_API_URL:", ENV.openaiApiUrl || "(not set — AI news disabled)");
+  console.log("[Server] Mode:", ENV.corsOrigin ? "SPLIT (Railway backend only)" : "SAME-ORIGIN (full stack)");
+  console.log("[Server] ───────────────────────────────────────");
+
+  // ─── Request logging middleware ───────────────────────────────────────────
+  // Logs every incoming request with origin, cookies, and timing
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const origin = req.headers.origin || "(no origin)";
+    const hasCookies = !!req.headers.cookie;
+    const cookieNames = hasCookies
+      ? req.headers.cookie!.split(";").map(c => c.trim().split("=")[0]).join(", ")
+      : "(none)";
+
+    // Log on response finish
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      const status = res.statusCode;
+      const method = req.method;
+      const path = req.path;
+
+      // Color-code by status
+      const statusTag = status >= 500 ? "✗" : status >= 400 ? "⚠" : "✓";
+
+      // Only log API requests (skip static files in same-origin mode)
+      if (path.startsWith("/api/")) {
+        console.log(
+          `[HTTP] ${statusTag} ${method} ${path} → ${status} (${duration}ms) | origin: ${origin} | cookies: [${cookieNames}]`
+        );
+
+        // Detailed CORS logging for cross-origin requests
+        if (origin !== "(no origin)" && ENV.corsOrigin) {
+          const isAllowed = origin === ENV.corsOrigin;
+          if (!isAllowed) {
+            console.warn(`[CORS] ⚠️ Origin "${origin}" does NOT match CORS_ORIGIN="${ENV.corsOrigin}"`);
+          }
+        }
+
+        // Auth logging for tRPC requests
+        if (path.startsWith("/api/trpc")) {
+          if (!hasCookies) {
+            console.log(`[Auth] No cookies sent with request — user is not authenticated`);
+          } else if (!req.headers.cookie?.includes("app_session_id")) {
+            console.log(`[Auth] Cookies present but no session cookie (app_session_id) — user is not authenticated`);
+          }
+        }
+      }
+    });
+
+    next();
+  });
+
+  // ─── CORS Configuration ───────────────────────────────────────────────────
   if (ENV.corsOrigin) {
     app.use(cors({
-      origin: ENV.corsOrigin,
+      origin: (requestOrigin, callback) => {
+        // Allow requests with no origin (e.g., server-to-server, health checks)
+        if (!requestOrigin) {
+          callback(null, true);
+          return;
+        }
+        if (requestOrigin === ENV.corsOrigin) {
+          callback(null, true);
+        } else {
+          console.error(`[CORS] ✗ BLOCKED request from origin: "${requestOrigin}" (allowed: "${ENV.corsOrigin}")`);
+          callback(new Error(`CORS: Origin ${requestOrigin} not allowed`));
+        }
+      },
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     }));
     console.log(`[CORS] Enabled for origin: ${ENV.corsOrigin}`);
+  } else {
+    console.log("[CORS] Disabled (same-origin mode)");
   }
 
   // Configure body parser with larger size limit
@@ -50,8 +122,16 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // Health check endpoint (useful for Railway)
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  app.get("/api/health", (req, res) => {
+    const origin = req.headers.origin || "(no origin)";
+    console.log(`[Health] Check from origin: ${origin}`);
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      cors_origin: ENV.corsOrigin || "(same-origin)",
+      database: ENV.databasePath,
+      mode: ENV.corsOrigin ? "split" : "same-origin",
+    });
   });
 
   // tRPC API
@@ -83,7 +163,7 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    // Start LP polling every 15 minutes
+    // Start LP polling
     startPolling();
   });
 }

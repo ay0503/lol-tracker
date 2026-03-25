@@ -398,3 +398,7 @@
 
 ## Bug: Line graph extends past current date
 - [ ] Fix LPChart line graph to stop at the current date instead of continuing endlessly
+
+## Feature: Connection diagnostics logging
+- [x] Add frontend logging: API URL, tRPC requests/responses, CORS errors, cookie status
+- [x] Add backend logging: incoming origins, CORS decisions, auth flow, cookie presence
