@@ -83,6 +83,7 @@ export default function TradingPanel() {
   const [showOrders, setShowOrders] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirmation | null>(null);
   const [tradingLocked, setTradingLocked] = useState(false);
+  const [inputMode, setInputMode] = useState<"dollars" | "shares">("dollars");
   const lastTradeTime = useRef(0);
   const TRADE_COOLDOWN_MS = 2000; // 2 second cooldown between trades
 
@@ -170,7 +171,14 @@ export default function TradingPanel() {
   };
 
   const tickerPrice = getLivePrice(selectedTicker);
-  const shares = tickerPrice > 0 && parseFloat(amount) > 0 ? parseFloat(amount) / tickerPrice : 0;
+  // Compute shares and dollar amount based on input mode
+  const rawInput = parseFloat(amount) || 0;
+  const shares = inputMode === "dollars"
+    ? (tickerPrice > 0 && rawInput > 0 ? rawInput / tickerPrice : 0)
+    : rawInput;
+  const dollarAmount = inputMode === "dollars"
+    ? rawInput
+    : rawInput * tickerPrice;
   const isMarketOpen = marketStatus?.isOpen ?? true;
 
   const currentHolding = useMemo(() => {
@@ -272,8 +280,7 @@ export default function TradingPanel() {
   };
 
   const maybeConfirm = (type: string, action: () => void) => {
-    const amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) {
+    if (rawInput <= 0 || isNaN(rawInput)) {
       toast.error(t.trading.validAmount);
       return;
     }
@@ -281,16 +288,16 @@ export default function TradingPanel() {
       toast.error(t.trading.priceNotAvailable);
       return;
     }
-    if (amt < 0.01) {
+    if (shares < 0.0001) {
       toast.error(t.trading.tooSmall);
       return;
     }
-    if (amt >= CONFIRM_THRESHOLD) {
+    if (dollarAmount >= CONFIRM_THRESHOLD) {
       setPendingConfirm({
         type,
         ticker: `$${selectedTicker}`,
-        amount: `$${amt.toFixed(2)}`,
-        shares: `${(amt / tickerPrice).toFixed(4)}`,
+        amount: `$${dollarAmount.toFixed(2)}`,
+        shares: `${shares.toFixed(4)}`,
         price: `$${tickerPrice.toFixed(2)}`,
         action,
       });
@@ -515,15 +522,45 @@ export default function TradingPanel() {
                   <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.buy}</button>
                   <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.sell}</button>
                 </div>
-                <div className="relative mb-3">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={t.trading.amountUsd} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                {/* Dollar / Shares toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => { setInputMode("dollars"); setAmount(""); }}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "dollars" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <DollarSign className="inline w-3 h-3 mr-0.5" />USD
+                  </button>
+                  <button
+                    onClick={() => { setInputMode("shares"); setAmount(""); }}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "shares" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Shares
+                  </button>
                 </div>
-                {shares > 0 && <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">≈ {shares.toFixed(4)} {t.trading.sharesLabel} @ ${tickerPrice.toFixed(2)}</p>}
+                <div className="relative mb-3">
+                  {inputMode === "dollars" ? (
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-bold">#</span>
+                  )}
+                  <input type="number" min="0" step={inputMode === "dollars" ? "0.01" : "0.0001"} value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={inputMode === "dollars" ? t.trading.amountUsd : "Number of shares"} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                </div>
+                {shares > 0 && (
+                  <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">
+                    {inputMode === "dollars"
+                      ? `≈ ${shares.toFixed(4)} shares @ $${tickerPrice.toFixed(2)}`
+                      : `≈ $${dollarAmount.toFixed(2)} @ $${tickerPrice.toFixed(2)}/share`}
+                  </p>
+                )}
                 <div className="flex gap-2 mb-4">
-                  {["10", "25", "50", "100"].map((val) => (
-                    <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
-                  ))}
+                  {inputMode === "dollars"
+                    ? ["10", "25", "50", "100"].map((val) => (
+                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
+                      ))
+                    : ["0.5", "1", "2", "5"].map((val) => (
+                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">{val}</button>
+                      ))
+                  }
                 </div>
                 <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
                   {tradeMutation.isPending ? t.trading.processing : `${tradeType === "buy" ? t.trading.buyTicker : t.trading.sellTicker} $${selectedTicker}`}
@@ -591,15 +628,45 @@ export default function TradingPanel() {
                   <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.shortSell}</button>
                   <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.coverBuyBack}</button>
                 </div>
-                <div className="relative mb-3">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={t.trading.amountUsd} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                {/* Dollar / Shares toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => { setInputMode("dollars"); setAmount(""); }}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "dollars" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <DollarSign className="inline w-3 h-3 mr-0.5" />USD
+                  </button>
+                  <button
+                    onClick={() => { setInputMode("shares"); setAmount(""); }}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "shares" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Shares
+                  </button>
                 </div>
-                {shares > 0 && <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">≈ {shares.toFixed(4)} {t.trading.sharesLabel} @ ${tickerPrice.toFixed(2)}</p>}
+                <div className="relative mb-3">
+                  {inputMode === "dollars" ? (
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-bold">#</span>
+                  )}
+                  <input type="number" min="0" step={inputMode === "dollars" ? "0.01" : "0.0001"} value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={inputMode === "dollars" ? t.trading.amountUsd : "Number of shares"} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                </div>
+                {shares > 0 && (
+                  <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">
+                    {inputMode === "dollars"
+                      ? `≈ ${shares.toFixed(4)} shares @ $${tickerPrice.toFixed(2)}`
+                      : `≈ $${dollarAmount.toFixed(2)} @ $${tickerPrice.toFixed(2)}/share`}
+                  </p>
+                )}
                 <div className="flex gap-2 mb-4">
-                  {["10", "25", "50", "100"].map((val) => (
-                    <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
-                  ))}
+                  {inputMode === "dollars"
+                    ? ["10", "25", "50", "100"].map((val) => (
+                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
+                      ))
+                    : ["0.5", "1", "2", "5"].map((val) => (
+                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">{val}</button>
+                      ))
+                  }
                 </div>
                 <button
                   onClick={tradeType === "sell" ? handleShort : handleCover}

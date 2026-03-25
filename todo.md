@@ -531,3 +531,24 @@
 - [x] Add server-side per-user mutex (withUserLock) on executeTrade, executeShort, executeCover — concurrent trades for same user are serialized
 - [x] Add frontend 2-second cooldown + tradingLocked state on all trade buttons
 - [x] Both layers prevent rapid double-click from executing two trades
+
+## Feature: Trade by Shares (not just dollars)
+- [x] Add a $ / shares toggle in TradingPanel for market and short tabs
+- [x] When in "shares" mode, user enters number of shares directly
+- [x] When in "dollars" mode, keep existing behavior (enter dollar amount, compute shares)
+- [x] Apply to buy, sell, short, and cover actions
+- [x] Update quick-amount buttons: $10/$25/$50/$100 in dollar mode, 0.5/1/2/5 in shares mode
+- [x] Info line shows inverse: shares mode shows dollar equivalent, dollar mode shows share equivalent
+
+## Feature: Admin DB Management Page
+- [x] Create admin-only route /admin with full DB management UI (tabbed: Tables, SQL Console, Quick Actions)
+- [x] Table browser: list all tables with row counts, click to view paginated rows
+- [x] Inline row editing: click pencil icon to edit fields in dialog, save changes
+- [x] Delete rows with confirmation dialog
+- [x] Add new rows with auto-populated defaults
+- [x] SQL console tab for raw queries (migrated from old AdminSQL page)
+- [x] Quick Actions tab: Force Run Bot, Reset User Cash
+- [x] Search/filter rows, pagination, refresh
+- [x] Backend endpoints: tableSchema, tableRows, updateRow, deleteRow, insertRow
+- [x] Quick actions: reset user cash, run bot, view DB stats
+- [x] Protect with admin role check (redirects non-admin users)

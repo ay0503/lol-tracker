@@ -893,6 +893,107 @@ export const appRouter = router({
       return { traded, botUserId: botId };
     }),
 
+    /** Get table schema (column info) */
+    tableSchema: adminProcedure
+      .input(z.object({ table: z.string() }))
+      .query(async ({ input }) => {
+        const client = getRawClient();
+        const result = await client.execute(`PRAGMA table_info("${input.table.replace(/"/g, '')}")`);  
+        return result.rows.map(row => ({
+          cid: Number(row[0]),
+          name: String(row[1]),
+          type: String(row[2]),
+          notnull: Number(row[3]) === 1,
+          dflt_value: row[4],
+          pk: Number(row[5]) === 1,
+        }));
+      }),
+
+    /** Browse table rows with pagination */
+    tableRows: adminProcedure
+      .input(z.object({
+        table: z.string(),
+        page: z.number().min(1).default(1),
+        pageSize: z.number().min(1).max(200).default(50),
+        orderBy: z.string().optional(),
+        orderDir: z.enum(["asc", "desc"]).default("desc"),
+      }))
+      .query(async ({ input }) => {
+        const client = getRawClient();
+        const tableName = input.table.replace(/"/g, '');
+        const offset = (input.page - 1) * input.pageSize;
+        const orderCol = input.orderBy || 'id';
+        const dir = input.orderDir.toUpperCase();
+        const result = await client.execute(
+          `SELECT * FROM "${tableName}" ORDER BY "${orderCol}" ${dir} LIMIT ${input.pageSize} OFFSET ${offset}`
+        );
+        const countResult = await client.execute(`SELECT COUNT(*) as c FROM "${tableName}"`);
+        const totalRows = Number(countResult.rows[0][0]);
+        return {
+          columns: result.columns,
+          rows: result.rows.map(row => {
+            const obj: Record<string, unknown> = {};
+            result.columns.forEach((col, i) => { obj[col] = row[i]; });
+            return obj;
+          }),
+          totalRows,
+          page: input.page,
+          pageSize: input.pageSize,
+          totalPages: Math.ceil(totalRows / input.pageSize),
+        };
+      }),
+
+    /** Update a row by primary key */
+    updateRow: adminProcedure
+      .input(z.object({
+        table: z.string(),
+        id: z.union([z.number(), z.string()]),
+        updates: z.record(z.string(), z.unknown()),
+      }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        const tableName = input.table.replace(/"/g, '');
+        const setClauses = Object.entries(input.updates)
+          .map(([key, val]) => `"${key.replace(/"/g, '')}" = ${val === null ? 'NULL' : `'${String(val).replace(/'/g, "''")}'`}`)
+          .join(', ');
+        const result = await client.execute(
+          `UPDATE "${tableName}" SET ${setClauses} WHERE id = ${typeof input.id === 'string' ? `'${input.id}'` : input.id}`
+        );
+        return { success: true, rowsAffected: result.rowsAffected };
+      }),
+
+    /** Delete a row by primary key */
+    deleteRow: adminProcedure
+      .input(z.object({
+        table: z.string(),
+        id: z.union([z.number(), z.string()]),
+      }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        const tableName = input.table.replace(/"/g, '');
+        const result = await client.execute(
+          `DELETE FROM "${tableName}" WHERE id = ${typeof input.id === 'string' ? `'${input.id}'` : input.id}`
+        );
+        return { success: true, rowsAffected: result.rowsAffected };
+      }),
+
+    /** Insert a new row */
+    insertRow: adminProcedure
+      .input(z.object({
+        table: z.string(),
+        values: z.record(z.string(), z.unknown()),
+      }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        const tableName = input.table.replace(/"/g, '');
+        const cols = Object.keys(input.values).map(k => `"${k.replace(/"/g, '')}"`);
+        const vals = Object.values(input.values).map(v => v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
+        const result = await client.execute(
+          `INSERT INTO "${tableName}" (${cols.join(', ')}) VALUES (${vals.join(', ')})`
+        );
+        return { success: true, rowsAffected: result.rowsAffected };
+      }),
+
     /** Reset a user's cash balance (lookup by display name or user ID) */
     resetUserCash: adminProcedure
       .input(z.object({
