@@ -21,6 +21,7 @@ import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
+import BettingPanel from "@/components/BettingPanel";
 import { TickerProvider } from "@/contexts/TickerContext";
 import NotificationBell from "@/components/NotificationBell";
 import PriceRankLegend from "@/components/PriceRankLegend";
@@ -903,6 +904,12 @@ export default function Home() {
             </section>
           )}
         </TickerProvider>
+
+        {isAuthenticated && (
+          <section className="mt-6">
+            <BettingPanel />
+          </section>
+        )}
 
         <section className="mt-6">
           <PriceRankLegend />
