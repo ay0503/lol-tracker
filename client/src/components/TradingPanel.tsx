@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -220,13 +220,20 @@ export default function TradingPanel() {
     return TICKERS;
   }, [isSellMode, isCoverMode, heldTickers, shortedTickers]);
 
-  // Auto-switch to first available ticker when entering sell/cover mode
-  // if the currently selected ticker is not in the available list
+  // Auto-switch to first available ticker ONLY when user explicitly enters sell/cover mode
+  // and the currently selected ticker is not available to sell/cover.
+  // We track the mode transition to avoid reactive switches on portfolio data refreshes.
+  const prevModeRef = useRef({ isSellMode, isCoverMode });
   useEffect(() => {
-    if (availableTickers.length > 0 && !availableTickers.find(tk => tk.symbol === selectedTicker)) {
+    const wasInRestrictedMode = prevModeRef.current.isSellMode || prevModeRef.current.isCoverMode;
+    const isInRestrictedMode = isSellMode || isCoverMode;
+    prevModeRef.current = { isSellMode, isCoverMode };
+
+    // Only auto-switch when entering a restricted mode (sell/cover), not on every re-render
+    if (isInRestrictedMode && availableTickers.length > 0 && !availableTickers.find(tk => tk.symbol === selectedTicker)) {
       setSelectedTicker(availableTickers[0].symbol as TickerSymbol);
     }
-  }, [availableTickers, selectedTicker]);
+  }, [isSellMode, isCoverMode, availableTickers, selectedTicker]);
 
   // Confirmation-aware trade handlers
   const executeMarketTrade = () => {

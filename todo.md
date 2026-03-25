@@ -440,3 +440,7 @@
 - [x] Create backend endpoint to check live game status
 - [x] Build alert banner component above the LP chart
 - [x] Show game mode, live timer, and ranked warning in the alert
+
+## Bug: Users only see DORI ticker despite buying different stocks
+- [x] Audit auto-switch useEffect in TradingPanel for unintended ticker resets
+- [x] Fix: replaced reactive useEffect with mode-transition-aware logic using useRef
