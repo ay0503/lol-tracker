@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 function getRankIcon(rank: number) {
   if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
@@ -18,9 +19,122 @@ function getRankBg(rank: number) {
   return "bg-card border-border";
 }
 
+/** Mini sparkline SVG from portfolio history */
+function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[] }) {
+  if (data.length < 2) return <span className="text-[10px] text-muted-foreground">—</span>;
+
+  const values = data.map(d => d.totalValue);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const w = 80, h = 24;
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    return `${x},${y}`;
+  }).join(" ");
+
+  const isUp = values[values.length - 1] >= values[0];
+  const color = isUp ? "#00C805" : "#FF5252";
+
+  return (
+    <svg width={w} height={h} className="inline-block">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Expanded user profile panel */
+function UserProfile({ userId }: { userId: number }) {
+  const { t } = useTranslation();
+  const { data, isLoading } = trpc.leaderboard.userProfile.useQuery({ userId });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/50 mt-3">
+      {/* Holdings */}
+      <div>
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Holdings</p>
+        {data.holdings.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No positions</p>
+        ) : (
+          <div className="space-y-1">
+            {data.holdings.map(h => (
+              <div key={h.ticker} className="flex items-center justify-between text-xs">
+                <span className="font-mono font-bold">${h.ticker}</span>
+                <div className="text-right">
+                  {h.shares > 0 && (
+                    <span className="text-foreground font-mono">{h.shares.toFixed(2)} shares @ ${h.avgCostBasis.toFixed(2)}</span>
+                  )}
+                  {h.shortShares > 0 && (
+                    <span className="text-red-400 font-mono ml-2">short {h.shortShares.toFixed(2)} @ ${h.shortAvgPrice.toFixed(2)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent trades */}
+      <div>
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Recent Trades</p>
+        {data.trades.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No trades yet</p>
+        ) : (
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {data.trades.slice(0, 10).map((trade, i) => {
+              const isBuy = trade.type === "buy" || trade.type === "short";
+              return (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`font-bold uppercase text-[10px] ${isBuy ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                      {trade.type}
+                    </span>
+                    <span className="font-mono">${trade.ticker}</span>
+                  </div>
+                  <span className="text-muted-foreground font-mono">
+                    {trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Portfolio sparkline */}
+      {data.portfolioHistory.length >= 2 && (
+        <div className="sm:col-span-2">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">7-Day Portfolio</p>
+          <Sparkline data={data.portfolioHistory} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Leaderboard() {
   const { t } = useTranslation();
   const { data: rankings, isLoading } = trpc.leaderboard.rankings.useQuery();
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,13 +182,16 @@ export default function Leaderboard() {
             {rankings.map((trader, idx) => {
               const rank = idx + 1;
               const isPositive = trader.pnl >= 0;
+              const isExpanded = expandedUserId === trader.userId;
+
               return (
                 <motion.div
                   key={trader.userId}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className={`border rounded-xl p-4 ${getRankBg(rank)}`}
+                  className={`border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${getRankBg(rank)} ${isExpanded ? "ring-1 ring-primary/30" : ""}`}
+                  onClick={() => setExpandedUserId(isExpanded ? null : trader.userId)}
                 >
                   {/* Desktop layout */}
                   <div className="hidden sm:flex items-center justify-between">
@@ -102,21 +219,28 @@ export default function Leaderboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
-                      <div className="flex items-center gap-1 justify-end">
-                        {isPositive ? (
-                          <TrendingUp className="w-3 h-3 text-[#00C805]" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 text-[#FF5252]" />
-                        )}
-                        <span
-                          className="text-xs font-mono font-bold"
-                          style={{ color: isPositive ? "#00C805" : "#FF5252" }}
-                        >
-                          {isPositive ? "+" : ""}${trader.pnl.toFixed(2)} ({isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%)
-                        </span>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
+                        <div className="flex items-center gap-1 justify-end">
+                          {isPositive ? (
+                            <TrendingUp className="w-3 h-3 text-[#00C805]" />
+                          ) : (
+                            <TrendingDown className="w-3 h-3 text-[#FF5252]" />
+                          )}
+                          <span
+                            className="text-xs font-mono font-bold"
+                            style={{ color: isPositive ? "#00C805" : "#FF5252" }}
+                          >
+                            {isPositive ? "+" : ""}${trader.pnl.toFixed(2)} ({isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%)
+                          </span>
+                        </div>
                       </div>
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
                     </div>
                   </div>
 
@@ -127,7 +251,14 @@ export default function Leaderboard() {
                         {getRankIcon(rank)}
                         <p className="text-sm font-bold text-foreground">{trader.userName}</p>
                       </div>
-                      <p className="text-base font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-base font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
+                        {isExpanded ? (
+                          <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
@@ -158,6 +289,21 @@ export default function Leaderboard() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Expandable profile */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <UserProfile userId={trader.userId} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })}
