@@ -10,17 +10,15 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import "./index.css";
 
 // ─── Connection Diagnostics ─────────────────────────────────────────────────
-// These logs appear in the browser console (Vercel → Inspect → Functions or
-// browser DevTools → Console). They help diagnose frontend ↔ backend issues.
+// In split deployment (Vercel + Railway), Vercel rewrites proxy /api/* to Railway.
+// The browser always sees same-origin requests — no CORS needed.
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
-const TRPC_URL = `${API_BASE}/api/trpc`;
+const TRPC_URL = "/api/trpc";
 
 console.log("[Config] ─── Frontend Connection Diagnostics ───");
-console.log("[Config] VITE_API_URL:", import.meta.env.VITE_API_URL || "(not set — same-origin mode)");
 console.log("[Config] tRPC endpoint:", TRPC_URL);
 console.log("[Config] Current origin:", window.location.origin);
-console.log("[Config] Mode:", API_BASE ? "SPLIT (Vercel→Railway)" : "SAME-ORIGIN (single process)");
+console.log("[Config] Mode: Vercel proxy (same-origin via rewrites)");
 console.log("[Config] Cookies enabled:", navigator.cookieEnabled);
 console.log("[Config] ─────────────────────────────────────────");
 
@@ -67,7 +65,6 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    // Detailed error logging for connection diagnosis
     if (error instanceof TRPCClientError) {
       console.error("[API Query Error]", {
         message: error.message,
@@ -75,12 +72,6 @@ queryClient.getQueryCache().subscribe(event => {
         data: error.data,
         shape: error.shape,
       });
-      // Check for network/CORS errors
-      if (error.message === "Failed to fetch" || error.message.includes("NetworkError")) {
-        console.error("[CORS/Network] ⚠️ Request failed — likely a CORS or network issue.");
-        console.error("[CORS/Network] Check that CORS_ORIGIN on your backend matches:", window.location.origin);
-        console.error("[CORS/Network] Backend URL:", TRPC_URL);
-      }
     } else {
       console.error("[API Query Error]", error);
     }
@@ -97,17 +88,13 @@ queryClient.getMutationCache().subscribe(event => {
         data: error.data,
         shape: error.shape,
       });
-      if (error.message === "Failed to fetch" || error.message.includes("NetworkError")) {
-        console.error("[CORS/Network] ⚠️ Mutation failed — likely a CORS or network issue.");
-        console.error("[CORS/Network] Check that CORS_ORIGIN on your backend matches:", window.location.origin);
-      }
     } else {
       console.error("[API Mutation Error]", error);
     }
   }
 });
 
-// ─── tRPC Client with request/response logging ─────────────────────────────
+// ─── tRPC Client ──────────────────────────────────────────────────────────────
 
 let requestCounter = 0;
 
@@ -119,7 +106,7 @@ const trpcClient = trpc.createClient({
       fetch(input, init) {
         const reqId = ++requestCounter;
         const url = typeof input === "string" ? input : input instanceof Request ? input.url : String(input);
-        const shortUrl = url.replace(TRPC_URL, "");
+        const shortUrl = url.replace(window.location.origin, "");
         console.log(`[tRPC #${reqId}] → ${shortUrl}`);
         const start = performance.now();
 
@@ -132,37 +119,14 @@ const trpcClient = trpc.createClient({
 
           if (status >= 200 && status < 300) {
             console.log(`[tRPC #${reqId}] ← ${status} OK (${duration}ms) ${shortUrl}`);
-          } else if (status === 0 || !response.ok) {
-            console.error(`[tRPC #${reqId}] ← ${status} FAILED (${duration}ms) ${shortUrl}`);
-            if (status === 0) {
-              console.error(`[tRPC #${reqId}] ⚠️ Status 0 = CORS blocked or network error`);
-              console.error(`[tRPC #${reqId}] Verify CORS_ORIGIN="${window.location.origin}" is set on backend`);
-            }
           } else {
             console.warn(`[tRPC #${reqId}] ← ${status} (${duration}ms) ${shortUrl}`);
-          }
-
-          // Log cookie presence (helps debug auth issues)
-          const setCookie = response.headers.get("set-cookie");
-          if (setCookie) {
-            console.log(`[tRPC #${reqId}] 🍪 Set-Cookie header received`);
           }
 
           return response;
         }).catch(err => {
           const duration = (performance.now() - start).toFixed(0);
-          console.error(`[tRPC #${reqId}] ✗ NETWORK ERROR (${duration}ms) ${shortUrl}`);
-          console.error(`[tRPC #${reqId}] Error:`, err.message);
-          if (err.message === "Failed to fetch") {
-            console.error(`[tRPC #${reqId}] ─── CORS Diagnosis ───`);
-            console.error(`[tRPC #${reqId}] Frontend origin: ${window.location.origin}`);
-            console.error(`[tRPC #${reqId}] Backend URL: ${TRPC_URL}`);
-            console.error(`[tRPC #${reqId}] This usually means:`);
-            console.error(`[tRPC #${reqId}]   1. Backend is down or unreachable`);
-            console.error(`[tRPC #${reqId}]   2. CORS_ORIGIN on backend doesn't match "${window.location.origin}"`);
-            console.error(`[tRPC #${reqId}]   3. Backend URL is wrong (check VITE_API_URL)`);
-            console.error(`[tRPC #${reqId}] ──────────────────────`);
-          }
+          console.error(`[tRPC #${reqId}] ✗ ERROR (${duration}ms) ${shortUrl}`, err.message);
           throw err;
         });
       },
@@ -171,25 +135,18 @@ const trpcClient = trpc.createClient({
 });
 
 // ─── Health check on startup ────────────────────────────────────────────────
-// Quick fetch to /api/health to verify backend connectivity
-if (API_BASE) {
-  fetch(`${API_BASE}/api/health`, { mode: "cors" })
-    .then(res => {
-      if (res.ok) {
-        console.log("[Health] ✓ Backend reachable at", API_BASE);
-        return res.json().then(data => console.log("[Health] Response:", data));
-      } else {
-        console.error("[Health] ✗ Backend returned", res.status, res.statusText);
-      }
-    })
-    .catch(err => {
-      console.error("[Health] ✗ Cannot reach backend at", API_BASE);
-      console.error("[Health] Error:", err.message);
-      if (err.message === "Failed to fetch") {
-        console.error("[Health] ─── This means the backend is either down or CORS is blocking ───");
-      }
-    });
-}
+fetch("/api/health")
+  .then(res => {
+    if (res.ok) {
+      console.log("[Health] ✓ Backend reachable via Vercel proxy");
+      return res.json().then(data => console.log("[Health] Response:", data));
+    } else {
+      console.error("[Health] ✗ Backend returned", res.status, res.statusText);
+    }
+  })
+  .catch(err => {
+    console.error("[Health] ✗ Cannot reach backend:", err.message);
+  });
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>

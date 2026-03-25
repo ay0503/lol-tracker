@@ -402,3 +402,11 @@
 ## Feature: Connection diagnostics logging
 - [x] Add frontend logging: API URL, tRPC requests/responses, CORS errors, cookie status
 - [x] Add backend logging: incoming origins, CORS decisions, auth flow, cookie presence
+
+## Fix: Railway CORS Override — Use Vercel Proxy Instead
+- [x] Railway proxy overrides Access-Control-Allow-Origin with 'https://railway.com' — bypass CORS entirely
+- [x] Update vercel.json with rewrites to proxy /api/* requests to Railway backend
+- [x] Update tRPC client to use same-origin /api/trpc path (no cross-origin needed)
+- [x] Update frontend health check to use same-origin /api/health
+- [x] Remove cross-origin cookie/credentials config (cookies now sameSite: lax)
+- [x] Update DEPLOYMENT_GUIDE.md with Vercel rewrites instructions

@@ -1,29 +1,29 @@
 # Deployment Guide: Vercel (Frontend) + Railway (Backend)
 
-This guide walks through deploying the LoL LP Tracker as a split architecture: the React frontend on **Vercel** and the Express/tRPC backend on **Railway**. Both services talk to each other via CORS-enabled API calls, and authentication cookies work cross-origin with `SameSite=None; Secure`.
+This guide walks through deploying the LoL LP Tracker as a split architecture: the React frontend on **Vercel** and the Express/tRPC backend on **Railway**. Vercel rewrites proxy all `/api/*` requests to Railway server-side, so the browser sees everything as same-origin — no CORS issues.
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────┐         ┌──────────────────────────┐
-│   Vercel (Frontend)  │  HTTPS  │   Railway (Backend)       │
-│                      │ ──────► │                           │
-│  React + Vite SPA    │         │  Express + tRPC + SQLite  │
-│  Static files only   │         │  Riot API polling engine   │
-│                      │ ◄────── │  JWT session cookies       │
-│  VITE_API_URL ───────┼────────►│  CORS_ORIGIN ─────────────┤
-└─────────────────────┘         └──────────────────────────┘
+┌─────────────────────────┐  server-side   ┌──────────────────────────┐
+│   Vercel (Frontend)      │   rewrite      │   Railway (Backend)       │
+│                          │  ──────────►   │                           │
+│  React + Vite SPA        │  /api/* ──────►│  Express + tRPC + SQLite  │
+│  Static files + proxy    │                │  Riot API polling engine   │
+│                          │  ◄──────────   │  JWT session cookies       │
+│  vercel.json rewrites    │   response     │                           │
+└─────────────────────────┘                └──────────────────────────┘
 ```
 
-The frontend is a static SPA build served by Vercel's CDN. All API calls go to the Railway backend via the `VITE_API_URL` environment variable. The backend runs the Express server, tRPC API, SQLite database, and the Riot API polling engine.
+The frontend is a static SPA build served by Vercel's CDN. All `/api/*` requests are proxied by Vercel to the Railway backend via rewrites (server-side, not browser-side). This eliminates CORS entirely since the browser only talks to Vercel's domain.
 
 ---
 
 ## Part 1: Railway (Backend)
 
-Deploy the backend first so you have the Railway URL to give to Vercel.
+Deploy the backend first so you have the Railway URL for the Vercel rewrite config.
 
 ### Step 1: Create a Railway Project
 
@@ -51,10 +51,11 @@ In your Railway service, go to **Variables** and add these:
 | `PORT` | `3000` | Yes |
 | `JWT_SECRET` | A random 32+ character string (e.g., `openssl rand -hex 32`) | Yes |
 | `RIOT_API_KEY` | Your Riot Games API key | Yes |
-| `CORS_ORIGIN` | Your Vercel frontend URL (set after Vercel deploy, e.g., `https://lol-tracker.vercel.app`) | Yes |
 | `DATABASE_PATH` | `/app/data/lol-tracker.db` | Yes |
 | `OPENAI_API_URL` | OpenAI-compatible API base URL (e.g., `https://api.openai.com/v1`) | No |
 | `OPENAI_API_KEY` | API key for the LLM service | No |
+
+**Note**: `CORS_ORIGIN` is no longer needed. Since Vercel proxies requests server-side, the backend receives requests from Vercel's infrastructure (not from the browser), so CORS is not involved. You can leave `CORS_ORIGIN` unset or remove it.
 
 **Important**: Set `DATABASE_PATH` to `/app/data/lol-tracker.db` so it writes to the persistent volume, not the ephemeral filesystem.
 
@@ -76,7 +77,7 @@ curl https://lol-tracker-production.up.railway.app/api/health
 # Should return: {"status":"ok","timestamp":"..."}
 ```
 
-Copy this URL — you'll need it for the Vercel setup.
+Copy this URL — you'll need it for the Vercel rewrite configuration.
 
 ### Railway Config Files (Already in Repo)
 
@@ -88,7 +89,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "node dist/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
@@ -152,23 +152,19 @@ Vercel should auto-detect these from `vercel.json`, but verify them in the proje
 | **Output Directory** | `dist/public` |
 | **Install Command** | `pnpm install` |
 
-### Step 3: Set Environment Variables
+### Step 3: No Environment Variables Needed
 
-In your Vercel project, go to **Settings** → **Environment Variables** and add:
+Unlike the previous cross-origin approach, no `VITE_API_URL` is needed. The frontend always calls `/api/*` on the same origin, and Vercel rewrites proxy those requests to Railway server-side.
 
-| Variable | Value | Required |
-|----------|-------|----------|
-| `VITE_API_URL` | Your Railway backend URL (e.g., `https://lol-tracker-production.up.railway.app`) | Yes |
-
-**No trailing slash** on the URL. The frontend will append `/api/trpc` to this base URL.
+The Railway backend URL is configured directly in `vercel.json` rewrites. If your Railway URL is different from the default, update the rewrite destination in `vercel.json` before deploying.
 
 ### Step 4: Deploy
 
-Click **Deploy**. Vercel will run `pnpm run build:frontend` which builds only the React SPA (no server code). The `vercel.json` rewrites handle SPA routing so all paths serve `index.html`.
+Click **Deploy**. Vercel will run `pnpm run build:frontend` which builds only the React SPA (no server code).
 
 ### Vercel Config File (Already in Repo)
 
-**`vercel.json`**:
+**`vercel.json`** — The key is the `/api/:path*` rewrite that proxies to Railway:
 
 ```json
 {
@@ -177,87 +173,60 @@ Click **Deploy**. Vercel will run `pnpm run build:frontend` which builds only th
   "installCommand": "pnpm install",
   "framework": "vite",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://lol-tracker-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
 ```
 
----
-
-## Part 3: Connect Frontend ↔ Backend
-
-After both are deployed, you need to set the cross-references:
-
-### 3a. Update Railway's CORS_ORIGIN
-
-Go to your Railway service → **Variables** and set:
-
-```
-CORS_ORIGIN=https://your-app.vercel.app
-```
-
-Replace with your actual Vercel domain. Railway will auto-redeploy.
-
-### 3b. Verify Vercel's VITE_API_URL
-
-Go to your Vercel project → **Settings** → **Environment Variables** and confirm:
-
-```
-VITE_API_URL=https://lol-tracker-production.up.railway.app
-```
-
-Replace with your actual Railway domain. **Redeploy** the Vercel project after setting this (Vercel bakes `VITE_*` vars into the static build at build time, so you need a fresh deploy).
+**Important**: Update the `destination` URL to match your Railway backend URL. The `/api/:path*` rewrite must come before the SPA catch-all `/(.*)`  rewrite.
 
 ---
 
-## Part 4: How Cross-Origin Auth Works
+## Part 3: How the Proxy Works
 
-The app uses JWT session cookies for authentication. When the frontend and backend are on different domains, cookies need special handling:
+1. Browser requests `https://your-app.vercel.app/api/trpc/player.current` (same origin).
+2. Vercel matches the `/api/:path*` rewrite rule.
+3. Vercel's edge network proxies the request server-side to `https://your-railway-app.up.railway.app/api/trpc/player.current`.
+4. Railway's Express server processes the request and returns JSON.
+5. Vercel forwards the response back to the browser.
 
-1. **Backend sets cookies with `SameSite=None; Secure`** — This is already configured in `server/_core/cookies.ts`. The `SameSite=None` flag allows the cookie to be sent cross-origin, and `Secure` ensures it only works over HTTPS (which both Vercel and Railway provide by default).
-
-2. **Frontend sends `credentials: "include"`** — The tRPC client in `client/src/main.tsx` already includes `credentials: "include"` in every fetch call, which tells the browser to attach cookies even for cross-origin requests.
-
-3. **Backend enables CORS with credentials** — When `CORS_ORIGIN` is set, the Express server enables CORS with `credentials: true` for that specific origin.
-
-This means login, registration, and all authenticated API calls work seamlessly across Vercel and Railway without any additional configuration.
+Since the browser only ever talks to `your-app.vercel.app`, there are no CORS issues. Cookies set by the backend are also same-origin, so `SameSite=Lax` works (more secure than the previous `SameSite=None` approach).
 
 ---
 
-## Part 5: Custom Domains (Optional)
+## Part 4: Custom Domains (Optional)
 
 ### Vercel Custom Domain
 
 1. Go to your Vercel project → **Settings** → **Domains**.
 2. Add your custom domain (e.g., `lp.yourdomain.com`).
 3. Follow Vercel's DNS instructions (add a CNAME record).
-4. **Update Railway's `CORS_ORIGIN`** to match the new domain.
+4. No changes needed on Railway — the proxy still works through Vercel's rewrites.
 
-### Railway Custom Domain
+### Railway Custom Domain (Optional)
 
-1. Go to your Railway service → **Settings** → **Networking** → **Custom Domain**.
-2. Add your custom domain (e.g., `api.yourdomain.com`).
-3. Follow Railway's DNS instructions.
-4. **Update Vercel's `VITE_API_URL`** to match the new domain and **redeploy**.
+You can add a custom domain to Railway for direct API access (e.g., for mobile apps or external integrations), but it's not required for the web frontend since everything goes through Vercel's proxy.
 
 ---
 
 ## Troubleshooting
 
-### "CORS error" in browser console
+### API calls return 404
 
-The `CORS_ORIGIN` on Railway doesn't match the actual frontend URL. Check for:
-- Trailing slash mismatch (`https://app.vercel.app` vs `https://app.vercel.app/`)
-- HTTP vs HTTPS mismatch
-- Wrong domain entirely
+Make sure the rewrite rules in `vercel.json` have the `/api/:path*` rule **before** the SPA catch-all `/(.*)`  rule. If the SPA rule is first, it will serve `index.html` for API paths.
 
 ### Cookies not being sent / login doesn't persist
 
-Both Vercel and Railway must serve over HTTPS (they do by default). If you're testing locally with `http://localhost`, cross-origin cookies won't work because `SameSite=None` requires `Secure`, which requires HTTPS. For local development, use `pnpm dev` which runs everything on the same origin.
-
-### API calls return 404
-
-Make sure `VITE_API_URL` has no trailing slash. The frontend appends `/api/trpc` to it. Correct: `https://my-app.up.railway.app`. Wrong: `https://my-app.up.railway.app/`.
+Cookies are now same-origin (`SameSite=Lax`), so they should work in all browsers including Safari Private Browsing and Firefox Strict ETP. If login doesn't persist, check that:
+- The backend is setting the `app_session_id` cookie (check Response headers in DevTools).
+- The cookie's `Path` is `/` (it should be by default).
 
 ### Database is empty after redeployment
 
@@ -267,9 +236,13 @@ The Railway volume mount at `/app/data` must be configured. Without it, SQLite w
 
 Vercel only needs to build the frontend. If it's trying to build the server, check that the build command is `pnpm run build:frontend` (not `pnpm run build`). The `vercel.json` in the repo already sets this.
 
-### "VITE_API_URL is not defined" or API calls go to same origin
+### Vercel rewrite not working (getting HTML instead of JSON)
 
-`VITE_*` environment variables are baked into the static build at build time. If you add or change `VITE_API_URL` after deploying, you must **redeploy** the Vercel project for the change to take effect.
+If `/api/health` returns HTML (the SPA index.html) instead of JSON, the rewrite rules are in the wrong order. The `/api/:path*` rule must be listed first in the `rewrites` array.
+
+### Railway URL changed
+
+If you redeploy Railway and the URL changes, update the `destination` in `vercel.json` and redeploy Vercel.
 
 ---
 
@@ -277,8 +250,8 @@ Vercel only needs to build the frontend. If it's trying to build the server, che
 
 | Service | What It Runs | Key Env Vars | URL Pattern |
 |---------|-------------|--------------|-------------|
-| **Vercel** | React SPA (static files) | `VITE_API_URL` | `https://your-app.vercel.app` |
-| **Railway** | Express + tRPC + SQLite + Polling | `JWT_SECRET`, `RIOT_API_KEY`, `CORS_ORIGIN`, `DATABASE_PATH` | `https://your-app.up.railway.app` |
+| **Vercel** | React SPA + API proxy | (none required) | `https://your-app.vercel.app` |
+| **Railway** | Express + tRPC + SQLite + Polling | `JWT_SECRET`, `RIOT_API_KEY`, `DATABASE_PATH` | `https://your-app.up.railway.app` |
 
 | Build Script | What It Does |
 |-------------|-------------|
