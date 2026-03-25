@@ -86,6 +86,8 @@ function TableBrowser() {
   const [addingRow, setAddingRow] = useState(false);
   const [newRowValues, setNewRowValues] = useState<Record<string, string>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<{ table: string; id: number | string } | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
   const [searchFilter, setSearchFilter] = useState("");
 
   const dbStatus = trpc.admin.dbStatus.useQuery();
@@ -129,6 +131,45 @@ function TableBrowser() {
     },
     onError: (err) => toast.error(err.message),
   });
+
+  // Reset selection when table or page changes
+  useEffect(() => { setSelectedIds(new Set()); }, [selectedTable, page]);
+
+  const toggleSelect = (id: number | string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!filteredRows.length) return;
+    const allIds = filteredRows.map(r => r.id as number | string);
+    const allSelected = allIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedTable) return;
+    const ids = Array.from(selectedIds);
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        await deleteMutation.mutateAsync({ table: selectedTable, id });
+        deleted++;
+      } catch { /* continue */ }
+    }
+    toast.success(`Deleted ${deleted} row${deleted !== 1 ? "s" : ""}`);
+    setSelectedIds(new Set());
+    setBulkDeleteConfirm(false);
+    utils.admin.tableRows.invalidate();
+    utils.admin.dbStatus.invalidate();
+  };
 
   const handleEdit = (row: Record<string, unknown>) => {
     setEditingRow(row);
@@ -242,6 +283,12 @@ function TableBrowser() {
               className="pl-8 pr-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary w-48"
             />
           </div>
+          {selectedIds.size > 0 && (
+            <Button size="sm" variant="destructive" onClick={() => setBulkDeleteConfirm(true)} className="h-7 text-xs">
+              <Trash2 className="w-3 h-3 mr-1" />
+              Delete {selectedIds.size} row{selectedIds.size !== 1 ? "s" : ""}
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={openAddRow} className="h-7 text-xs">
             <Plus className="w-3 h-3 mr-1" />
             Add Row
@@ -264,6 +311,14 @@ function TableBrowser() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border bg-secondary/30">
+                  <th className="px-2 py-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={filteredRows.length > 0 && filteredRows.every(r => selectedIds.has(r.id as number | string))}
+                      onChange={toggleSelectAll}
+                      className="rounded border-border accent-primary cursor-pointer"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-left font-semibold text-muted-foreground whitespace-nowrap w-20">
                     Actions
                   </th>
@@ -283,6 +338,14 @@ function TableBrowser() {
                     key={idx}
                     className="border-b border-border/50 hover:bg-secondary/20 transition-colors"
                   >
+                    <td className="px-2 py-1.5 w-8">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id as number | string)}
+                        onChange={() => toggleSelect(row.id as number | string)}
+                        className="rounded border-border accent-primary cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
                       <div className="flex gap-1">
                         <button
@@ -318,7 +381,7 @@ function TableBrowser() {
                 ))}
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={(tableRows.data?.columns.length ?? 0) + 1} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={(tableRows.data?.columns.length ?? 0) + 2} className="px-4 py-8 text-center text-muted-foreground">
                       {searchFilter ? "No matching rows" : "Table is empty"}
                     </td>
                   </tr>
@@ -462,6 +525,28 @@ function TableBrowser() {
             >
               {deleteMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={(open) => !open && setBulkDeleteConfirm(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} rows?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {selectedIds.size} selected row{selectedIds.size !== 1 ? "s" : ""} from {selectedTable}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Delete {selectedIds.size} rows
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
