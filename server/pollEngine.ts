@@ -39,6 +39,12 @@ let isPolling = false;
 let lastPollTime: Date | null = null;
 let lastPollResult: PollResult | null = null;
 
+// Two-consecutive-confirmation for live game detection.
+// The confirmed status only flips when two consecutive raw checks agree.
+// This prevents false toggles from API flickers and provides a ~2 min delay.
+let previousRawIsInGame: boolean | null = null; // raw result from last poll
+let confirmedIsInGame = false; // only changes after 2 consecutive agreeing polls
+
 export interface PollResult {
   timestamp: Date;
   price: number;
@@ -76,22 +82,36 @@ export async function pollNow(): Promise<PollResult> {
   };
 
   try {
-    // 1. Check live game status and update cache for trade blocking
+    // 1. Check live game status with two-consecutive-confirmation
+    // The confirmed status only flips when two consecutive raw checks agree.
+    // This prevents false toggles and provides a natural ~2 min delay.
     console.log("[Poll] Checking live game status...");
-    let isInGame = false;
+    let rawIsInGame = false;
     try {
       const playerDataForGame = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
       PUUID_CACHE.puuid = playerDataForGame.account.puuid;
       const activeGame = await getActiveGame(playerDataForGame.account.puuid);
-      isInGame = !!activeGame;
-      // Update the cache used by trade endpoints for blocking
-      cache.set("player.liveGame.check", isInGame, 150_000); // 2.5 min TTL (slightly > poll interval)
-      console.log(`[Poll] Live game: ${isInGame ? "IN GAME" : "not in game"}`);
+      rawIsInGame = !!activeGame;
     } catch (err: any) {
       console.warn("[Poll] Live game check failed:", err?.message);
-      // On error, don't block trading — set to false
-      cache.set("player.liveGame.check", false, 150_000);
+      // On error, treat as not-in-game (don't block trading)
+      rawIsInGame = false;
     }
+
+    // Two-consecutive-confirmation logic
+    if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
+      // Two consecutive polls agree on a NEW status — flip confirmed
+      confirmedIsInGame = rawIsInGame;
+      console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
+    } else if (rawIsInGame !== previousRawIsInGame) {
+      console.log(`[Poll] Live game raw: ${rawIsInGame ? "IN GAME" : "not in game"} (waiting for confirmation, confirmed: ${confirmedIsInGame ? "IN GAME" : "not in game"})`);
+    } else {
+      console.log(`[Poll] Live game: confirmed=${confirmedIsInGame ? "IN GAME" : "not in game"}, raw=${rawIsInGame ? "IN GAME" : "not in game"}`);
+    }
+    previousRawIsInGame = rawIsInGame;
+
+    // Update the cache with the CONFIRMED status (used by trade endpoints + bot)
+    cache.set("player.liveGame.check", confirmedIsInGame, 150_000); // 2.5 min TTL
 
     // 2. Fetch current player data
     console.log("[Poll] Fetching player data...");
@@ -153,18 +173,18 @@ export async function pollNow(): Promise<PollResult> {
         });
         result.newMatches++;
 
-        // 4. Distribute dividends
-        try {
-          const reason = participant.win
-            ? `Win on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`
-            : `Loss on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`;
-
-          await distributeDividends(matchId, participant.win, reason);
-          await markMatchDividendsPaid(matchId);
-          result.dividendsPaid++;
-        } catch (err: any) {
-          result.errors.push(`Dividend error for ${matchId}: ${err.message}`);
-        }
+        // 4. Distribute dividends (DISABLED — kept for easy re-enable)
+        // try {
+        //   const reason = participant.win
+        //     ? `Win on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`
+        //     : `Loss on ${participant.championName} (${participant.kills}/${participant.deaths}/${participant.assists})`;
+        //
+        //   await distributeDividends(matchId, participant.win, reason);
+        //   await markMatchDividendsPaid(matchId);
+        //   result.dividendsPaid++;
+        // } catch (err: any) {
+        //   result.errors.push(`Dividend error for ${matchId}: ${err.message}`);
+        // }
 
         // 5. Generate AI meme news
         try {
@@ -291,13 +311,9 @@ export async function pollNow(): Promise<PollResult> {
     lastPollTime = new Date();
     lastPollResult = result;
     // Invalidate all server-side caches after poll writes new data
-    // Preserve live game status before clearing
-    const liveGameStatus = cache.get<boolean>("player.liveGame.check");
     cache.invalidateAll();
-    // Re-set live game cache so trade blocking persists between polls
-    if (liveGameStatus !== undefined) {
-      cache.set("player.liveGame.check", liveGameStatus, 150_000);
-    }
+    // Re-set confirmed live game status so trade blocking persists between polls
+    cache.set("player.liveGame.check", confirmedIsInGame, 150_000);
     console.log(`[Poll] Complete. Price: $${result.price.toFixed(2)}, New matches: ${result.newMatches}, News: ${result.newsGenerated}, Dividends: ${result.dividendsPaid}, Orders: ${result.ordersExecuted}`);
   }
 

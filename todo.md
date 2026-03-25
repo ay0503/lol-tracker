@@ -505,3 +505,15 @@
 - [x] Wire LPChart to read/write from TickerContext instead of local state
 - [x] Wire TradingPanel to read/write from TickerContext instead of local state
 - [x] Verify bidirectional sync: chart selection updates trading panel and vice versa
+
+## Change: Two-Consecutive-Confirmation Live Game Check
+- [x] Track previous poll's raw isInGame result in poll engine (previousRawIsInGame)
+- [x] Only flip the confirmed live game status when two consecutive polls agree (confirmedIsInGame)
+- [x] This provides ~2 min delay at game start and prevents false toggles from API flickers
+- [x] Update the cache key to store the confirmed status (not the raw check)
+- [x] Update frontend player.liveGame endpoint to use confirmed status from cache
+- [x] All 81 tests passing
+
+## Change: Disable Dividends
+- [x] Skip dividend distribution in poll engine (code commented out)
+- [x] Keep the code intact but commented/disabled for easy re-enable

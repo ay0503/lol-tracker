@@ -173,13 +173,21 @@ export const appRouter = router({
         }, THIRTY_MIN);
       }),
     liveGame: publicProcedure.query(async () => {
-      return cache.getOrSet("player.liveGame", async () => {
-        try {
-          const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-          const game = await getActiveGame(account.account.puuid);
-          if (!game) return { inGame: false as const };
+      // Uses the two-consecutive-confirmation status from the poll engine.
+      // The poll engine sets "player.liveGame.check" only after two consecutive
+      // polls agree, preventing false toggles and providing a ~2 min delay.
+      const confirmedInGame = cache.get<boolean>("player.liveGame.check");
 
-          // Find the tracked player's participant data
+      // If not confirmed in-game, return early
+      if (!confirmedInGame) return { inGame: false as const };
+
+      // Confirmed in-game — fetch game details for the UI banner
+      return cache.getOrSet("player.liveGame.details", async () => {
+        try {
+          const account = await fetchFullPlayerData("목도리 도마뱰", "dori");
+          const game = await getActiveGame(account.account.puuid);
+          if (!game) return { inGame: true as const }; // confirmed but details unavailable
+
           const playerParticipant = game.participants.find(p => p.puuid === account.account.puuid);
           const gameStartTime = game.gameStartTime;
           const gameLengthSeconds = game.gameLength;
@@ -197,10 +205,10 @@ export const appRouter = router({
             queueId: game.gameQueueConfigId,
           };
         } catch (err: any) {
-          console.warn("[LiveGame] Check failed:", err?.message);
-          return { inGame: false as const };
+          console.warn("[LiveGame] Details fetch failed:", err?.message);
+          return { inGame: true as const }; // confirmed but details unavailable
         }
-      }, 60_000); // Cache for 1 minute
+      }, 60_000);
     }),
   }),
 
