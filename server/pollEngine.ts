@@ -11,8 +11,8 @@
  * 8. Update market status
  */
 import {
-  fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
-  getActiveGame,
+  fetchFullPlayerData, tierToPrice, tierToTotalLP,
+  getActiveGame, getMatchIds, getMatchDetails,
 } from "./riotApi";
 import { cache } from "./cache";
 import {
@@ -113,8 +113,9 @@ export async function pollNow(): Promise<PollResult> {
     // This prevents false toggles and provides a natural ~2 min delay.
     console.log("[Poll] Checking live game status...");
     let rawIsInGame = false;
+    let playerDataForGame: Awaited<ReturnType<typeof fetchFullPlayerData>> | null = null;
     try {
-      const playerDataForGame = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
+      playerDataForGame = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
       PUUID_CACHE.puuid = playerDataForGame.account.puuid;
       const activeGame = await getActiveGame(playerDataForGame.account.puuid);
       rawIsInGame = !!activeGame;
@@ -138,10 +139,10 @@ export async function pollNow(): Promise<PollResult> {
     previousRawIsInGame = rawIsInGame;
 
     // Track game-start: capture pre-game LP/price snapshot
-    if (!wasConfirmedInGame && confirmedIsInGame) {
+    // Reuse playerDataForGame from the live-game check above to avoid a duplicate API call
+    if (!wasConfirmedInGame && confirmedIsInGame && playerDataForGame) {
       try {
-        const snapData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
-        const snapEntry = snapData.soloEntry;
+        const snapEntry = playerDataForGame.soloEntry;
         if (snapEntry) {
           const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
           const snapPrice = tierToPrice(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
@@ -222,17 +223,27 @@ export async function pollNow(): Promise<PollResult> {
     await addPriceSnapshot({ timestamp: Date.now(), tier, division, lp, totalLP, price, wins, losses });
 
     // 3. Fetch and process new matches
-    console.log("[Poll] Fetching recent matches...");
+    // First get match IDs, filter out already-processed ones, then only fetch details for new ones
+    console.log("[Poll] Fetching recent match IDs...");
     const puuid = playerData.account.puuid;
-    const recentMatches = await fetchRecentMatches(puuid, 10, 420);
+    const recentMatchIds = await getMatchIds(puuid, 10, 420);
     const processedIds = await getProcessedMatchIds();
+    const newMatchIds = recentMatchIds.filter(id => !processedIds.has(id));
+
+    console.log(`[Poll] ${newMatchIds.length} new matches to process (${recentMatchIds.length - newMatchIds.length} already processed)`);
 
     const previousPrice = await getLatestPrice();
     const prevPrice = previousPrice ? parseFloat(previousPrice.price) : price;
 
-    for (const match of recentMatches) {
-      const matchId = match.metadata.matchId;
-      if (processedIds.has(matchId)) continue;
+    for (const matchId of newMatchIds) {
+      let match;
+      try {
+        match = await getMatchDetails(matchId);
+        await new Promise(r => setTimeout(r, 100)); // rate limit delay
+      } catch (err: any) {
+        result.errors.push(`Failed to fetch match ${matchId}: ${err.message}`);
+        continue;
+      }
 
       const participant = match.info.participants.find(p => p.puuid === puuid);
       if (!participant) continue;
@@ -372,15 +383,9 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // 9. Update market status based on recent activity
-    const hasRecentGame = recentMatches.some(m => {
-      const endTime = m.info.gameEndTimestamp || (m.info.gameCreation + m.info.gameDuration * 1000);
-      return Date.now() - endTime < 60 * 60 * 1000; // within last hour
-    });
-
-    if (hasRecentGame) {
+    if (result.newMatches > 0 || confirmedIsInGame) {
       await setMarketStatus(true, "Player recently active in ranked");
     } else {
-      // Market stays open but with a note
       await setMarketStatus(true, "Market open — awaiting next game");
     }
 

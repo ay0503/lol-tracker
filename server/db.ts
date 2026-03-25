@@ -190,15 +190,17 @@ export function executeTrade(
 
       if (type === "buy") {
         if (totalAmount > currentCash) throw new Error("Insufficient funds");
-        await tx.update(portfolios).set({ cashBalance: (currentCash - totalAmount).toFixed(2) }).where(eq(portfolios.userId, userId));
+        const now = new Date().toISOString();
+        await tx.update(portfolios).set({ cashBalance: (currentCash - totalAmount).toFixed(2), updatedAt: now }).where(eq(portfolios.userId, userId));
         const newShares = currentShares + shares;
         const newAvgCost = currentShares > 0 ? ((currentAvgCost * currentShares) + (pricePerShare * shares)) / newShares : pricePerShare;
-        await tx.update(holdings).set({ shares: newShares.toFixed(4), avgCostBasis: newAvgCost.toFixed(4) })
+        await tx.update(holdings).set({ shares: newShares.toFixed(4), avgCostBasis: newAvgCost.toFixed(4), updatedAt: now })
           .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
       } else {
         if (shares > currentShares) throw new Error("Insufficient shares");
-        await tx.update(portfolios).set({ cashBalance: (currentCash + totalAmount).toFixed(2) }).where(eq(portfolios.userId, userId));
-        await tx.update(holdings).set({ shares: (currentShares - shares).toFixed(4) })
+        const now = new Date().toISOString();
+        await tx.update(portfolios).set({ cashBalance: (currentCash + totalAmount).toFixed(2), updatedAt: now }).where(eq(portfolios.userId, userId));
+        await tx.update(holdings).set({ shares: (currentShares - shares).toFixed(4), updatedAt: now })
           .where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
       }
 
@@ -246,7 +248,8 @@ export function executeShort(
       if (marginRequired > currentCash) throw new Error("Insufficient margin. Need 50% collateral.");
 
       const newCash = currentCash - marginRequired + totalAmount;
-      await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
+      const now = new Date().toISOString();
+      await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2), updatedAt: now }).where(eq(portfolios.userId, userId));
 
       const newShortShares = currentShortShares + shares;
       const newShortAvg = currentShortShares > 0
@@ -256,6 +259,7 @@ export function executeShort(
       await tx.update(holdings).set({
         shortShares: newShortShares.toFixed(4),
         shortAvgPrice: newShortAvg.toFixed(4),
+        updatedAt: now,
       }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
 
       await tx.insert(trades).values({
@@ -297,9 +301,11 @@ export function executeCover(
 
       if (newCash < 0) throw new Error("Insufficient funds to cover (after margin return)");
 
-      await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, userId));
+      const now = new Date().toISOString();
+      await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2), updatedAt: now }).where(eq(portfolios.userId, userId));
       await tx.update(holdings).set({
         shortShares: (currentShortShares - shares).toFixed(4),
+        updatedAt: now,
       }).where(and(eq(holdings.userId, userId), eq(holdings.ticker, ticker)));
 
       await tx.insert(trades).values({
@@ -451,23 +457,27 @@ export async function distributeDividends(matchId: string, isWin: boolean, reaso
       const payout = sharesHeld * rate;
       totalDistributed += payout;
 
-      const portfolio = await getOrCreatePortfolio(holder.userId);
-      const newCash = parseFloat(portfolio.cashBalance) + payout;
-      await db.update(portfolios).set({
-        cashBalance: newCash.toFixed(2),
-        totalDividends: (parseFloat(portfolio.totalDividends) + payout).toFixed(2),
-      }).where(eq(portfolios.userId, holder.userId));
+      // Use per-user lock to prevent race with concurrent trades
+      await withUserLock(holder.userId, async () => {
+        const portfolio = await getOrCreatePortfolio(holder.userId);
+        const newCash = parseFloat(portfolio.cashBalance) + payout;
+        await db.update(portfolios).set({
+          cashBalance: newCash.toFixed(2),
+          totalDividends: (parseFloat(portfolio.totalDividends) + payout).toFixed(2),
+          updatedAt: new Date().toISOString(),
+        }).where(eq(portfolios.userId, holder.userId));
 
-      await db.insert(dividends).values({
-        userId: holder.userId, ticker, shares: sharesHeld.toFixed(4),
-        dividendPerShare: rate.toFixed(4), totalPayout: payout.toFixed(2),
-        reason, matchId,
-      });
+        await db.insert(dividends).values({
+          userId: holder.userId, ticker, shares: sharesHeld.toFixed(4),
+          dividendPerShare: rate.toFixed(4), totalPayout: payout.toFixed(2),
+          reason, matchId,
+        });
 
-      await db.insert(trades).values({
-        userId: holder.userId, ticker, type: "dividend",
-        shares: sharesHeld.toFixed(4), pricePerShare: rate.toFixed(4),
-        totalAmount: payout.toFixed(2),
+        await db.insert(trades).values({
+          userId: holder.userId, ticker, type: "dividend",
+          shares: sharesHeld.toFixed(4), pricePerShare: rate.toFixed(4),
+          totalAmount: payout.toFixed(2),
+        });
       });
     }
   }

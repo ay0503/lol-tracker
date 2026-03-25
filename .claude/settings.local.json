@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vitest:*)",
+      "Bash(npx -p vitest@2.1.4 vitest run)",
+      "Bash(npx --yes tsx server/db.ts)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(pnpm install:*)",
+      "Bash(npm install:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)"
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, THIRTY_DAYS_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
@@ -34,6 +34,25 @@ const THIRTY_MIN = 30 * 60 * 1000;
 const TEN_MIN = 10 * 60 * 1000;
 const FIVE_MIN = 5 * 60 * 1000;
 
+/** Per-user trade cooldown (2 minutes) */
+const TRADE_COOLDOWN_MS = 2 * 60 * 1000;
+const lastTradeTime = new Map<number, number>();
+
+function checkTradeCooldown(userId: number) {
+  const last = lastTradeTime.get(userId);
+  if (last) {
+    const elapsed = Date.now() - last;
+    if (elapsed < TRADE_COOLDOWN_MS) {
+      const remaining = Math.ceil((TRADE_COOLDOWN_MS - elapsed) / 1000);
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Trading cooldown: please wait ${remaining}s before your next trade.` });
+    }
+  }
+}
+
+function recordTrade(userId: number) {
+  lastTradeTime.set(userId, Date.now());
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -56,7 +75,7 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const existing = await getUserByEmail(input.email);
         if (existing && existing.passwordHash) {
-          throw new TRPCError({ code: "CONFLICT", message: "Email already registered" });
+          throw new TRPCError({ code: "CONFLICT", message: "Unable to create account. Please try logging in instead." });
         }
         const passwordHash = await bcrypt.hash(input.password, 12);
         if (existing && !existing.passwordHash) {
@@ -72,10 +91,10 @@ export const appRouter = router({
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user" });
         const sessionToken = await sdk.createSessionToken(user.openId, {
           name: user.displayName || user.name || "",
-          expiresInMs: ONE_YEAR_MS,
+          expiresInMs: THIRTY_DAYS_MS,
         });
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: THIRTY_DAYS_MS });
         return { success: true };
       }),
     login: publicProcedure
@@ -94,10 +113,10 @@ export const appRouter = router({
         }
         const sessionToken = await sdk.createSessionToken(user.openId, {
           name: user.displayName || user.name || "",
-          expiresInMs: ONE_YEAR_MS,
+          expiresInMs: THIRTY_DAYS_MS,
         });
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: THIRTY_DAYS_MS });
         return { success: true };
       }),
     updateDisplayName: protectedProcedure
@@ -429,6 +448,7 @@ export const appRouter = router({
         shares: z.number().positive().finite(), pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkTradeCooldown(ctx.user.id);
         // Block trading during live games
         const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
           try {
@@ -450,6 +470,7 @@ export const appRouter = router({
         }
 
         const result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, serverPrice);
+        recordTrade(ctx.user.id);
         // Invalidate ledger and leaderboard caches after trade
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
@@ -476,6 +497,7 @@ export const appRouter = router({
         pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkTradeCooldown(ctx.user.id);
         const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
           try {
             const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
@@ -496,6 +518,7 @@ export const appRouter = router({
         }
 
         const result = await executeShort(ctx.user.id, input.ticker, input.shares, serverPrice);
+        recordTrade(ctx.user.id);
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
         return {
@@ -509,6 +532,7 @@ export const appRouter = router({
         pricePerShare: z.number().positive().finite(),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkTradeCooldown(ctx.user.id);
         const liveGame = await cache.getOrSet("player.liveGame.check", async () => {
           try {
             const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
@@ -529,6 +553,7 @@ export const appRouter = router({
         }
 
         const result = await executeCover(ctx.user.id, input.ticker, input.shares, serverPrice);
+        recordTrade(ctx.user.id);
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
         return {

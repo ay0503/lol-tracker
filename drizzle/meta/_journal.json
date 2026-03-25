@@ -15,6 +15,13 @@
       "when": 1774462800000,
       "tag": "0001_add_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774462900000,
+      "tag": "0002_add_foreign_keys",
+      "breakpoints": true
     }
   ]
 }
