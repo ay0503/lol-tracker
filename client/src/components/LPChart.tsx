@@ -246,11 +246,16 @@ export default function LPChart() {
 
   const since = useMemo(() => getRangeSince(activeRange), [activeRange]);
 
-  // Chart data from etfHistory — same computation engine as etfPrices
+  // Chart data from etfHistory
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
     { ticker: activeTicker as any, since },
     { refetchInterval: 30_000, staleTime: 15_000 }
   );
+
+  // Current price from etfPrices — single source of truth shared with TradingPanel
+  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
+    refetchInterval: 30_000, staleTime: 15_000,
+  });
 
   /**
    * Process raw ETF history into chart data:
@@ -357,7 +362,9 @@ export default function LPChart() {
   );
 
   const firstPrice = data[0]?.price ?? 0;
-  const lastPrice = data[data.length - 1]?.price ?? 0;
+  // Use etfPrices (single source of truth) for current price, fallback to last chart point
+  const livePrice = etfPrices?.find((p: any) => p.ticker === activeTicker)?.price;
+  const lastPrice = livePrice ?? data[data.length - 1]?.price ?? 0;
   const priceChange = lastPrice - firstPrice;
   const isPositive = priceChange >= 0;
   const chartColor = isPositive ? tickerColor : "#FF5252";
