@@ -4,12 +4,13 @@ export const ENV = {
   databasePath: process.env.DATABASE_PATH ?? "./data/lol-tracker.db",
   isProduction: process.env.NODE_ENV === "production",
   // Optional: OpenAI-compatible API for AI meme news generation
-  // Falls back to BUILT_IN_FORGE_API if OPENAI vars are not set
-  openaiApiUrl: process.env.OPENAI_API_URL || process.env.BUILT_IN_FORGE_API_URL || "",
-  openaiApiKey: process.env.OPENAI_API_KEY || process.env.BUILT_IN_FORGE_API_KEY || "",
+  // Set OPENAI_API_URL and OPENAI_API_KEY to enable AI-generated news
+  // Works with any OpenAI-compatible API (OpenAI, Ollama, LM Studio, etc.)
+  openaiApiUrl: process.env.OPENAI_API_URL || "",
+  openaiApiKey: process.env.OPENAI_API_KEY || "",
   // Riot Games API
   riotApiKey: process.env.RIOT_API_KEY ?? "",
-  // CORS: set to frontend URL when hosting frontend separately (e.g., Vercel)
+  // CORS: set to frontend URL when hosting frontend separately (e.g., behind a reverse proxy)
   // Leave empty for same-origin deployment
   corsOrigin: process.env.CORS_ORIGIN ?? "",
 };

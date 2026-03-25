@@ -262,7 +262,7 @@ export default function TradingPanel() {
   const guardedExecute = (fn: () => void) => {
     const now = Date.now();
     if (tradingLocked || now - lastTradeTime.current < TRADE_COOLDOWN_MS) {
-      toast.error("Please wait before placing another trade");
+      toast.error(t.trading.pleaseWaitCooldown);
       return;
     }
     lastTradeTime.current = now;
@@ -360,7 +360,7 @@ export default function TradingPanel() {
           <div className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-full ${isTradingHalted ? "bg-yellow-500 animate-pulse" : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
              <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? "text-yellow-500" : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-               {isTradingHalted ? "HALTED" : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
+               {isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
              </span>
           </div>
           <div className="w-px h-4 bg-border" />
@@ -427,7 +427,7 @@ export default function TradingPanel() {
         {isTradingHalted && (
            <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 mb-4">
              <Pause className="w-4 h-4 text-yellow-500" />
-             <p className="text-xs text-yellow-500">Trading halted — player is in a live game. Trades resume after the match ends.</p>
+             <p className="text-xs text-yellow-500">{t.trading.tradingHaltedMessage}</p>
            </div>
          )}
          {!isMarketOpen && !isTradingHalted && orderTab === "market" && (
@@ -549,13 +549,13 @@ export default function TradingPanel() {
                   ) : (
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-bold">#</span>
                   )}
-                  <input type="number" min="0" step={inputMode === "dollars" ? "0.01" : "0.0001"} value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={inputMode === "dollars" ? t.trading.amountUsd : "Number of shares"} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step={inputMode === "dollars" ? "0.01" : "0.0001"} value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={inputMode === "dollars" ? t.trading.amountUsd : t.trading.numberOfShares} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
                 {shares > 0 && (
                   <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">
                     {inputMode === "dollars"
-                      ? `≈ ${shares.toFixed(4)} shares @ $${tickerPrice.toFixed(2)}`
-                      : `≈ $${dollarAmount.toFixed(2)} @ $${tickerPrice.toFixed(2)}/share`}
+                      ? `≈ ${shares.toFixed(4)} ${t.trading.sharesApprox} @ $${tickerPrice.toFixed(2)}`
+                      : `≈ $${dollarAmount.toFixed(2)} @ $${tickerPrice.toFixed(2)}/${t.trading.sharesApprox}`}
                   </p>
                 )}
                 <div className="flex gap-2 mb-4">
@@ -594,7 +594,7 @@ export default function TradingPanel() {
                     disabled={tradeMutation.isPending || tradingLocked || !isMarketOpen || priceLoading || isTradingHalted}
                     className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[#FF5252]/20 text-[#FF5252] border border-[#FF5252]/30 hover:bg-[#FF5252]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Sell All {currentHolding.shares.toFixed(2)} shares (≈${(currentHolding.shares * tickerPrice).toFixed(2)})
+                    {t.trading.sellAllShares} {currentHolding.shares.toFixed(2)} {t.trading.sharesApprox} (≈${(currentHolding.shares * tickerPrice).toFixed(2)})
                   </button>
                 )}
               </>
@@ -681,13 +681,13 @@ export default function TradingPanel() {
                   ) : (
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-bold">#</span>
                   )}
-                  <input type="number" min="0" step={inputMode === "dollars" ? "0.01" : "0.0001"} value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={inputMode === "dollars" ? t.trading.amountUsd : "Number of shares"} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" step={inputMode === "dollars" ? "0.01" : "0.0001"} value={amount} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setAmount(val); }} placeholder={inputMode === "dollars" ? t.trading.amountUsd : t.trading.numberOfShares} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-border text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50" />
                 </div>
                 {shares > 0 && (
                   <p className="text-xs text-muted-foreground mb-3 font-[var(--font-mono)]">
                     {inputMode === "dollars"
-                      ? `≈ ${shares.toFixed(4)} shares @ $${tickerPrice.toFixed(2)}`
-                      : `≈ $${dollarAmount.toFixed(2)} @ $${tickerPrice.toFixed(2)}/share`}
+                      ? `≈ ${shares.toFixed(4)} ${t.trading.sharesApprox} @ $${tickerPrice.toFixed(2)}`
+                      : `≈ $${dollarAmount.toFixed(2)} @ $${tickerPrice.toFixed(2)}/${t.trading.sharesApprox}`}
                   </p>
                 )}
                 <div className="flex gap-2 mb-4">
@@ -730,7 +730,7 @@ export default function TradingPanel() {
                     disabled={coverMutation.isPending || tradingLocked || !isMarketOpen || priceLoading || isTradingHalted}
                     className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[#00C805]/20 text-[#00C805] border border-[#00C805]/30 hover:bg-[#00C805]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cover All {currentHolding.shortShares.toFixed(2)} shares (≈${(currentHolding.shortShares * tickerPrice).toFixed(2)})
+                    {t.trading.coverAllShares} {currentHolding.shortShares.toFixed(2)} {t.trading.sharesApprox} (≈${(currentHolding.shortShares * tickerPrice).toFixed(2)})
                   </button>
                 )}
               </>

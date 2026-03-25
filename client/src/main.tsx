@@ -10,7 +10,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import "./index.css";
 
 // ─── Connection Diagnostics ─────────────────────────────────────────────────
-// In split deployment (Vercel + Railway), Vercel rewrites proxy /api/* to Railway.
+// In split deployment, a reverse proxy rewrites /api/* to the backend.
 // The browser always sees same-origin requests — no CORS needed.
 
 const TRPC_URL = "/api/trpc";
@@ -18,7 +18,7 @@ const TRPC_URL = "/api/trpc";
 console.log("[Config] ─── Frontend Connection Diagnostics ───");
 console.log("[Config] tRPC endpoint:", TRPC_URL);
 console.log("[Config] Current origin:", window.location.origin);
-console.log("[Config] Mode: Vercel proxy (same-origin via rewrites)");
+console.log("[Config] Mode: same-origin (proxy via rewrites)");
 console.log("[Config] Cookies enabled:", navigator.cookieEnabled);
 console.log("[Config] ─────────────────────────────────────────");
 
@@ -138,7 +138,7 @@ const trpcClient = trpc.createClient({
 fetch("/api/health")
   .then(res => {
     if (res.ok) {
-      console.log("[Health] ✓ Backend reachable via Vercel proxy");
+      console.log("[Health] ✓ Backend reachable");
       return res.json().then(data => console.log("[Health] Response:", data));
     } else {
       console.error("[Health] ✗ Backend returned", res.status, res.statusText);

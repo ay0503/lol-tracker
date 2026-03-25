@@ -251,6 +251,13 @@ export const ko: TranslationKeys = {
     enterValidTarget: "유효한 목표가를 입력하세요",
     enterValidStop: "유효한 손절가를 입력하세요",
     noHoldings: "판매할 보유 종목이 없습니다",
+    pleaseWaitCooldown: "잠시 후 다시 거래해주세요",
+    tradingHaltedMessage: "거래 중단 \u2014 플레이어가 라이브 게임 중입니다. 경기 종료 후 거래가 재개됩니다.",
+    halted: "중단",
+    numberOfShares: "주식 수",
+    sellAllShares: "전량 매도",
+    coverAllShares: "전량 커버",
+    sharesApprox: "주",
   },
 
   // ─── Notifications ───
@@ -416,6 +423,14 @@ export const ko: TranslationKeys = {
     lpChange: "LP 변동",
     priceImpact: "가격 영향",
     dismiss: "닫기",
+    rank: "랭크",
+    switchToLight: "라이트 모드로 전환",
+    switchToDark: "다크 모드로 전환",
+    toggleLanguage: "언어 전환",
+    editDisplayName: "표시 이름 수정",
+    perfectKda: "퍼펙트",
+    rankedSolo: "랭크 솔로",
+    cs: "CS",
   },
 
   // ─── Not Found ───

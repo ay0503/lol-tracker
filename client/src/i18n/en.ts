@@ -250,6 +250,13 @@ export const en = {
     enterValidTarget: "Enter a valid target price",
     enterValidStop: "Enter a valid stop price",
     noHoldings: "No holdings to sell",
+    pleaseWaitCooldown: "Please wait before placing another trade",
+    tradingHaltedMessage: "Trading halted \u2014 player is in a live game. Trades resume after the match ends.",
+    halted: "HALTED",
+    numberOfShares: "Number of shares",
+    sellAllShares: "Sell All",
+    coverAllShares: "Cover All",
+    sharesApprox: "shares",
   },
 
   // ─── Notifications ───
@@ -415,6 +422,14 @@ export const en = {
     lpChange: "LP Change",
     priceImpact: "Price Impact",
     dismiss: "Dismiss",
+    rank: "Rank",
+    switchToLight: "Switch to light mode",
+    switchToDark: "Switch to dark mode",
+    toggleLanguage: "Toggle language",
+    editDisplayName: "Edit display name",
+    perfectKda: "Perfect",
+    rankedSolo: "Ranked Solo",
+    cs: "CS",
   },
 
   // ─── Not Found ───

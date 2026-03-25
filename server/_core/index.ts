@@ -72,7 +72,7 @@ async function startServer() {
   console.log("[Server] RIOT_API_KEY:", ENV.riotApiKey ? `${ENV.riotApiKey.slice(0, 8)}...` : "(not set)");
   console.log("[Server] JWT_SECRET:", ENV.cookieSecret === "change-me-in-production" ? "⚠️ USING DEFAULT (insecure)" : "✓ Custom secret set");
   console.log("[Server] OPENAI_API_URL:", ENV.openaiApiUrl || "(not set — AI news disabled)");
-  console.log("[Server] Mode:", ENV.corsOrigin ? "SPLIT (Railway backend only)" : "SAME-ORIGIN (full stack)");
+  console.log("[Server] Mode:", ENV.corsOrigin ? "SPLIT (backend only, frontend served separately)" : "SAME-ORIGIN (full stack)");
   console.log("[Server] ───────────────────────────────────────");
 
   // ─── Run migrations before anything else ──────────────────────────────────

@@ -211,7 +211,7 @@ function LiveGameBanner() {
           {/* Live indicator dot */}
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-xs font-bold text-red-400 uppercase tracking-wider">LIVE</span>
+            <span className="text-xs font-bold text-red-400 uppercase tracking-wider">{t.common.live}</span>
           </div>
         </div>
       </div>
@@ -343,7 +343,7 @@ function PostGameBanner() {
               <>
                 <div className="w-px h-12 bg-border/50" />
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Rank</span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t.common.rank}</span>
                   <span className="text-sm font-semibold text-foreground">
                     {event.tierBefore} {event.divisionBefore} → {event.tierAfter} {event.divisionAfter}
                   </span>
@@ -370,7 +370,7 @@ function MatchHistorySection() {
   const dbMatches: MatchResult[] = (liveMatches ?? []).map((m, i) => {
     const kda =
       m.deaths === 0
-        ? "Perfect"
+        ? t.common.perfectKda
         : ((m.kills + m.assists) / m.deaths).toFixed(2);
     const duration = formatDuration(m.gameDuration, language);
     const timeAgo = formatTimeAgo(m.gameCreation, language);
@@ -391,7 +391,7 @@ function MatchHistorySection() {
       cs: `${m.cs}`,
       tier: "",
       tags: [],
-      queueType: "Ranked Solo",
+      queueType: t.common.rankedSolo,
     };
   });
 
@@ -606,11 +606,12 @@ function ChampionPoolSection() {
 
 function ThemeToggleButton() {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   return (
     <button
       onClick={toggleTheme}
       className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      title={theme === "dark" ? t.common.switchToLight : t.common.switchToDark}
     >
       {theme === "dark" ? (
         <Sun className="w-4 h-4" />
@@ -622,12 +623,12 @@ function ThemeToggleButton() {
 }
 
 function LanguageToggle() {
-  const { language, setLanguage } = useTranslation();
+  const { language, setLanguage, t } = useTranslation();
   return (
     <button
       onClick={() => setLanguage(language === "en" ? "ko" : "en")}
       className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all font-[var(--font-mono)]"
-      title="Toggle language"
+      title={t.common.toggleLanguage}
     >
       <Globe className="w-3.5 h-3.5" />
       {language === "en" ? "KR" : "EN"}
@@ -787,7 +788,7 @@ export default function Home() {
                           setIsEditingName(true);
                         }}
                         className="p-0.5 text-muted-foreground hover:text-foreground rounded"
-                        title="Edit display name"
+                        title={t.common.editDisplayName}
                       >
                         <Pencil className="w-3 h-3" />
                       </button>

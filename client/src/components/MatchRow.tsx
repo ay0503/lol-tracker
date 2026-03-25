@@ -88,7 +88,7 @@ export default function MatchRow({ match, index }: Props) {
         <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
           {match.cs}
         </p>
-        <p className="text-xs text-muted-foreground">CS</p>
+        <p className="text-xs text-muted-foreground">{t.common.cs}</p>
       </div>
     </motion.div>
   );

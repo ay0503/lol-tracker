@@ -637,3 +637,27 @@
 - [x] Frontend PostGameBanner component: animated, shows LP delta, price change, rank change
 - [x] Auto-dismiss after 60 seconds or on user click (dismiss clears cache)
 - [x] i18n support (EN/KR) for all banner text
+
+## Audit: Manus-Only vs Self-Hosted Compatibility
+- [x] Check OAuth/auth flow — uses local email/password auth, no Manus OAuth dependency
+- [x] Check LLM usage — falls back gracefully when OPENAI_API_URL not set; removed BUILT_IN_FORGE fallback
+- [x] Check notifications — notifyOwner unused, notification system is local DB-based
+- [x] Check storage — S3/storage.ts not present, no file upload dependency
+- [x] Check env vars — removed all BUILT_IN_FORGE_* references from env.ts; only OPENAI_API_URL/KEY remain as optional
+- [x] Check polling engine — uses Riot API directly, no Manus-specific calls
+- [x] Check image generation — not used in the app
+- [x] Check data API — not used in the app
+- [x] Cleaned up Vercel/Railway-specific comments in main.tsx, cookies.ts, env.ts, index.ts
+- [x] Document all findings and create fallbacks where needed
+
+## Audit: i18n Completeness
+- [x] Check every page component for hardcoded English strings
+- [x] Check every shared component for hardcoded English strings
+- [x] Verify all translation keys exist in both en.ts and ko.ts
+- [x] Check toast messages, error messages, and confirmation dialogs
+- [x] Check admin pages — English-only by design (admin is developer-facing)
+- [x] Check placeholder text, aria labels, and title attributes
+- [x] Fixed: TradingPanel cooldown toast, halted message, 'Number of shares' placeholder, 'Sell All'/'Cover All' buttons
+- [x] Fixed: Home.tsx 'LIVE' text, 'Rank' label, 'Perfect' KDA, 'Ranked Solo', tooltip titles
+- [x] Fixed: MatchRow 'CS' label
+- [x] Added 15 new i18n keys to en.ts and ko.ts

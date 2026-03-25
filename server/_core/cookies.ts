@@ -22,8 +22,8 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    // With Vercel proxy rewrites, the browser sees same-origin requests,
-    // so sameSite: "lax" works and is more secure than "none".
+    // With same-origin deployment or reverse proxy rewrites, the browser sees
+    // same-origin requests, so sameSite: "lax" works and is more secure than "none".
     // For local dev (HTTP), use "lax" as well.
     sameSite: "lax",
     secure,
