@@ -450,3 +450,14 @@
 
 ## Change: Reduce poll interval to 2 minutes
 - [x] Change match/update polling interval from 20 min to 2 min
+
+## Feature: Trading Halt During Live Games
+- [x] Add server-side check to block trade/order execution when player is in a live game
+- [x] Show "Market Halted" banner on frontend when player is in game
+- [x] Disable trade buttons and show explanation during halt
+
+## Fix: Dividends only for non-inverse tickers
+- [x] Exclude inverse tickers ($SDRI, $XDRI) from dividend payouts — dividends only on wins for DORI/DDRI/TDRI
+
+## Enhancement: Poll live game status in polling engine
+- [x] Add live game check to pollEngine so trade block cache is always fresh (with cache preservation across invalidateAll)

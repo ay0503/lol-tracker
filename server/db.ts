@@ -350,17 +350,17 @@ export async function getNews(limit = 20) {
 export async function distributeDividends(matchId: string, isWin: boolean, reason: string) {
   const db = await getDb();
 
+  // Only positive/leveraged tickers receive dividends (on wins only)
   const winTickers = [
     { ticker: "DORI", rate: 0.50 },
     { ticker: "DDRI", rate: 0.75 },
     { ticker: "TDRI", rate: 1.00 },
   ];
-  const lossTickers = [
-    { ticker: "SDRI", rate: 0.75 },
-    { ticker: "XDRI", rate: 1.00 },
-  ];
 
-  const eligibleTickers = isWin ? winTickers : lossTickers;
+  // No dividends on losses — inverse tickers don't receive payouts
+  if (!isWin) return { totalDistributed: 0, tickersPaid: [] };
+
+  const eligibleTickers = winTickers;
   let totalDistributed = 0;
 
   for (const { ticker, rate } of eligibleTickers) {

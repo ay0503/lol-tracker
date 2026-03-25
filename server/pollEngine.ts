@@ -1,16 +1,18 @@
 /**
  * LP Polling Engine
  * Runs every 2 minutes to:
- * 1. Fetch current LP from Riot API
- * 2. Store price snapshot
- * 3. Fetch new matches and store them
- * 4. Generate AI meme news for new matches
- * 5. Distribute dividends for new matches
- * 6. Execute pending limit orders and stop-losses
- * 7. Update market status
+ * 1. Check live game status (for trading halt enforcement)
+ * 2. Fetch current LP from Riot API
+ * 3. Store price snapshot
+ * 4. Fetch new matches and store them
+ * 5. Generate AI meme news for new matches
+ * 6. Distribute dividends for new matches
+ * 7. Execute pending limit orders and stop-losses
+ * 8. Update market status
  */
 import {
-  fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP
+  fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
+  getActiveGame,
 } from "./riotApi";
 import { cache } from "./cache";
 import {
@@ -73,7 +75,24 @@ export async function pollNow(): Promise<PollResult> {
   };
 
   try {
-    // 1. Fetch current player data
+    // 1. Check live game status and update cache for trade blocking
+    console.log("[Poll] Checking live game status...");
+    let isInGame = false;
+    try {
+      const playerDataForGame = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
+      PUUID_CACHE.puuid = playerDataForGame.account.puuid;
+      const activeGame = await getActiveGame(playerDataForGame.account.puuid);
+      isInGame = !!activeGame;
+      // Update the cache used by trade endpoints for blocking
+      cache.set("player.liveGame.check", isInGame, 150_000); // 2.5 min TTL (slightly > poll interval)
+      console.log(`[Poll] Live game: ${isInGame ? "IN GAME" : "not in game"}`);
+    } catch (err: any) {
+      console.warn("[Poll] Live game check failed:", err?.message);
+      // On error, don't block trading — set to false
+      cache.set("player.liveGame.check", false, 150_000);
+    }
+
+    // 2. Fetch current player data
     console.log("[Poll] Fetching player data...");
     const playerData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
     PUUID_CACHE.puuid = playerData.account.puuid;
@@ -260,7 +279,13 @@ export async function pollNow(): Promise<PollResult> {
     lastPollTime = new Date();
     lastPollResult = result;
     // Invalidate all server-side caches after poll writes new data
+    // Preserve live game status before clearing
+    const liveGameStatus = cache.get<boolean>("player.liveGame.check");
     cache.invalidateAll();
+    // Re-set live game cache so trade blocking persists between polls
+    if (liveGameStatus !== undefined) {
+      cache.set("player.liveGame.check", liveGameStatus, 150_000);
+    }
     console.log(`[Poll] Complete. Price: $${result.price.toFixed(2)}, New matches: ${result.newMatches}, News: ${result.newsGenerated}, Dividends: ${result.dividendsPaid}, Orders: ${result.ordersExecuted}`);
   }
 

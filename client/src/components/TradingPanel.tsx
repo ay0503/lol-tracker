@@ -13,6 +13,7 @@ import {
   Target,
   ShieldAlert,
   AlertTriangle,
+  Pause,
   XCircle,
   ArrowUpCircle,
   ArrowDownCircle,
@@ -87,6 +88,10 @@ export default function TradingPanel() {
     { id: "stop_loss", label: t.trading.stopLoss, icon: ShieldAlert },
     { id: "short", label: t.trading.short, icon: TrendingDown },
   ];
+
+  // Check if player is in a live game (trading halt)
+  const { data: liveGameData } = trpc.player.liveGame.useQuery(undefined, { refetchInterval: 30000 });
+  const isTradingHalted = liveGameData?.inGame === true;
 
   // Live ETF prices from backend
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { refetchInterval: 60000 });
@@ -322,10 +327,10 @@ export default function TradingPanel() {
       <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-              {isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
-            </span>
+            <div className={`w-2 h-2 rounded-full ${isTradingHalted ? "bg-yellow-500 animate-pulse" : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
+             <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? "text-yellow-500" : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+               {isTradingHalted ? "HALTED" : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
+             </span>
           </div>
           <div className="w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
@@ -388,12 +393,18 @@ export default function TradingPanel() {
 
       {/* Trading Form */}
       <div className="p-5">
-        {!isMarketOpen && orderTab === "market" && (
-          <div className="flex items-center gap-2 bg-[#FF5252]/10 border border-[#FF5252]/30 rounded-lg px-3 py-2 mb-4">
-            <AlertTriangle className="w-4 h-4 text-[#FF5252]" />
-            <p className="text-xs text-[#FF5252]">{t.trading.marketClosed}. {marketStatus?.reason || ""}</p>
-          </div>
-        )}
+        {isTradingHalted && (
+           <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 mb-4">
+             <Pause className="w-4 h-4 text-yellow-500" />
+             <p className="text-xs text-yellow-500">Trading halted — player is in a live game. Trades resume after the match ends.</p>
+           </div>
+         )}
+         {!isMarketOpen && !isTradingHalted && orderTab === "market" && (
+           <div className="flex items-center gap-2 bg-[#FF5252]/10 border border-[#FF5252]/30 rounded-lg px-3 py-2 mb-4">
+             <AlertTriangle className="w-4 h-4 text-[#FF5252]" />
+             <p className="text-xs text-[#FF5252]">{t.trading.marketClosed}. {marketStatus?.reason || ""}</p>
+           </div>
+         )}
 
         {priceLoading && (
           <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2 mb-4">
@@ -496,7 +507,7 @@ export default function TradingPanel() {
                     <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
                   ))}
                 </div>
-                <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || shares <= 0 || !isMarketOpen || priceLoading} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
+                <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
                   {tradeMutation.isPending ? t.trading.processing : `${tradeType === "buy" ? t.trading.buyTicker : t.trading.sellTicker} $${selectedTicker}`}
                 </button>
               </>
@@ -521,8 +532,8 @@ export default function TradingPanel() {
                   {tradeType === "buy" ? t.trading.limitBuyExec : t.trading.limitSellExec}
                   <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
                 </p>
-                <button onClick={handleLimitOrder} disabled={createOrderMutation.isPending || !amount || !targetPrice} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
-                  {createOrderMutation.isPending ? t.trading.placing : `${tradeType === "buy" ? t.trading.placeLimitBuy : t.trading.placeLimitSell}`}
+                <button onClick={handleLimitOrder}disabled={createOrderMutation.isPending || !amount || !targetPrice || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
+                   {createOrderMutation.isPending ? t.trading.placing : `${tradeType === "buy" ? t.trading.placeLimitBuy : t.trading.placeLimitSell}`}
                 </button>
               </>
             )}
@@ -546,9 +557,8 @@ export default function TradingPanel() {
                   {t.trading.currentPrice}: <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
                   {currentHolding.shares > 0 && <> · {t.trading.youHold} <span className="text-foreground">{currentHolding.shares.toFixed(2)}</span> {t.trading.sharesLabel}</>}
                 </p>
-                <button onClick={handleStopLoss} disabled={createOrderMutation.isPending || !amount || !targetPrice} className="w-full py-3 rounded-lg text-sm font-bold bg-[#FF5252] text-white hover:bg-[#e04848] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                  {createOrderMutation.isPending ? t.trading.placing : t.trading.setStopLoss}
-                </button>
+                <button onClick={handleStopLoss} disabled={createOrderMutation.isPending || !amount || !targetPrice || isTradingHalted} className="w-full py-3 rounded-lg text-sm font-bold bg-[#FF5252] text-white hover:bg-[#e04848] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                   {createOrderMutation.isPending ? t.trading.placing : t.trading.setStopLoss}                </button>
               </>
             )}
 
@@ -575,7 +585,7 @@ export default function TradingPanel() {
                 </div>
                 <button
                   onClick={tradeType === "sell" ? handleShort : handleCover}
-                  disabled={(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) || shares <= 0 || !isMarketOpen || priceLoading}
+                  disabled={(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted}
                   className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "sell" ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]"}`}
                 >
                   {(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) ? t.trading.processing : tradeType === "sell" ? `${t.trading.shortTicker} $${selectedTicker}` : `${t.trading.coverTicker} $${selectedTicker}`}
