@@ -1,72 +1,57 @@
 # $DORI LP Tracker — Project Memory
 
 ## Architecture
-- **Frontend**: React 19 + Vite + Tailwind 4 + shadcn/ui on Vercel
-- **Backend**: Express + tRPC 11 + SQLite (libSQL) on Railway
-- **Deployment**: Vercel rewrites `/api/*` to Railway backend
-- **Polling**: 30s interval, ~5 Riot API calls per cycle
-- **Code splitting**: React.lazy() for all pages except Home + Login
+- Frontend: React 19 + Vite + Tailwind 4 + shadcn/ui on Vercel
+- Backend: Express + tRPC 11 + SQLite (libSQL/Drizzle) on Railway
+- Deployment: Vercel rewrites /api/* to Railway backend
+- Polling: 30s server, adaptive client (120s idle → 15s active)
+- Code splitting: React.lazy() for all pages except Home + Login
+- Vite manual chunks: vendor-charts, vendor-motion
 
-## Key Technical Decisions
-- `.returning()` not supported by libSQL — use select after insert
-- `Array.from(map.entries())` for Map iteration (TS downlevelIteration)
-- Drizzle SQL expressions type as `{}` — cast with `String()`
-- `clearInterval` doesn't accept `null` — use local variable or guard
-- Raw SQL sometimes more reliable than Drizzle for new columns
-- Casino leaderboard uses raw SQL query (getRawClient)
-- Adaptive polling: 120s idle → 15s when game active (saves 80% requests)
-- Memory leak prevention: cleanup intervals on Maps (casinoLastGameTime, userTradeLocks)
-- getAllMatchesFromDB limited to 200 (was unlimited)
+## Recent Sprint Progress
 
-## Navigation
-- Shared AppNav component used on ALL pages
-- CasinoSubNav: game tab strip on casino pages
-- User names clickable → /profile/:userId
+### Sprint 1 ✅ (8 items)
+- Trade price validation uses cached ETF prices (no full table scan)
+- fullHistoryCache properly assigned in pollEngine
+- Cache invalidation uses invalidatePrefix for parameterized keys
+- Portfolio summary card on Home page
+- Unhandled rejection/exception handlers
+- Discord .catch() on all notifications
+- Dead code removed from Home.tsx
+- keepNames removed from vite config
 
-## Casino System
-- Separate `casinoBalance` from `cashBalance` ($20 vs $200 start)
-- Deposit: 10x multiplier ($1 trading = $10 casino)
-- Daily bonus: $1/day (DB-persisted, not cache)
-- Per-user cooldowns (admin-controlled, DB table)
-- Games: Blackjack, Crash, Mines, Roulette, Video Poker
-- Routes: /casino (landing), /casino/blackjack, /casino/crash, etc.
-- In-memory game state, 30-min stale cleanup
-- Casino leaderboard separate from trading
+### Sprint 2 ✅ (4 items)
+- Comment reactions (like/fire/dislike toggle) - backend done
+- Price alerts (table + endpoints + poll engine checking) - backend done
+- Sentiment preview on Home (last 3 comments)
+- Portfolio summary (merged with Sprint 1)
 
-## Blackjack
-- Standard rules, dealer stands 17, BJ pays 3:2
-- $0.10-$5 bets, colored casino chips
-- Sequential dealer reveal, keyboard shortcuts H/S/D
-- Delayed result display (useDelayedStatus hook)
+### Sprint 3 ✅ (5 items)
+- DB indexes on dividends, matches, news, notifications
+- Portfolio snapshots pruning (7d/hourly/daily)
+- Vite manual chunk splitting
+- Casino race condition: in-flight lock + withUserLock
+- Casino dark theme: dark class on wrappers
 
-## Crash
-- Canvas graph with real-time curve, 1% house edge
-- Server-side timers for crash + auto-cashout (not polling-dependent)
-- 200ms grace window on cashout for network latency
-- Tab-focus resync via visibilitychange listener
+### Sprint 4 🟡 (1/3 items)
+- Casino game history table + endpoint ✅
+- Daily challenges - NOT STARTED
+- routers.ts decomposition - NOT STARTED
 
-## Mines
-- 5x5 grid, 1-24 mines, 2% house edge
-- Multiplier: ∏(25-i)/(25-m-i) × 0.98, $250 max payout
+## Still TODO
+- Wire recordCasinoGameResult into game resolution points
+- Daily/weekly challenges system
+- routers.ts split into modules
+- Trade markers on candlestick chart
+- Comment reactions frontend UI
+- Price alerts frontend UI
+- Casino → Trading withdrawal
 
-## Video Poker
-- Jacks or Better, 9/5 pay table (~2% house edge)
-- Full House 9x, Flush 5x
-
-## Dividend System
-- Base $0.10 + share bonus + rubber banding (3x broke → 0.5x rich)
-- Cap $3/user/game
-
-## Betting
-- $1-$50 game bets, 2x payout, blocked during live games
-
-## Discord Bot
-- REST-only, all notifications gated behind newMatches > 0
-
-## User Profiles
-- /profile/:userId — public profiles with holdings, trades, bets, chart
-- Clickable from leaderboard
-
-## Welcome Modal
-- 4-step first-visit education (Trading, Casino, Transfers, Dividends)
-- localStorage flag, Korean/English
+## Key Gotchas (unchanged)
+- libSQL: no .returning(), use select after insert
+- Map iteration: Array.from(map.entries())
+- Drizzle SQL types as {} — cast with String()
+- clearInterval doesn't accept null
+- Spectator API: by-summoner/{puuid} (NOT by-puuid)
+- Casino deposit rate: 10x
+- Casino in-flight lock: acquireCasinoLock in checkCasinoCooldown
