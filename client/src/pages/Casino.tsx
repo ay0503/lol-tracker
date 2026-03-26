@@ -10,7 +10,7 @@ const GAMES = [
   { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 – $5", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
   { id: "coinflip", title: "Coin Flip", titleKo: "코인 플립", emoji: "🪙", desc: "Heads or tails, 50/50", descKo: "앞면 뒷면 50/50", bet: "$0.10 – $5", href: "#", active: false, bg: "from-yellow-950/30 to-amber-900/15", border: "border-zinc-800/50", badge: "" },
   { id: "dice", title: "Dice", titleKo: "주사위", emoji: "🎲", desc: "Roll over/under", descKo: "높낮이 베팅", bet: "$0.10 – $5", href: "#", active: false, bg: "from-purple-950/30 to-violet-900/15", border: "border-zinc-800/50", badge: "" },
-  { id: "mines", title: "Mines", titleKo: "지뢰찾기", emoji: "💣", desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 – $5", href: "#", active: false, bg: "from-red-950/30 to-rose-900/15", border: "border-zinc-800/50", badge: "" },
+  { id: "mines", title: "Mines", titleKo: "지뢰찾기", emoji: "💣", desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 – $5", href: "/casino/mines", active: true, bg: "from-red-950/50 to-rose-900/30", border: "border-red-700/40", badge: "from-red-500 to-orange-600" },
 ];
 
 function RankIcon({ rank }: { rank: number }) {
