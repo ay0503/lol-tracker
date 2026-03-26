@@ -834,7 +834,7 @@ export const appRouter = router({
     }),
     mines: router({
       start: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), mineCount: z.number().int().min(1).max(24) }))
+        .input(z.object({ bet: z.number().min(0.10).finite(), mineCount: z.number().int().min(1).max(24) }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
@@ -941,7 +941,7 @@ export const appRouter = router({
           bets: z.array(z.object({
             type: z.enum(['straight', 'red', 'black', 'odd', 'even', 'high', 'low', 'dozen1', 'dozen2', 'dozen3', 'column1', 'column2', 'column3']),
             number: z.number().int().min(0).max(36).optional(),
-            amount: z.number().min(0.10).max(5).finite(),
+            amount: z.number().min(0.10).finite(),
           })).min(1),
         }))
         .mutation(async ({ ctx, input }) => {
@@ -954,8 +954,6 @@ export const appRouter = router({
           }
 
           const totalBet = input.bets.reduce((sum, b) => sum + b.amount, 0);
-          if (totalBet > 25) throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum total bet is $25.00 per spin." });
-
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
           const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
           if (totalBet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });

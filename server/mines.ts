@@ -6,7 +6,7 @@
 
 const GRID_SIZE = 25;
 const HOUSE_EDGE = 0.02;
-const MAX_PAYOUT = 250;
+const MAX_PAYOUT = 5000;
 
 export interface MinesGame {
   id: string;

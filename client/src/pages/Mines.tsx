@@ -13,12 +13,12 @@ import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 const GRID_SIZE = 25;
 
 const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
   0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", text: "text-white" },
   1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", text: "text-gray-800" },
-  2: { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", text: "text-white" },
   5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", text: "text-black" },
+  10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
+  25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
+  50: { bg: "from-purple-400 to-purple-600", border: "border-purple-300/50", text: "text-white" },
 };
 
 const MINE_PRESETS = [1, 3, 5, 10, 15, 20, 24];
@@ -119,7 +119,7 @@ export default function Mines() {
 
   const handleStart = useCallback(() => {
     const amt = parseFloat(betAmount);
-    if (isNaN(amt) || amt < 0.10 || amt > 5) return toast.error("Bet $0.10–$5.00");
+    if (isNaN(amt) || amt < 0.10) return toast.error("Min bet $0.10");
     startMutation.mutate({ bet: amt, mineCount });
   }, [betAmount, mineCount]);
 
@@ -257,7 +257,7 @@ export default function Mines() {
 
                 {/* Chips */}
                 <div className="flex gap-1.5 justify-center">
-                  {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
+                  {[0.50, 1, 5, 10, 25, 50].map(amt => {
                     const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
                     const selected = parseFloat(betAmount) === amt;
                     const disabled = cash < amt;
