@@ -451,7 +451,12 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
-        const result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, serverPrice);
+        let result;
+        try {
+          result = await executeTrade(ctx.user.id, input.ticker, input.type, input.shares, serverPrice);
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Trade failed" });
+        }
 
         // Invalidate ledger and leaderboard caches after trade
         cache.invalidate("ledger.all");
@@ -494,7 +499,12 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
-        const result = await executeShort(ctx.user.id, input.ticker, input.shares, serverPrice);
+        let result;
+        try {
+          result = await executeShort(ctx.user.id, input.ticker, input.shares, serverPrice);
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Short failed" });
+        }
 
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
@@ -523,7 +533,12 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
-        const result = await executeCover(ctx.user.id, input.ticker, input.shares, serverPrice);
+        let result;
+        try {
+          result = await executeCover(ctx.user.id, input.ticker, input.shares, serverPrice);
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Cover failed" });
+        }
 
         cache.invalidate("ledger.all");
         cache.invalidate("leaderboard.rankings");
@@ -663,7 +678,12 @@ export const appRouter = router({
         amount: z.number().min(1).max(50).finite(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const bet = await placeBet(ctx.user.id, input.prediction, input.amount);
+        let bet;
+        try {
+          bet = await placeBet(ctx.user.id, input.prediction, input.amount);
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Bet failed" });
+        }
         cache.invalidate("leaderboard.rankings");
         return bet;
       }),
