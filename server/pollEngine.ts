@@ -553,6 +553,27 @@ export async function pollNow(): Promise<PollResult> {
       }
     }
 
+    // 6b. Check price alerts
+    try {
+      const client = (await import("./db")).getRawClient();
+      const alerts = await client.execute(`SELECT * FROM price_alerts WHERE triggered = 0`);
+      for (const alert of alerts.rows as any[]) {
+        const alertPrice = parseFloat(String(alert.targetPrice));
+        const etfPrice = currentETFPrices[alert.ticker as keyof typeof currentETFPrices] || price;
+        const shouldTrigger = (alert.direction === "above" && etfPrice >= alertPrice) ||
+                             (alert.direction === "below" && etfPrice <= alertPrice);
+        if (shouldTrigger) {
+          await client.execute({ sql: `UPDATE price_alerts SET triggered = 1 WHERE id = ?`, args: [alert.id] });
+          await createNotification({
+            userId: Number(alert.userId),
+            type: "system",
+            title: `Price Alert: $${alert.ticker}`,
+            message: `$${alert.ticker} ${alert.direction === "above" ? "reached" : "dropped to"} $${etfPrice.toFixed(2)} (target: $${alertPrice.toFixed(2)})`,
+          });
+        }
+      }
+    } catch { /* price_alerts table may not exist yet */ }
+
     // 7. Record portfolio snapshots for P&L charting
     try {
       const nowMs = Date.now();

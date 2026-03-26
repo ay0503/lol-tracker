@@ -609,6 +609,37 @@ function ChampionPoolSection() {
   );
 }
 
+function SentimentPreview() {
+  const { t, language } = useTranslation();
+  const { data: comments } = trpc.comments.list.useQuery({ limit: 3 }, { staleTime: 60_000 });
+
+  if (!comments || comments.length === 0) return null;
+
+  return (
+    <section className="mt-6">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          {language === "ko" ? "최근 의견" : "Latest Takes"}
+        </h3>
+        <Link href="/sentiment" className="text-[10px] text-primary hover:underline">
+          {language === "ko" ? "더 보기" : "View all"}
+        </Link>
+      </div>
+      <div className="space-y-1.5">
+        {comments.map((c: any) => (
+          <div key={c.id} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-card border border-border">
+            <span className="text-xs">{c.sentiment === "bullish" ? "🐂" : c.sentiment === "bearish" ? "🐻" : "😐"}</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] text-muted-foreground font-mono">{String(c.userName ?? "")}</span>
+              <p className="text-xs text-foreground truncate">{c.content}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function PortfolioSummary() {
   const { t } = useTranslation();
   const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { staleTime: 60_000 });
@@ -713,6 +744,9 @@ export default function Home() {
             <BettingPanel />
           </section>
         )}
+
+        {/* Sentiment Preview */}
+        <SentimentPreview />
 
         <section className="mt-6">
           <PriceRankLegend />

@@ -255,3 +255,27 @@ export const bets = sqliteTable("bets", {
 
 export type Bet = typeof bets.$inferSelect;
 export type InsertBet = typeof bets.$inferInsert;
+
+/**
+ * Comment reactions — likes/reactions on sentiment board comments.
+ */
+export const commentReactions = sqliteTable("comment_reactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  commentId: integer("commentId").notNull(),
+  type: text("type", { enum: ["like", "fire", "dislike"] }).notNull(),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+});
+
+/**
+ * Price alerts — notify when a ticker hits a target price.
+ */
+export const priceAlerts = sqliteTable("price_alerts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  ticker: text("ticker").notNull(),
+  targetPrice: text("targetPrice").notNull(),
+  direction: text("direction", { enum: ["above", "below"] }).notNull(),
+  triggered: integer("triggered", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
+});

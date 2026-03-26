@@ -722,6 +722,37 @@ export const appRouter = router({
         cache.invalidatePrefix("comments.");
         return { success: true };
       }),
+    react: protectedProcedure
+      .input(z.object({ commentId: z.number(), type: z.enum(["like", "fire", "dislike"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const client = getRawClient();
+        await client.execute(`CREATE TABLE IF NOT EXISTS comment_reactions (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, userId integer NOT NULL, commentId integer NOT NULL, type text NOT NULL, createdAt text DEFAULT (datetime('now')) NOT NULL)`);
+        // Toggle: if already reacted with same type, remove it
+        const existing = await client.execute({ sql: `SELECT id FROM comment_reactions WHERE userId = ? AND commentId = ? AND type = ?`, args: [ctx.user.id, input.commentId, input.type] });
+        if (existing.rows.length > 0) {
+          await client.execute({ sql: `DELETE FROM comment_reactions WHERE userId = ? AND commentId = ? AND type = ?`, args: [ctx.user.id, input.commentId, input.type] });
+        } else {
+          await client.execute({ sql: `INSERT INTO comment_reactions (userId, commentId, type) VALUES (?, ?, ?)`, args: [ctx.user.id, input.commentId, input.type] });
+        }
+        cache.invalidatePrefix("comments.");
+        return { success: true };
+      }),
+    reactions: publicProcedure
+      .input(z.object({ commentIds: z.array(z.number()) }))
+      .query(async ({ input }) => {
+        if (input.commentIds.length === 0) return {};
+        const client = getRawClient();
+        try {
+          const result = await client.execute({ sql: `SELECT commentId, type, COUNT(*) as count FROM comment_reactions WHERE commentId IN (${input.commentIds.join(",")}) GROUP BY commentId, type`, args: [] });
+          const map: Record<number, Record<string, number>> = {};
+          for (const row of result.rows as any[]) {
+            const cid = Number(row.commentId);
+            if (!map[cid]) map[cid] = {};
+            map[cid][String(row.type)] = Number(row.count);
+          }
+          return map;
+        } catch { return {}; }
+      }),
   }),
 
   // ─── News Feed — cached 30 min ───
@@ -737,6 +768,44 @@ export const appRouter = router({
   }),
 
   // ─── Game Bets ───
+  // ─── Price Alerts ───
+  alerts: router({
+    create: protectedProcedure
+      .input(z.object({
+        ticker: z.enum(TICKERS),
+        targetPrice: z.number().positive().finite(),
+        direction: z.enum(["above", "below"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const client = getRawClient();
+        await client.execute(`CREATE TABLE IF NOT EXISTS price_alerts (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, userId integer NOT NULL, ticker text NOT NULL, targetPrice text NOT NULL, direction text NOT NULL, triggered integer NOT NULL DEFAULT 0, createdAt text DEFAULT (datetime('now')) NOT NULL)`);
+        await client.execute({
+          sql: `INSERT INTO price_alerts (userId, ticker, targetPrice, direction) VALUES (?, ?, ?, ?)`,
+          args: [ctx.user.id, input.ticker, input.targetPrice.toFixed(4), input.direction],
+        });
+        return { success: true };
+      }),
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const client = getRawClient();
+      try {
+        const result = await client.execute({ sql: `SELECT * FROM price_alerts WHERE userId = ? ORDER BY createdAt DESC LIMIT 20`, args: [ctx.user.id] });
+        return (result.rows as any[]).map(r => ({
+          id: Number(r.id), ticker: String(r.ticker),
+          targetPrice: parseFloat(String(r.targetPrice)),
+          direction: String(r.direction),
+          triggered: Boolean(r.triggered),
+        }));
+      } catch { return []; }
+    }),
+    delete: protectedProcedure
+      .input(z.object({ alertId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const client = getRawClient();
+        await client.execute({ sql: `DELETE FROM price_alerts WHERE id = ? AND userId = ?`, args: [input.alertId, ctx.user.id] });
+        return { success: true };
+      }),
+  }),
+
   betting: router({
     place: protectedProcedure
       .input(z.object({
