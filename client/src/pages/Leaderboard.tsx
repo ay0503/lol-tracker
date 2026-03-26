@@ -385,7 +385,14 @@ export default function Leaderboard() {
                     <div className="flex items-center gap-3">
                       {getRankIcon(rank)}
                       <div>
-                        <p className="text-sm font-bold text-foreground">{player.userName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className={`text-sm font-bold ${(player as any).nameEffect?.cssClass || "text-foreground"}`}>{player.userName}</p>
+                          {(player as any).title && (
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold ${(player as any).title.cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
+                              {(player as any).title.name}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-muted-foreground">
                           {language === "ko" ? "시작" : "Started"}: $20.00
                         </span>

@@ -207,6 +207,13 @@ async function startServer() {
     } catch (err) {
       console.error("[Server] Failed to initialize QuantBot:", err);
     }
+    // Seed cosmetics catalog
+    try {
+      const { seedCosmeticsIfEmpty } = await import("../seedCosmetics");
+      await seedCosmeticsIfEmpty();
+    } catch (err) {
+      console.error("[Server] Failed to seed cosmetics:", err);
+    }
     startPolling();
   });
 }

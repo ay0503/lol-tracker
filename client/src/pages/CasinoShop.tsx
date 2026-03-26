@@ -1,0 +1,249 @@
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useTranslation } from "@/contexts/LanguageContext";
+import { Link } from "wouter";
+import { ArrowLeft, Loader2, Check, ShoppingBag } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+
+const TIER_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 } as Record<string, number>;
+
+function TierBadge({ tier }: { tier: string }) {
+  const cls =
+    tier === "legendary" ? "bg-gradient-to-r from-amber-600/80 to-yellow-500/80 text-yellow-100 border-yellow-400/60" :
+    tier === "epic" ? "bg-gradient-to-r from-purple-900/70 to-violet-900/70 text-purple-300 border-purple-500/40" :
+    tier === "rare" ? "bg-blue-950/50 text-blue-400 border-blue-500/30" :
+    "bg-zinc-800 text-zinc-400 border-zinc-700";
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold uppercase border ${cls}`}>
+      {tier}
+    </span>
+  );
+}
+
+function TitleBadge({ name, cssClass }: { name: string; cssClass: string | null }) {
+  return (
+    <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold ${cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
+      {name}
+    </span>
+  );
+}
+
+function NamePreview({ name, cssClass }: { name: string; cssClass: string | null }) {
+  return (
+    <span className={`text-sm font-bold ${cssClass || "text-zinc-300"}`}>
+      {name}
+    </span>
+  );
+}
+
+export default function CasinoShop() {
+  const { language } = useTranslation();
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+
+  const [tab, setTab] = useState<"all" | "title" | "name_effect">("all");
+
+  const { data: catalog } = trpc.casino.shop.catalog.useQuery();
+  const { data: owned } = trpc.casino.shop.owned.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: equipped } = trpc.casino.shop.equipped.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: balance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: me } = trpc.auth.me.useQuery();
+
+  const purchaseMutation = trpc.casino.shop.purchase.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Purchased "${data.name}"!`);
+      utils.casino.shop.owned.invalidate();
+      utils.casino.shop.catalog.invalidate();
+      utils.casino.blackjack.balance.invalidate();
+      utils.casino.leaderboard.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const equipMutation = trpc.casino.shop.equip.useMutation({
+    onSuccess: () => {
+      toast.success("Equipped!");
+      utils.casino.shop.equipped.invalidate();
+      utils.casino.leaderboard.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const cash = balance ?? 20;
+  const ownedIds = new Set((owned ?? []).map(o => o.id));
+  const myName = me?.displayName || me?.name || "You";
+
+  const filtered = (catalog ?? [])
+    .filter(c => tab === "all" || c.type === tab)
+    .sort((a, b) => (TIER_ORDER[b.tier] ?? 0) - (TIER_ORDER[a.tier] ?? 0) || b.price - a.price);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+      <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
+        <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
+          <ArrowLeft className="w-3.5 h-3.5" /> Casino
+        </Link>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/25 to-violet-600/15 border border-purple-500/20">
+              <ShoppingBag className="w-4 h-4 text-purple-400" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">
+                {language === "ko" ? "상점" : "Shop"}
+              </h1>
+              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Equipped Preview */}
+        {isAuthenticated && (
+          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 mb-5">
+            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">
+              {language === "ko" ? "내 프로필" : "Your Profile"}
+            </p>
+            <div className="flex items-center gap-2">
+              <NamePreview name={myName} cssClass={equipped?.nameEffect?.cssClass ?? null} />
+              {equipped?.title && (
+                <TitleBadge name={equipped.title.name} cssClass={equipped.title.cssClass} />
+              )}
+            </div>
+            {equipped?.title || equipped?.nameEffect ? (
+              <div className="flex gap-2 mt-2">
+                {equipped?.title && (
+                  <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
+                    className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">
+                    {language === "ko" ? "칭호 해제" : "Unequip title"}
+                  </button>
+                )}
+                {equipped?.nameEffect && (
+                  <button onClick={() => equipMutation.mutate({ type: "name_effect", cosmeticId: null })}
+                    className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">
+                    {language === "ko" ? "효과 해제" : "Unequip effect"}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-[9px] text-zinc-600 mt-1">
+                {language === "ko" ? "아이템을 장착하면 리더보드에 표시됩니다" : "Equip items to show on leaderboard"}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-1.5 mb-4">
+          {([["all", "All", "전체"], ["title", "Titles", "칭호"], ["name_effect", "Effects", "효과"]] as const).map(([key, en, ko]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
+                tab === key
+                  ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
+                  : "bg-zinc-800/50 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
+              }`}
+            >
+              {language === "ko" ? ko : en}
+            </button>
+          ))}
+        </div>
+
+        {/* Catalog */}
+        <div className="space-y-2">
+          {filtered.map((item, i) => {
+            const isOwned = ownedIds.has(item.id);
+            const isEquipped = equipped?.title?.id === item.id || equipped?.nameEffect?.id === item.id;
+            const canAfford = cash >= item.price;
+
+            return (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className={`border rounded-xl p-3 transition-all ${
+                  item.tier === "legendary" ? "border-yellow-500/30 bg-yellow-500/[0.03]" :
+                  item.tier === "epic" ? "border-purple-500/20 bg-purple-500/[0.02]" :
+                  "border-zinc-800/80 bg-zinc-900/40"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <TierBadge tier={item.tier} />
+                      <span className="text-[9px] text-zinc-500 uppercase">{item.type === "title" ? "Title" : "Effect"}</span>
+                      {item.isLimited && item.stock >= 0 && (
+                        <span className="text-[8px] text-red-400 font-bold">{item.stock} left</span>
+                      )}
+                    </div>
+
+                    {/* Preview */}
+                    {item.type === "title" ? (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs text-zinc-300">{myName}</span>
+                        <TitleBadge name={item.name} cssClass={item.cssClass} />
+                      </div>
+                    ) : (
+                      <NamePreview name={item.name} cssClass={item.cssClass} />
+                    )}
+
+                    {item.description && (
+                      <p className="text-[9px] text-zinc-600 mt-0.5">{item.description}</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <span className="text-xs font-mono font-bold text-white">${item.price.toFixed(0)}</span>
+                    {isOwned ? (
+                      isEquipped ? (
+                        <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 font-bold">
+                          <Check className="w-3 h-3" /> Equipped
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => equipMutation.mutate({ type: item.type as "title" | "name_effect", cosmeticId: item.id })}
+                          disabled={equipMutation.isPending}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 text-[9px] font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40"
+                        >
+                          {equipMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Equip"}
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        onClick={() => purchaseMutation.mutate({ cosmeticId: item.id })}
+                        disabled={purchaseMutation.isPending || !canAfford || !isAuthenticated}
+                        className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-colors disabled:opacity-30 ${
+                          canAfford
+                            ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                            : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                        }`}
+                      >
+                        {purchaseMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Buy"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {filtered.length === 0 && (
+            <div className="text-center py-12">
+              <ShoppingBag className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+              <p className="text-xs text-zinc-600">No items in this category</p>
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-[9px] text-zinc-700 mt-6 font-mono">
+          {language === "ko" ? "카지노 캐시로 구매 · 리더보드에 표시" : "Buy with casino cash · Shows on leaderboard"}
+        </p>
+      </div>
+    </div>
+  );
+}

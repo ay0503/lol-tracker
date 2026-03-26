@@ -227,3 +227,29 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.4 0.005 260);
 }
+
+/* ─── Casino Cosmetic Animations ─── */
+@keyframes rainbow {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(360deg); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes lightning {
+  0%, 90%, 100% { filter: brightness(1); }
+  95% { filter: brightness(2.5); }
+}
+@keyframes sparkle {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  33% { filter: brightness(1.5) saturate(1.3); }
+}
+@keyframes flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes cosmic {
+  0%, 100% { background-position: 0% 50%; filter: brightness(1); }
+  50% { background-position: 100% 50%; filter: brightness(1.3); }
+}

@@ -20,6 +20,7 @@ import Mines from "./pages/Mines";
 import Crash from "./pages/Crash";
 import Roulette from "./pages/Roulette";
 import Poker from "./pages/VideoPoker";
+import CasinoShop from "./pages/CasinoShop";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path={"/casino/crash"} component={Crash} />
       <Route path={"/casino/roulette"} component={Roulette} />
       <Route path={"/casino/poker"} component={Poker} />
+      <Route path={"/casino/shop"} component={CasinoShop} />
       <Route path={"/casino"} component={Casino} />
       <Route path={"/admin/sql"} component={AdminSQL} />
       <Route path={"/admin"} component={AdminDB} />

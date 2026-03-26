@@ -1137,17 +1137,132 @@ export const appRouter = router({
     leaderboard: publicProcedure.query(async () => {
       return cache.getOrSet("casino.leaderboard", async () => {
         const client = getRawClient();
-        const result = await client.execute(
-          `SELECT u.id as userId, COALESCE(u.displayName, u.name) as userName, COALESCE(p.casinoBalance, '20.00') as casinoBalance
-           FROM users u LEFT JOIN portfolios p ON u.id = p.userId ORDER BY CAST(COALESCE(p.casinoBalance, '20.00') AS REAL) DESC`
-        );
-        return (result.rows as any[]).map(r => ({
-          userId: Number(r.userId),
-          userName: String(r.userName || "Anonymous"),
-          casinoBalance: parseFloat(String(r.casinoBalance ?? "20.00")),
-          profit: parseFloat(String(r.casinoBalance ?? "20.00")) - 20,
-        }));
+        // Try with cosmetics join, fall back to simple query if tables don't exist yet
+        try {
+          const result = await client.execute(
+            `SELECT u.id as userId, COALESCE(u.displayName, u.name) as userName, COALESCE(p.casinoBalance, '20.00') as casinoBalance,
+             t.name as titleName, t.cssClass as titleCss, t.tier as titleTier,
+             n.name as nameEffectName, n.cssClass as nameEffectCss
+             FROM users u LEFT JOIN portfolios p ON u.id = p.userId
+             LEFT JOIN user_equipped ue ON u.id = ue.userId
+             LEFT JOIN cosmetic_items t ON ue.equippedTitle = t.id
+             LEFT JOIN cosmetic_items n ON ue.equippedNameEffect = n.id
+             ORDER BY CAST(COALESCE(p.casinoBalance, '20.00') AS REAL) DESC`
+          );
+          return (result.rows as any[]).map(r => ({
+            userId: Number(r.userId),
+            userName: String(r.userName || "Anonymous"),
+            casinoBalance: parseFloat(String(r.casinoBalance ?? "20.00")),
+            profit: parseFloat(String(r.casinoBalance ?? "20.00")) - 20,
+            title: r.titleName ? { name: String(r.titleName), cssClass: r.titleCss ? String(r.titleCss) : null, tier: String(r.titleTier) } : null,
+            nameEffect: r.nameEffectName ? { name: String(r.nameEffectName), cssClass: r.nameEffectCss ? String(r.nameEffectCss) : null } : null,
+          }));
+        } catch {
+          const result = await client.execute(
+            `SELECT u.id as userId, COALESCE(u.displayName, u.name) as userName, COALESCE(p.casinoBalance, '20.00') as casinoBalance
+             FROM users u LEFT JOIN portfolios p ON u.id = p.userId ORDER BY CAST(COALESCE(p.casinoBalance, '20.00') AS REAL) DESC`
+          );
+          return (result.rows as any[]).map(r => ({
+            userId: Number(r.userId),
+            userName: String(r.userName || "Anonymous"),
+            casinoBalance: parseFloat(String(r.casinoBalance ?? "20.00")),
+            profit: parseFloat(String(r.casinoBalance ?? "20.00")) - 20,
+            title: null,
+            nameEffect: null,
+          }));
+        }
       }, TEN_MIN);
+    }),
+    shop: router({
+      catalog: publicProcedure.query(async () => {
+        const client = getRawClient();
+        try {
+          const result = await client.execute(`SELECT id, type, name, tier, price, cssClass, description, category, isLimited, stock FROM cosmetic_items WHERE stock != 0 ORDER BY price ASC`);
+          return (result.rows as any[]).map(r => ({
+            id: Number(r.id), type: String(r.type), name: String(r.name), tier: String(r.tier),
+            price: Number(r.price), cssClass: r.cssClass ? String(r.cssClass) : null,
+            description: r.description ? String(r.description) : null, category: r.category ? String(r.category) : null,
+            isLimited: Boolean(Number(r.isLimited)), stock: Number(r.stock),
+          }));
+        } catch { return []; }
+      }),
+      owned: protectedProcedure.query(async ({ ctx }) => {
+        const client = getRawClient();
+        try {
+          const result = await client.execute({ sql: `SELECT c.id, c.type, c.name, c.tier, c.cssClass, uc.purchasedAt FROM user_cosmetics uc JOIN cosmetic_items c ON uc.cosmeticId = c.id WHERE uc.userId = ? ORDER BY uc.purchasedAt DESC`, args: [ctx.user.id] });
+          return (result.rows as any[]).map(r => ({
+            id: Number(r.id), type: String(r.type), name: String(r.name), tier: String(r.tier),
+            cssClass: r.cssClass ? String(r.cssClass) : null, purchasedAt: String(r.purchasedAt),
+          }));
+        } catch { return []; }
+      }),
+      purchase: protectedProcedure
+        .input(z.object({ cosmeticId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+          const client = getRawClient();
+          const itemRes = await client.execute({ sql: `SELECT price, stock, name FROM cosmetic_items WHERE id = ?`, args: [input.cosmeticId] });
+          if (itemRes.rows.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Cosmetic not found" });
+          const item = itemRes.rows[0];
+          const price = Number(item.price);
+          const stock = Number(item.stock);
+          const name = String(item.name);
+
+          if (stock === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Out of stock" });
+
+          const ownedRes = await client.execute({ sql: `SELECT 1 FROM user_cosmetics WHERE userId = ? AND cosmeticId = ?`, args: [ctx.user.id, input.cosmeticId] });
+          if (ownedRes.rows.length > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "You already own this" });
+
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (casinoCash < price) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient funds. You have $${casinoCash.toFixed(2)}, need $${price.toFixed(2)}.` });
+
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - price).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          await client.execute({ sql: `INSERT INTO user_cosmetics (userId, cosmeticId) VALUES (?, ?)`, args: [ctx.user.id, input.cosmeticId] });
+
+          if (stock > 0) {
+            await client.execute({ sql: `UPDATE cosmetic_items SET stock = stock - 1 WHERE id = ?`, args: [input.cosmeticId] });
+          }
+
+          cache.invalidate("casino.leaderboard");
+          return { success: true, name, newBalance: casinoCash - price };
+        }),
+      equip: protectedProcedure
+        .input(z.object({ type: z.enum(["title", "name_effect"]), cosmeticId: z.number().nullable() }))
+        .mutation(async ({ ctx, input }) => {
+          const client = getRawClient();
+
+          if (input.cosmeticId !== null) {
+            const ownedRes = await client.execute({ sql: `SELECT 1 FROM user_cosmetics WHERE userId = ? AND cosmeticId = ?`, args: [ctx.user.id, input.cosmeticId] });
+            if (ownedRes.rows.length === 0) throw new TRPCError({ code: "FORBIDDEN", message: "You don't own this" });
+            const typeRes = await client.execute({ sql: `SELECT type FROM cosmetic_items WHERE id = ?`, args: [input.cosmeticId] });
+            if (typeRes.rows.length === 0 || String(typeRes.rows[0].type) !== input.type) throw new TRPCError({ code: "BAD_REQUEST", message: "Type mismatch" });
+          }
+
+          const column = input.type === "title" ? "equippedTitle" : "equippedNameEffect";
+          await client.execute({
+            sql: `INSERT INTO user_equipped (userId, ${column}, updatedAt) VALUES (?, ?, datetime('now')) ON CONFLICT(userId) DO UPDATE SET ${column} = ?, updatedAt = datetime('now')`,
+            args: [ctx.user.id, input.cosmeticId, input.cosmeticId],
+          });
+
+          cache.invalidate("casino.leaderboard");
+          return { success: true };
+        }),
+      equipped: protectedProcedure.query(async ({ ctx }) => {
+        const client = getRawClient();
+        try {
+          const result = await client.execute({
+            sql: `SELECT t.id as titleId, t.name as titleName, t.cssClass as titleCss, n.id as nameEffectId, n.name as nameEffectName, n.cssClass as nameEffectCss FROM user_equipped ue LEFT JOIN cosmetic_items t ON ue.equippedTitle = t.id LEFT JOIN cosmetic_items n ON ue.equippedNameEffect = n.id WHERE ue.userId = ?`,
+            args: [ctx.user.id],
+          });
+          if (result.rows.length === 0) return { title: null, nameEffect: null };
+          const r = result.rows[0] as any;
+          return {
+            title: r.titleId ? { id: Number(r.titleId), name: String(r.titleName), cssClass: r.titleCss ? String(r.titleCss) : null } : null,
+            nameEffect: r.nameEffectId ? { id: Number(r.nameEffectId), name: String(r.nameEffectName), cssClass: r.nameEffectCss ? String(r.nameEffectCss) : null } : null,
+          };
+        } catch { return { title: null, nameEffect: null }; }
+      }),
     }),
   }),
 

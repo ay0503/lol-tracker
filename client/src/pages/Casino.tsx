@@ -3,7 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { useState } from "react";
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -83,24 +83,36 @@ export default function Casino() {
                 <p className="text-xs text-zinc-400 mb-3">
                   {language === "ko" ? "가상 캐시로 카지노 게임을 즐기세요" : "Play casino games with your virtual cash"}
                 </p>
-                {/* Daily Bonus */}
+                {/* Daily Bonus + Shop */}
                 {isAuthenticated && (
-                  <motion.button
-                    whileHover={canClaim ? { scale: 1.02 } : {}}
-                    whileTap={canClaim ? { scale: 0.98 } : {}}
-                    onClick={() => canClaim && claimBonus.mutate()}
-                    disabled={!canClaim || claimBonus.isPending}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      canClaim
-                        ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg shadow-yellow-500/20 hover:from-yellow-400 hover:to-amber-400"
-                        : "bg-zinc-800 text-zinc-500 cursor-default"
-                    }`}
-                  >
-                    {claimBonus.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
-                    {canClaim
-                      ? (language === "ko" ? "일일 보너스 $1.00 받기" : "Claim Daily $1.00")
-                      : (language === "ko" ? "✓ 오늘 보너스 수령 완료" : "✓ Claimed Today")}
-                  </motion.button>
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      whileHover={canClaim ? { scale: 1.02 } : {}}
+                      whileTap={canClaim ? { scale: 0.98 } : {}}
+                      onClick={() => canClaim && claimBonus.mutate()}
+                      disabled={!canClaim || claimBonus.isPending}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        canClaim
+                          ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg shadow-yellow-500/20 hover:from-yellow-400 hover:to-amber-400"
+                          : "bg-zinc-800 text-zinc-500 cursor-default"
+                      }`}
+                    >
+                      {claimBonus.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
+                      {canClaim
+                        ? (language === "ko" ? "일일 보너스 $1.00 받기" : "Claim Daily $1.00")
+                        : (language === "ko" ? "✓ 오늘 보너스 수령 완료" : "✓ Claimed Today")}
+                    </motion.button>
+                    <Link href="/casino/shop">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition-all"
+                      >
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        {language === "ko" ? "상점" : "Shop"}
+                      </motion.button>
+                    </Link>
+                  </div>
                 )}
               </div>
               <div className="text-left sm:text-right">
@@ -265,7 +277,12 @@ export default function Casino() {
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <RankIcon rank={i + 1} />
-                      <span className="text-xs text-zinc-300 font-medium truncate">{player.userName}</span>
+                      <span className={`text-xs font-medium truncate ${(player as any).nameEffect?.cssClass || "text-zinc-300"}`}>{player.userName}</span>
+                      {(player as any).title && (
+                        <span className={`flex-shrink-0 px-1 py-0.5 rounded text-[7px] font-bold ${(player as any).title.cssClass || "bg-zinc-800 text-zinc-400"}`}>
+                          {(player as any).title.name}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className={`text-[10px] font-mono flex items-center gap-0.5 ${isProfit ? "text-[#00C805]" : "text-[#FF5252]"}`}>
