@@ -11,6 +11,26 @@ import "./index.css";
 
 const TRPC_URL = "/api/trpc";
 
+// ─── Startup Health Check ───
+(async () => {
+  const t0 = performance.now();
+  try {
+    const res = await fetch("/api/health");
+    const ms = (performance.now() - t0).toFixed(0);
+    if (res.ok) {
+      const data = await res.json();
+      console.log(
+        `%c$DORI%c Backend ✓ ${ms}ms | ${window.location.origin} → ${data.timestamp ?? "ok"}`,
+        "color:#00C805;font-weight:bold", "color:inherit"
+      );
+    } else {
+      console.error(`$DORI Backend ✗ ${res.status} (${ms}ms)`);
+    }
+  } catch (err: any) {
+    console.error(`$DORI Backend ✗ unreachable — ${err.message}`);
+  }
+})();
+
 /**
  * Client-side caching strategy:
  * - staleTime: 10 min → data is considered "fresh" for 10 min after fetch
