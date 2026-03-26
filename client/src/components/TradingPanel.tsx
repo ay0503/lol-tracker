@@ -156,7 +156,7 @@ export default function TradingPanel() {
   });
 
   const tickerInfo = useMemo(() => {
-    const found = TICKERS.find((t) => t.symbol === selectedTicker);
+    const found = TICKERS.find((tk) => tk.symbol === selectedTicker);
     const tickerKey = selectedTicker.toLowerCase() as keyof typeof t.tickers;
     return {
       color: found?.color ?? "#fff",

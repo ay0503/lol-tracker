@@ -231,20 +231,20 @@ function TableBrowser() {
         <p className="text-sm text-muted-foreground">Select a table to browse and edit rows.</p>
         {dbStatus.data && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {dbStatus.data.tables.map((t) => (
+            {dbStatus.data.tables.map((tbl) => (
               <button
-                key={t.table}
-                onClick={() => { setSelectedTable(t.table); setPage(1); setSearchFilter(""); }}
+                key={tbl.table}
+                onClick={() => { setSelectedTable(tbl.table); setPage(1); setSearchFilter(""); }}
                 className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/40 transition-all hover:shadow-md group"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Table2 className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   <span className="text-sm font-semibold font-[var(--font-mono)] truncate">
-                    {t.table}
+                    {tbl.table}
                   </span>
                 </div>
                 <p className="text-2xl font-bold font-[var(--font-mono)]">
-                  {t.count.toLocaleString()}
+                  {tbl.count.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">rows</p>
               </button>

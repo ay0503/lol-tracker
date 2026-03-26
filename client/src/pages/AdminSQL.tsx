@@ -141,23 +141,23 @@ export default function AdminSQL() {
         {/* DB Status Cards */}
         {dbStatus.data && (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            {dbStatus.data.tables.map((t) => (
+            {dbStatus.data.tables.map((tbl) => (
               <div
-                key={t.table}
+                key={tbl.table}
                 className="bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors"
                 onClick={() => {
-                  setQuery(`SELECT * FROM "${t.table}" LIMIT 20;`);
+                  setQuery(`SELECT * FROM "${tbl.table}" LIMIT 20;`);
                   textareaRef.current?.focus();
                 }}
               >
                 <div className="flex items-center gap-1.5 mb-1">
                   <Table2 className="w-3 h-3 text-muted-foreground" />
                   <span className="text-xs font-semibold font-[var(--font-mono)] truncate">
-                    {t.table}
+                    {tbl.table}
                   </span>
                 </div>
                 <p className="text-lg font-bold font-[var(--font-mono)]">
-                  {t.count.toLocaleString()}
+                  {tbl.count.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-muted-foreground">rows</p>
               </div>

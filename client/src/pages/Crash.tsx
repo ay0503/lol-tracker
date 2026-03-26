@@ -138,9 +138,9 @@ function CrashCanvas({
     const STEPS = 180;
     const pts: [number, number][] = [];
     for (let i = 0; i <= STEPS; i++) {
-      const t = (tEnd * i) / STEPS;
-      const m = multiplierAtTime(t);
-      pts.push([toX(t), toY(m)]);
+      const tv = (tEnd * i) / STEPS;
+      const m = multiplierAtTime(tv);
+      pts.push([toX(tv), toY(m)]);
     }
 
     // ---- Gradient fill ----
