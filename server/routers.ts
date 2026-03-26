@@ -35,6 +35,35 @@ const THIRTY_MIN = 30 * 60 * 1000;
 const TEN_MIN = 10 * 60 * 1000;
 const FIVE_MIN = 5 * 60 * 1000;
 
+/** Casino cooldown tracking */
+const casinoLastGameTime = new Map<number, number>();
+
+async function checkCasinoCooldown(userId: number): Promise<void> {
+  const client = getRawClient();
+  try {
+    const result = await client.execute({ sql: `SELECT cooldownSeconds FROM casino_cooldowns WHERE userId = ?`, args: [userId] });
+    if (result.rows.length === 0) return; // No cooldown set
+    const cooldownSec = Number(result.rows[0].cooldownSeconds);
+    if (cooldownSec <= 0) return;
+
+    const lastGame = casinoLastGameTime.get(userId);
+    if (lastGame) {
+      const elapsed = (Date.now() - lastGame) / 1000;
+      if (elapsed < cooldownSec) {
+        const remaining = Math.ceil(cooldownSec - elapsed);
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Casino cooldown: wait ${remaining}s before next game.` });
+      }
+    }
+  } catch (err) {
+    if (err instanceof TRPCError) throw err;
+    // Table doesn't exist yet — no cooldowns
+  }
+}
+
+function recordCasinoGame(userId: number): void {
+  casinoLastGameTime.set(userId, Date.now());
+}
+
 
 export const appRouter = router({
   system: systemRouter,
@@ -732,6 +761,7 @@ export const appRouter = router({
       start: protectedProcedure
         .input(z.object({ bet: z.number().min(0.10).max(5).finite(), mineCount: z.number().int().min(1).max(24) }))
         .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
           const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
           if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
@@ -741,6 +771,7 @@ export const appRouter = router({
 
           const { startMinesGame } = await import("./mines");
           const game = startMinesGame(ctx.user.id, input.bet, input.mineCount);
+          recordCasinoGame(ctx.user.id);
           cache.invalidate("casino.leaderboard");
           return game;
         }),
@@ -788,6 +819,7 @@ export const appRouter = router({
       deal: protectedProcedure
         .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
         .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
           const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
           if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
@@ -800,6 +832,7 @@ export const appRouter = router({
 
           const { dealGame } = await import("./blackjack");
           const game = dealGame(ctx.user.id, input.bet);
+          recordCasinoGame(ctx.user.id);
 
           if (game.status !== "playing" && game.payout > 0) {
             const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
@@ -1503,6 +1536,70 @@ export const appRouter = router({
           newBalance: input.amount.toFixed(2),
         };
       }),
+    /** Set casino cooldown for a user (seconds between games, 0 = no cooldown) */
+    setCasinoCooldown: adminProcedure
+      .input(z.object({
+        displayName: z.string().optional(),
+        userId: z.number().optional(),
+        cooldownSeconds: z.number().min(0).max(86400).int().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        let userId: number | null = null;
+        let userName: string | null = null;
+
+        if (input.userId) {
+          const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+          if (user.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: `User with ID ${input.userId} not found` });
+          userId = user[0].id;
+          userName = user[0].displayName || user[0].name;
+        } else if (input.displayName) {
+          const allUsers = await db.select().from(users);
+          const match = allUsers.find(u => (u.displayName || u.name) === input.displayName);
+          if (!match) throw new TRPCError({ code: "NOT_FOUND", message: `User "${input.displayName}" not found` });
+          userId = match.id;
+          userName = match.displayName || match.name;
+        } else {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Provide either displayName or userId" });
+        }
+
+        const client = getRawClient();
+        await client.execute(`CREATE TABLE IF NOT EXISTS casino_cooldowns (userId INTEGER PRIMARY KEY, cooldownSeconds INTEGER NOT NULL DEFAULT 0)`);
+
+        if (input.cooldownSeconds === 0) {
+          await client.execute({ sql: `DELETE FROM casino_cooldowns WHERE userId = ?`, args: [userId] });
+        } else {
+          await client.execute({
+            sql: `INSERT INTO casino_cooldowns (userId, cooldownSeconds) VALUES (?, ?) ON CONFLICT(userId) DO UPDATE SET cooldownSeconds = ?`,
+            args: [userId, input.cooldownSeconds, input.cooldownSeconds],
+          });
+        }
+
+        return {
+          success: true, userId, userName,
+          cooldownSeconds: input.cooldownSeconds,
+          message: input.cooldownSeconds === 0
+            ? `Removed cooldown for ${userName}`
+            : `Set ${input.cooldownSeconds}s cooldown for ${userName}`,
+        };
+      }),
+    /** List all casino cooldowns */
+    listCasinoCooldowns: adminProcedure.query(async () => {
+      const client = getRawClient();
+      try {
+        const result = await client.execute(
+          `SELECT c.userId, c.cooldownSeconds, COALESCE(u.displayName, u.name) as userName
+           FROM casino_cooldowns c LEFT JOIN users u ON c.userId = u.id`
+        );
+        return (result.rows as any[]).map(r => ({
+          userId: Number(r.userId),
+          userName: String(r.userName || "Unknown"),
+          cooldownSeconds: Number(r.cooldownSeconds),
+        }));
+      } catch {
+        return [];
+      }
+    }),
   }),
 });
 
