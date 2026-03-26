@@ -50,7 +50,7 @@ export default function Casino() {
 
   const depositMutation = trpc.casino.deposit.useMutation({
     onSuccess: (data) => {
-      toast.success(`$${data.deposited.toFixed(2)} → $${data.received.toFixed(0)} casino cash (20x)`);
+      toast.success(`$${data.deposited.toFixed(2)} → $${data.received.toFixed(0)} casino cash (10x)`);
       setDepositAmount("");
       setShowDeposit(false);
       utils.casino.blackjack.balance.invalidate();
@@ -150,7 +150,7 @@ export default function Casino() {
               <div className="flex items-center gap-2">
                 <ArrowRightLeft className="w-4 h-4 text-yellow-400" />
                 <h3 className="text-xs font-bold text-white">
-                  {language === "ko" ? "트레이딩 → 카지노 입금 (20배)" : "Trading → Casino (20x)"}
+                  {language === "ko" ? "트레이딩 → 카지노 입금 (10배)" : "Trading → Casino (10x)"}
                 </h3>
               </div>
               <span className="text-[10px] text-yellow-400/60 font-mono">
@@ -159,8 +159,8 @@ export default function Casino() {
             </div>
             <p className="text-[10px] text-zinc-400 mb-3">
               {language === "ko"
-                ? `$1 트레이딩 캐시 = $20 카지노 캐시`
-                : `$1 trading cash = $20 casino cash`}
+                ? `$1 트레이딩 캐시 = $10 카지노 캐시`
+                : `$1 trading cash = $10 casino cash`}
             </p>
             <div className="flex gap-1.5 mb-2">
               {[1, 2, 5, 10].map(amt => (
@@ -176,7 +176,7 @@ export default function Casino() {
                         : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
                   }`}
                 >
-                  ${amt}→${amt * 20}
+                  ${amt}→${amt * 10}
                 </button>
               ))}
               <button
@@ -204,7 +204,7 @@ export default function Casino() {
               </div>
               <div className="flex items-center text-xs text-zinc-500 font-mono px-2">→</div>
               <div className="flex items-center text-sm font-mono font-bold text-yellow-400 min-w-[4rem]">
-                ${((parseFloat(depositAmount) || 0) * 20).toFixed(0)}
+                ${((parseFloat(depositAmount) || 0) * 10).toFixed(0)}
               </div>
               <button
                 onClick={() => {

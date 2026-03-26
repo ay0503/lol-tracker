@@ -1104,11 +1104,11 @@ export const appRouter = router({
         return { claimed: false };
       }
     }),
-    /** Transfer trading cash → casino balance (20x multiplier) */
+    /** Transfer trading cash → casino balance (10x multiplier) */
     deposit: protectedProcedure
       .input(z.object({ amount: z.number().min(0.50).max(200).finite() }))
       .mutation(async ({ ctx, input }) => {
-        const CASINO_MULTIPLIER = 20;
+        const CASINO_MULTIPLIER = 10;
         const portfolio = await getOrCreatePortfolio(ctx.user.id);
         const tradingCash = parseFloat(portfolio.cashBalance);
         const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
