@@ -326,13 +326,13 @@ export default function Crash() {
   // Re-sync on tab focus (requestAnimationFrame pauses in background)
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && isFlying) {
+      if (document.visibilityState === "visible" && phase === "flying") {
         statusQuery.refetch();
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [isFlying]);
+  }, [phase]);
 
   const handleStart = () => {
     const amt = parseFloat(betAmount);
