@@ -68,6 +68,12 @@ export default function Casino() {
   const cash = balance ?? 20;
   const tradingCash = portfolio?.cashBalance ?? 0;
   const canClaim = isAuthenticated && !bonusStatus?.claimed;
+  const casinoIntro = language === "ko"
+    ? "한 판의 운과 코스메틱 자랑을 위한 사이드 퀘스트 공간입니다."
+    : "A side quest for hot streaks, silly luck, and cosmetic flexes.";
+  const casinoRules = language === "ko"
+    ? "카지노 머니는 트레이딩 머니와 완전히 별개이며, 게임과 코스메틱 구매에만 사용할 수 있습니다. 카지노 머니가 부족하면 트레이딩 머니를 1:10 비율로 옮겨 충전할 수 있지만, 챌린지의 무결성을 위해 카지노 머니를 트레이딩 머니로 되돌리는 것은 불가능합니다."
+    : "Casino cash is completely separate from trading cash and can only be used for games and cosmetics. If you run low, you can top up casino cash from trading cash at a 1:10 rate, but casino cash cannot be moved back into trading cash so the challenge stays honest.";
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -217,6 +223,60 @@ export default function Casino() {
             </div>
           </motion.div>
         )}
+
+        <div className="relative mb-6 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/70">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.10),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_32%)]" />
+          <div className="relative grid gap-4 px-5 py-5 sm:grid-cols-[1.4fr_0.9fr] sm:px-6">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-yellow-300">
+                <span>INFO</span>
+              </div>
+              <h2 className="mb-2 text-lg font-bold text-white font-[var(--font-heading)]">
+                {language === "ko" ? "카지노 머니는 가볍게, 규칙은 분명하게" : "Casino cash stays playful. The rules do not."}
+              </h2>
+              <p className="mb-3 max-w-2xl text-sm text-zinc-300">
+                {casinoIntro}
+              </p>
+              <p className="max-w-2xl text-xs leading-6 text-zinc-400 sm:text-sm">
+                {casinoRules}
+              </p>
+            </div>
+
+            <div className="grid gap-2 self-start">
+              <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+                  {language === "ko" ? "핵심 규칙" : "Key Rules"}
+                </p>
+                <p className="mt-1 text-xs text-zinc-300">
+                  {language === "ko" ? "트레이딩 → 카지노는 가능, 카지노 → 트레이딩은 불가" : "Trading -> casino is allowed. Casino -> trading is locked."}
+                </p>
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+                  {language === "ko" ? "충전 비율" : "Transfer Rate"}
+                </p>
+                <p className="mt-1 text-xs text-zinc-300">
+                  {language === "ko" ? `$1 트레이딩 캐시 = $${mult} 카지노 캐시` : `$1 trading cash = $${mult} casino cash`}
+                </p>
+              </div>
+              <Link href="/casino/shop">
+                <motion.div
+                  whileHover={{ scale: 1.015, y: -1 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="relative flex items-center gap-2 overflow-hidden rounded-xl border border-violet-400/30 bg-gradient-to-r from-violet-600/30 via-fuchsia-500/20 to-indigo-500/30 px-4 py-3 text-sm font-bold text-violet-100 shadow-[0_10px_30px_rgba(124,58,237,0.18)] transition-colors hover:border-violet-300/50"
+                >
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(216,180,254,0.18),transparent_40%)]" />
+                  <span className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/10">
+                    <ShoppingBag className="h-4 w-4" />
+                  </span>
+                  <span className="relative">
+                    {language === "ko" ? "코스메틱 상점 열기" : "Open the Cosmetics Shop"}
+                  </span>
+                </motion.div>
+              </Link>
+            </div>
+          </div>
+        </div>
 
         {/* ─── Games ─── */}
         <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
