@@ -175,15 +175,16 @@ function useDealerReveal(game: any) {
 
       if (hand.length > 2) {
         let idx = 2;
-        timerRef.current = setInterval(() => {
+        const timer = setInterval(() => {
           idx++;
           if (idx > hand.length) {
-            clearInterval(timerRef.current);
+            clearInterval(timer);
             timerRef.current = null;
             return;
           }
           setRevealed(hand.slice(0, idx));
         }, 500);
+        timerRef.current = timer;
       }
 
       prevStatusRef.current = game.status;
