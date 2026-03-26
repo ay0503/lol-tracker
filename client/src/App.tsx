@@ -14,6 +14,7 @@ import NewsFeed from "./pages/NewsFeed";
 import Sentiment from "./pages/Sentiment";
 import AdminSQL from "./pages/AdminSQL";
 import AdminDB from "./pages/AdminDB";
+import Casino from "./pages/Casino";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/leaderboard"} component={Leaderboard} />
       <Route path={"/news"} component={NewsFeed} />
       <Route path={"/sentiment"} component={Sentiment} />
+      <Route path={"/casino"} component={Casino} />
       <Route path={"/admin/sql"} component={AdminSQL} />
       <Route path={"/admin"} component={AdminDB} />
       <Route path={"/404"} component={NotFound} />

@@ -726,6 +726,103 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Casino ───
+  casino: router({
+    blackjack: router({
+      deal: protectedProcedure
+        .input(z.object({ bet: z.number().min(1).max(50).finite() }))
+        .mutation(async ({ ctx, input }) => {
+          // Deduct bet from cash
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const cash = parseFloat(portfolio.cashBalance);
+          if (input.bet > cash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient cash. You have $${cash.toFixed(2)}.` });
+
+          const { getDb } = await import("./db");
+          const db = await getDb();
+          const { portfolios } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(portfolios).set({ cashBalance: (cash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+
+          const { dealGame } = await import("./blackjack");
+          const game = dealGame(ctx.user.id, input.bet);
+
+          // If game ended immediately (blackjack/push/dealer BJ), pay out
+          if (game.status !== "playing" && game.payout > 0) {
+            const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
+            const newCash = parseFloat(freshPortfolio.cashBalance) + game.payout;
+            await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+
+          cache.invalidate("leaderboard.rankings");
+          return game;
+        }),
+      hit: protectedProcedure.mutation(async ({ ctx }) => {
+        const { hitGame } = await import("./blackjack");
+        try {
+          const game = hitGame(ctx.user.id);
+          // If busted, no payout needed (already deducted)
+          return game;
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+      }),
+      stand: protectedProcedure.mutation(async ({ ctx }) => {
+        const { standGame } = await import("./blackjack");
+        try {
+          const game = standGame(ctx.user.id);
+          // Pay out winnings
+          if (game.payout > 0) {
+            const { getDb } = await import("./db");
+            const db = await getDb();
+            const { portfolios } = await import("../drizzle/schema");
+            const { eq } = await import("drizzle-orm");
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const newCash = parseFloat(portfolio.cashBalance) + game.payout;
+            await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          cache.invalidate("leaderboard.rankings");
+          return game;
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+      }),
+      double: protectedProcedure.mutation(async ({ ctx }) => {
+        const { doubleDown, getActiveGame: getGame } = await import("./blackjack");
+        // Deduct additional bet
+        const currentGame = getGame(ctx.user.id);
+        if (!currentGame) throw new TRPCError({ code: "BAD_REQUEST", message: "No active game" });
+
+        const portfolio = await getOrCreatePortfolio(ctx.user.id);
+        const cash = parseFloat(portfolio.cashBalance);
+        const additionalBet = currentGame.bet; // Double means matching original bet
+        if (additionalBet > cash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient cash to double down. Need $${additionalBet.toFixed(2)}.` });
+
+        const { getDb } = await import("./db");
+        const db = await getDb();
+        const { portfolios } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await db.update(portfolios).set({ cashBalance: (cash - additionalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+
+        try {
+          const game = doubleDown(ctx.user.id);
+          if (game.payout > 0) {
+            const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
+            const newCash = parseFloat(freshPortfolio.cashBalance) + game.payout;
+            await db.update(portfolios).set({ cashBalance: newCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          cache.invalidate("leaderboard.rankings");
+          return game;
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+      }),
+      active: protectedProcedure.query(async ({ ctx }) => {
+        const { getActiveGame: getGame } = await import("./blackjack");
+        return getGame(ctx.user.id);
+      }),
+    }),
+  }),
+
   // ─── Leaderboard — cached 10 min ───
   leaderboard: router({
     rankings: publicProcedure.query(async () => {

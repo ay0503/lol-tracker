@@ -701,6 +701,10 @@ export default function Home() {
                 <MessageCircle className="w-3.5 h-3.5" />
                 {t.nav.sentiment}
               </Link>
+              <Link href="/casino" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30 transition-all">
+                <Gamepad2 className="w-3.5 h-3.5" />
+                Casino
+              </Link>
               {isAuthenticated && (
                 <Link href="/portfolio" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
                   <Wallet className="w-3.5 h-3.5" />
@@ -840,6 +844,10 @@ export default function Home() {
                 <Link href="/sentiment" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
                   <MessageCircle className="w-4 h-4" />
                   {t.nav.sentiment}
+                </Link>
+                <Link href="/casino" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30 transition-all">
+                  <Gamepad2 className="w-4 h-4" />
+                  Casino
                 </Link>
                 {isAuthenticated && (
                   <Link href="/portfolio" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
