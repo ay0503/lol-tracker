@@ -1398,24 +1398,57 @@ export const appRouter = router({
     userProfile: publicProcedure
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {
-        const trades = await getUserTrades(input.userId, 20);
+        const db = await getDb();
+        const [userRow] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        if (!userRow) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        const portfolio = await getOrCreatePortfolio(input.userId);
+        const trades = await getUserTrades(input.userId, 30);
         const holdings = await getUserHoldings(input.userId);
-        const history = await getPortfolioHistory(input.userId, Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const userBets = await getUserBets(input.userId, 10);
+        const history = await getPortfolioHistory(input.userId, Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const userBets = await getUserBets(input.userId, 20);
+
+        // Get current prices for holdings valuation
+        const cachedPrices = cache.get<{ ticker: string; price: number }[]>("prices.etfPrices");
+        const priceMap: Record<string, number> = cachedPrices
+          ? Object.fromEntries(cachedPrices.map(p => [p.ticker, p.price]))
+          : { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 };
+
+        const cash = parseFloat(portfolio.cashBalance);
+        let holdingsValue = 0;
+        let shortPnl = 0;
+        const holdingsData = holdings.map(h => {
+          const shares = parseFloat(h.shares);
+          const shortShares = parseFloat(h.shortShares);
+          const price = priceMap[h.ticker] || 0;
+          const value = shares * price;
+          const pnl = value - shares * parseFloat(h.avgCostBasis);
+          const sPnl = shortShares * (parseFloat(h.shortAvgPrice) - price);
+          holdingsValue += value;
+          shortPnl += sPnl;
+          return {
+            ticker: h.ticker, shares, avgCostBasis: parseFloat(h.avgCostBasis),
+            shortShares, shortAvgPrice: parseFloat(h.shortAvgPrice),
+            currentPrice: price, value, pnl, shortPnl: sPnl,
+          };
+        }).filter(h => h.shares > 0 || h.shortShares > 0);
+
+        const totalValue = cash + holdingsValue + shortPnl;
+
         return {
+          userName: userRow.displayName || userRow.name || "Trader",
+          joinDate: userRow.createdAt,
+          totalValue,
+          cashBalance: cash,
+          casinoBalance: parseFloat(portfolio.casinoBalance ?? "20.00"),
+          totalDividends: parseFloat(portfolio.totalDividends),
+          allTimePnl: totalValue - 200,
           trades: trades.map(t => ({
             ticker: t.ticker, type: t.type,
             shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
             totalAmount: parseFloat(t.totalAmount),
             createdAt: t.createdAt,
           })),
-          holdings: holdings.map(h => ({
-            ticker: h.ticker,
-            shares: parseFloat(h.shares),
-            avgCostBasis: parseFloat(h.avgCostBasis),
-            shortShares: parseFloat(h.shortShares),
-            shortAvgPrice: parseFloat(h.shortAvgPrice),
-          })).filter(h => h.shares > 0 || h.shortShares > 0),
+          holdings: holdingsData,
           portfolioHistory: history.map(s => ({
             totalValue: parseFloat(s.totalValue),
             timestamp: Number(s.timestamp),

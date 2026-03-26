@@ -226,7 +226,9 @@ export default function Leaderboard() {
                     <div className="flex items-center gap-3">
                       {getRankIcon(rank)}
                       <div>
-                        <StyledName name={trader.userName} nameEffectCss={(trader as any).nameEffect?.cssClass} titleName={(trader as any).title?.name} titleCss={(trader as any).title?.cssClass} className="text-sm" />
+                        <Link href={`/profile/${trader.userId}`} onClick={(e: React.MouseEvent) => e.stopPropagation()} className="hover:underline">
+                          <StyledName name={trader.userName} nameEffectCss={(trader as any).nameEffect?.cssClass} titleName={(trader as any).title?.name} titleCss={(trader as any).title?.cssClass} className="text-sm" />
+                        </Link>
                         <div className="flex items-center gap-3 mt-0.5">
                           <span className="text-xs text-muted-foreground">
                             {t.leaderboard.cash}: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(2)}</span>
@@ -277,7 +279,9 @@ export default function Leaderboard() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {getRankIcon(rank)}
-                        <StyledName name={trader.userName} nameEffectCss={(trader as any).nameEffect?.cssClass} titleName={(trader as any).title?.name} titleCss={(trader as any).title?.cssClass} className="text-sm" />
+                        <Link href={`/profile/${trader.userId}`} onClick={(e: React.MouseEvent) => e.stopPropagation()} className="hover:underline">
+                          <StyledName name={trader.userName} nameEffectCss={(trader as any).nameEffect?.cssClass} titleName={(trader as any).title?.name} titleCss={(trader as any).title?.cssClass} className="text-sm" />
+                        </Link>
                       </div>
                       <div className="flex items-center gap-2">
                         <p className="text-base font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>

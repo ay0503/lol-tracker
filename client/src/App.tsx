@@ -28,6 +28,7 @@ const Crash = lazy(() => import("./pages/Crash"));
 const Roulette = lazy(() => import("./pages/Roulette"));
 const Poker = lazy(() => import("./pages/VideoPoker"));
 const CasinoShop = lazy(() => import("./pages/CasinoShop"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
 
 function LoadingFallback() {
   return (
@@ -47,6 +48,7 @@ function Router() {
         <Route path={"/ledger"} component={Ledger} />
         <Route path={"/portfolio"} component={Portfolio} />
         <Route path={"/leaderboard"} component={Leaderboard} />
+        <Route path={"/profile/:userId"} component={UserProfile} />
         <Route path={"/news"} component={NewsFeed} />
         <Route path={"/sentiment"} component={Sentiment} />
         <Route path={"/casino/blackjack"} component={Blackjack} />
