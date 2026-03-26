@@ -49,9 +49,9 @@ export default function AppNav() {
     { href: "/leaderboard", label: t.nav.leaderboard, icon: Crown },
     { href: "/news", label: t.nav.news, icon: Newspaper },
     { href: "/sentiment", label: t.nav.sentiment, icon: MessageCircle },
-    { href: "/casino", label: "Casino", icon: Gamepad2, className: "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30" },
+    { href: "/casino", label: (t as any).casino?.casino ?? "Casino", icon: Gamepad2, className: "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30" },
     { href: "/portfolio", label: t.nav.portfolio, icon: Wallet, auth: true },
-    { href: "/admin", label: "Admin", icon: Shield, admin: true, className: "text-red-400 hover:text-red-300 hover:bg-red-950/30" },
+    { href: "/admin", label: (t as any).casino?.admin ?? "Admin", icon: Shield, admin: true, className: "text-red-400 hover:text-red-300 hover:bg-red-950/30" },
   ];
 
   return (
