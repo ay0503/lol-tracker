@@ -124,24 +124,49 @@ export default function Wheel() {
 
             {/* Wheel */}
             <div className="relative flex justify-center mb-4">
-              {/* Pointer */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
-                <div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[14px] border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-lg" />
+              {/* Pointer with glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20">
+                <motion.div
+                  animate={spinning ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.3, repeat: spinning ? Infinity : 0 }}
+                >
+                  <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
+                </motion.div>
               </div>
 
-              {/* Spinning Wheel */}
-              <div
-                className="w-56 h-56 sm:w-64 sm:h-64 rounded-full border-4 border-zinc-700 shadow-2xl"
-                style={{
-                  background: `conic-gradient(${conicStops})`,
-                  transform: `rotate(${rotation}deg)`,
-                  transition: spinning ? "transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
-                }}
-              >
-                {/* Center hub */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-zinc-900 border-2 border-zinc-600 flex items-center justify-center shadow-lg">
-                    <span className="text-[10px] font-bold text-zinc-400">SPIN</span>
+              {/* LED dots ring */}
+              <div className="relative w-60 h-60 sm:w-68 sm:h-68">
+                {Array.from({ length: 24 }).map((_, idx) => {
+                  const angle = (idx / 24) * 360;
+                  const rad = (angle * Math.PI) / 180;
+                  const radius = 120;
+                  const lx = 120 + Math.cos(rad - Math.PI / 2) * radius;
+                  const ly = 120 + Math.sin(rad - Math.PI / 2) * radius;
+                  return (
+                    <div key={idx} className="absolute w-1.5 h-1.5 rounded-full transition-all duration-200"
+                      style={{
+                        left: lx - 3, top: ly - 3,
+                        background: spinning ? (idx % 3 === 0 ? "#facc15" : "#52525b") : "#3f3f46",
+                        boxShadow: spinning && idx % 3 === 0 ? "0 0 4px rgba(250,204,21,0.6)" : "none",
+                      }}
+                    />
+                  );
+                })}
+
+                {/* Spinning Wheel */}
+                <div
+                  className="absolute inset-3 rounded-full border-4 border-zinc-700 shadow-2xl overflow-hidden"
+                  style={{
+                    background: `conic-gradient(${conicStops})`,
+                    transform: `rotate(${rotation}deg)`,
+                    transition: spinning ? "transform 3.5s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
+                  }}
+                >
+                  {/* Center hub */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-zinc-900 border-2 border-zinc-600 flex items-center justify-center shadow-lg">
+                      <span className="text-[9px] font-bold text-zinc-400">{lastResult ? `${lastResult.multiplier}x` : "SPIN"}</span>
+                    </div>
                   </div>
                 </div>
               </div>

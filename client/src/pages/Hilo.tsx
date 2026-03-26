@@ -77,6 +77,10 @@ export default function Hilo() {
   const isOver = game && game.status !== "playing";
   const isPending = startMutation.isPending || guessMutation.isPending || cashoutMutation.isPending;
   const cash = balance ?? 20;
+  const streak = game?.history?.length ?? 0;
+  const streakGlow = streak >= 10 ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-500/30" :
+    streak >= 5 ? "ring-2 ring-purple-400 shadow-lg shadow-purple-500/20" :
+    streak >= 3 ? "ring-2 ring-blue-400 shadow-md shadow-blue-500/15" : "";
 
   const handleStart = useCallback(() => {
     startMutation.mutate({ bet: selectedChip });
@@ -125,8 +129,21 @@ export default function Hilo() {
               </div>
             )}
 
+            {/* Streak Indicator */}
+            {isPlaying && streak >= 3 && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center mb-2">
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                  streak >= 10 ? "bg-yellow-500/20 text-yellow-400" :
+                  streak >= 5 ? "bg-purple-500/20 text-purple-400" :
+                  "bg-blue-500/20 text-blue-400"
+                }`}>
+                  {streak} streak {"🔥".repeat(Math.min(Math.floor(streak / 3), 3))}
+                </span>
+              </motion.div>
+            )}
+
             {/* Current Card */}
-            <div className="flex justify-center mb-6 min-h-[160px] items-center">
+            <div className={`flex justify-center mb-6 min-h-[160px] items-center rounded-2xl transition-all ${streakGlow}`}>
               {game ? (
                 <CardFace rank={game.currentCard.rank} suit={game.currentCard.suit} />
               ) : (
