@@ -106,6 +106,16 @@ export async function seedCosmeticsIfEmpty() {
     { type: "name_effect", name: "Diamond Sparkle", tier: "legendary", price: 350, css: "inline-block bg-gradient-to-br from-blue-200 via-blue-100 to-blue-200 bg-clip-text text-transparent animate-[sparkle_3s_linear_infinite]", desc: "VIP sparkle", extra: "drop-shadow-[0_0_30px_rgba(255,255,255,1)]" },
     { type: "name_effect", name: "Molten Gold", tier: "legendary", price: 400, css: "inline-block bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 bg-[length:200%_100%] bg-clip-text text-transparent animate-[flow_2s_linear_infinite]", desc: "Liquid metal", extra: "drop-shadow-[0_0_35px_rgba(234,179,8,1)]" },
     { type: "name_effect", name: "Cosmic Void", tier: "legendary", price: 500, css: "inline-block bg-gradient-to-r from-purple-700 via-pink-500 to-purple-700 bg-[length:300%_100%] bg-clip-text text-transparent animate-[cosmic_4s_ease-in-out_infinite]", desc: "Nebula aura", extra: "drop-shadow-[0_0_40px_rgba(168,85,247,1)]" },
+
+    // ─── NEW ANIMATED EFFECTS ───
+    { type: "name_effect", name: "Frostbite", tier: "rare", price: 58, css: "text-blue-200 animate-[frostbite_2s_ease-in-out_infinite]", desc: "Frozen aura" },
+    { type: "name_effect", name: "Toxic Drip", tier: "rare", price: 52, css: "inline-block bg-gradient-to-b from-lime-500 via-green-500 to-lime-500 bg-clip-text text-transparent animate-[toxic-drip_2.5s_linear_infinite]", desc: "Radioactive ooze", extra: "drop-shadow-[0_0_12px_rgba(132,204,22,0.7)]" },
+    { type: "name_effect", name: "Neon Pulse", tier: "epic", price: 160, css: "text-cyan-400 animate-[neon-pulse_1.5s_ease-in-out_infinite]", desc: "Electric heartbeat" },
+    { type: "name_effect", name: "Phantom Fade", tier: "epic", price: 175, css: "text-purple-300 animate-[phantom-fade_3s_ease-in-out_infinite]", desc: "Ethereal presence" },
+    { type: "name_effect", name: "Glitch Matrix", tier: "epic", price: 195, css: "text-green-400 animate-[glitch-matrix_0.4s_infinite]", desc: "Digital chaos" },
+    { type: "name_effect", name: "Lava Flow", tier: "legendary", price: 420, css: "inline-block bg-gradient-to-r from-red-600 via-orange-500 to-red-600 bg-clip-text text-transparent animate-[lava-flow_3s_linear_infinite]", desc: "Molten fury", extra: "drop-shadow-[0_0_25px_rgba(239,68,68,0.8)]" },
+    { type: "name_effect", name: "Solar Flare", tier: "legendary", price: 450, css: "inline-block bg-gradient-to-r from-yellow-200 via-yellow-100 to-yellow-200 bg-clip-text text-transparent animate-[solar-flare_2s_ease-in-out_infinite]", desc: "Blinding radiance" },
+    { type: "name_effect", name: "Arcane Runes", tier: "legendary", price: 480, css: "arcane-runes-effect", desc: "Ancient magic" },
   ];
 
   for (const c of items) {

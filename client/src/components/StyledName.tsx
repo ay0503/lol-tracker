@@ -121,6 +121,62 @@ const EFFECT_STYLES: Record<string, { className?: string; style?: CSSProperties 
       display: "inline-block",
     },
   },
+
+  // ─── New Animated Effects ───
+  "neon_pulse": {
+    className: "text-cyan-400",
+    style: { animation: "neon-pulse 1.5s ease-in-out infinite" },
+  },
+  "lava_flow": {
+    style: {
+      background: "linear-gradient(to right, #dc2626, #f97316, #dc2626)",
+      backgroundSize: "200% 100%",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      filter: "drop-shadow(0 0 25px rgba(239,68,68,0.8))",
+      animation: "lava-flow 3s linear infinite",
+      display: "inline-block",
+    },
+  },
+  "glitch_matrix": {
+    className: "text-green-400",
+    style: {
+      animation: "glitch-matrix 0.4s infinite",
+      display: "inline-block",
+    },
+  },
+  "frostbite": {
+    className: "text-blue-200",
+    style: { animation: "frostbite 2s ease-in-out infinite" },
+  },
+  "solar_flare": {
+    style: {
+      background: "linear-gradient(to right, #fef08a, #fef3c7, #fef08a)",
+      backgroundSize: "200% 100%",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      animation: "solar-flare 2s ease-in-out infinite",
+      display: "inline-block",
+    },
+  },
+  "phantom_fade": {
+    className: "text-purple-300",
+    style: { animation: "phantom-fade 3s ease-in-out infinite" },
+  },
+  "toxic_drip": {
+    style: {
+      background: "linear-gradient(to bottom, #84cc16, #22c55e, #84cc16)",
+      backgroundSize: "100% 200%",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      filter: "drop-shadow(0 0 12px rgba(132,204,22,0.7))",
+      animation: "toxic-drip 2.5s linear infinite",
+      display: "inline-block",
+    },
+  },
+  "arcane_runes": {
+    className: "arcane-runes-effect",
+  },
 };
 
 // Map DB cssClass strings to registry keys
@@ -140,9 +196,17 @@ function getEffectKey(cssClass: string): string | null {
   if (lower.includes("shimmer")) return "shimmer";
   if (lower.includes("from-red") && lower.includes("to-yellow")) return "inferno";
   if (lower.includes("lightning")) return "electric";
-  if (lower.includes("sparkle")) return "diamond";
-  if (lower.includes("flow")) return "molten";
+  if (lower.includes("sparkle") && !lower.includes("solar")) return "diamond";
+  if (lower.includes("flow") && !lower.includes("lava")) return "molten";
   if (lower.includes("cosmic")) return "cosmic";
+  if (lower.includes("neon") && lower.includes("pulse")) return "neon_pulse";
+  if (lower.includes("lava")) return "lava_flow";
+  if (lower.includes("glitch") || lower.includes("matrix")) return "glitch_matrix";
+  if (lower.includes("frost")) return "frostbite";
+  if (lower.includes("solar") || lower.includes("flare")) return "solar_flare";
+  if (lower.includes("phantom")) return "phantom_fade";
+  if (lower.includes("toxic") && lower.includes("drip")) return "toxic_drip";
+  if (lower.includes("arcane") || lower.includes("runes")) return "arcane_runes";
   return null;
 }
 
