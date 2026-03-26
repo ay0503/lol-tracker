@@ -15,7 +15,7 @@ const PAY_TABLE = [
   { hand: "Royal Flush", payout: "250x" },
   { hand: "Straight Flush", payout: "50x" },
   { hand: "Four of a Kind", payout: "25x" },
-  { hand: "Full House", payout: "8x" },
+  { hand: "Full House", payout: "9x" },
   { hand: "Flush", payout: "5x" },
   { hand: "Straight", payout: "4x" },
   { hand: "Three of a Kind", payout: "3x" },

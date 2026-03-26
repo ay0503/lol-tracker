@@ -45,7 +45,7 @@ const PAY_TABLE: { name: string; multiplier: number }[] = [
   { name: "Royal Flush", multiplier: 250 },
   { name: "Straight Flush", multiplier: 50 },
   { name: "Four of a Kind", multiplier: 25 },
-  { name: "Full House", multiplier: 8 },
+  { name: "Full House", multiplier: 9 },
   { name: "Flush", multiplier: 5 },
   { name: "Straight", multiplier: 4 },
   { name: "Three of a Kind", multiplier: 3 },
@@ -145,7 +145,7 @@ export function evaluateHand(hand: Card[]): HandResult {
 
   // Full House (three of a kind + pair)
   if (counts[0] === 3 && counts[1] === 2) {
-    return { name: "Full House", multiplier: 8 };
+    return { name: "Full House", multiplier: 9 };
   }
 
   // Flush
