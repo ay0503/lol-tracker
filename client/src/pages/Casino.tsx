@@ -217,7 +217,6 @@ export default function Casino() {
   const { data: casinoBalance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, {
     enabled: isAuthenticated,
   });
-  const { data: casinoLeaderboard } = trpc.casino.leaderboard.useQuery();
 
   const dealMutation = trpc.casino.blackjack.deal.useMutation({
     onSuccess: (game) => {
@@ -566,34 +565,6 @@ export default function Casino() {
             : "Dealer stands 17 · BJ pays 3:2 · Double on first hand"}
         </p>
 
-        {/* Casino Leaderboard */}
-        {casinoLeaderboard && casinoLeaderboard.length > 0 && (
-          <div className="mt-6 bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
-            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <Dice5 className="w-3.5 h-3.5 text-yellow-400" />
-              {language === "ko" ? "카지노 랭킹" : "Casino Leaderboard"}
-            </h3>
-            <div className="space-y-1.5">
-              {casinoLeaderboard.slice(0, 10).map((player, i) => {
-                const isProfit = player.profit >= 0;
-                return (
-                  <div key={player.userId} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono text-zinc-500 w-4">{i + 1}</span>
-                      <span className="text-xs text-zinc-300 font-medium">{player.userName}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[10px] font-mono ${isProfit ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-                        {isProfit ? "+" : ""}{player.profit.toFixed(2)}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-zinc-200">${player.casinoBalance.toFixed(2)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
