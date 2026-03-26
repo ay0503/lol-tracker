@@ -26,32 +26,32 @@ export default function Dice() {
   const [lastResult, setLastResult] = useState<any>(null);
   const [rolling, setRolling] = useState(false);
   const [displayRoll, setDisplayRoll] = useState<number | null>(null);
+  const [barFlash, setBarFlash] = useState<"win" | "lose" | null>(null);
 
   const { data: balance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
   const { data: history, refetch: refetchHistory } = trpc.casino.dice.history.useQuery(undefined, { staleTime: 10_000 });
 
   const rollMutation = trpc.casino.dice.roll.useMutation({
     onSuccess: (result) => {
-      // Animate roll
-      let count = 0;
-      const interval = setInterval(() => {
-        setDisplayRoll(Math.floor(Math.random() * 10000) / 100);
-        count++;
-        if (count >= 15) {
-          clearInterval(interval);
-          setDisplayRoll(result.roll);
-          setRolling(false);
-          setLastResult(result);
-          refetchBalance();
-          refetchHistory();
-          if (result.won) {
-            toast.success(`${result.roll.toFixed(2)} — Won $${result.payout.toFixed(2)} (${result.multiplier}x)`);
-          } else {
-            toast.error(`${result.roll.toFixed(2)} — Lost`);
-          }
-          setTimeout(() => { setLastResult(null); setDisplayRoll(null); }, 3000);
+      // Start indicator at 0, animate to result position on the bar
+      setDisplayRoll(0);
+      requestAnimationFrame(() => setDisplayRoll(result.roll));
+
+      // After animation (~1.3s), show result
+      setTimeout(() => {
+        setRolling(false);
+        setLastResult(result);
+        refetchBalance();
+        refetchHistory();
+        if (result.won) {
+          setBarFlash("win");
+          toast.success(`${result.roll.toFixed(2)} — Won $${result.payout.toFixed(2)} (${result.multiplier}x)`);
+        } else {
+          setBarFlash("lose");
+          toast.error(`${result.roll.toFixed(2)} — Lost`);
         }
-      }, 50);
+        setTimeout(() => { setBarFlash(null); setLastResult(null); setDisplayRoll(null); }, 2500);
+      }, 1300);
     },
     onError: (err) => { setRolling(false); toast.error(err.message); },
   });
@@ -66,8 +66,11 @@ export default function Dice() {
   const handleRoll = useCallback(() => {
     if (rolling || !isAuthenticated) return;
     setRolling(true);
+    setBarFlash(null);
     rollMutation.mutate({ bet: selectedChip, target, direction });
   }, [selectedChip, target, direction, rolling]);
+
+  const isWinZoneLeft = direction === "under";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -104,24 +107,84 @@ export default function Dice() {
               </div>
             )}
 
-            {/* Roll Display */}
-            <div className="text-center mb-6">
+            {/* Result Number */}
+            <div className="text-center mb-3">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={displayRoll ?? "idle"}
+                  key={lastResult?.roll ?? "idle"}
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className={`text-5xl font-bold font-mono ${
-                    lastResult ? (lastResult.won ? "text-[#00C805]" : "text-[#FF5252]") : "text-white"
+                  className={`text-4xl font-bold font-mono ${
+                    lastResult ? (lastResult.won ? "text-[#00C805]" : "text-[#FF5252]") : "text-white/30"
                   }`}
                 >
                   {displayRoll !== null ? displayRoll.toFixed(2) : "—"}
                 </motion.div>
               </AnimatePresence>
               {lastResult && (
-                <p className={`text-sm font-mono mt-1 ${lastResult.won ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                <p className={`text-sm font-mono mt-0.5 ${lastResult.won ? "text-[#00C805]" : "text-[#FF5252]"}`}>
                   {lastResult.won ? `+$${lastResult.payout.toFixed(2)}` : `-$${selectedChip.toFixed(2)}`}
                 </p>
+              )}
+            </div>
+
+            {/* ─── Animated Result Bar ─── */}
+            <div className={`relative w-full h-12 rounded-xl overflow-hidden bg-zinc-800 border transition-all duration-300 mb-4 ${
+              barFlash === "win" ? "border-[#00C805] shadow-lg shadow-[#00C805]/30" :
+              barFlash === "lose" ? "border-[#FF5252] shadow-lg shadow-[#FF5252]/30" :
+              "border-zinc-700/50"
+            }`}>
+              {/* Win zone (green) */}
+              <div
+                className="absolute inset-y-0 transition-all duration-300"
+                style={{
+                  left: isWinZoneLeft ? "0%" : `${target}%`,
+                  width: isWinZoneLeft ? `${target}%` : `${100 - target}%`,
+                  background: "linear-gradient(90deg, rgba(0,200,5,0.15) 0%, rgba(0,200,5,0.3) 100%)",
+                }}
+              />
+              {/* Lose zone (red) */}
+              <div
+                className="absolute inset-y-0 transition-all duration-300"
+                style={{
+                  left: isWinZoneLeft ? `${target}%` : "0%",
+                  width: isWinZoneLeft ? `${100 - target}%` : `${target}%`,
+                  background: "linear-gradient(90deg, rgba(255,82,82,0.1) 0%, rgba(255,82,82,0.2) 100%)",
+                }}
+              />
+
+              {/* Tick marks every 10 */}
+              {Array.from({ length: 9 }, (_, idx) => (idx + 1) * 10).map(tick => (
+                <div key={tick} className="absolute top-0 bottom-0 w-px bg-white/[0.06]" style={{ left: `${tick}%` }} />
+              ))}
+
+              {/* Target line — pulses when idle */}
+              <motion.div
+                className="absolute top-0 bottom-0 w-0.5 z-10"
+                style={{ left: `${target}%` }}
+                animate={!rolling ? {
+                  boxShadow: ["0 0 8px rgba(250,204,21,0.4)", "0 0 16px rgba(250,204,21,0.8)", "0 0 8px rgba(250,204,21,0.4)"],
+                } : {}}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <div className="w-full h-full bg-yellow-400" />
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-yellow-400">
+                  {target}
+                </div>
+              </motion.div>
+
+              {/* Rolling indicator — glowing white dot that races across */}
+              {displayRoll !== null && (
+                <motion.div
+                  className="absolute top-1 bottom-1 w-1 rounded-full z-20"
+                  style={{
+                    background: "white",
+                    boxShadow: "0 0 12px rgba(255,255,255,0.8), 0 0 24px rgba(255,255,255,0.4)",
+                  }}
+                  initial={{ left: "0%" }}
+                  animate={{ left: `${displayRoll}%` }}
+                  transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                />
               )}
             </div>
 
@@ -133,45 +196,39 @@ export default function Dice() {
                 <span>99</span>
               </div>
               <input
-                type="range"
-                min={1}
-                max={99}
-                value={target}
+                type="range" min={1} max={99} value={target}
                 onChange={(ev) => setTarget(Number(ev.target.value))}
-                className="w-full accent-yellow-500"
-                disabled={rolling}
+                className="w-full accent-yellow-500" disabled={rolling}
               />
             </div>
 
             {/* Direction Toggle */}
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <button
-                onClick={() => setDirection("over")}
-                disabled={rolling}
+              <button onClick={() => setDirection("over")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  direction === "over" ? "bg-[#00C805] text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"
-                }`}
-              >
+                  direction === "over" ? "bg-[#00C805] text-white shadow-lg shadow-[#00C805]/20" : "bg-zinc-800 text-zinc-400 hover:text-white"
+                }`}>
                 Roll Over {target}
               </button>
-              <button
-                onClick={() => setDirection("under")}
-                disabled={rolling}
+              <button onClick={() => setDirection("under")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  direction === "under" ? "bg-[#FF5252] text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"
-                }`}
-              >
+                  direction === "under" ? "bg-[#FF5252] text-white shadow-lg shadow-[#FF5252]/20" : "bg-zinc-800 text-zinc-400 hover:text-white"
+                }`}>
                 Roll Under {target}
               </button>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
+              <div className={`bg-zinc-800/50 rounded-lg p-2.5 text-center transition-all ${
+                multiplier > 5 ? "ring-1 ring-yellow-500/30 shadow-md shadow-yellow-500/10" : ""
+              }`}>
                 <p className="text-[9px] text-zinc-500 uppercase">Multiplier</p>
                 <p className="text-lg font-bold text-yellow-400 font-mono">{multiplier}x</p>
               </div>
-              <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
+              <div className={`bg-zinc-800/50 rounded-lg p-2.5 text-center transition-all ${
+                winChance < 20 ? "ring-1 ring-red-500/30 shadow-md shadow-red-500/10" : ""
+              }`}>
                 <p className="text-[9px] text-zinc-500 uppercase">Win Chance</p>
                 <p className="text-lg font-bold text-white font-mono">{winChance}%</p>
               </div>
@@ -203,8 +260,7 @@ export default function Dice() {
               disabled={rolling || !isAuthenticated || cash < selectedChip}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
             >
-              {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                `ROLL · $${selectedChip.toFixed(2)}`}
+              {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `ROLL · $${selectedChip.toFixed(2)}`}
             </motion.button>
           </div>
         </div>

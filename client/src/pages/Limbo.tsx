@@ -18,6 +18,18 @@ const CHIP_COLORS: Record<number, { bg: string; border: string; txt: string }> =
 };
 
 const PRESETS = [1.5, 2, 3, 5, 10, 50];
+const LOG_MIN = Math.log(1);
+const LOG_MAX = Math.log(1000);
+const METER_TICKS = [
+  { value: 1, label: "1x" }, { value: 2, label: "2x" }, { value: 5, label: "5x" },
+  { value: 10, label: "10x" }, { value: 50, label: "50x" }, { value: 100, label: "100x" },
+  { value: 1000, label: "1000x" },
+];
+
+function logScale(val: number): number {
+  const clamped = Math.max(1, Math.min(1000, val));
+  return (Math.log(clamped) - LOG_MIN) / (LOG_MAX - LOG_MIN);
+}
 
 export default function Limbo() {
   const { language } = useTranslation();
@@ -34,13 +46,14 @@ export default function Limbo() {
 
   const playMutation = trpc.casino.limbo.play.useMutation({
     onSuccess: (result) => {
-      // Animate counter from 1.00 up to crashPoint
       const start = Date.now();
-      const duration = Math.min(result.crashPoint * 300, 2000);
+      const duration = Math.min(result.crashPoint * 400, 2500);
       const animate = () => {
         const elapsed = Date.now() - start;
         const progress = Math.min(elapsed / duration, 1);
-        const current = 1 + (result.crashPoint - 1) * progress;
+        // Ease-out cubic for tension
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = 1 + (result.crashPoint - 1) * eased;
         setDisplayMult(Math.round(current * 100) / 100);
         if (progress < 1) {
           animRef.current = requestAnimationFrame(animate);
@@ -66,6 +79,10 @@ export default function Limbo() {
   const cash = balance ?? 20;
   const parsedTarget = parseFloat(targetMult) || 2;
   const winChance = Math.round((99 / parsedTarget) * 100) / 100;
+  const targetPos = logScale(parsedTarget) * 100;
+  const currentPos = displayMult ? logScale(displayMult) * 100 : 0;
+  const isWin = lastResult?.won;
+  const isLoss = lastResult && !lastResult.won;
 
   const handlePlay = useCallback(() => {
     if (playing || !isAuthenticated) return;
@@ -110,38 +127,100 @@ export default function Limbo() {
               </div>
             )}
 
-            {/* Crash Point Display */}
-            <div className="text-center mb-6 py-6">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={displayMult ?? "idle"}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className={`text-5xl sm:text-6xl font-bold font-mono ${
-                    lastResult ? (lastResult.won ? "text-[#00C805]" : "text-[#FF5252]") : playing ? "text-yellow-400" : "text-zinc-600"
-                  }`}
-                >
-                  {displayMult !== null ? `${displayMult.toFixed(2)}x` : "—"}
-                </motion.div>
-              </AnimatePresence>
-              {lastResult && (
-                <p className={`text-sm font-mono mt-2 ${lastResult.won ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-                  {lastResult.won ? `+$${lastResult.payout.toFixed(2)}` : `-$${selectedChip.toFixed(2)}`}
-                </p>
-              )}
+            {/* ─── Rising Meter + Number Display ─── */}
+            <div className="flex justify-center mb-4 py-2">
+              <div className="flex items-end gap-3">
+                {/* Y-axis ticks */}
+                <div className="relative h-48 w-10 flex-shrink-0">
+                  {METER_TICKS.map(tick => (
+                    <span key={tick.value} className="absolute right-0 text-[8px] font-mono text-zinc-500 -translate-y-1/2"
+                      style={{ bottom: `${logScale(tick.value) * 100}%` }}>
+                      {tick.label}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Meter bar */}
+                <div className="relative h-48 w-16 rounded-lg overflow-hidden bg-zinc-800/80 border border-zinc-700/50">
+                  {/* Background gradient */}
+                  <div className="absolute inset-0 opacity-20" style={{ background: "linear-gradient(to top, #22c55e, #eab308 50%, #ef4444)" }} />
+
+                  {/* Target line */}
+                  <div className="absolute left-0 right-0 z-10 flex items-center" style={{ bottom: `${targetPos}%`, transform: "translateY(50%)" }}>
+                    <div className="w-full h-[2px] bg-white/70 shadow-[0_0_6px_rgba(255,255,255,0.5)]" />
+                  </div>
+
+                  {/* Rising fill */}
+                  <motion.div
+                    className={`absolute bottom-0 left-0 right-0 rounded-b-lg ${
+                      isWin ? "bg-gradient-to-t from-emerald-500 to-emerald-400" :
+                      isLoss ? "bg-gradient-to-t from-red-500 to-red-400" :
+                      "bg-gradient-to-t from-violet-600 to-violet-400"
+                    }`}
+                    initial={{ height: "0%" }}
+                    animate={{ height: displayMult !== null ? `${currentPos}%` : "0%" }}
+                    transition={{ duration: 0.05, ease: "linear" }}
+                  />
+
+                  {/* Glowing orb */}
+                  {displayMult !== null && (
+                    <motion.div
+                      className={`absolute left-1/2 w-4 h-4 rounded-full z-20 ${
+                        isWin ? "bg-emerald-400 shadow-[0_0_16px_4px_rgba(34,197,94,0.7)]" :
+                        isLoss ? "bg-red-400 shadow-[0_0_16px_4px_rgba(239,68,68,0.7)]" :
+                        "bg-violet-300 shadow-[0_0_12px_4px_rgba(167,139,250,0.6)]"
+                      }`}
+                      style={{ bottom: `${currentPos}%`, transform: "translate(-50%, 50%)" }}
+                    />
+                  )}
+
+                  {/* Win particles */}
+                  <AnimatePresence>
+                    {isWin && lastResult && (
+                      <>
+                        {[...Array(8)].map((_, idx) => (
+                          <motion.div key={idx} className="absolute w-1.5 h-1.5 rounded-full bg-emerald-400"
+                            style={{ left: "50%", bottom: `${currentPos}%` }}
+                            initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+                            animate={{
+                              scale: [0, 1.5, 0],
+                              x: Math.cos((idx * Math.PI * 2) / 8) * 25,
+                              y: Math.sin((idx * Math.PI * 2) / 8) * 25,
+                              opacity: [1, 1, 0],
+                            }}
+                            transition={{ duration: 0.6, ease: "easeOut" }}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Multiplier display */}
+                <div className="flex flex-col items-start gap-1 w-20">
+                  <motion.p
+                    key={displayMult ?? "idle"}
+                    className={`text-3xl font-bold font-mono ${
+                      isWin ? "text-[#00C805]" : isLoss ? "text-[#FF5252]" : playing ? "text-violet-300" : "text-zinc-600"
+                    }`}
+                  >
+                    {displayMult !== null ? `${displayMult.toFixed(2)}x` : "—"}
+                  </motion.p>
+                  {lastResult && (
+                    <p className={`text-xs font-mono ${isWin ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                      {isWin ? `+$${lastResult.payout.toFixed(2)}` : `-$${selectedChip.toFixed(2)}`}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Target Multiplier */}
+            {/* Target Multiplier Input */}
             <div className="mb-3">
               <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mb-1.5">Target Multiplier</p>
               <input
-                type="number"
-                value={targetMult}
-                onChange={(ev) => setTargetMult(ev.target.value)}
-                min={1.01}
-                max={1000}
-                step={0.01}
-                disabled={playing}
+                type="number" value={targetMult} onChange={(ev) => setTargetMult(ev.target.value)}
+                min={1.01} max={1000} step={0.01} disabled={playing}
                 className="w-full px-3 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700/50 text-white font-mono text-lg text-center focus:outline-none focus:ring-1 focus:ring-violet-500/50"
               />
             </div>
@@ -189,8 +268,7 @@ export default function Limbo() {
               disabled={playing || !isAuthenticated || cash < selectedChip}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
             >
-              {playing ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                `PLAY · $${selectedChip.toFixed(2)}`}
+              {playing ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `PLAY · $${selectedChip.toFixed(2)}`}
             </motion.button>
           </div>
         </div>
