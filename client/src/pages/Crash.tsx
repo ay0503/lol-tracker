@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
+const CHIPS = [0.10, 0.25, 0.50, 1, 2, 5] as const;
 const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
   0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
   0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
@@ -20,12 +21,16 @@ function multiplierAtTime(ms: number): number {
   return 1 + 0.06 * Math.pow(ms / 1000, 1.5);
 }
 
+function timeAtMultiplier(m: number): number {
+  return Math.pow(Math.max(0, m - 1) / 0.06, 1 / 1.5) * 1000;
+}
+
 function getMultColor(m: number): string {
-  if (m >= 50) return "#ef4444";
-  if (m >= 10) return "#f97316";
-  if (m >= 5) return "#eab308";
+  if (m >= 50) return "#FF5252";
+  if (m >= 10) return "#FF9800";
+  if (m >= 5) return "#FFD600";
   if (m >= 2) return "#00C805";
-  return "#ffffff";
+  return "#FFFFFF";
 }
 
 function getMultColorClass(m: number): string {
@@ -36,15 +41,32 @@ function getMultColorClass(m: number): string {
   return "text-white";
 }
 
-// ─── Canvas Graph Component ───
-function CrashGraph({
-  isFlying, currentMult, crashPoint, cashoutMult, startTime, crashed,
+function CrashPill({ point, won }: { point: number; won?: boolean }) {
+  const color =
+    point < 2 ? "bg-red-500/25 text-red-400 border-red-500/20" :
+    point <= 10 ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/20" :
+    "bg-[#00C805]/20 text-[#00C805] border-[#00C805]/20";
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border ${color} ${won ? "ring-1 ring-white/30" : ""}`}>
+      {point.toFixed(2)}x
+    </span>
+  );
+}
+
+type Phase = "idle" | "flying" | "crashed" | "cashed_out";
+
+// ---- Canvas Graph ----
+function CrashCanvas({
+  phase, elapsedRef, endMult, cashoutMult, crashPoint,
 }: {
-  isFlying: boolean; currentMult: number; crashPoint?: number;
-  cashoutMult?: number; startTime: number; crashed: boolean;
+  phase: Phase;
+  elapsedRef: React.MutableRefObject<number>;
+  endMult: number;
+  cashoutMult: number | null;
+  crashPoint: number | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animRef = useRef<number>();
+  const rafRef = useRef<number>();
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -59,392 +81,376 @@ function CrashGraph({
     ctx.scale(dpr, dpr);
     const W = rect.width;
     const H = rect.height;
-
-    // Clear
     ctx.clearRect(0, 0, W, H);
 
-    // Determine time range and mult range
-    const elapsed = isFlying ? Date.now() - startTime : 0;
-    const maxTime = Math.max(elapsed + 2000, 5000); // at least 5s visible
-    const maxMult = Math.max(currentMult * 1.3, 2.5); // headroom above current
+    const isActive = phase === "flying";
+    const isCrashed = phase === "crashed";
+    const isCashedOut = phase === "cashed_out";
+    const elapsed = elapsedRef.current;
 
-    const pad = { top: 20, right: 20, bottom: 30, left: 45 };
+    // Current multiplier for live; final multiplier for results
+    const liveMult = isActive ? multiplierAtTime(elapsed) : endMult;
+    const displayEnd = isCrashed ? (crashPoint ?? liveMult) : isCashedOut ? (cashoutMult ?? liveMult) : liveMult;
+    const curveMult = Math.max(displayEnd, 1.01);
+
+    // Viewport
+    const yMax = Math.max(curveMult * 1.35, 2.0);
+    const tEnd = timeAtMultiplier(curveMult);
+    const tMax = Math.max(tEnd * 1.2, 4000);
+
+    const pad = { top: 16, right: 16, bottom: 28, left: 42 };
     const gW = W - pad.left - pad.right;
     const gH = H - pad.top - pad.bottom;
+    const toX = (t: number) => pad.left + (t / tMax) * gW;
+    const toY = (m: number) => pad.top + gH - ((m - 1) / (yMax - 1)) * gH;
 
-    // Grid lines
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    // ---- Grid ----
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
     ctx.lineWidth = 1;
-
-    // Y grid (multiplier)
-    const ySteps = Math.min(6, Math.ceil(maxMult));
+    const ySteps = Math.min(6, Math.max(3, Math.ceil(yMax)));
     for (let i = 0; i <= ySteps; i++) {
-      const mult = 1 + (maxMult - 1) * (i / ySteps);
-      const y = pad.top + gH - (gH * (mult - 1) / (maxMult - 1));
-      ctx.beginPath();
-      ctx.moveTo(pad.left, y);
-      ctx.lineTo(W - pad.right, y);
-      ctx.stroke();
-
-      // Label
-      ctx.fillStyle = "rgba(255,255,255,0.25)";
+      const mv = 1 + ((yMax - 1) * i) / ySteps;
+      const y = toY(mv);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
-      ctx.fillText(`${mult.toFixed(1)}x`, pad.left - 5, y + 3);
+      ctx.fillText(`${mv.toFixed(1)}x`, pad.left - 5, y + 3);
     }
-
-    // X grid (time)
-    const xSteps = 5;
-    for (let i = 0; i <= xSteps; i++) {
-      const t = (maxTime / 1000) * (i / xSteps);
-      const x = pad.left + gW * (i / xSteps);
-      ctx.beginPath();
-      ctx.moveTo(x, pad.top);
-      ctx.lineTo(x, H - pad.bottom);
-      ctx.stroke();
-
-      ctx.fillStyle = "rgba(255,255,255,0.2)";
+    for (let i = 0; i <= 4; i++) {
+      const x = pad.left + (gW * i) / 4;
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + gH); ctx.stroke();
+      const sec = (tMax / 1000) * (i / 4);
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
       ctx.font = "10px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(`${t.toFixed(1)}s`, x, H - pad.bottom + 15);
+      ctx.fillText(`${sec.toFixed(0)}s`, x, H - pad.bottom + 14);
     }
 
-    if (!isFlying && !crashed && !cashoutMult) return; // idle state
+    // Nothing to draw in idle
+    if (phase === "idle") return;
 
-    // Draw curve
-    const toX = (ms: number) => pad.left + (ms / maxTime) * gW;
-    const toY = (m: number) => pad.top + gH - (gH * (m - 1) / (maxMult - 1));
-
-    const points: [number, number][] = [];
-    const step = Math.max(1, Math.floor(elapsed / 200));
-    for (let t = 0; t <= elapsed; t += step) {
+    // ---- Build curve points ----
+    const lineColor = isCrashed ? "#FF5252" : getMultColor(curveMult);
+    const STEPS = 180;
+    const pts: [number, number][] = [];
+    for (let i = 0; i <= STEPS; i++) {
+      const t = (tEnd * i) / STEPS;
       const m = multiplierAtTime(t);
-      points.push([toX(t), toY(m)]);
+      pts.push([toX(t), toY(m)]);
     }
-    // Final point
-    points.push([toX(elapsed), toY(currentMult)]);
 
-    if (points.length < 2) return;
-
-    // Gradient fill under curve
-    const gradient = ctx.createLinearGradient(0, toY(currentMult), 0, toY(1));
-    const color = crashed ? "255,82,82" : "0,200,5";
-    gradient.addColorStop(0, `rgba(${color},0.15)`);
-    gradient.addColorStop(1, `rgba(${color},0.02)`);
-
+    // ---- Gradient fill ----
+    const grad = ctx.createLinearGradient(0, toY(curveMult), 0, toY(1));
+    const rgb = isCrashed ? "255,82,82" : curveMult >= 2 ? "0,200,5" : "255,255,255";
+    grad.addColorStop(0, `rgba(${rgb},0.18)`);
+    grad.addColorStop(1, `rgba(${rgb},0.01)`);
     ctx.beginPath();
-    ctx.moveTo(points[0][0], toY(1));
-    for (const [x, y] of points) ctx.lineTo(x, y);
-    ctx.lineTo(points[points.length - 1][0], toY(1));
+    ctx.moveTo(pts[0][0], toY(1));
+    for (const [x, y] of pts) ctx.lineTo(x, y);
+    ctx.lineTo(pts[pts.length - 1][0], toY(1));
     ctx.closePath();
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = grad;
     ctx.fill();
 
-    // Curve line
+    // ---- Curve line ----
     ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-    ctx.strokeStyle = crashed ? "#FF5252" : getMultColor(currentMult);
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.stroke();
 
-    // Current point dot (pulsing)
-    if (isFlying || cashoutMult) {
-      const lastPt = points[points.length - 1];
-      ctx.beginPath();
-      ctx.arc(lastPt[0], lastPt[1], 4, 0, Math.PI * 2);
-      ctx.fillStyle = crashed ? "#FF5252" : getMultColor(currentMult);
-      ctx.fill();
-
-      // Outer glow
-      ctx.beginPath();
-      ctx.arc(lastPt[0], lastPt[1], 8, 0, Math.PI * 2);
-      ctx.fillStyle = crashed ? "rgba(255,82,82,0.2)" : `rgba(0,200,5,0.2)`;
-      ctx.fill();
+    // ---- Tip glow (flying) ----
+    if (isActive && pts.length > 0) {
+      const [tx, ty] = pts[pts.length - 1];
+      const glow = ctx.createRadialGradient(tx, ty, 0, tx, ty, 22);
+      glow.addColorStop(0, `${lineColor}60`);
+      glow.addColorStop(1, `${lineColor}00`);
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(tx, ty, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = lineColor;
+      ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Cashout marker
-    if (cashoutMult && !crashed) {
-      const cashTime = Math.pow((cashoutMult - 1) / 0.06, 1 / 1.5) * 1000;
-      const cx = toX(cashTime);
-      const cy = toY(cashoutMult);
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    // ---- Cashout marker (green dot + label) ----
+    if (isCashedOut && cashoutMult && cashoutMult > 1) {
+      const ct = timeAtMultiplier(cashoutMult);
+      const cx = toX(ct), cy = toY(cashoutMult);
+      // Outer ring
+      ctx.strokeStyle = "#00C805";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.stroke();
+      // Inner dot
       ctx.fillStyle = "#00C805";
-      ctx.fill();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
+      ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
+      // Label
       ctx.fillStyle = "#00C805";
-      ctx.font = "bold 11px monospace";
+      ctx.font = "bold 12px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(`${cashoutMult.toFixed(2)}x`, cx, cy - 12);
+      ctx.fillText(`${cashoutMult.toFixed(2)}x`, cx, cy - 16);
     }
 
-    // Crash marker
-    if (crashed && crashPoint) {
-      const crashTime = Math.pow((crashPoint - 1) / 0.06, 1 / 1.5) * 1000;
-      const cx = toX(Math.min(crashTime, elapsed));
-      const cy = toY(crashPoint);
-
-      // Red X
+    // ---- Crash X marker ----
+    if (isCrashed && crashPoint && crashPoint > 1) {
+      const ct = timeAtMultiplier(crashPoint);
+      const cx = toX(ct), cy = toY(crashPoint);
       ctx.strokeStyle = "#FF5252";
       ctx.lineWidth = 3;
-      const s = 6;
+      const s = 7;
       ctx.beginPath(); ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s); ctx.stroke();
     }
 
-    if (isFlying) animRef.current = requestAnimationFrame(draw);
-  }, [isFlying, currentMult, crashPoint, cashoutMult, startTime, crashed]);
+    if (isActive) rafRef.current = requestAnimationFrame(draw);
+  }, [phase, endMult, cashoutMult, crashPoint, elapsedRef]);
 
   useEffect(() => {
     draw();
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-  }, [draw]);
+    if (phase === "flying") rafRef.current = requestAnimationFrame(draw);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [draw, phase]);
 
-  // Redraw on resize
   useEffect(() => {
-    const handle = () => draw();
-    window.addEventListener("resize", handle);
-    return () => window.removeEventListener("resize", handle);
+    const h = () => draw();
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
   }, [draw]);
 
   return <canvas ref={canvasRef} className="w-full h-full" />;
 }
 
-function CrashPill({ point, won }: { point: number; won?: boolean }) {
-  const color = point < 2 ? "bg-red-500/20 text-red-400" : point <= 10 ? "bg-yellow-500/20 text-yellow-400" : "bg-[#00C805]/20 text-[#00C805]";
-  return <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-mono font-bold ${color} ${won ? "ring-1 ring-white/20" : ""}`}>{point.toFixed(2)}x</span>;
-}
-
-// ─── Main Component ───
+// ---- Main Component ----
 export default function Crash() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [betAmount, setBetAmount] = useState("0.50");
   const [autoCashout, setAutoCashout] = useState("");
-  const [currentMult, setCurrentMult] = useState(1.00);
-  const [isFlying, setIsFlying] = useState(false);
-  const [startTime, setStartTime] = useState(0);
-  const [gameResult, setGameResult] = useState<{ status: string; crashPoint?: number; payout?: number; multiplier?: number } | null>(null);
-  const [flashRed, setFlashRed] = useState(false);
-  const animRef = useRef<number>();
-  const utils = trpc.useUtils();
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [displayMult, setDisplayMult] = useState(1.0);
+  const [crashPoint, setCrashPoint] = useState<number | null>(null);
+  const [cashoutMult, setCashoutMult] = useState<number | null>(null);
+  const [payout, setPayout] = useState<number | null>(null);
+  const [flash, setFlash] = useState<"red" | "green" | null>(null);
 
-  const { data: casinoBalance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
-  const { data: history, refetch: refetchHistory } = trpc.casino.crash.history.useQuery(undefined, { enabled: isAuthenticated });
+  const animRef = useRef<number>();
+  const startTimeRef = useRef(0);
+  const elapsedRef = useRef(0);
+
+  const { data: casinoBalance, refetch: refetchBalance } =
+    trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: history, refetch: refetchHistory } =
+    trpc.casino.crash.history.useQuery(undefined, { enabled: isAuthenticated });
+
+  const doFlash = (c: "red" | "green") => { setFlash(c); setTimeout(() => setFlash(null), 400); };
+
+  const endGame = useCallback((p: Phase, cp: number | null, co: number | null, pay: number | null) => {
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    setCrashPoint(cp);
+    setCashoutMult(co);
+    setPayout(pay);
+    setDisplayMult(cp ?? co ?? 1);
+    setPhase(p);
+    doFlash(p === "crashed" ? "red" : "green");
+    refetchBalance();
+    refetchHistory();
+  }, [refetchBalance, refetchHistory]);
+
+  const tick = useCallback(() => {
+    const el = Date.now() - startTimeRef.current;
+    elapsedRef.current = el;
+    setDisplayMult(Math.floor(multiplierAtTime(el) * 100) / 100);
+    animRef.current = requestAnimationFrame(tick);
+  }, []);
 
   const startMutation = trpc.casino.crash.start.useMutation({
     onSuccess: (game) => {
       if (game.status === "crashed") {
-        setGameResult({ status: "crashed", crashPoint: game.crashPoint, payout: 0 });
-        setFlashRed(true); setTimeout(() => setFlashRed(false), 500);
+        elapsedRef.current = timeAtMultiplier(game.crashPoint ?? 1);
+        endGame("crashed", game.crashPoint ?? 1, null, 0);
         toast.error(`Instant crash! ${game.crashPoint?.toFixed(2)}x`);
-        refetchBalance(); refetchHistory();
         return;
       }
-      setIsFlying(true);
-      setGameResult(null);
-      setCurrentMult(1.00);
-      const now = Date.now();
-      setStartTime(now);
-      const animate = () => {
-        const m = multiplierAtTime(Date.now() - now);
-        setCurrentMult(Math.floor(m * 100) / 100);
-        animRef.current = requestAnimationFrame(animate);
-      };
-      animRef.current = requestAnimationFrame(animate);
+      setCrashPoint(null);
+      setCashoutMult(null);
+      setPayout(null);
+      setDisplayMult(1);
+      elapsedRef.current = 0;
+      startTimeRef.current = Date.now();
+      setPhase("flying");
+      tick();
     },
     onError: (err) => toast.error(err.message),
   });
 
   const cashoutMutation = trpc.casino.crash.cashout.useMutation({
     onSuccess: (game) => {
-      setIsFlying(false);
-      if (animRef.current) cancelAnimationFrame(animRef.current);
       if (game.status === "cashed_out") {
-        setGameResult({ status: "cashed_out", crashPoint: game.crashPoint, payout: game.payout, multiplier: game.cashoutMultiplier });
+        elapsedRef.current = timeAtMultiplier(game.cashoutMultiplier);
+        endGame("cashed_out", game.crashPoint, game.cashoutMultiplier, game.payout);
         toast.success(`Cashed out at ${game.cashoutMultiplier.toFixed(2)}x! +$${game.payout.toFixed(2)}`);
       } else {
-        setGameResult({ status: "crashed", crashPoint: game.crashPoint, payout: 0 });
-        setFlashRed(true); setTimeout(() => setFlashRed(false), 500);
+        elapsedRef.current = timeAtMultiplier(game.crashPoint ?? displayMult);
+        endGame("crashed", game.crashPoint, null, 0);
         toast.error(`Crashed at ${game.crashPoint?.toFixed(2)}x!`);
       }
-      refetchBalance(); refetchHistory();
     },
     onError: (err) => toast.error(err.message),
   });
 
-  // Poll for crash/auto-cashout during flight
   const statusQuery = trpc.casino.crash.status.useQuery(undefined, {
-    enabled: isAuthenticated && isFlying, refetchInterval: 400,
+    enabled: isAuthenticated && phase === "flying",
+    refetchInterval: 400,
   });
 
   useEffect(() => {
-    if (statusQuery.data && isFlying) {
-      const s = statusQuery.data.status;
-      if (s === "crashed") {
-        setIsFlying(false);
-        if (animRef.current) cancelAnimationFrame(animRef.current);
-        setGameResult({ status: "crashed", crashPoint: statusQuery.data.crashPoint, payout: 0 });
-        setFlashRed(true); setTimeout(() => setFlashRed(false), 500);
-        toast.error(`Crashed at ${statusQuery.data.crashPoint?.toFixed(2)}x!`);
-        refetchBalance(); refetchHistory();
-      } else if (s === "cashed_out") {
-        setIsFlying(false);
-        if (animRef.current) cancelAnimationFrame(animRef.current);
-        setGameResult({ status: "cashed_out", crashPoint: statusQuery.data.crashPoint, payout: statusQuery.data.payout, multiplier: statusQuery.data.cashoutMultiplier });
-        toast.success(`Auto-cashout! +$${statusQuery.data.payout.toFixed(2)}`);
-        refetchBalance(); refetchHistory();
-      }
+    if (!statusQuery.data || phase !== "flying") return;
+    const d = statusQuery.data;
+    if (d.status === "crashed") {
+      elapsedRef.current = timeAtMultiplier(d.crashPoint ?? displayMult);
+      endGame("crashed", d.crashPoint, null, 0);
+      toast.error(`Crashed at ${d.crashPoint?.toFixed(2)}x!`);
+    } else if (d.status === "cashed_out") {
+      elapsedRef.current = timeAtMultiplier(d.cashoutMultiplier);
+      endGame("cashed_out", d.crashPoint, d.cashoutMultiplier, d.payout);
+      toast.success(`Auto-cashout at ${d.cashoutMultiplier.toFixed(2)}x! +$${d.payout.toFixed(2)}`);
     }
   }, [statusQuery.data?.status]);
 
-  useEffect(() => { return () => { if (animRef.current) cancelAnimationFrame(animRef.current); }; }, []);
+  useEffect(() => {
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, []);
+
+  // Re-sync on tab focus (requestAnimationFrame pauses in background)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && isFlying) {
+        statusQuery.refetch();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isFlying]);
+
+  const handleStart = () => {
+    const amt = parseFloat(betAmount);
+    if (isNaN(amt) || amt < 0.10 || amt > 5) return toast.error("Bet $0.10-$5.00");
+    const auto = autoCashout ? parseFloat(autoCashout) : undefined;
+    if (auto !== undefined && auto < 1.01) return toast.error("Auto-cashout must be >= 1.01x");
+    startMutation.mutate({ bet: amt, autoCashout: auto });
+  };
 
   const cash = casinoBalance ?? 20;
   const isPending = startMutation.isPending || cashoutMutation.isPending;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
-      <div className="container py-6 sm:py-8 max-w-lg mx-auto">
-        <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> Casino
-        </Link>
+      {/* Full-screen flash */}
+      <AnimatePresence>
+        {flash && (
+          <motion.div
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className={`fixed inset-0 z-50 pointer-events-none ${flash === "red" ? "bg-red-600" : "bg-green-500"}`}
+          />
+        )}
+      </AnimatePresence>
 
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500/25 to-red-600/15 border border-orange-500/20">
-              <span className="text-lg">🚀</span>
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Crash</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
-            </div>
-          </div>
+      <div className="container py-4 sm:py-6 max-w-lg mx-auto px-4">
+        <div className="flex items-center justify-between mb-4">
+          <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" /> Casino
+          </Link>
+          <span className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</span>
         </div>
 
-        {/* Game Area */}
-        <div className={`relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] transition-all duration-200 ${flashRed ? "ring-2 ring-red-500/60" : ""}`}>
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/90 to-zinc-900/95" />
-          <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
+        {/* History pills */}
+        {history && history.length > 0 && (
+          <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+            {history.slice(0, 12).map((h, i) => (
+              <CrashPill key={i} point={h.crashPoint} won={h.cashedOut} />
+            ))}
+          </div>
+        )}
 
-          {/* Red flash overlay */}
-          <AnimatePresence>
-            {flashRed && (
-              <motion.div
-                initial={{ opacity: 0.4 }}
-                animate={{ opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 bg-red-500/20 z-10 pointer-events-none"
-              />
-            )}
-          </AnimatePresence>
+        {/* ======== GRAPH AREA ======== */}
+        <div className={`relative rounded-2xl overflow-hidden border border-white/[0.06] bg-zinc-900/90 shadow-[0_0_80px_rgba(0,0,0,0.6)] transition-shadow duration-300 ${
+          phase === "crashed" ? "shadow-[0_0_60px_rgba(255,82,82,0.15)]" :
+          phase === "cashed_out" ? "shadow-[0_0_60px_rgba(0,200,5,0.15)]" : ""
+        }`}>
+          <div className="relative" style={{ height: 260 }}>
+            <CrashCanvas
+              phase={phase}
+              elapsedRef={elapsedRef}
+              endMult={displayMult}
+              cashoutMult={cashoutMult}
+              crashPoint={crashPoint}
+            />
 
-          <div className="relative p-4 sm:p-5">
-            {/* Graph + Multiplier Overlay */}
-            <div className="relative" style={{ height: 220 }}>
-              <CrashGraph
-                isFlying={isFlying}
-                currentMult={currentMult}
-                crashPoint={gameResult?.crashPoint}
-                cashoutMult={gameResult?.status === "cashed_out" ? gameResult.multiplier : undefined}
-                startTime={startTime}
-                crashed={gameResult?.status === "crashed" || false}
-              />
-
-              {/* Overlaid multiplier number */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <AnimatePresence mode="wait">
-                  {isFlying ? (
-                    <motion.p key="fly" className={`text-5xl sm:text-6xl font-bold font-mono drop-shadow-lg ${getMultColorClass(currentMult)}`}
-                      style={{ textShadow: `0 0 30px ${getMultColor(currentMult)}40` }}>
-                      {currentMult.toFixed(2)}x
-                    </motion.p>
-                  ) : gameResult?.status === "crashed" ? (
-                    <motion.div key="crash" initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300 }} className="text-center">
-                      <p className="text-4xl sm:text-5xl font-bold font-mono text-[#FF5252] drop-shadow-lg" style={{ textShadow: "0 0 30px rgba(255,82,82,0.4)" }}>
-                        {gameResult.crashPoint?.toFixed(2)}x
-                      </p>
-                      <p className="text-sm font-bold text-[#FF5252] mt-1">{language === "ko" ? "추락!" : "CRASHED!"}</p>
-                    </motion.div>
-                  ) : gameResult?.status === "cashed_out" ? (
-                    <motion.div key="win" initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300 }} className="text-center">
-                      <p className="text-4xl sm:text-5xl font-bold font-mono text-[#00C805] drop-shadow-lg" style={{ textShadow: "0 0 30px rgba(0,200,5,0.4)" }}>
-                        {gameResult.multiplier?.toFixed(2)}x
-                      </p>
-                      <p className="text-sm font-bold text-[#00C805] mt-1">+${gameResult.payout?.toFixed(2)}</p>
-                    </motion.div>
-                  ) : (
-                    <motion.p key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-4xl sm:text-5xl font-bold text-zinc-700 font-mono">
-                      1.00x
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* History Strip */}
-            {history && history.length > 0 && (
-              <div className="flex gap-1 justify-center flex-wrap mt-3 mb-3">
-                {history.slice(0, 12).map((h, i) => <CrashPill key={i} point={h.crashPoint} won={h.cashedOut} />)}
-              </div>
-            )}
-
-            {/* Controls */}
-            <div className="pt-3 border-t border-white/[0.05]">
+            {/* Multiplier overlaid on graph center */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <AnimatePresence mode="wait">
-                {isFlying ? (
-                  <motion.button key="cashout" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => cashoutMutation.mutate()} disabled={isPending}
-                    className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-white font-bold text-lg disabled:opacity-40 transition-colors shadow-lg shadow-[#00C805]/25"
-                    style={{ animation: "pulse 1s ease-in-out infinite" }}>
-                    {cashoutMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> :
-                      `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(parseFloat(betAmount) * currentMult).toFixed(2)}`}
-                  </motion.button>
+                {phase === "flying" ? (
+                  <motion.div key="fly" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
+                    <motion.p
+                      className={`text-6xl sm:text-7xl font-black font-mono ${getMultColorClass(displayMult)}`}
+                      style={{ textShadow: `0 0 40px ${getMultColor(displayMult)}40` }}
+                      animate={displayMult >= 5 ? { scale: [1, 1.04, 1] } : {}}
+                      transition={{ repeat: Infinity, duration: 0.25 }}
+                    >
+                      {displayMult.toFixed(2)}x
+                    </motion.p>
+                    <p className="text-xs text-zinc-400/70 font-mono mt-1">
+                      ${(parseFloat(betAmount) * displayMult).toFixed(2)}
+                    </p>
+                  </motion.div>
+                ) : phase === "crashed" ? (
+                  <motion.div
+                    key="crash"
+                    initial={{ scale: 1.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1, x: [0, -8, 8, -5, 5, 0] }}
+                    transition={{ duration: 0.4 }}
+                    className="text-center"
+                  >
+                    <p className="text-6xl sm:text-7xl font-black font-mono text-[#FF5252]"
+                      style={{ textShadow: "0 0 50px rgba(255,82,82,0.5)" }}>
+                      {(crashPoint ?? 1).toFixed(2)}x
+                    </p>
+                    <motion.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                      className="text-lg font-black text-[#FF5252] tracking-[0.2em] mt-1"
+                    >
+                      CRASHED
+                    </motion.p>
+                  </motion.div>
+                ) : phase === "cashed_out" ? (
+                  <motion.div
+                    key="win"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="text-center"
+                  >
+                    <p className="text-6xl sm:text-7xl font-black font-mono text-[#00C805]"
+                      style={{ textShadow: "0 0 50px rgba(0,200,5,0.5)" }}>
+                      {(cashoutMult ?? 1).toFixed(2)}x
+                    </p>
+                    <p className="text-lg font-black text-[#00C805] mt-1">
+                      +${(payout ?? 0).toFixed(2)}
+                    </p>
+                  </motion.div>
                 ) : (
-                  <motion.div key="bet" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
-                    <div className="flex gap-1.5 justify-center">
-                      {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
-                        const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                        const selected = parseFloat(betAmount) === amt;
-                        const disabled = cash < amt;
-                        const colors = CHIP_COLORS[amt];
-                        return (
-                          <motion.button key={amt} whileHover={disabled ? {} : { y: -3 }} whileTap={disabled ? {} : { scale: 0.92 }}
-                            onClick={() => !disabled && setBetAmount(amt.toString())} disabled={disabled}
-                            className={`w-11 h-11 rounded-full font-mono font-bold text-[10px] shadow-md border-[2.5px] border-dashed transition-all ${
-                              disabled ? "opacity-25 cursor-not-allowed bg-gray-700 border-gray-600 text-gray-500" :
-                              selected ? `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} ring-2 ring-white/40 ring-offset-1 ring-offset-zinc-900 shadow-lg`
-                                : `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} opacity-70 hover:opacity-100`
-                            }`}>{label}</motion.button>
-                        );
-                      })}
-                    </div>
-                    <input type="number" value={autoCashout} onChange={(e) => setAutoCashout(e.target.value)}
-                      placeholder={language === "ko" ? "자동 캐시아웃 배율 (선택)" : "Auto cashout multiplier (optional)"}
-                      min={1.01} step={0.1}
-                      className="w-full px-3 py-2.5 rounded-xl bg-zinc-800 border border-zinc-700/50 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50" />
-                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        const amt = parseFloat(betAmount);
-                        if (isNaN(amt) || amt < 0.10 || amt > 5) return toast.error("Bet $0.10–$5.00");
-                        const auto = autoCashout ? parseFloat(autoCashout) : undefined;
-                        if (auto !== undefined && auto < 1.01) return toast.error("Auto-cashout ≥ 1.01x");
-                        startMutation.mutate({ bet: amt, autoCashout: auto });
-                      }}
-                      disabled={isPending || !isAuthenticated || cash < parseFloat(betAmount || "0")}
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-400 hover:to-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-500/15">
-                      {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                        `🚀 ${language === "ko" ? "시작" : "START"} $${parseFloat(betAmount || "0").toFixed(2)}`}
-                    </motion.button>
+                  <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+                    <p className="text-6xl sm:text-7xl font-black text-zinc-700/80 font-mono">1.00x</p>
+                    <p className="text-xs text-zinc-600 mt-2">
+                      {language === "ko" ? "베팅하고 시작하세요" : "Place your bet"}
+                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -452,8 +458,92 @@ export default function Crash() {
           </div>
         </div>
 
+        {/* ======== CONTROLS ======== */}
+        <div className="mt-4 space-y-3">
+          <AnimatePresence mode="wait">
+            {phase === "flying" ? (
+              <motion.button
+                key="cashout-btn"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => cashoutMutation.mutate()}
+                disabled={isPending}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-white font-bold text-lg disabled:opacity-40 shadow-lg shadow-[#00C805]/30 animate-pulse"
+              >
+                {cashoutMutation.isPending ? (
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                ) : (
+                  `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(parseFloat(betAmount) * displayMult).toFixed(2)}`
+                )}
+              </motion.button>
+            ) : (
+              <motion.div key="bet-controls" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
+                {/* Chips */}
+                <div className="flex gap-1.5 justify-center">
+                  {CHIPS.map((amt) => {
+                    const label = amt < 1 ? `${Math.round(amt * 100)}c` : `$${amt}`;
+                    const selected = parseFloat(betAmount) === amt;
+                    const disabled = cash < amt;
+                    const c = CHIP_COLORS[amt];
+                    return (
+                      <motion.button
+                        key={amt}
+                        whileHover={disabled ? {} : { y: -3 }}
+                        whileTap={disabled ? {} : { scale: 0.92 }}
+                        onClick={() => !disabled && setBetAmount(amt.toString())}
+                        disabled={disabled}
+                        className={`w-11 h-11 rounded-full font-mono font-bold text-[10px] shadow-md border-[2.5px] border-dashed transition-all ${
+                          disabled ? "opacity-25 cursor-not-allowed bg-gray-700 border-gray-600 text-gray-500" :
+                          selected ? `bg-gradient-to-b ${c.bg} ${c.text} ${c.border} ring-2 ring-white/40 ring-offset-1 ring-offset-zinc-900 shadow-lg` :
+                          `bg-gradient-to-b ${c.bg} ${c.text} ${c.border} opacity-70 hover:opacity-100`
+                        }`}
+                      >
+                        {label}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                {/* Auto-cashout input */}
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={autoCashout}
+                    onChange={(e) => setAutoCashout(e.target.value)}
+                    placeholder={language === "ko" ? "자동 캐시아웃 배율 (선택)" : "Auto cashout multiplier (optional)"}
+                    min={1.01}
+                    step={0.1}
+                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-800/80 border border-zinc-700/50 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                  />
+                  {autoCashout && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 font-mono">x</span>
+                  )}
+                </div>
+
+                {/* Start button */}
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleStart}
+                  disabled={isPending || !isAuthenticated || cash < parseFloat(betAmount || "0")}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-400 hover:to-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-500/20"
+                >
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                  ) : (
+                    `${language === "ko" ? "시작" : "START"} $${parseFloat(betAmount || "0").toFixed(2)}`
+                  )}
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
-          {language === "ko" ? "1% 하우스 엣지 · 최대 $500 지급" : "1% house edge · $500 max payout"}
+          {language === "ko" ? "1% 하우스 엣지 | 최대 $500 지급" : "1% house edge | $500 max payout"}
         </p>
       </div>
     </div>

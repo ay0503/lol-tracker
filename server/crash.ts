@@ -6,6 +6,7 @@
  */
 
 const MAX_PAYOUT = 500;
+const GRACE_MS = 200; // Latency grace window for cashout
 
 export interface CrashGame {
   id: string;
@@ -17,6 +18,8 @@ export interface CrashGame {
   cashoutMultiplier: number;
   payout: number;
   startedAt: number;
+  crashTimer?: ReturnType<typeof setTimeout>;
+  autoCashoutTimer?: ReturnType<typeof setTimeout>;
 }
 
 export interface PublicCrashGame {
@@ -97,6 +100,7 @@ export function startCrashGame(userId: number, bet: number, autoCashout?: number
   const existing = activeGames.get(userId);
   if (existing && existing.status === "flying") throw new Error("Game already in progress");
   activeGames.delete(userId);
+  payoutCredited.delete(userId);
 
   const crashPoint = generateCrashPoint();
 
@@ -110,16 +114,44 @@ export function startCrashGame(userId: number, bet: number, autoCashout?: number
     startedAt: Date.now(),
   };
 
-  // If auto-cashout is set and <= crashPoint, it will be handled on cashout call
-  // If crashPoint is 1.00 (instant crash), resolve immediately
+  // Instant crash
   if (crashPoint <= 1.00) {
     game.status = "crashed";
     game.cashoutMultiplier = 0;
     game.payout = 0;
     addToHistory(userId, { crashPoint, cashedOut: false, multiplier: 0, profit: -bet });
+    activeGames.set(userId, game);
+    return gameToPublic(game);
   }
 
   activeGames.set(userId, game);
+
+  // Server-side crash timer — resolves game automatically when crash point is reached
+  const crashTimeMs = timeAtMultiplier(crashPoint);
+  game.crashTimer = setTimeout(() => {
+    if (game.status !== "flying") return;
+    game.status = "crashed";
+    game.cashoutMultiplier = 0;
+    game.payout = 0;
+    addToHistory(userId, { crashPoint: game.crashPoint, cashedOut: false, multiplier: 0, profit: -game.bet });
+  }, crashTimeMs);
+
+  // Server-side auto-cashout timer
+  if (game.autoCashout && game.autoCashout <= crashPoint) {
+    const autoCashoutTimeMs = timeAtMultiplier(game.autoCashout);
+    game.autoCashoutTimer = setTimeout(() => {
+      if (game.status !== "flying") return;
+      game.status = "cashed_out";
+      game.cashoutMultiplier = game.autoCashout!;
+      game.payout = Math.min(game.bet * game.autoCashout!, MAX_PAYOUT);
+      if (game.crashTimer) clearTimeout(game.crashTimer);
+      addToHistory(userId, {
+        crashPoint: game.crashPoint, cashedOut: true,
+        multiplier: game.autoCashout!, profit: game.payout - game.bet,
+      });
+    }, autoCashoutTimeMs);
+  }
+
   return gameToPublic(game);
 }
 
@@ -127,20 +159,23 @@ export function cashoutCrash(userId: number): PublicCrashGame {
   const game = activeGames.get(userId);
   if (!game || game.status !== "flying") throw new Error("No active game");
 
-  const elapsed = Date.now() - game.startedAt;
+  // Use grace window to account for network latency
+  const elapsed = Math.max(0, Date.now() - game.startedAt - GRACE_MS);
   let currentMult = multiplierAtTime(elapsed);
   currentMult = Math.floor(currentMult * 100) / 100;
 
-  // Check if already crashed
+  // Check if already crashed (even with grace)
   if (currentMult >= game.crashPoint) {
     game.status = "crashed";
     game.cashoutMultiplier = 0;
     game.payout = 0;
+    if (game.crashTimer) clearTimeout(game.crashTimer);
+    if (game.autoCashoutTimer) clearTimeout(game.autoCashoutTimer);
     addToHistory(userId, { crashPoint: game.crashPoint, cashedOut: false, multiplier: 0, profit: -game.bet });
     return gameToPublic(game);
   }
 
-  // Check auto-cashout
+  // Use the multiplier at the grace-adjusted time
   const cashMult = game.autoCashout && game.autoCashout <= currentMult
     ? game.autoCashout
     : currentMult;
@@ -148,6 +183,8 @@ export function cashoutCrash(userId: number): PublicCrashGame {
   game.status = "cashed_out";
   game.cashoutMultiplier = cashMult;
   game.payout = Math.min(game.bet * cashMult, MAX_PAYOUT);
+  if (game.crashTimer) clearTimeout(game.crashTimer);
+  if (game.autoCashoutTimer) clearTimeout(game.autoCashoutTimer);
   addToHistory(userId, {
     crashPoint: game.crashPoint, cashedOut: true,
     multiplier: cashMult, profit: game.payout - game.bet,
@@ -196,6 +233,16 @@ export function getCrashHistory(userId: number): CrashHistoryEntry[] {
   return crashHistory.get(userId) ?? [];
 }
 
+const payoutCredited = new Set<number>();
+
+export function markPayoutCredited(userId: number) {
+  payoutCredited.add(userId);
+}
+
+export function isPayoutCredited(userId: number): boolean {
+  return payoutCredited.has(userId);
+}
+
 export function getActiveCrashGame(userId: number): PublicCrashGame | null {
   const game = activeGames.get(userId);
   if (!game) return null;
@@ -210,6 +257,8 @@ setInterval(() => {
     if (game.status === "flying" && game.startedAt < cutoff) {
       game.status = "crashed";
       game.payout = 0;
+      if (game.crashTimer) clearTimeout(game.crashTimer);
+      if (game.autoCashoutTimer) clearTimeout(game.autoCashoutTimer);
       addToHistory(userId, { crashPoint: game.crashPoint, cashedOut: false, multiplier: 0, profit: -game.bet });
     }
     if (game.status !== "flying" && game.startedAt < cutoff) {
