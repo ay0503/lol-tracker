@@ -853,21 +853,17 @@ export const appRouter = router({
     }),
     leaderboard: publicProcedure.query(async () => {
       return cache.getOrSet("casino.leaderboard", async () => {
-        const db = await getDb();
-        const results = await db.select({
-          userId: users.id,
-          userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
-          casinoBalance: portfolios.casinoBalance,
-        }).from(users).leftJoin(portfolios, eq(users.id, portfolios.userId));
-
-        return results
-          .map(u => ({
-            userId: u.userId,
-            userName: String(u.userName || "Anonymous"),
-            casinoBalance: parseFloat(u.casinoBalance ?? "20.00"),
-            profit: parseFloat(u.casinoBalance ?? "20.00") - 20, // Starting was $20
-          }))
-          .sort((a, b) => b.casinoBalance - a.casinoBalance);
+        const client = getRawClient();
+        const result = await client.execute(
+          `SELECT u.id as userId, COALESCE(u.displayName, u.name) as userName, COALESCE(p.casinoBalance, '20.00') as casinoBalance
+           FROM users u LEFT JOIN portfolios p ON u.id = p.userId ORDER BY CAST(COALESCE(p.casinoBalance, '20.00') AS REAL) DESC`
+        );
+        return (result.rows as any[]).map(r => ({
+          userId: Number(r.userId),
+          userName: String(r.userName || "Anonymous"),
+          casinoBalance: parseFloat(String(r.casinoBalance ?? "20.00")),
+          profit: parseFloat(String(r.casinoBalance ?? "20.00")) - 20,
+        }));
       }, TEN_MIN);
     }),
   }),
