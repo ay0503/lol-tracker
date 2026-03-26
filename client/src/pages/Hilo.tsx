@@ -7,6 +7,8 @@ import { ArrowLeft, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import AppNav from "@/components/AppNav";
+import CasinoSubNav from "@/components/CasinoSubNav";
 import CasinoBetControls, {
   MAX_CASINO_BET,
   MIN_CASINO_BET,
@@ -88,7 +90,9 @@ export default function Hilo() {
   }, [language, parsedBetAmount, startMutation]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+      <AppNav />
+      <CasinoSubNav />
       <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
         <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
           <ArrowLeft className="w-3.5 h-3.5" /> Casino
