@@ -20,7 +20,7 @@ import {
   markMatchNewsGenerated, distributeDividends, addNews, getPendingOrders,
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
-  getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory,
+  getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory, pruneOldPortfolioSnapshots,
   pruneOldPortfolioSnapshots, resolveBets,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
@@ -499,6 +499,7 @@ export async function pollNow(): Promise<PollResult> {
 
         // Daily cleanup: prune old price history + portfolio snapshots
         await pruneOldPriceHistory();
+        await pruneOldPortfolioSnapshots();
         await pruneOldPortfolioSnapshots();
       } catch (err: any) {
         console.warn("[Poll] Daily summary failed:", err?.message);

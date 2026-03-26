@@ -752,6 +752,34 @@ export async function pruneOldPriceHistory(): Promise<number> {
   return total;
 }
 
+/**
+ * Prune old portfolio snapshots: keep all for 7d, hourly for 7-30d, daily for 30d+.
+ */
+export async function pruneOldPortfolioSnapshots(): Promise<number> {
+  const client = getRawClient();
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+  const hourlyResult = await client.execute({
+    sql: `DELETE FROM portfolioSnapshots WHERE timestamp < ? AND timestamp >= ? AND id NOT IN (
+      SELECT MAX(id) FROM portfolioSnapshots WHERE timestamp < ? AND timestamp >= ? GROUP BY userId, CAST(timestamp / 3600000 AS INTEGER)
+    )`,
+    args: [sevenDaysAgo, thirtyDaysAgo, sevenDaysAgo, thirtyDaysAgo],
+  });
+
+  const dailyResult = await client.execute({
+    sql: `DELETE FROM portfolioSnapshots WHERE timestamp < ? AND id NOT IN (
+      SELECT MAX(id) FROM portfolioSnapshots WHERE timestamp < ? GROUP BY userId, CAST(timestamp / 86400000 AS INTEGER)
+    )`,
+    args: [thirtyDaysAgo, thirtyDaysAgo],
+  });
+
+  const total = (hourlyResult.rowsAffected ?? 0) + (dailyResult.rowsAffected ?? 0);
+  if (total > 0) console.log(`[DB] Pruned ${total} old portfolio snapshot rows`);
+  return total;
+}
+
 // ─── Game Bets ───
 
 export async function placeBet(userId: number, prediction: "win" | "loss", amount: number) {
@@ -912,38 +940,6 @@ export async function getPortfolioHistory(userId: number, since?: number) {
   return db.select().from(portfolioSnapshots)
     .where(eq(portfolioSnapshots.userId, userId))
     .orderBy(portfolioSnapshots.timestamp);
-}
-
-/**
- * Prune old portfolio snapshots: keep all from last 7 days,
- * then keep only 1 per hour for 7-30 days, and 1 per day for 30+ days.
- * Returns number of rows deleted.
- */
-export async function pruneOldPortfolioSnapshots(): Promise<number> {
-  const client = getRawClient();
-  const now = Date.now();
-  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
-  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-
-  // For 7-30 days: keep only the last snapshot per user per hour
-  const hourlyResult = await client.execute({
-    sql: `DELETE FROM portfolioSnapshots WHERE timestamp < ? AND timestamp >= ? AND id NOT IN (
-      SELECT MAX(id) FROM portfolioSnapshots WHERE timestamp < ? AND timestamp >= ? GROUP BY userId, CAST(timestamp / 3600000 AS INTEGER)
-    )`,
-    args: [sevenDaysAgo, thirtyDaysAgo, sevenDaysAgo, thirtyDaysAgo],
-  });
-
-  // For 30+ days: keep only the last snapshot per user per day
-  const dailyResult = await client.execute({
-    sql: `DELETE FROM portfolioSnapshots WHERE timestamp < ? AND id NOT IN (
-      SELECT MAX(id) FROM portfolioSnapshots WHERE timestamp < ? GROUP BY userId, CAST(timestamp / 86400000 AS INTEGER)
-    )`,
-    args: [thirtyDaysAgo, thirtyDaysAgo],
-  });
-
-  const total = (hourlyResult.rowsAffected ?? 0) + (dailyResult.rowsAffected ?? 0);
-  if (total > 0) console.log(`[DB] Pruned ${total} old portfolio snapshot rows`);
-  return total;
 }
 
 // ─── Notifications ───

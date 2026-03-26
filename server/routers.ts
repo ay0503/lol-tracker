@@ -39,6 +39,14 @@ const FIVE_MIN = 5 * 60 * 1000;
 /** Casino cooldown tracking */
 const casinoLastGameTime = new Map<number, number>();
 
+/** Casino in-flight lock — prevents double-click race condition */
+const casinoInFlight = new Set<number>();
+function acquireCasinoLock(userId: number) {
+  if (casinoInFlight.has(userId)) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Game already in progress. Please wait." });
+  casinoInFlight.add(userId);
+}
+function releaseCasinoLock(userId: number) { casinoInFlight.delete(userId); }
+
 // Clean up stale cooldown entries every 10 min
 setInterval(() => {
   const cutoff = Date.now() - 3600_000;
@@ -48,6 +56,8 @@ setInterval(() => {
 }, 600_000);
 
 async function checkCasinoCooldown(userId: number): Promise<void> {
+  // In-flight lock: prevent double-click race condition
+  acquireCasinoLock(userId);
   const client = getRawClient();
   try {
     const result = await client.execute({ sql: `SELECT cooldownSeconds FROM casino_cooldowns WHERE userId = ?`, args: [userId] });
@@ -71,6 +81,7 @@ async function checkCasinoCooldown(userId: number): Promise<void> {
 
 function recordCasinoGame(userId: number): void {
   casinoLastGameTime.set(userId, Date.now());
+  releaseCasinoLock(userId);
 }
 
 
