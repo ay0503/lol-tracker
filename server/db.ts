@@ -113,7 +113,7 @@ export async function getOrCreatePortfolio(userId: number) {
   const db = await getDb();
   const existing = await db.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
   if (existing.length > 0) return existing[0];
-  await db.insert(portfolios).values({ userId, cashBalance: "200.00", totalDividends: "0.00" });
+  await db.insert(portfolios).values({ userId, cashBalance: "200.00", casinoBalance: "20.00", totalDividends: "0.00" });
   const created = await db.select().from(portfolios).where(eq(portfolios.userId, userId)).limit(1);
   return created[0];
 }

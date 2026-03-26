@@ -207,6 +207,7 @@ function useDealerReveal(game: any) {
 export default function Casino() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
+  const [selectedGame, setSelectedGame] = useState<"blackjack" | "coming_soon">("blackjack");
   const [betAmount, setBetAmount] = useState("0.50");
   const [lastBet, setLastBet] = useState<number | null>(null);
   const utils = trpc.useUtils();
@@ -345,6 +346,29 @@ export default function Casino() {
               <span className="text-[11px] font-mono font-bold text-yellow-400">${game.bet.toFixed(2)}</span>
             </motion.div>
           )}
+        </div>
+
+        {/* Game Selector */}
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={() => setSelectedGame("blackjack")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              selectedGame === "blackjack"
+                ? "bg-zinc-800 text-white border border-zinc-600 shadow-md"
+                : "bg-zinc-900/50 text-zinc-500 border border-zinc-800 hover:text-zinc-300"
+            }`}
+          >
+            <span className="text-base">🃏</span>
+            Blackjack
+          </button>
+          <button
+            onClick={() => setSelectedGame("coming_soon")}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-zinc-900/50 text-zinc-600 border border-zinc-800/50 cursor-not-allowed"
+            disabled
+          >
+            <span className="text-base">🎰</span>
+            {language === "ko" ? "곧 추가" : "More Soon"}
+          </button>
         </div>
 
         {/* Table */}

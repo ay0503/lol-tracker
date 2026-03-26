@@ -751,6 +751,7 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
 
+          cache.invalidate("casino.leaderboard");
           return game;
         }),
       hit: protectedProcedure.mutation(async ({ ctx }) => {
@@ -776,6 +777,7 @@ export const appRouter = router({
             const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
+          cache.invalidate("casino.leaderboard");
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -804,6 +806,7 @@ export const appRouter = router({
             const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + game.payout;
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
+          cache.invalidate("casino.leaderboard");
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -1374,6 +1377,42 @@ export const appRouter = router({
           userName,
           previousCash: portfolio.cashBalance,
           newCash: input.cashAmount.toFixed(2),
+        };
+      }),
+    resetCasinoBalance: adminProcedure
+      .input(z.object({
+        displayName: z.string().optional(),
+        userId: z.number().optional(),
+        amount: z.number().min(0).finite().default(20),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        let userId: number | null = null;
+        let userName: string | null = null;
+
+        if (input.userId) {
+          const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+          if (user.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: `User with ID ${input.userId} not found` });
+          userId = user[0].id;
+          userName = user[0].displayName || user[0].name;
+        } else if (input.displayName) {
+          const allUsers = await db.select().from(users);
+          const match = allUsers.find(u => (u.displayName || u.name) === input.displayName);
+          if (!match) throw new TRPCError({ code: "NOT_FOUND", message: `User "${input.displayName}" not found` });
+          userId = match.id;
+          userName = match.displayName || match.name;
+        } else {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Provide either displayName or userId" });
+        }
+
+        const portfolio = await getOrCreatePortfolio(userId);
+        await db.update(portfolios).set({ casinoBalance: input.amount.toFixed(2) }).where(eq(portfolios.userId, userId));
+        cache.invalidateAll();
+
+        return {
+          success: true, userId, userName,
+          previousBalance: portfolio.casinoBalance ?? "20.00",
+          newBalance: input.amount.toFixed(2),
         };
       }),
   }),

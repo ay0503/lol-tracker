@@ -559,6 +559,8 @@ function TableBrowser() {
 function QuickActions() {
   const [resetName, setResetName] = useState("");
   const [resetAmount, setResetAmount] = useState("200");
+  const [casinoName, setCasinoName] = useState("");
+  const [casinoAmount, setCasinoAmount] = useState("20");
 
   const utils = trpc.useUtils();
 
@@ -692,6 +694,63 @@ function QuickActions() {
             ) : (
               <RotateCcw className="w-3 h-3 mr-1" />
             )}
+            Reset
+          </Button>
+        </div>
+      </div>
+
+      {/* Reset Casino Balance */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign className="w-4 h-4 text-yellow-400" />
+          <h3 className="text-sm font-bold">Reset Casino Balance</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Reset a user's casino (blackjack) balance by display name.
+        </p>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="text-xs text-muted-foreground mb-1 block">Display Name</label>
+            <input
+              type="text"
+              value={casinoName}
+              onChange={(e) => setCasinoName(e.target.value)}
+              placeholder="e.g. 윤여균"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="w-28">
+            <label className="text-xs text-muted-foreground mb-1 block">Amount ($)</label>
+            <input
+              type="number"
+              value={casinoAmount}
+              onChange={(e) => setCasinoAmount(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              const mutation = trpc.admin.resetCasinoBalance.useMutation as any;
+              // Use fetch directly since we can't easily add another mutation hook
+              fetch('/api/trpc/admin.resetCasinoBalance', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ json: { displayName: casinoName, amount: parseFloat(casinoAmount) } }),
+              }).then(r => r.json()).then(d => {
+                if (d.result?.data?.json?.success) {
+                  toast.success(`Reset ${d.result.data.json.userName}'s casino balance to $${d.result.data.json.newBalance}`);
+                  setCasinoName("");
+                  setCasinoAmount("20");
+                } else {
+                  toast.error(d.error?.json?.message || "Failed");
+                }
+              }).catch(() => toast.error("Failed"));
+            }}
+            disabled={!casinoName.trim()}
+            className="h-9"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
             Reset
           </Button>
         </div>
