@@ -16,8 +16,8 @@ import { Info, ChevronDown } from "lucide-react";
 function getTiers(tr: any) {
   return [
     {
-      name: t.legend.platinum,
-      shortName: t.legend.platShort,
+      name: tr.legend.platinum,
+      shortName: tr.legend.platShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 10,
       endPrice: 40,
@@ -26,8 +26,8 @@ function getTiers(tr: any) {
       borderColor: "rgba(79, 166, 141, 0.4)",
     },
     {
-      name: t.legend.emerald,
-      shortName: t.legend.emShort,
+      name: tr.legend.emerald,
+      shortName: tr.legend.emShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 40,
       endPrice: 70,
@@ -36,8 +36,8 @@ function getTiers(tr: any) {
       borderColor: "rgba(0, 200, 5, 0.4)",
     },
     {
-      name: t.legend.diamond,
-      shortName: t.legend.diaShort,
+      name: tr.legend.diamond,
+      shortName: tr.legend.diaShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 70,
       endPrice: 100,
