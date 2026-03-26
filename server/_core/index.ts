@@ -222,6 +222,22 @@ async function startServer() {
     } catch (err) {
       console.error("[Server] Failed to seed cosmetics:", err);
     }
+    // Restore persisted casino game states
+    try {
+      const { restoreBlackjackGames } = await import("../blackjack");
+      const { restoreMinesGames } = await import("../mines");
+      const { restoreCrashGames } = await import("../crash");
+      const { restoreVideoPokerGames } = await import("../videoPoker");
+      const { restoreHiloGames } = await import("../hilo");
+      const counts = await Promise.all([
+        restoreBlackjackGames(), restoreMinesGames(), restoreCrashGames(),
+        restoreVideoPokerGames(), restoreHiloGames(),
+      ]);
+      const total = counts.reduce((sum, c) => sum + c, 0);
+      if (total > 0) console.log(`[Server] Restored ${total} active casino games from DB`);
+    } catch (err) {
+      console.error("[Server] Failed to restore casino games:", err);
+    }
     startPolling();
   });
 }

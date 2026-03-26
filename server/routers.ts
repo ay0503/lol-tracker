@@ -766,6 +766,22 @@ export const appRouter = router({
           return map;
         } catch { return {}; }
       }),
+    myReactions: protectedProcedure
+      .input(z.object({ commentIds: z.array(z.number()) }))
+      .query(async ({ ctx, input }) => {
+        if (input.commentIds.length === 0) return {};
+        const client = getRawClient();
+        try {
+          const result = await client.execute({ sql: `SELECT commentId, type FROM comment_reactions WHERE userId = ? AND commentId IN (${input.commentIds.join(",")})`, args: [ctx.user.id] });
+          const map: Record<number, string[]> = {};
+          for (const row of result.rows as any[]) {
+            const cid = Number(row.commentId);
+            if (!map[cid]) map[cid] = [];
+            map[cid].push(String(row.type));
+          }
+          return map;
+        } catch { return {}; }
+      }),
   }),
 
   // ─── News Feed — cached 30 min ───

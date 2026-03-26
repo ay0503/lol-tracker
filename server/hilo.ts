@@ -1,8 +1,11 @@
 /**
  * Hilo (High/Low) game engine — stateful, card-based.
  * Guess if next card is higher or lower. Cash out anytime.
+ * Games stored in memory with DB persistence for server restarts.
  */
+import { saveGameState, clearGameState, loadGameStates } from "./gamePersistence";
 
+const GAME_TYPE = "hilo";
 const MAX_PAYOUT = 250;
 const PLAYER_EDGE_BOOST = 1.01;
 
@@ -98,6 +101,7 @@ export function startHiloGame(userId: number, bet: number): PublicHiloGame {
     createdAt: Date.now(),
   };
   activeGames.set(userId, game);
+  saveGameState(userId, GAME_TYPE, game);
   return toPublic(game);
 }
 
@@ -123,11 +127,15 @@ export function guessHilo(userId: number, direction: "higher" | "lower"): Public
     if (game.deck.length === 0) {
       game.status = "won";
       game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);
+      clearGameState(userId, GAME_TYPE);
+    } else {
+      saveGameState(userId, GAME_TYPE, game);
     }
   } else {
     game.status = "lost";
     game.multiplier = 0;
     game.payout = 0;
+    clearGameState(userId, GAME_TYPE);
   }
 
   return toPublic(game);
@@ -139,12 +147,24 @@ export function cashOutHilo(userId: number): PublicHiloGame {
   if (game.history.length === 0) throw new Error("Make at least one guess first");
   game.status = "won";
   game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);
+  clearGameState(userId, GAME_TYPE);
   return toPublic(game);
 }
 
 export function getActiveHiloGame(userId: number): PublicHiloGame | null {
   const game = activeGames.get(userId);
   return game ? toPublic(game) : null;
+}
+
+/** Restore persisted games from DB on startup */
+export async function restoreHiloGames(): Promise<number> {
+  const saved = await loadGameStates<HiloGame>(GAME_TYPE);
+  for (const [userId, game] of Array.from(saved.entries())) {
+    if (game.status === "playing") {
+      activeGames.set(userId, game);
+    }
+  }
+  return saved.size;
 }
 
 // Cleanup stale games

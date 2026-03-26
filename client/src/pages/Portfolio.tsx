@@ -245,7 +245,23 @@ function PortfolioPnlChart() {
 export default function Portfolio() {
   const { t, language } = useTranslation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [filter, setFilter] = useState<TradeFilter>("all");
+  const VALID_FILTERS: TradeFilter[] = ["all", "buy", "sell", "short", "cover", "dividend", "bet"];
+  const [filter, setFilterState] = useState<TradeFilter>(() => {
+    const hash = window.location.hash.slice(1);
+    return VALID_FILTERS.includes(hash as TradeFilter) ? (hash as TradeFilter) : "all";
+  });
+  const setFilter = (newFilter: TradeFilter) => {
+    setFilterState(newFilter);
+    window.history.replaceState(null, "", `#${newFilter}`);
+  };
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (VALID_FILTERS.includes(hash as TradeFilter)) setFilterState(hash as TradeFilter);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   const TRADE_FILTERS: { id: TradeFilter; label: string }[] = [
     { id: "all", label: t.portfolio.all },

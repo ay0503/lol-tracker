@@ -1,8 +1,12 @@
 /**
  * Video Poker (Tens or Better variant) game engine — server-side logic.
  * 52-card deck, deal 5 cards, hold/discard, draw replacements.
- * Slight player edge via a lower qualifying pair on a classic pay table. Games stored in memory.
+ * Slight player edge via a lower qualifying pair on a classic pay table.
+ * Games stored in memory with DB persistence for server restarts.
  */
+import { saveGameState, clearGameState, loadGameStates } from "./gamePersistence";
+
+const GAME_TYPE = "videoPoker";
 
 export interface Card {
   rank: number; // 2-14 (J=11, Q=12, K=13, A=14)
@@ -209,6 +213,7 @@ export function dealPoker(userId: number, bet: number): PublicVideoPokerGame {
   };
 
   activeGames.set(userId, game);
+  saveGameState(userId, GAME_TYPE, game);
   return gameToPublic(game);
 }
 
@@ -238,6 +243,7 @@ export function drawPoker(
   game.result = result.name;
   game.multiplier = result.multiplier;
   game.payout = Math.round(game.bet * result.multiplier * 100) / 100;
+  clearGameState(userId, GAME_TYPE);
 
   return gameToPublic(game);
 }
@@ -248,6 +254,17 @@ export function drawPoker(
 export function getActivePokerGame(userId: number): PublicVideoPokerGame | null {
   const game = activeGames.get(userId);
   return game ? gameToPublic(game) : null;
+}
+
+/** Restore persisted games from DB on startup */
+export async function restoreVideoPokerGames(): Promise<number> {
+  const saved = await loadGameStates<VideoPokerGame>(GAME_TYPE);
+  for (const [userId, game] of Array.from(saved.entries())) {
+    if (game.status === "holding") {
+      activeGames.set(userId, game);
+    }
+  }
+  return saved.size;
 }
 
 // Clean up stale games older than 30 minutes

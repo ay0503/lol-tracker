@@ -1,5 +1,5 @@
 import AppNav from "@/components/AppNav";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -30,6 +30,19 @@ export default function Sentiment() {
   const { getCosmetics } = useCosmetics();
 
   const { data: comments, isLoading, refetch } = trpc.comments.list.useQuery({ limit: 50 });
+  const commentIds = useMemo(() => (comments ?? []).map(c => c.id), [comments]);
+  const { data: reactions, refetch: refetchReactions } = trpc.comments.reactions.useQuery(
+    { commentIds },
+    { enabled: commentIds.length > 0 }
+  );
+  const { data: myReactions, refetch: refetchMyReactions } = trpc.comments.myReactions.useQuery(
+    { commentIds },
+    { enabled: isAuthenticated && commentIds.length > 0 }
+  );
+  const reactMutation = trpc.comments.react.useMutation({
+    onSuccess: () => { refetchReactions(); refetchMyReactions(); },
+    onError: (err) => toast.error(err.message),
+  });
   const postComment = trpc.comments.post.useMutation({
     onSuccess: () => {
       setContent("");
@@ -234,6 +247,29 @@ export default function Sentiment() {
                         </span>
                       </div>
                       <p className="text-sm text-foreground/90">{comment.content}</p>
+                      {/* Reactions */}
+                      <div className="flex items-center gap-1.5 mt-2">
+                        {(["like", "fire", "dislike"] as const).map(rType => {
+                          const emoji = rType === "like" ? "\uD83D\uDC4D" : rType === "fire" ? "\uD83D\uDD25" : "\uD83D\uDC4E";
+                          const count = reactions?.[comment.id]?.[rType] ?? 0;
+                          const myReacted = myReactions?.[comment.id]?.includes(rType);
+                          return (
+                            <button
+                              key={rType}
+                              onClick={() => isAuthenticated && reactMutation.mutate({ commentId: comment.id, type: rType })}
+                              disabled={!isAuthenticated || reactMutation.isPending}
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] transition-all border ${
+                                myReacted
+                                  ? "bg-primary/15 border-primary/30 text-foreground"
+                                  : "bg-secondary/50 border-transparent text-muted-foreground hover:bg-secondary hover:border-border"
+                              } disabled:opacity-40 disabled:cursor-not-allowed`}
+                            >
+                              <span>{emoji}</span>
+                              {count > 0 && <span className="font-mono">{count}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </motion.div>

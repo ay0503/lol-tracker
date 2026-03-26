@@ -1,9 +1,11 @@
 /**
  * Mines game engine — server-side logic.
  * 5x5 grid, player-selected mine count (1-24).
- * Slight player edge. Games stored in memory.
+ * Slight player edge. Games stored in memory with DB persistence for server restarts.
  */
+import { saveGameState, clearGameState, loadGameStates } from "./gamePersistence";
 
+const GAME_TYPE = "mines";
 const GRID_SIZE = 25;
 const PLAYER_EDGE_BOOST = 1.01;
 const MAX_PAYOUT = 5000;
@@ -83,6 +85,7 @@ export function startMinesGame(userId: number, bet: number, mineCount: number): 
     createdAt: Date.now(),
   };
   activeGames.set(userId, game);
+  saveGameState(userId, GAME_TYPE, game);
   return gameToPublic(game);
 }
 
@@ -96,6 +99,7 @@ export function revealTile(userId: number, position: number): PublicMinesGame {
     game.status = "lost";
     game.payout = 0;
     game.multiplier = 0;
+    clearGameState(userId, GAME_TYPE);
     return gameToPublic(game);
   }
 
@@ -106,6 +110,9 @@ export function revealTile(userId: number, position: number): PublicMinesGame {
   if (game.revealedTiles.length >= maxSafe) {
     game.status = "won";
     game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);
+    clearGameState(userId, GAME_TYPE);
+  } else {
+    saveGameState(userId, GAME_TYPE, game);
   }
 
   return gameToPublic(game);
@@ -117,12 +124,24 @@ export function cashOutMines(userId: number): PublicMinesGame {
   if (game.revealedTiles.length === 0) throw new Error("Reveal at least one tile first");
   game.status = "won";
   game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);
+  clearGameState(userId, GAME_TYPE);
   return gameToPublic(game);
 }
 
 export function getActiveMinesGame(userId: number): PublicMinesGame | null {
   const game = activeGames.get(userId);
   return game ? gameToPublic(game) : null;
+}
+
+/** Restore persisted games from DB on startup */
+export async function restoreMinesGames(): Promise<number> {
+  const saved = await loadGameStates<MinesGame>(GAME_TYPE);
+  for (const [userId, game] of Array.from(saved.entries())) {
+    if (game.status === "playing") {
+      activeGames.set(userId, game);
+    }
+  }
+  return saved.size;
 }
 
 // Clean up stale games

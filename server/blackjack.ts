@@ -1,9 +1,11 @@
 /**
  * Blackjack game engine — server-side logic.
- * Games stored in memory (short-lived, no DB needed).
+ * Games stored in memory with DB persistence for server restarts.
  * Clean player-favored payout table.
  */
+import { saveGameState, clearGameState, loadGameStates } from "./gamePersistence";
 
+const GAME_TYPE = "blackjack";
 const SUITS = ["♠", "♥", "♦", "♣"] as const;
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"] as const;
 
@@ -106,6 +108,7 @@ export function dealGame(userId: number, bet: number): Omit<BlackjackGame, "deck
   }
 
   activeGames.set(userId, game);
+  saveGameState(userId, GAME_TYPE, game);
   return gameToPublic(game);
 }
 
@@ -118,6 +121,9 @@ export function hitGame(userId: number): Omit<BlackjackGame, "deck"> {
   if (handValue(game.playerHand) > 21) {
     game.status = "player_bust";
     game.payout = 0;
+    clearGameState(userId, GAME_TYPE);
+  } else {
+    saveGameState(userId, GAME_TYPE, game);
   }
 
   return gameToPublic(game);
@@ -149,6 +155,7 @@ export function standGame(userId: number): Omit<BlackjackGame, "deck"> {
     game.payout = game.bet;
   }
 
+  clearGameState(userId, GAME_TYPE);
   return gameToPublic(game);
 }
 
@@ -178,6 +185,18 @@ export function getActiveGame(userId: number): Omit<BlackjackGame, "deck"> | nul
 
 export function clearGame(userId: number): void {
   activeGames.delete(userId);
+  clearGameState(userId, GAME_TYPE);
+}
+
+/** Restore persisted games from DB on startup */
+export async function restoreBlackjackGames(): Promise<number> {
+  const saved = await loadGameStates<BlackjackGame>(GAME_TYPE);
+  for (const [userId, game] of Array.from(saved.entries())) {
+    if (game.status === "playing") {
+      activeGames.set(userId, game);
+    }
+  }
+  return saved.size;
 }
 
 // Clean up stale games older than 30 minutes

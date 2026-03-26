@@ -17,6 +17,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { translateTickerDescription } from "@/lib/formatters";
 import { motion } from "framer-motion";
@@ -259,6 +260,13 @@ export default function LPChart() {
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
     refetchInterval: 60_000, staleTime: 30_000,
   });
+
+  // Fetch user's trades for chart markers (only in candlestick view)
+  const { isAuthenticated } = useAuth();
+  const { data: myTrades } = trpc.trading.history.useQuery(
+    { limit: 200 },
+    { enabled: isAuthenticated && chartView === "candlestick", staleTime: 60_000 }
+  );
 
   /**
    * Process raw ETF history into chart data:
@@ -676,6 +684,7 @@ export default function LPChart() {
           timeRange={activeRange}
           onVisibleRangeChange={handleVisibleRangeChange}
           ticker={activeTicker}
+          trades={myTrades}
         />
       )}
     </motion.div>

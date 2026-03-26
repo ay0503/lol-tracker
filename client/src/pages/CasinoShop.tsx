@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -30,7 +30,24 @@ export default function CasinoShop() {
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
 
-  const [tab, setTab] = useState<"all" | "title" | "name_effect">("all");
+  type ShopTab = "all" | "title" | "name_effect";
+  const VALID_TABS: ShopTab[] = ["all", "title", "name_effect"];
+  const [tab, setTabState] = useState<ShopTab>(() => {
+    const hash = window.location.hash.slice(1);
+    return VALID_TABS.includes(hash as ShopTab) ? (hash as ShopTab) : "all";
+  });
+  const setTab = (newTab: ShopTab) => {
+    setTabState(newTab);
+    window.history.replaceState(null, "", `#${newTab}`);
+  };
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (VALID_TABS.includes(hash as ShopTab)) setTabState(hash as ShopTab);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   const { data: catalog } = trpc.casino.shop.catalog.useQuery();
   const { data: owned } = trpc.casino.shop.owned.useQuery(undefined, { enabled: isAuthenticated });

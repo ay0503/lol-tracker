@@ -3,8 +3,11 @@
  * Multiplier rises from 1.00x until crash point.
  * Player cashes out before crash to win.
  * Slight player edge via a softer crash curve and boosted payouts.
+ * Games stored in memory with DB persistence for server restarts.
  */
+import { saveGameState, clearGameState, loadGameStates } from "./gamePersistence";
 
+const GAME_TYPE = "crash";
 const MAX_PAYOUT = 500;
 const GRACE_MS = 200; // Latency grace window for cashout
 const PLAYER_EDGE_BOOST = 1.02;
@@ -124,10 +127,12 @@ export function startCrashGame(userId: number, bet: number, autoCashout?: number
     game.payout = 0;
     addToHistory(userId, { crashPoint, cashedOut: false, multiplier: 0, profit: -bet });
     activeGames.set(userId, game);
+    clearGameState(userId, GAME_TYPE);
     return gameToPublic(game);
   }
 
   activeGames.set(userId, game);
+  saveGameState(userId, GAME_TYPE, game);
 
   // Server-side crash timer — resolves game automatically when crash point is reached
   const crashTimeMs = timeAtMultiplier(crashPoint);
@@ -137,6 +142,7 @@ export function startCrashGame(userId: number, bet: number, autoCashout?: number
     game.cashoutMultiplier = 0;
     game.payout = 0;
     addToHistory(userId, { crashPoint: game.crashPoint, cashedOut: false, multiplier: 0, profit: -game.bet });
+    clearGameState(userId, GAME_TYPE);
   }, crashTimeMs);
 
   // Server-side auto-cashout timer
@@ -152,6 +158,7 @@ export function startCrashGame(userId: number, bet: number, autoCashout?: number
         crashPoint: game.crashPoint, cashedOut: true,
         multiplier: game.autoCashout!, profit: game.payout - game.bet,
       });
+      clearGameState(userId, GAME_TYPE);
     }, autoCashoutTimeMs);
   }
 
@@ -175,6 +182,7 @@ export function cashoutCrash(userId: number): PublicCrashGame {
     if (game.crashTimer) clearTimeout(game.crashTimer);
     if (game.autoCashoutTimer) clearTimeout(game.autoCashoutTimer);
     addToHistory(userId, { crashPoint: game.crashPoint, cashedOut: false, multiplier: 0, profit: -game.bet });
+    clearGameState(userId, GAME_TYPE);
     return gameToPublic(game);
   }
 
@@ -192,6 +200,7 @@ export function cashoutCrash(userId: number): PublicCrashGame {
     crashPoint: game.crashPoint, cashedOut: true,
     multiplier: cashMult, profit: game.payout - game.bet,
   });
+  clearGameState(userId, GAME_TYPE);
 
   return gameToPublic(game);
 }
@@ -216,6 +225,7 @@ export function checkCrashStatus(userId: number): PublicCrashGame | null {
         crashPoint: game.crashPoint, cashedOut: true,
         multiplier: game.autoCashout, profit: game.payout - game.bet,
       });
+      clearGameState(userId, GAME_TYPE);
       return gameToPublic(game);
     }
 
@@ -225,6 +235,7 @@ export function checkCrashStatus(userId: number): PublicCrashGame | null {
       game.cashoutMultiplier = 0;
       game.payout = 0;
       addToHistory(userId, { crashPoint: game.crashPoint, cashedOut: false, multiplier: 0, profit: -game.bet });
+      clearGameState(userId, GAME_TYPE);
       return gameToPublic(game);
     }
   }
@@ -251,6 +262,22 @@ export function getActiveCrashGame(userId: number): PublicCrashGame | null {
   if (!game) return null;
   // Auto-resolve if needed
   return checkCrashStatus(userId);
+}
+
+/**
+ * Restore persisted crash games from DB on startup.
+ * NOTE: Flying games have server-side timers that cannot be restored,
+ * so we don't restore them — they are treated as crashed (lost).
+ * We only clean up DB entries here.
+ */
+export async function restoreCrashGames(): Promise<number> {
+  const saved = await loadGameStates<CrashGame>(GAME_TYPE);
+  // Crash games rely on server timers, so we cannot meaningfully restore
+  // "flying" games after a restart. Clear them from persistence.
+  for (const [userId, _game] of Array.from(saved.entries())) {
+    clearGameState(userId, GAME_TYPE);
+  }
+  return 0;
 }
 
 // Clean up stale games

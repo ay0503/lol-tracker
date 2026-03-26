@@ -1,5 +1,5 @@
 import AppNav from "@/components/AppNav";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
@@ -158,7 +158,23 @@ export default function Leaderboard() {
   const { data: rankings, isLoading } = trpc.leaderboard.rankings.useQuery();
   const { data: casinoRankings, isLoading: casinoLoading } = trpc.casino.leaderboard.useQuery();
   const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
-  const [tab, setTab] = useState<LeaderboardTab>("trading");
+  const VALID_TABS: LeaderboardTab[] = ["trading", "casino"];
+  const [tab, setTabState] = useState<LeaderboardTab>(() => {
+    const hash = window.location.hash.slice(1);
+    return VALID_TABS.includes(hash as LeaderboardTab) ? (hash as LeaderboardTab) : "trading";
+  });
+  const setTab = (newTab: LeaderboardTab) => {
+    setTabState(newTab);
+    window.history.replaceState(null, "", `#${newTab}`);
+  };
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.slice(1);
+      if (VALID_TABS.includes(hash as LeaderboardTab)) setTabState(hash as LeaderboardTab);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

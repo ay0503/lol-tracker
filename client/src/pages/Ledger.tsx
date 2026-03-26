@@ -3,7 +3,7 @@ import AppNav from "@/components/AppNav";
  * Ledger: Public trade ledger with Trades and Dividends tabs.
  * Full i18n support (EN/KR).
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -22,7 +22,25 @@ type LedgerTab = "trades" | "dividends" | "bets";
 
 export default function Ledger() {
   const { t, language } = useTranslation();
-  const [tab, setTab] = useState<LedgerTab>("trades");
+  const [tab, setTabState] = useState<LedgerTab>(() => {
+    const hash = window.location.hash.slice(1);
+    return (["trades", "dividends", "bets"] as const).includes(hash as LedgerTab)
+      ? (hash as LedgerTab) : "trades";
+  });
+  const setTab = (newTab: LedgerTab) => {
+    setTabState(newTab);
+    window.history.replaceState(null, "", `#${newTab}`);
+  };
+  useEffect(() => {
+    const onHash = () => {
+      const hash = window.location.hash.slice(1);
+      if ((["trades", "dividends", "bets"] as const).includes(hash as LedgerTab)) {
+        setTabState(hash as LedgerTab);
+      }
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
   const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
   const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });

@@ -45,10 +45,21 @@ const TICKER_COLORS: Record<string, { color: string; inverse: boolean }> = {
 
 const INTRADAY_RANGES = new Set<TimeRange>(["3H", "6H", "1D"]);
 
+interface TradeMarkerData {
+  id: number;
+  ticker: string;
+  type: string; // buy, sell, short, cover
+  shares: number;
+  pricePerShare: number;
+  totalAmount: number;
+  createdAt: string | null;
+}
+
 interface CandlestickChartProps {
   timeRange?: TimeRange;
   onVisibleRangeChange?: (range: TimeRange | null) => void;
   ticker?: string;
+  trades?: TradeMarkerData[];
 }
 
 interface ETFHistoryPoint {
@@ -283,6 +294,7 @@ export default function CandlestickChart({
   timeRange = "1M",
   onVisibleRangeChange,
   ticker = "DORI",
+  trades,
 }: CandlestickChartProps) {
   const { t, language } = useTranslation();
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -444,6 +456,46 @@ export default function CandlestickChart({
         }
       }
 
+      // ─── Trade markers ───
+      if (trades && trades.length > 0) {
+        const cutoff = getRangeCutoffMs(timeRange);
+        const tickerTrades = trades.filter(tr => tr.ticker === ticker && tr.createdAt);
+
+        for (const trade of tickerTrades) {
+          const tradeTs = new Date(trade.createdAt!).getTime();
+          if (tradeTs < cutoff) continue;
+
+          // Find closest candle by timestamp
+          let bestIdx = -1;
+          let bestDist = Infinity;
+          for (let ci = 0; ci < candleMeta.length; ci++) {
+            const dist = Math.abs(candleMeta[ci].originalTs - tradeTs);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestIdx = ci;
+            }
+          }
+          if (bestIdx < 0 || bestIdx >= candles.length) continue;
+
+          const isBuy = trade.type === "buy" || trade.type === "cover";
+          const label = trade.type === "buy" ? "B"
+            : trade.type === "sell" ? "S"
+            : trade.type === "short" ? "SH"
+            : "CV";
+
+          markers.push({
+            time: candles[bestIdx].time,
+            position: isBuy ? "belowBar" : "aboveBar",
+            color: isBuy ? "#00C805" : "#FF5252",
+            shape: isBuy ? "arrowUp" : "arrowDown",
+            text: `${label} ${trade.shares.toFixed(1)}`,
+          });
+        }
+      }
+
+      // Sort markers by time (required by lightweight-charts)
+      markers.sort((a, b) => (a.time as number) - (b.time as number));
+
       if (markers.length > 0) {
         markersPluginRef.current = createSeriesMarkers(candlestickSeries, markers);
         markersRef.current = markers;
@@ -543,7 +595,7 @@ export default function CandlestickChart({
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [ticker, language, candles, volumes, isIntraday, candleMeta]);
+  }, [ticker, language, candles, volumes, isIntraday, candleMeta, trades]);
 
   // Add horizontal line
   const addHorizontalLine = useCallback(
