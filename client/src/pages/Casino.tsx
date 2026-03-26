@@ -148,11 +148,11 @@ function useCardCount(hand: Card[] | undefined): number {
 function useDealerReveal(game: any) {
   const [revealed, setRevealed] = useState<Card[]>([]);
   const prevStatusRef = useRef<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Clear any pending reveal timer
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = undefined; }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
 
     if (!game || !game.dealerHand || game.dealerHand.length === 0) {
       setRevealed([]);
@@ -179,7 +179,7 @@ function useDealerReveal(game: any) {
           idx++;
           if (idx > hand.length) {
             clearInterval(timerRef.current);
-            timerRef.current = undefined;
+            timerRef.current = null;
             return;
           }
           setRevealed(hand.slice(0, idx));
@@ -195,7 +195,7 @@ function useDealerReveal(game: any) {
     prevStatusRef.current = game.status;
 
     return () => {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = undefined; }
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
   }, [game?.status, game?.id]);
 
