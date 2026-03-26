@@ -89,23 +89,23 @@ export async function seedCosmeticsIfEmpty() {
     { type: "name_effect", name: "Amber", tier: "common", price: 18, css: "text-amber-500", desc: "Warm glow" },
 
     // ─── NAME EFFECTS: Rare ($35-60) ───
-    { type: "name_effect", name: "Sunset", tier: "rare", price: 35, css: "bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent", desc: "Warm fade" },
-    { type: "name_effect", name: "Ocean Wave", tier: "rare", price: 40, css: "bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent", desc: "Cool and fluid" },
-    { type: "name_effect", name: "Toxic", tier: "rare", price: 45, css: "bg-gradient-to-r from-lime-400 to-green-600 bg-clip-text text-transparent", desc: "Radioactive energy" },
+    { type: "name_effect", name: "Sunset", tier: "rare", price: 35, css: "inline-block bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent", desc: "Warm fade", extra: "drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]" },
+    { type: "name_effect", name: "Ocean Wave", tier: "rare", price: 40, css: "inline-block bg-gradient-to-r from-blue-600 to-cyan-400 bg-clip-text text-transparent", desc: "Cool and fluid", extra: "drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" },
+    { type: "name_effect", name: "Toxic", tier: "rare", price: 45, css: "inline-block bg-gradient-to-r from-lime-400 to-green-600 bg-clip-text text-transparent", desc: "Radioactive energy", extra: "drop-shadow-[0_0_10px_rgba(163,230,53,0.6)]" },
     { type: "name_effect", name: "Gold Rush", tier: "rare", price: 50, css: "text-yellow-500", desc: "Golden glow", extra: "drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]" },
     { type: "name_effect", name: "Neon Pink", tier: "rare", price: 55, css: "text-pink-400", desc: "Hot pink glow", extra: "drop-shadow-[0_0_10px_rgba(244,114,182,0.8)]" },
     { type: "name_effect", name: "Ice Cold", tier: "rare", price: 60, css: "text-cyan-300", desc: "Frosty aura", extra: "drop-shadow-[0_0_12px_rgba(103,232,249,0.7)]" },
 
     // ─── NAME EFFECTS: Epic ($120-200) ───
     { type: "name_effect", name: "Rainbow Cycle", tier: "epic", price: 120, css: "text-red-400 animate-[rainbow_3s_linear_infinite]", desc: "Full spectrum shift" },
-    { type: "name_effect", name: "Shimmer", tier: "epic", price: 150, css: "bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 bg-[length:200%_100%] bg-clip-text text-transparent animate-[shimmer_2s_linear_infinite]", desc: "Metallic sheen" },
-    { type: "name_effect", name: "Inferno", tier: "epic", price: 180, css: "bg-gradient-to-t from-red-600 via-orange-500 to-yellow-400 bg-clip-text text-transparent", desc: "Flames rising" },
+    { type: "name_effect", name: "Shimmer", tier: "epic", price: 150, css: "inline-block bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400 bg-[length:200%_100%] bg-clip-text text-transparent animate-[shimmer_2s_linear_infinite]", desc: "Metallic sheen" },
+    { type: "name_effect", name: "Inferno", tier: "epic", price: 180, css: "inline-block bg-gradient-to-t from-red-600 via-orange-500 to-yellow-400 bg-clip-text text-transparent", desc: "Flames rising", extra: "drop-shadow-[0_0_15px_rgba(251,146,60,0.7)]" },
     { type: "name_effect", name: "Electric Storm", tier: "epic", price: 200, css: "text-blue-300 animate-[lightning_0.5s_ease-in-out_infinite]", desc: "Lightning strikes", extra: "drop-shadow-[0_0_25px_rgba(147,197,253,1)]" },
 
     // ─── NAME EFFECTS: Legendary ($350-500) ───
-    { type: "name_effect", name: "Diamond Sparkle", tier: "legendary", price: 350, css: "bg-gradient-to-br from-blue-100 via-white to-blue-100 bg-clip-text text-transparent animate-[sparkle_3s_linear_infinite]", desc: "VIP sparkle", extra: "drop-shadow-[0_0_30px_rgba(255,255,255,1)]" },
-    { type: "name_effect", name: "Molten Gold", tier: "legendary", price: 400, css: "bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 bg-[length:200%_100%] bg-clip-text text-transparent animate-[flow_2s_linear_infinite]", desc: "Liquid metal", extra: "drop-shadow-[0_0_35px_rgba(234,179,8,1)]" },
-    { type: "name_effect", name: "Cosmic Void", tier: "legendary", price: 500, css: "bg-gradient-to-r from-purple-900 via-pink-500 to-purple-900 bg-[length:300%_100%] bg-clip-text text-transparent animate-[cosmic_4s_ease-in-out_infinite]", desc: "Nebula aura", extra: "drop-shadow-[0_0_40px_rgba(168,85,247,1)]" },
+    { type: "name_effect", name: "Diamond Sparkle", tier: "legendary", price: 350, css: "inline-block bg-gradient-to-br from-blue-200 via-blue-100 to-blue-200 bg-clip-text text-transparent animate-[sparkle_3s_linear_infinite]", desc: "VIP sparkle", extra: "drop-shadow-[0_0_30px_rgba(255,255,255,1)]" },
+    { type: "name_effect", name: "Molten Gold", tier: "legendary", price: 400, css: "inline-block bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 bg-[length:200%_100%] bg-clip-text text-transparent animate-[flow_2s_linear_infinite]", desc: "Liquid metal", extra: "drop-shadow-[0_0_35px_rgba(234,179,8,1)]" },
+    { type: "name_effect", name: "Cosmic Void", tier: "legendary", price: 500, css: "inline-block bg-gradient-to-r from-purple-700 via-pink-500 to-purple-700 bg-[length:300%_100%] bg-clip-text text-transparent animate-[cosmic_4s_ease-in-out_infinite]", desc: "Nebula aura", extra: "drop-shadow-[0_0_40px_rgba(168,85,247,1)]" },
   ];
 
   for (const c of items) {

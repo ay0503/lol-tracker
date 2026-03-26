@@ -10,34 +10,19 @@ import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 const TIER_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 } as Record<string, number>;
 
-function TierBadge({ tier }: { tier: string }) {
-  const cls =
-    tier === "legendary" ? "bg-gradient-to-r from-amber-600/80 to-yellow-500/80 text-yellow-100 border-yellow-400/60" :
-    tier === "epic" ? "bg-gradient-to-r from-purple-900/70 to-violet-900/70 text-purple-300 border-purple-500/40" :
-    tier === "rare" ? "bg-blue-950/50 text-blue-400 border-blue-500/30" :
-    "bg-zinc-800 text-zinc-400 border-zinc-700";
-  return (
-    <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold uppercase border ${cls}`}>
-      {tier}
-    </span>
-  );
-}
+const TIER_BORDER: Record<string, string> = {
+  legendary: "border-yellow-500/40 shadow-lg shadow-yellow-500/10",
+  epic: "border-purple-500/30 shadow-md shadow-purple-500/10",
+  rare: "border-blue-500/20",
+  common: "border-zinc-800",
+};
 
-function TitleBadge({ name, cssClass }: { name: string; cssClass: string | null }) {
-  return (
-    <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold ${cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
-      {name}
-    </span>
-  );
-}
-
-function NamePreview({ name, cssClass }: { name: string; cssClass: string | null }) {
-  return (
-    <span className={`text-sm font-bold ${cssClass || "text-zinc-300"}`}>
-      {name}
-    </span>
-  );
-}
+const TIER_BADGE: Record<string, string> = {
+  legendary: "bg-gradient-to-r from-amber-600/80 to-yellow-500/80 text-yellow-100 border-yellow-400/60",
+  epic: "bg-gradient-to-r from-purple-900/70 to-violet-900/70 text-purple-300 border-purple-500/40",
+  rare: "bg-blue-950/50 text-blue-400 border-blue-500/30",
+  common: "bg-zinc-800 text-zinc-500 border-zinc-700",
+};
 
 export default function CasinoShop() {
   const { language } = useTranslation();
@@ -82,7 +67,7 @@ export default function CasinoShop() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
-      <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
+      <div className="container py-6 sm:py-8 max-w-2xl mx-auto px-4">
         <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
           <ArrowLeft className="w-3.5 h-3.5" /> Casino
         </Link>
@@ -103,59 +88,50 @@ export default function CasinoShop() {
         </div>
 
         {/* Equipped Preview */}
-        {isAuthenticated && (
-          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-4 mb-5">
-            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">
-              {language === "ko" ? "내 프로필" : "Your Profile"}
+        {isAuthenticated && (equipped?.title || equipped?.nameEffect) && (
+          <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3 mb-4">
+            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-1.5">
+              {language === "ko" ? "내 프로필" : "Equipped"}
             </p>
             <div className="flex items-center gap-2">
-              <NamePreview name={myName} cssClass={equipped?.nameEffect?.cssClass ?? null} />
+              <span className={`text-sm font-bold ${equipped?.nameEffect?.cssClass || "text-zinc-300"}`}>
+                {myName}
+              </span>
               {equipped?.title && (
-                <TitleBadge name={equipped.title.name} cssClass={equipped.title.cssClass} />
+                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${equipped.title.cssClass || "bg-zinc-800 text-zinc-400"}`}>
+                  {equipped.title.name}
+                </span>
               )}
             </div>
-            {equipped?.title || equipped?.nameEffect ? (
-              <div className="flex gap-2 mt-2">
-                {equipped?.title && (
-                  <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
-                    className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">
-                    {language === "ko" ? "칭호 해제" : "Unequip title"}
-                  </button>
-                )}
-                {equipped?.nameEffect && (
-                  <button onClick={() => equipMutation.mutate({ type: "name_effect", cosmeticId: null })}
-                    className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">
-                    {language === "ko" ? "효과 해제" : "Unequip effect"}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <p className="text-[9px] text-zinc-600 mt-1">
-                {language === "ko" ? "아이템을 장착하면 리더보드에 표시됩니다" : "Equip items to show on leaderboard"}
-              </p>
-            )}
+            <div className="flex gap-2 mt-1.5">
+              {equipped?.title && (
+                <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
+                  className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">Unequip title</button>
+              )}
+              {equipped?.nameEffect && (
+                <button onClick={() => equipMutation.mutate({ type: "name_effect", cosmeticId: null })}
+                  className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">Unequip effect</button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Tabs */}
         <div className="flex gap-1.5 mb-4">
           {([["all", "All", "전체"], ["title", "Titles", "칭호"], ["name_effect", "Effects", "효과"]] as const).map(([key, en, ko]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
+            <button key={key} onClick={() => setTab(key)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
                 tab === key
                   ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
                   : "bg-zinc-800/50 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
-              }`}
-            >
+              }`}>
               {language === "ko" ? ko : en}
             </button>
           ))}
         </div>
 
-        {/* Catalog */}
-        <div className="space-y-2">
+        {/* Card Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
           {filtered.map((item, i) => {
             const isOwned = ownedIds.has(item.id);
             const isEquipped = equipped?.title?.id === item.id || equipped?.nameEffect?.id === item.id;
@@ -166,65 +142,73 @@ export default function CasinoShop() {
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className={`border rounded-xl p-3 transition-all ${
-                  item.tier === "legendary" ? "border-yellow-500/30 bg-yellow-500/[0.03]" :
-                  item.tier === "epic" ? "border-purple-500/20 bg-purple-500/[0.02]" :
-                  "border-zinc-800/80 bg-zinc-900/40"
-                }`}
+                transition={{ delay: i * 0.02 }}
+                className={`relative rounded-xl border overflow-hidden transition-all ${TIER_BORDER[item.tier] || "border-zinc-800"}`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <TierBadge tier={item.tier} />
-                      <span className="text-[9px] text-zinc-500 uppercase">{item.type === "title" ? "Title" : "Effect"}</span>
-                      {item.isLimited && item.stock >= 0 && (
-                        <span className="text-[8px] text-red-400 font-bold">{item.stock} left</span>
-                      )}
+                {/* Tier badge — top right */}
+                <div className="absolute top-1.5 right-1.5 z-10">
+                  <span className={`px-1 py-0.5 rounded text-[6px] font-bold uppercase border ${TIER_BADGE[item.tier] || TIER_BADGE.common}`}>
+                    {item.tier}
+                  </span>
+                </div>
+
+                {/* Limited stock */}
+                {item.isLimited && item.stock >= 0 && (
+                  <div className="absolute top-1.5 left-1.5 z-10">
+                    <span className="px-1 py-0.5 rounded text-[6px] font-bold text-red-400 bg-red-500/15 border border-red-500/30">
+                      {item.stock} left
+                    </span>
+                  </div>
+                )}
+
+                {/* Preview Area */}
+                <div className="bg-zinc-950 px-3 py-4 flex items-center justify-center min-h-[80px]">
+                  {item.type === "title" ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-zinc-500 font-medium">{myName}</span>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${item.cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
+                        {item.name}
+                      </span>
                     </div>
+                  ) : (
+                    <span className={`text-lg sm:text-xl font-bold ${item.cssClass || "text-zinc-300"}`}>
+                      {myName}
+                    </span>
+                  )}
+                </div>
 
-                    {/* Preview */}
-                    {item.type === "title" ? (
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs text-zinc-300">{myName}</span>
-                        <TitleBadge name={item.name} cssClass={item.cssClass} />
-                      </div>
-                    ) : (
-                      <NamePreview name={item.name} cssClass={item.cssClass} />
-                    )}
-
+                {/* Info Bar */}
+                <div className="bg-zinc-900/80 px-2.5 py-2 space-y-1.5">
+                  <div>
+                    <p className="text-[10px] text-zinc-300 font-semibold truncate">{item.name}</p>
                     {item.description && (
-                      <p className="text-[9px] text-zinc-600 mt-0.5">{item.description}</p>
+                      <p className="text-[8px] text-zinc-600 truncate">{item.description}</p>
                     )}
                   </div>
 
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <span className="text-xs font-mono font-bold text-white">${item.price.toFixed(0)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold text-white">${item.price.toFixed(0)}</span>
                     {isOwned ? (
                       isEquipped ? (
-                        <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 font-bold">
-                          <Check className="w-3 h-3" /> Equipped
+                        <span className="flex items-center gap-0.5 text-[8px] text-emerald-400 font-bold">
+                          <Check className="w-2.5 h-2.5" /> On
                         </span>
                       ) : (
                         <button
                           onClick={() => equipMutation.mutate({ type: item.type as "title" | "name_effect", cosmeticId: item.id })}
                           disabled={equipMutation.isPending}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 text-[9px] font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40"
-                        >
-                          {equipMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Equip"}
+                          className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 text-[8px] font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40">
+                          Equip
                         </button>
                       )
                     ) : (
                       <button
                         onClick={() => purchaseMutation.mutate({ cosmeticId: item.id })}
                         disabled={purchaseMutation.isPending || !canAfford || !isAuthenticated}
-                        className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-colors disabled:opacity-30 ${
-                          canAfford
-                            ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
-                            : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
-                        }`}
-                      >
-                        {purchaseMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Buy"}
+                        className={`px-2 py-0.5 rounded text-[8px] font-bold transition-colors disabled:opacity-30 ${
+                          canAfford ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-zinc-800 text-zinc-600"
+                        }`}>
+                        Buy
                       </button>
                     )}
                   </div>
@@ -232,14 +216,14 @@ export default function CasinoShop() {
               </motion.div>
             );
           })}
-
-          {filtered.length === 0 && (
-            <div className="text-center py-12">
-              <ShoppingBag className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-              <p className="text-xs text-zinc-600">No items in this category</p>
-            </div>
-          )}
         </div>
+
+        {filtered.length === 0 && (
+          <div className="text-center py-12">
+            <ShoppingBag className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+            <p className="text-xs text-zinc-600">No items in this category</p>
+          </div>
+        )}
 
         <p className="text-center text-[9px] text-zinc-700 mt-6 font-mono">
           {language === "ko" ? "카지노 캐시로 구매 · 리더보드에 표시" : "Buy with casino cash · Shows on leaderboard"}
