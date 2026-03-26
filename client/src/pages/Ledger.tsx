@@ -1,11 +1,12 @@
 /*
- * Ledger: Public trade ledger showing all trades from all users.
+ * Ledger: Public trade ledger with Trades and Dividends tabs.
  * Full i18n support (EN/KR).
  */
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins } from "lucide-react";
 import { Link } from "wouter";
 import { TICKERS } from "@/lib/playerData";
 import { formatTimeAgoFromDate, translateTickerDescription } from "@/lib/formatters";
@@ -14,9 +15,17 @@ function getTickerColor(ticker: string): string {
   return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
 }
 
+type LedgerTab = "trades" | "dividends";
+
 export default function Ledger() {
   const { t, language } = useTranslation();
-  const { data: trades, isLoading, refetch, isRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
+  const [tab, setTab] = useState<LedgerTab>("trades");
+  const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
+  const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
+
+  const isLoading = tab === "trades" ? tradesLoading : dividendsLoading;
+  const isRefetching = tab === "trades" ? tradesRefetching : dividendsRefetching;
+  const refetch = tab === "trades" ? refetchTrades : refetchDividends;
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,6 +59,28 @@ export default function Ledger() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-secondary/50 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setTab("trades")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              tab === "trades" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            {language === "ko" ? "거래" : "Trades"}
+          </button>
+          <button
+            onClick={() => setTab("dividends")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              tab === "dividends" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Coins className="w-3.5 h-3.5" />
+            {language === "ko" ? "배당금" : "Dividends"}
+          </button>
+        </div>
+
         {/* Ticker Legend */}
         <div className="flex gap-2 sm:gap-3 mb-6 flex-wrap">
           {TICKERS.map(tk => (
@@ -74,146 +105,195 @@ export default function Ledger() {
               </div>
             ))}
           </div>
-        ) : trades && trades.length > 0 ? (
-          <>
-            {/* Desktop table header - hidden on mobile */}
-            <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-              <div className="col-span-2">{t.ledger.user}</div>
-              <div className="col-span-1">{t.ledger.type}</div>
-              <div className="col-span-2">{t.ledger.ticker}</div>
-              <div className="col-span-2 text-right">{t.ledger.shares}</div>
-              <div className="col-span-2 text-right">{t.ledger.price}</div>
-              <div className="col-span-1 text-right">{t.ledger.total}</div>
-              <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
-            </div>
+        ) : tab === "trades" ? (
+          /* ─── Trades Tab ─── */
+          trades && trades.length > 0 ? (
+            <>
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                <div className="col-span-2">{t.ledger.user}</div>
+                <div className="col-span-1">{t.ledger.type}</div>
+                <div className="col-span-2">{t.ledger.ticker}</div>
+                <div className="col-span-2 text-right">{t.ledger.shares}</div>
+                <div className="col-span-2 text-right">{t.ledger.price}</div>
+                <div className="col-span-1 text-right">{t.ledger.total}</div>
+                <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
+              </div>
 
-            <div className="space-y-1.5">
-              {trades.map((trade, i) => (
-                <motion.div
-                  key={trade.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.02, duration: 0.3 }}
-                >
-                  {/* Desktop row */}
-                  <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                    <div className="col-span-2 flex items-center gap-2 min-w-0">
-                      <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                        <span className="text-[10px] font-bold text-foreground">
-                          {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
-                        {String(trade.userName || t.common.anonymous)}
-                      </span>
-                    </div>
-
-                    <div className="col-span-1">
-                      <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                          trade.type === "buy"
-                            ? "bg-[#00C805]/15 text-[#00C805]"
-                            : "bg-[#FF5252]/15 text-[#FF5252]"
-                        }`}
-                      >
-                        {trade.type === "buy" ? (
-                          <ArrowUpRight className="w-3 h-3" />
-                        ) : (
-                          <ArrowDownRight className="w-3 h-3" />
-                        )}
-                        {trade.type === "buy" ? t.trading.buy : t.trading.sell}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2">
-                      <span
-                        className="text-xs font-bold font-[var(--font-mono)]"
-                        style={{ color: getTickerColor(trade.ticker) }}
-                      >
-                        ${trade.ticker}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2 text-right">
-                      <span className="text-xs text-foreground font-[var(--font-mono)]">
-                        {trade.shares.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2 text-right">
-                      <span className="text-xs text-muted-foreground font-[var(--font-mono)]">
-                        ${trade.pricePerShare.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="col-span-1 text-right">
-                      <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">
-                        ${trade.totalAmount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2 text-right">
-                      <span className="text-[10px] text-muted-foreground">
-                        {formatTimeAgoFromDate(trade.createdAt, language)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Mobile card */}
-                  <div className="sm:hidden bg-card border border-border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
+              <div className="space-y-1.5">
+                {trades.map((trade, i) => (
+                  <motion.div
+                    key={trade.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.02, duration: 0.3 }}
+                  >
+                    {/* Desktop row */}
+                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                      <div className="col-span-2 flex items-center gap-2 min-w-0">
                         <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
                           <span className="text-[10px] font-bold text-foreground">
                             {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">
+                        <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
                           {String(trade.userName || t.common.anonymous)}
                         </span>
-                        <span
-                          className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                            trade.type === "buy"
-                              ? "bg-[#00C805]/15 text-[#00C805]"
-                              : "bg-[#FF5252]/15 text-[#FF5252]"
-                          }`}
-                        >
-                          {trade.type === "buy" ? (
-                            <ArrowUpRight className="w-2.5 h-2.5" />
-                          ) : (
-                            <ArrowDownRight className="w-2.5 h-2.5" />
-                          )}
+                      </div>
+                      <div className="col-span-1">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                          trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                        }`}>
+                          {trade.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                           {trade.type === "buy" ? t.trading.buy : t.trading.sell}
                         </span>
                       </div>
-                      <span className="text-xs text-foreground font-bold font-[var(--font-mono)]">
-                        ${trade.totalAmount.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>
+                      <div className="col-span-2">
+                        <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>
                           ${trade.ticker}
                         </span>
-                        <span className="text-muted-foreground font-[var(--font-mono)]">
-                          {trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-xs text-muted-foreground font-[var(--font-mono)]">${trade.pricePerShare.toFixed(2)}</span>
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-[10px] text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                      </div>
+                    </div>
+
+                    {/* Mobile card */}
+                    <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-bold text-foreground">
+                              {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">
+                            {String(trade.userName || t.common.anonymous)}
+                          </span>
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                          }`}>
+                            {trade.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                            {trade.type === "buy" ? t.trading.buy : t.trading.sell}
+                          </span>
+                        </div>
+                        <span className="text-xs text-foreground font-bold font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>${trade.ticker}</span>
+                          <span className="text-muted-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
+                        </div>
+                        <span className="text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-20">
+              <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">{t.ledger.noTrades}</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">{t.ledger.beFirst}</p>
+            </div>
+          )
+        ) : (
+          /* ─── Dividends Tab ─── */
+          dividends && dividends.length > 0 ? (
+            <>
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                <div className="col-span-2">{t.ledger.user}</div>
+                <div className="col-span-2">{t.ledger.ticker}</div>
+                <div className="col-span-4">{language === "ko" ? "사유" : "Reason"}</div>
+                <div className="col-span-2 text-right">{language === "ko" ? "지급액" : "Payout"}</div>
+                <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
+              </div>
+
+              <div className="space-y-1.5">
+                {dividends.map((div, i) => (
+                  <motion.div
+                    key={div.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.02, duration: 0.3 }}
+                  >
+                    {/* Desktop row */}
+                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                      <div className="col-span-2 flex items-center gap-2 min-w-0">
+                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                          <Coins className="w-3 h-3 text-green-400" />
+                        </div>
+                        <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
+                          {div.userName}
                         </span>
                       </div>
-                      <span className="text-muted-foreground">
-                        {formatTimeAgoFromDate(trade.createdAt, language)}
-                      </span>
+                      <div className="col-span-2">
+                        <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>
+                          ${div.ticker}
+                        </span>
+                      </div>
+                      <div className="col-span-4">
+                        <span className="text-[10px] text-muted-foreground truncate block">
+                          {div.reason}
+                        </span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">
+                          +${div.totalPayout.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatTimeAgoFromDate(div.createdAt, language)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+
+                    {/* Mobile card */}
+                    <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                            <Coins className="w-3 h-3 text-green-400" />
+                          </div>
+                          <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">
+                            {div.userName}
+                          </span>
+                        </div>
+                        <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">+${div.totalPayout.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>${div.ticker}</span>
+                          <span className="text-muted-foreground truncate max-w-[150px]">{div.reason}</span>
+                        </div>
+                        <span className="text-muted-foreground shrink-0">{formatTimeAgoFromDate(div.createdAt, language)}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-20">
+              <Coins className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">
+                {language === "ko" ? "아직 배당금이 없습니다" : "No dividends yet"}
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                {language === "ko" ? "게임이 끝나면 배당금이 지급됩니다" : "Dividends are paid after each game"}
+              </p>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-20">
-            <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-sm text-muted-foreground">{t.ledger.noTrades}</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">{t.ledger.beFirst}</p>
-          </div>
+          )
         )}
       </div>
     </div>

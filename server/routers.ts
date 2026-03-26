@@ -18,7 +18,7 @@ import {
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
   getRawClient, getDb, toggleAdminHalt,
-  placeBet, getUserBets, getPendingBets,
+  placeBet, getUserBets, getPendingBets, getAllDividends,
 } from "./db";
 import { users, portfolios } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -595,6 +595,21 @@ export const appRouter = router({
              totalAmount: parseFloat(t.totalAmount),
              createdAt: typeof t.createdAt === 'string' && !t.createdAt.endsWith('Z') ? t.createdAt + 'Z' : (t.createdAt ?? null),
            }));
+        }, FIVE_MIN);
+      }),
+    dividends: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(500).default(100) }).optional())
+      .query(async ({ input }) => {
+        const limit = input?.limit ?? 100;
+        return cache.getOrSet(`ledger.dividends.${limit}`, async () => {
+          const raw = await getAllDividends(limit);
+          return raw.map(d => ({
+            id: d.id, userName: String(d.userName ?? "Anonymous"),
+            ticker: d.ticker, shares: parseFloat(d.shares),
+            totalPayout: parseFloat(d.totalPayout),
+            reason: d.reason,
+            createdAt: typeof d.createdAt === 'string' && !d.createdAt.endsWith('Z') ? d.createdAt + 'Z' : (d.createdAt ?? null),
+          }));
         }, FIVE_MIN);
       }),
   }),

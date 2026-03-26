@@ -558,6 +558,19 @@ export async function getUserDividends(userId: number, limit = 50) {
   return db.select().from(dividends).where(eq(dividends.userId, userId)).orderBy(desc(dividends.createdAt)).limit(limit);
 }
 
+export async function getAllDividends(limit = 100) {
+  const db = await getDb();
+  return db.select({
+    id: dividends.id, userId: dividends.userId,
+    userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
+    ticker: dividends.ticker, shares: dividends.shares,
+    dividendPerShare: dividends.dividendPerShare, totalPayout: dividends.totalPayout,
+    reason: dividends.reason, matchId: dividends.matchId,
+    createdAt: dividends.createdAt,
+  }).from(dividends).leftJoin(users, eq(dividends.userId, users.id))
+    .orderBy(desc(dividends.createdAt)).limit(limit);
+}
+
 // ─── Matches ───
 
 export async function getProcessedMatchIds() {
