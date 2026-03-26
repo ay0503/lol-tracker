@@ -3,6 +3,32 @@
 > This document gives an AI assistant complete context to work on the project.
 > Read this FIRST before making any changes.
 
+## Required Reading (in order)
+
+Before making ANY change, read these files:
+
+1. **This file** — Project overview, structure, gotchas
+2. **AGENTS.md** — Strict NEVER/ALWAYS rules (will prevent production crashes)
+3. **MEMORY.md** — Architecture decisions and key technical patterns
+4. **.claude/skills/pitfalls.md** — Every known bug with BAD/GOOD examples
+
+For specific work areas:
+- Casino games → `.claude/skills/casino-guide.md` + `.claude/rules/templates.md`
+- Server/API → `.claude/skills/server-guide.md`
+- Frontend/UI → `.claude/skills/client-guide.md`
+- Pre-commit → `.claude/rules/checks.md`
+- Code standards → `.claude/rules/contributing.md`
+
+## CRITICAL RULES (memorize these)
+
+1. **NEVER use `t` as a variable/parameter name** — causes TDZ crash after esbuild minification conflicts with `useTranslation()`
+2. **Dynamic Tailwind classes from DB don't render** — use inline styles via `StyledName` registry instead
+3. **`Array.from()` for Set/Map iteration** — `for (const x of mySet)` fails TS compilation
+4. **No `.returning()` on Drizzle queries** — not supported by libSQL, use select after insert
+5. **`useRef<T>()` needs initial value** — use `useRef<T | undefined>(undefined)`
+6. **No self-referencing queries** — `const { data: x } = useQuery({ refetchInterval: x ? ... })` causes TDZ. Use callback: `(query) => query.state.data`
+7. **Always commit AND push** — never leave unpushed commits
+
 ## What This Is
 
 **$DORI LP Tracker** is a Robinhood-style fantasy stock trading + casino platform where the "stock" tracks a real League of Legends player's ranked LP. Built for a friend group (~12 users).

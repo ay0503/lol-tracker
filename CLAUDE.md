@@ -1,5 +1,8 @@
 # $DORI LP Tracker — AI Coding Assistant Onboarding
 
+> **Start here**: Read `CLAUDE_CONTEXT.md` for full project context, required reading list, and critical rules.
+> This file is a quick reference. For rules, see `AGENTS.md`. For deep guides, see `.claude/skills/`.
+
 ## Project Overview
 Real-time League of Legends rank tracking app with trading platform and casino games. Users bet on a player's performance, trade ETFs based on rank changes, and play casino games with virtual currency.
 
