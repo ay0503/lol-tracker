@@ -84,6 +84,16 @@ function recordCasinoGame(userId: number): void {
   releaseCasinoLock(userId);
 }
 
+async function recordCasinoGameResult(userId: number, gameType: string, bet: number, payout: number, result: string, multiplier?: number) {
+  try {
+    const client = getRawClient();
+    await client.execute({
+      sql: `INSERT INTO casino_game_history (userId, gameType, bet, payout, result, multiplier) VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [userId, gameType, bet.toFixed(2), payout.toFixed(2), result, multiplier?.toFixed(2) ?? null],
+    });
+  } catch { /* table may not exist yet */ }
+}
+
 
 export const appRouter = router({
   system: systemRouter,
@@ -1356,6 +1366,26 @@ export const appRouter = router({
         return { claimed: false };
       }
     }),
+    gameHistory: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(200).default(50), gameType: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const client = getRawClient();
+        try {
+          const limit = input?.limit ?? 50;
+          const gameType = input?.gameType;
+          const sql = gameType
+            ? `SELECT * FROM casino_game_history WHERE userId = ? AND gameType = ? ORDER BY createdAt DESC LIMIT ?`
+            : `SELECT * FROM casino_game_history WHERE userId = ? ORDER BY createdAt DESC LIMIT ?`;
+          const args = gameType ? [ctx.user.id, gameType, limit] : [ctx.user.id, limit];
+          const result = await client.execute({ sql, args });
+          return (result.rows as any[]).map(r => ({
+            id: Number(r.id), gameType: String(r.gameType),
+            bet: parseFloat(String(r.bet)), payout: parseFloat(String(r.payout)),
+            result: String(r.result), multiplier: r.multiplier ? parseFloat(String(r.multiplier)) : null,
+            createdAt: String(r.createdAt),
+          }));
+        } catch { return []; }
+      }),
     /** Get current deposit multiplier (public) */
     depositMultiplier: publicProcedure.query(async () => {
       try {
