@@ -6,6 +6,7 @@ import { useState } from "react";
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 const GAMES = [
   { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 – $5", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
@@ -306,6 +307,8 @@ export default function Casino() {
         <p className="text-center text-[9px] text-zinc-700 font-mono">
           {language === "ko" ? "가상 캐시 · 실제 돈 아님" : "Virtual cash · Not real money"}
         </p>
+
+        <GamblingDisclaimer />
       </div>
     </div>
   );

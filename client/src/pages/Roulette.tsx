@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 const RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 
@@ -570,6 +571,8 @@ export default function Roulette() {
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "유럽식 룰렛 · 2.7% 하우스 엣지 · 최대 $250 지급" : "European · 2.7% edge · $250 max payout"}
         </p>
+
+        <GamblingDisclaimer />
       </div>
     </div>
   );

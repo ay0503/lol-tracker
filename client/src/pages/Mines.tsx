@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 const GRID_SIZE = 25;
 
@@ -298,6 +299,8 @@ export default function Mines() {
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "2% 하우스 엣지 · 최대 $250 지급" : "2% house edge · $250 max payout"}
         </p>
+
+        <GamblingDisclaimer />
       </div>
     </div>
   );

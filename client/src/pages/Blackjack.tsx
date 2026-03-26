@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Dice5, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 interface Card {
   suit: string;
@@ -605,6 +606,7 @@ export default function Casino() {
             : "Dealer stands 17 · BJ pays 3:2 · Double on first hand"}
         </p>
 
+        <GamblingDisclaimer />
       </div>
     </div>
   );

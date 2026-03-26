@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 const CHIPS = [0.10, 0.25, 0.50, 1, 2, 5] as const;
 const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
@@ -545,6 +546,8 @@ export default function Crash() {
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "1% 하우스 엣지 | 최대 $500 지급" : "1% house edge | $500 max payout"}
         </p>
+
+        <GamblingDisclaimer />
       </div>
     </div>
   );

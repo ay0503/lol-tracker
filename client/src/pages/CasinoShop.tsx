@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Loader2, Check, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 
 const TIER_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 } as Record<string, number>;
 
@@ -243,6 +244,8 @@ export default function CasinoShop() {
         <p className="text-center text-[9px] text-zinc-700 mt-6 font-mono">
           {language === "ko" ? "카지노 캐시로 구매 · 리더보드에 표시" : "Buy with casino cash · Shows on leaderboard"}
         </p>
+
+        <GamblingDisclaimer />
       </div>
     </div>
   );
