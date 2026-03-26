@@ -5,6 +5,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import AppNav from "@/components/AppNav";
+import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -127,6 +128,7 @@ export default function VideoPoker() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
+      <CasinoSubNav />
       <div className="container py-6 sm:py-8 max-w-2xl mx-auto">
         
 
