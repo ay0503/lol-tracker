@@ -305,7 +305,7 @@ export default function Crash() {
 
   const statusQuery = trpc.casino.crash.status.useQuery(undefined, {
     enabled: isAuthenticated && phase === "flying",
-    refetchInterval: 400,
+    refetchInterval: 1000,
   });
 
   useEffect(() => {

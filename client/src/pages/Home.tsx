@@ -21,6 +21,7 @@ import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
+import AppNav from "@/components/AppNav";
 import BettingPanel from "@/components/BettingPanel";
 import { TickerProvider } from "@/contexts/TickerContext";
 import NotificationBell from "@/components/NotificationBell";
@@ -171,13 +172,13 @@ function LiveGameBanner() {
       transition={{ duration: 0.4 }}
     >
       <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
-        {/* Animated pulse background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 animate-pulse" />
+        {/* Subtle background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10" />
 
         <div className="relative flex items-center gap-4 px-5 py-4">
           {/* Pulsing game icon */}
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
+            <div className="absolute inset-0 rounded-full bg-primary/20" />
             <div className="relative p-2.5 rounded-full bg-primary/20 border border-primary/40">
               <Gamepad2 className="w-5 h-5 text-primary" />
             </div>
@@ -308,7 +309,7 @@ function PostGameBanner() {
           </div>
 
           {/* Stats row */}
-          <div className="flex items-center gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
             {/* LP Change */}
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t.common.lpChange}</span>
@@ -324,7 +325,7 @@ function PostGameBanner() {
             </div>
 
             {/* Divider */}
-            <div className="w-px h-12 bg-border/50" />
+            <div className="w-px h-12 bg-border/50 hidden sm:block" />
 
             {/* Price Impact */}
             <div className="flex flex-col">
@@ -345,7 +346,7 @@ function PostGameBanner() {
             {/* Rank Change */}
             {(event.tierBefore !== event.tierAfter || event.divisionBefore !== event.divisionAfter) && (
               <>
-                <div className="w-px h-12 bg-border/50" />
+                <div className="w-px h-12 bg-border/50 hidden sm:block" />
                 <div className="flex flex-col">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t.common.rank}</span>
                   <span className="text-sm font-semibold text-foreground">
@@ -672,226 +673,8 @@ export default function Home() {
         }}
       />
 
-      {/* Top nav bar */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex items-center justify-between h-14">
-          {/* Left: Logo + Desktop nav links */}
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            >
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-                $DORI
-              </span>
-            </Link>
-            <div className="hidden md:flex items-center gap-1 ml-2">
-              <Link href="/ledger" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                <BookOpen className="w-3.5 h-3.5" />
-                {t.nav.ledger}
-              </Link>
-              <Link href="/leaderboard" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                <Crown className="w-3.5 h-3.5" />
-                {t.nav.leaderboard}
-              </Link>
-              <Link href="/news" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                <Newspaper className="w-3.5 h-3.5" />
-                {t.nav.news}
-              </Link>
-              <Link href="/sentiment" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                <MessageCircle className="w-3.5 h-3.5" />
-                {t.nav.sentiment}
-              </Link>
-              <Link href="/casino" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30 transition-all">
-                <Gamepad2 className="w-3.5 h-3.5" />
-                Casino
-              </Link>
-              {isAuthenticated && (
-                <Link href="/portfolio" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                  <Wallet className="w-3.5 h-3.5" />
-                  {t.nav.portfolio}
-                </Link>
-              )}
-              {user?.role === "admin" && (
-                <Link href="/admin" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30 transition-all">
-                  <Shield className="w-3.5 h-3.5" />
-                  Admin
-                </Link>
-              )}
-            </div>
-          </div>
+      <AppNav />
 
-          {/* Right: Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <a
-              href="https://op.gg/lol/summoners/na/%EB%AA%A9%EB%8F%84%EB%A6%AC%20%EB%8F%84%EB%A7%88%EB%B1%80-dori"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors font-[var(--font-mono)] hidden md:inline"
-            >
-              OP.GG
-            </a>
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              S2026
-            </div>
-            {isAuthenticated ? (
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="hidden sm:flex items-center gap-1.5 text-xs text-foreground">
-                  {isEditingName ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        maxLength={50}
-                        className="w-24 px-1.5 py-0.5 rounded bg-secondary border border-border text-xs text-foreground font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && editName.trim()) {
-                            updateNameMutation.mutate({ displayName: editName.trim() });
-                          } else if (e.key === "Escape") {
-                            setIsEditingName(false);
-                          }
-                        }}
-                      />
-                      <button onClick={() => { if (editName.trim()) updateNameMutation.mutate({ displayName: editName.trim() }); }} className="p-0.5 text-[#00C805] hover:bg-secondary rounded">
-                        <Check className="w-3 h-3" />
-                      </button>
-                      <button onClick={() => setIsEditingName(false)} className="p-0.5 text-[#FF5252] hover:bg-secondary rounded">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <User className="w-3.5 h-3.5" />
-                      <span className="font-[var(--font-mono)]">
-                        {(user as any)?.displayName || user?.name || t.common.trader}
-                      </span>
-                      <button
-                        onClick={() => { setEditName((user as any)?.displayName || user?.name || ""); setIsEditingName(true); }}
-                        className="p-0.5 text-muted-foreground hover:text-foreground rounded"
-                        title={t.common.editDisplayName}
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                </div>
-                <NotificationBell />
-                <LanguageToggle />
-                <ThemeToggleButton />
-                <button
-                  onClick={() => logout()}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:flex items-center gap-1"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-                {/* Mobile hamburger */}
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <LanguageToggle />
-                <ThemeToggleButton />
-                <a
-                  href="/login"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t.nav.signIn}</span>
-                  <span className="sm:hidden"><LogIn className="w-3.5 h-3.5" /></span>
-                </a>
-                {/* Mobile hamburger (unauthenticated) */}
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile slide-down menu */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden overflow-hidden border-t border-border bg-background/95 backdrop-blur-xl"
-            >
-              <div className="container py-3 space-y-1">
-                <Link href="/ledger" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                  <BookOpen className="w-4 h-4" />
-                  {t.nav.ledger}
-                </Link>
-                <Link href="/leaderboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                  <Crown className="w-4 h-4" />
-                  {t.nav.leaderboard}
-                </Link>
-                <Link href="/news" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                  <Newspaper className="w-4 h-4" />
-                  {t.nav.news}
-                </Link>
-                <Link href="/sentiment" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                  <MessageCircle className="w-4 h-4" />
-                  {t.nav.sentiment}
-                </Link>
-                <Link href="/casino" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30 transition-all">
-                  <Gamepad2 className="w-4 h-4" />
-                  Casino
-                </Link>
-                {isAuthenticated && (
-                  <Link href="/portfolio" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all">
-                    <Wallet className="w-4 h-4" />
-                    {t.nav.portfolio}
-                  </Link>
-                )}
-                {user?.role === "admin" && (
-                  <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 transition-all">
-                    <Shield className="w-4 h-4" />
-                    Admin
-                  </Link>
-                )}
-                <a
-                  href="https://op.gg/lol/summoners/na/%EB%AA%A9%EB%8F%84%EB%A6%AC%20%EB%8F%84%EB%A7%88%EB%B1%80-dori"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-                >
-                  <Activity className="w-4 h-4" />
-                  OP.GG
-                </a>
-                {isAuthenticated && (
-                  <div className="border-t border-border pt-2 mt-2">
-                    <div className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-foreground">
-                      <User className="w-4 h-4" />
-                      {(user as any)?.displayName || user?.name || t.common.trader}
-                    </div>
-                    <button
-                      onClick={() => { logout(); setMobileMenuOpen(false); }}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      {t.nav.signOut}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
 
       {/* Main content */}
       <main className="container relative z-10 pb-20">
@@ -933,7 +716,8 @@ export default function Home() {
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ delay: 0.2, duration: 0.5 }}
             className="bg-card border border-border rounded-xl p-3 sm:p-5"
           >
@@ -947,7 +731,8 @@ export default function Home() {
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ delay: 0.3, duration: 0.5 }}
             className="bg-card border border-border rounded-xl p-3 sm:p-5"
           >
@@ -967,7 +752,8 @@ export default function Home() {
         <section className="mt-8">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ delay: 0.4, duration: 0.5 }}
             className="bg-card border border-border rounded-xl p-3 sm:p-5"
           >

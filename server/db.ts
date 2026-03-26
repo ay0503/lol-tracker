@@ -159,6 +159,10 @@ async function withUserLock<T>(userId: number, fn: () => Promise<T>): Promise<T>
     return await fn();
   } finally {
     resolve!();
+    // Clean up lock entry if queue is idle (prevents memory leak)
+    if (entry.queue === nextSlot) {
+      userTradeLocks.delete(userId);
+    }
   }
 }
 
