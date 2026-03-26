@@ -767,9 +767,12 @@ export async function placeBet(userId: number, prediction: "win" | "loss", amoun
       updatedAt: new Date().toISOString(),
     }).where(eq(portfolios.userId, userId));
 
-    const [bet] = await db.insert(bets).values({
+    await db.insert(bets).values({
       userId, prediction, amount: amount.toFixed(2),
-    }).returning();
+    });
+    const [bet] = await db.select().from(bets)
+      .where(and(eq(bets.userId, userId), eq(bets.status, "pending")))
+      .orderBy(desc(bets.createdAt)).limit(1);
 
     return bet;
   });
