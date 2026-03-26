@@ -9,6 +9,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import StyledName from "@/components/StyledName";
 
 const GAMES = [
   { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 – $5", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
@@ -278,12 +279,13 @@ export default function Casino() {
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <RankIcon rank={i + 1} />
-                      <span className={`text-xs font-medium truncate ${(player as any).nameEffect?.cssClass || "text-zinc-300"}`}>{player.userName}</span>
-                      {(player as any).title && (
-                        <span className={`flex-shrink-0 px-1 py-0.5 rounded text-[7px] font-bold ${(player as any).title.cssClass || "bg-zinc-800 text-zinc-400"}`}>
-                          {(player as any).title.name}
-                        </span>
-                      )}
+                      <StyledName
+                        name={player.userName}
+                        nameEffectCss={(player as any).nameEffect?.cssClass}
+                        titleName={(player as any).title?.name}
+                        titleCss={(player as any).title?.cssClass}
+                        className="text-xs truncate"
+                      />
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className={`text-[10px] font-mono flex items-center gap-0.5 ${isProfit ? "text-[#00C805]" : "text-[#FF5252]"}`}>

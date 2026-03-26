@@ -5,6 +5,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award, ChevronDown, ChevronUp, Loader2, Dice5, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import StyledName from "@/components/StyledName";
 
 function getRankIcon(rank: number) {
   if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
@@ -225,7 +226,7 @@ export default function Leaderboard() {
                     <div className="flex items-center gap-3">
                       {getRankIcon(rank)}
                       <div>
-                        <p className="text-sm font-bold text-foreground">{trader.userName}</p>
+                        <StyledName name={trader.userName} nameEffectCss={(trader as any).nameEffect?.cssClass} titleName={(trader as any).title?.name} titleCss={(trader as any).title?.cssClass} className="text-sm" />
                         <div className="flex items-center gap-3 mt-0.5">
                           <span className="text-xs text-muted-foreground">
                             {t.leaderboard.cash}: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(2)}</span>
@@ -276,7 +277,7 @@ export default function Leaderboard() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {getRankIcon(rank)}
-                        <p className="text-sm font-bold text-foreground">{trader.userName}</p>
+                        <StyledName name={trader.userName} nameEffectCss={(trader as any).nameEffect?.cssClass} titleName={(trader as any).title?.name} titleCss={(trader as any).title?.cssClass} className="text-sm" />
                       </div>
                       <div className="flex items-center gap-2">
                         <p className="text-base font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
@@ -366,14 +367,13 @@ export default function Leaderboard() {
                     <div className="flex items-center gap-3">
                       {getRankIcon(rank)}
                       <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className={`text-sm font-bold ${(player as any).nameEffect?.cssClass || "text-foreground"}`}>{player.userName}</p>
-                          {(player as any).title && (
-                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold ${(player as any).title.cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
-                              {(player as any).title.name}
-                            </span>
-                          )}
-                        </div>
+                        <StyledName
+                          name={player.userName}
+                          nameEffectCss={(player as any).nameEffect?.cssClass}
+                          titleName={(player as any).title?.name}
+                          titleCss={(player as any).title?.cssClass}
+                          className="text-sm"
+                        />
                         <span className="text-[10px] text-muted-foreground">
                           {language === "ko" ? "시작" : "Started"}: $20.00
                         </span>

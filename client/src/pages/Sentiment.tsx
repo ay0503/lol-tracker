@@ -9,6 +9,8 @@ import { formatTimeAgoFromDate } from "@/lib/formatters";
 import { ArrowLeft, MessageCircle, TrendingUp, TrendingDown, Minus, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import StyledName from "@/components/StyledName";
+import { useCosmetics } from "@/hooks/useCosmetics";
 
 function getSentimentConfig(t: any) {
   return {
@@ -25,6 +27,7 @@ export default function Sentiment() {
   const [content, setContent] = useState("");
   const [sentiment, setSentiment] = useState<"bullish" | "bearish" | "neutral">("bullish");
   const [ticker, setTicker] = useState<"DORI" | "DDRI" | "TDRI" | "SDRI" | "XDRI">("DORI");
+  const { getCosmetics } = useCosmetics();
 
   const { data: comments, isLoading, refetch } = trpc.comments.list.useQuery({ limit: 50 });
   const postComment = trpc.comments.post.useMutation({
@@ -214,7 +217,7 @@ export default function Sentiment() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
-                        <span className="text-xs font-bold text-foreground">{comment.userName}</span>
+                        <StyledName name={comment.userName} nameEffectCss={getCosmetics(comment.userId).nameEffect?.cssClass} showTitle={false} className="text-xs" />
                         {comment.ticker && (
                           <span className="text-[10px] sm:text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
                             ${comment.ticker}

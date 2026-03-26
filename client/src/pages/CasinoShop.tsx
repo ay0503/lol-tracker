@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Check, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import StyledName, { TitleBadge, EffectPreview } from "@/components/StyledName";
 
 const TIER_ORDER = { common: 0, rare: 1, epic: 2, legendary: 3 } as Record<string, number>;
 
@@ -93,16 +94,13 @@ export default function CasinoShop() {
             <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-1.5">
               {language === "ko" ? "내 프로필" : "Equipped"}
             </p>
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-bold ${equipped?.nameEffect?.cssClass || "text-zinc-300"}`}>
-                {myName}
-              </span>
-              {equipped?.title && (
-                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${equipped.title.cssClass || "bg-zinc-800 text-zinc-400"}`}>
-                  {equipped.title.name}
-                </span>
-              )}
-            </div>
+            <StyledName
+              name={myName}
+              nameEffectCss={equipped?.nameEffect?.cssClass}
+              titleName={equipped?.title?.name}
+              titleCss={equipped?.title?.cssClass}
+              className="text-sm"
+            />
             <div className="flex gap-2 mt-1.5">
               {equipped?.title && (
                 <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
@@ -166,14 +164,10 @@ export default function CasinoShop() {
                   {item.type === "title" ? (
                     <div className="flex flex-col items-center gap-1">
                       <span className="text-[10px] text-zinc-500 font-medium">{myName}</span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${item.cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
-                        {item.name}
-                      </span>
+                      <TitleBadge name={item.name} cssClass={item.cssClass} />
                     </div>
                   ) : (
-                    <span className={`text-lg sm:text-xl font-bold ${item.cssClass || "text-zinc-300"}`}>
-                      {myName}
-                    </span>
+                    <EffectPreview name={myName} cssClass={item.cssClass} />
                   )}
                 </div>
 

@@ -9,6 +9,8 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
+import StyledName from "@/components/StyledName";
+import { useCosmetics } from "@/hooks/useCosmetics";
 import { TICKERS } from "@/lib/playerData";
 import { formatTimeAgoFromDate, translateTickerDescription } from "@/lib/formatters";
 
@@ -24,6 +26,8 @@ export default function Ledger() {
   const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
   const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
   const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });
+
+  const { getCosmetics } = useCosmetics();
 
   const isLoading = tab === "trades" ? tradesLoading : tab === "dividends" ? dividendsLoading : betsLoading;
   const isRefetching = tab === "trades" ? tradesRefetching : tab === "dividends" ? dividendsRefetching : betsRefetching;
@@ -143,9 +147,12 @@ export default function Ledger() {
                             {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
-                          {String(trade.userName || t.common.anonymous)}
-                        </span>
+                        <StyledName
+                          name={String(trade.userName || t.common.anonymous)}
+                          nameEffectCss={getCosmetics(trade.userId).nameEffect?.cssClass}
+                          showTitle={false}
+                          className="text-xs truncate"
+                        />
                       </div>
                       <div className="col-span-1">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
@@ -183,9 +190,12 @@ export default function Ledger() {
                               {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">
-                            {String(trade.userName || t.common.anonymous)}
-                          </span>
+                          <StyledName
+                            name={String(trade.userName || t.common.anonymous)}
+                            nameEffectCss={getCosmetics(trade.userId).nameEffect?.cssClass}
+                            showTitle={false}
+                            className="text-xs truncate max-w-[80px]"
+                          />
                           <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                             trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                           }`}>
@@ -240,9 +250,7 @@ export default function Ledger() {
                         <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                           <Coins className="w-3 h-3 text-green-400" />
                         </div>
-                        <span className="text-xs text-foreground truncate font-[var(--font-mono)]">
-                          {div.userName}
-                        </span>
+                        <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate" />
                       </div>
                       <div className="col-span-2">
                         <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>
@@ -273,9 +281,7 @@ export default function Ledger() {
                           <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                             <Coins className="w-3 h-3 text-green-400" />
                           </div>
-                          <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">
-                            {div.userName}
-                          </span>
+                          <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate max-w-[80px]" />
                         </div>
                         <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">+${div.totalPayout.toFixed(2)}</span>
                       </div>
@@ -332,7 +338,7 @@ export default function Ledger() {
                           <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
                             <Dice5 className="w-3 h-3 text-yellow-400" />
                           </div>
-                          <span className="text-xs text-foreground truncate font-[var(--font-mono)]">{bet.userName}</span>
+                          <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate" />
                         </div>
                         <div className="col-span-2">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
@@ -374,7 +380,7 @@ export default function Ledger() {
                             <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
                               <Dice5 className="w-3 h-3 text-yellow-400" />
                             </div>
-                            <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">{bet.userName}</span>
+                            <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate max-w-[80px]" />
                             <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                               bet.prediction === "win" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                             }`}>

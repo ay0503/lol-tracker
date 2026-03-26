@@ -1174,6 +1174,23 @@ export const appRouter = router({
       }, TEN_MIN);
     }),
     shop: router({
+      allEquipped: publicProcedure.query(async () => {
+        try {
+          const client = getRawClient();
+          const result = await client.execute(`
+            SELECT ue.userId, t.name as titleName, t.cssClass as titleCss, n.name as nameEffectName, n.cssClass as nameEffectCss
+            FROM user_equipped ue
+            LEFT JOIN cosmetic_items t ON ue.equippedTitle = t.id
+            LEFT JOIN cosmetic_items n ON ue.equippedNameEffect = n.id
+            WHERE ue.equippedTitle IS NOT NULL OR ue.equippedNameEffect IS NOT NULL
+          `);
+          return (result.rows as any[]).map(r => ({
+            userId: Number(r.userId),
+            title: r.titleName ? { name: String(r.titleName), cssClass: r.titleCss ? String(r.titleCss) : null } : null,
+            nameEffect: r.nameEffectName ? { name: String(r.nameEffectName), cssClass: r.nameEffectCss ? String(r.nameEffectCss) : null } : null,
+          }));
+        } catch { return []; }
+      }),
       catalog: publicProcedure.query(async () => {
         const client = getRawClient();
         try {
@@ -1311,7 +1328,31 @@ export const appRouter = router({
         });
 
         rankings.sort((a, b) => b.totalValue - a.totalValue);
-        return rankings;
+
+        // Attach equipped cosmetics to each user
+        try {
+          const client = getRawClient();
+          const equipped = await client.execute(`
+            SELECT ue.userId, t.name as titleName, t.cssClass as titleCss, n.name as nameEffectName, n.cssClass as nameEffectCss
+            FROM user_equipped ue
+            LEFT JOIN cosmetic_items t ON ue.equippedTitle = t.id
+            LEFT JOIN cosmetic_items n ON ue.equippedNameEffect = n.id
+          `);
+          const cosmeticMap = new Map<number, { title: any; nameEffect: any }>();
+          for (const r of equipped.rows as any[]) {
+            cosmeticMap.set(Number(r.userId), {
+              title: r.titleName ? { name: String(r.titleName), cssClass: r.titleCss ? String(r.titleCss) : null } : null,
+              nameEffect: r.nameEffectName ? { name: String(r.nameEffectName), cssClass: r.nameEffectCss ? String(r.nameEffectCss) : null } : null,
+            });
+          }
+          return rankings.map(r => ({
+            ...r,
+            title: cosmeticMap.get(r.userId)?.title ?? null,
+            nameEffect: cosmeticMap.get(r.userId)?.nameEffect ?? null,
+          }));
+        } catch {
+          return rankings.map(r => ({ ...r, title: null, nameEffect: null }));
+        }
       }, TEN_MIN);
     }),
     /** Public user profile: trades + holdings for any user */
