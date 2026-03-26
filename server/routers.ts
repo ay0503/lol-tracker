@@ -1038,22 +1038,12 @@ export const appRouter = router({
     roulette: router({
       spin: protectedProcedure
         .input(z.object({
-          bets: z.array(z.object({
-            type: z.enum(['straight', 'red', 'black', 'odd', 'even', 'high', 'low', 'dozen1', 'dozen2', 'dozen3', 'column1', 'column2', 'column3']),
-            number: z.number().int().min(0).max(36).optional(),
-            amount: z.number().min(0.10).finite(),
-          })).min(1),
+          type: z.enum(["red", "black", "green"]),
+          amount: z.number().min(0.10).max(50).finite(),
         }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
-
-          for (const bet of input.bets) {
-            if (bet.type === 'straight' && (bet.number === undefined || bet.number < 0 || bet.number > 36)) {
-              throw new TRPCError({ code: "BAD_REQUEST", message: "Straight bets require a number (0-36)." });
-            }
-          }
-
-          const totalBet = input.bets.reduce((sum, b) => sum + b.amount, 0);
+          const totalBet = input.amount;
           return withUserLock(ctx.user.id, async () => {
             const portfolio = await getOrCreatePortfolio(ctx.user.id);
             const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
@@ -1063,7 +1053,7 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
             const { spin } = await import("./roulette");
-            const result = spin(input.bets);
+            const result = spin({ type: input.type, amount: input.amount });
 
             if (result.totalPayout > 0) {
               const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
