@@ -11,10 +11,8 @@ const GAMES = [
   { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 – $5", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
   { id: "crash", title: "Crash", titleKo: "크래시", emoji: "🚀", desc: "Cash out before it crashes", descKo: "추락 전에 캐시아웃", bet: "$0.10 – $5", href: "/casino/crash", active: true, bg: "from-orange-950/50 to-red-900/30", border: "border-orange-700/40", badge: "from-orange-500 to-red-600" },
   { id: "roulette", title: "Roulette", titleKo: "룰렛", emoji: "🎡", desc: "European wheel, 2.7% edge", descKo: "유럽식 룰렛", bet: "$0.10 – $5", href: "/casino/roulette", active: true, bg: "from-green-950/50 to-emerald-900/30", border: "border-green-700/40", badge: "from-green-500 to-emerald-600" },
-  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "🃑", desc: "Jacks or Better", descKo: "잭스 오어 베터", bet: "$0.10 – $5", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
-  { id: "dice", title: "Dice", titleKo: "주사위", emoji: "🎲", desc: "Roll over/under", descKo: "높낮이 베팅", bet: "$0.10 – $5", href: "#", active: false, bg: "from-purple-950/30 to-violet-900/15", border: "border-zinc-800/50", badge: "" },
   { id: "mines", title: "Mines", titleKo: "지뢰찾기", emoji: "💣", desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 – $5", href: "/casino/mines", active: true, bg: "from-red-950/50 to-rose-900/30", border: "border-red-700/40", badge: "from-red-500 to-orange-600" },
-  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "♠️", desc: "Jacks or Better", descKo: "잭 이상 페어", bet: "$0.10 – $5", href: "/casino/poker", active: true, bg: "from-purple-950/50 to-indigo-900/30", border: "border-purple-700/40", badge: "from-purple-500 to-indigo-600" },
+  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "🃑", desc: "Jacks or Better", descKo: "잭스 오어 베터", bet: "$0.10 – $5", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
 ];
 
 function RankIcon({ rank }: { rank: number }) {

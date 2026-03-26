@@ -195,27 +195,31 @@ export default function Roulette() {
 
   const spinMutation = trpc.casino.roulette.spin.useMutation({
     onSuccess: (result) => {
-      setIsWheelSpinning(false);
+      // Keep wheel spinning for animation — delay result reveal by 3 seconds
       setWinningNumber(result.number);
-      setLastResult({ totalPayout: result.totalPayout, totalBet: result.totalBet });
       setLastBets([...bets]);
-      refetchBalance();
-      refetchHistory();
 
-      const profit = result.totalPayout - result.totalBet;
-      if (profit > 0) {
-        toast.success(`${result.number} ${result.color === "red" ? "🔴" : result.color === "black" ? "⚫" : "🟢"} +$${result.totalPayout.toFixed(2)}`);
-      } else if (result.totalPayout > 0) {
-        toast(`${result.number} — partial win +$${result.totalPayout.toFixed(2)}`);
-      } else {
-        toast.error(`${result.number} ${result.color === "red" ? "🔴" : result.color === "black" ? "⚫" : "🟢"} -$${result.totalBet.toFixed(2)}`);
-      }
+      setTimeout(() => {
+        setIsWheelSpinning(false);
+        setLastResult({ totalPayout: result.totalPayout, totalBet: result.totalBet });
+        refetchBalance();
+        refetchHistory();
+
+        const profit = result.totalPayout - result.totalBet;
+        if (profit > 0) {
+          toast.success(`${result.number} ${result.color === "red" ? "🔴" : result.color === "black" ? "⚫" : "🟢"} +$${result.totalPayout.toFixed(2)}`);
+        } else if (result.totalPayout > 0) {
+          toast(`${result.number} — partial win +$${result.totalPayout.toFixed(2)}`);
+        } else {
+          toast.error(`${result.number} ${result.color === "red" ? "🔴" : result.color === "black" ? "⚫" : "🟢"} -$${result.totalBet.toFixed(2)}`);
+        }
+      }, 3000);
 
       setTimeout(() => {
         setWinningNumber(null);
         setLastResult(null);
         setBets([]);
-      }, 4000);
+      }, 7000);
     },
     onError: (err) => {
       setIsWheelSpinning(false);
