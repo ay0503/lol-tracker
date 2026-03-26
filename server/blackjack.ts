@@ -127,7 +127,7 @@ export function standGame(userId: number): Omit<BlackjackGame, "deck"> {
   if (!game || game.status !== "playing") throw new Error("No active game");
 
   // Dealer draws until 17+
-  while (handValue(game.dealerHand) < 17) {
+  while (handValue(game.dealerHand) < 22) {
     game.dealerHand.push(game.deck.pop()!);
   }
 
