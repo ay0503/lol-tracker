@@ -203,6 +203,41 @@ function useDealerReveal(game: any) {
   return revealed;
 }
 
+// ─── Delayed Status (show result AFTER card animations) ───
+function useDelayedStatus(game: any) {
+  const [visibleStatus, setVisibleStatus] = useState<string | null>(null);
+  const prevGameId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!game) { setVisibleStatus(null); return; }
+
+    // New game dealt — reset immediately
+    if (game.id !== prevGameId.current) {
+      setVisibleStatus(game.status === "playing" ? null : game.status);
+      prevGameId.current = game.id;
+      return;
+    }
+
+    if (game.status === "playing") {
+      setVisibleStatus(null);
+      return;
+    }
+
+    // Game just ended — delay showing result so cards animate first
+    const delay = game.dealerHand?.length > 2
+      ? (game.dealerHand.length - 1) * 500 + 400  // Sequential dealer reveal
+      : 700; // Single card animation
+
+    const timer = setTimeout(() => {
+      setVisibleStatus(game.status);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [game?.status, game?.id, game?.dealerHand?.length]);
+
+  return visibleStatus;
+}
+
 // ─── Casino Page ───
 export default function Casino() {
   const { language } = useTranslation();
@@ -231,7 +266,9 @@ export default function Casino() {
   const hitMutation = trpc.casino.blackjack.hit.useMutation({
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
-      if (game.status === "player_bust") toast.error("Bust! 💥");
+      if (game.status === "player_bust") {
+        setTimeout(() => toast.error("Bust! 💥"), 700);
+      }
       refetchBalance();
     },
     onError: (err) => { toast.error(err.message); utils.casino.blackjack.active.invalidate(); },
@@ -278,13 +315,16 @@ export default function Casino() {
   const prevPlayerCards = useCardCount(game?.playerHand);
   const prevDealerCards = useCardCount(game?.dealerHand);
   const dealerRevealed = useDealerReveal(game);
+  const visibleStatus = useDelayedStatus(game);
 
   const playerVal = game ? handValue(game.playerHand) : 0;
   const dealerVal = dealerRevealed.length > 0 ? handValue(dealerRevealed) : 0;
   const playerSoft = game ? isSoftHand(game.playerHand) : false;
 
-  const isWin = game?.status === "player_win" || game?.status === "dealer_bust" || game?.status === "blackjack";
-  const isLoss = game?.status === "player_bust" || game?.status === "dealer_win";
+  // Use delayed status for result display (cards animate first)
+  const showResult = visibleStatus && visibleStatus !== "playing";
+  const isWin = visibleStatus === "player_win" || visibleStatus === "dealer_bust" || visibleStatus === "blackjack";
+  const isLoss = visibleStatus === "player_bust" || visibleStatus === "dealer_win";
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -305,13 +345,13 @@ export default function Casino() {
     dealMutation.mutate({ bet: betVal });
   }, [betAmount]);
 
-  const statusConfig = !game ? null :
-    game.status === "blackjack" ? { text: "BLACKJACK!", emoji: "🃏", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
-    game.status === "player_win" ? { text: language === "ko" ? "승리!" : "You Win!", emoji: "🎉", color: "text-[#00C805]", glow: "shadow-[#00C805]/30" } :
-    game.status === "dealer_bust" ? { text: language === "ko" ? "딜러 버스트!" : "Dealer Bust!", emoji: "💥", color: "text-[#00C805]", glow: "shadow-[#00C805]/30" } :
-    game.status === "player_bust" ? { text: language === "ko" ? "버스트!" : "Bust!", emoji: "💀", color: "text-[#FF5252]", glow: "shadow-[#FF5252]/30" } :
-    game.status === "dealer_win" ? { text: language === "ko" ? "딜러 승리" : "Dealer Wins", emoji: "😞", color: "text-[#FF5252]", glow: "shadow-[#FF5252]/30" } :
-    game.status === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
+  const statusConfig = !showResult ? null :
+    visibleStatus === "blackjack" ? { text: "BLACKJACK!", emoji: "🃏", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
+    visibleStatus === "player_win" ? { text: language === "ko" ? "승리!" : "You Win!", emoji: "🎉", color: "text-[#00C805]", glow: "shadow-[#00C805]/30" } :
+    visibleStatus === "dealer_bust" ? { text: language === "ko" ? "딜러 버스트!" : "Dealer Bust!", emoji: "💥", color: "text-[#00C805]", glow: "shadow-[#00C805]/30" } :
+    visibleStatus === "player_bust" ? { text: language === "ko" ? "버스트!" : "Bust!", emoji: "💀", color: "text-[#FF5252]", glow: "shadow-[#FF5252]/30" } :
+    visibleStatus === "dealer_win" ? { text: language === "ko" ? "딜러 승리" : "Dealer Wins", emoji: "😞", color: "text-[#FF5252]", glow: "shadow-[#FF5252]/30" } :
+    visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
     null;
 
   const canDouble = isPlaying && game.playerHand.length === 2 && cash >= game.bet;
@@ -370,9 +410,9 @@ export default function Casino() {
                 )}
               </div>
               <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence>
                   {dealerRevealed.length > 0 ? dealerRevealed.map((card, i) => (
-                    <CardDisplay key={`d-${i}-${card.rank}-${card.suit}-${card.hidden}`} card={card} index={i} isNew={i >= prevDealerCards} />
+                    <CardDisplay key={`d-${i}`} card={card} index={i} isNew={i >= prevDealerCards} />
                   )) : <PlaceholderCards />}
                 </AnimatePresence>
               </div>
@@ -395,7 +435,7 @@ export default function Casino() {
                         <span className="text-xl">{statusConfig.emoji}</span>
                         <span className={`text-base font-bold ${statusConfig.color}`}>{statusConfig.text}</span>
                       </div>
-                      {isOver && (
+                      {showResult && game && (
                         <motion.p
                           initial={{ y: 5, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
@@ -433,9 +473,9 @@ export default function Casino() {
                 )}
               </div>
               <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence>
                   {game ? game.playerHand.map((card, i) => (
-                    <CardDisplay key={`p-${i}-${card.rank}-${card.suit}`} card={card} index={i} isNew={i >= prevPlayerCards} />
+                    <CardDisplay key={`p-${i}`} card={card} index={i} isNew={i >= prevPlayerCards} />
                   )) : <PlaceholderCards />}
                 </AnimatePresence>
               </div>
