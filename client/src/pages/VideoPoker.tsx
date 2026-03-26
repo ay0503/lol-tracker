@@ -8,6 +8,12 @@ import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 const RANKS = ["", "", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -24,15 +30,6 @@ const PAY_TABLE = [
   { hand: "Two Pair", payout: "2x" },
   { hand: "Jacks or Better", payout: "1x" },
 ];
-
-const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", text: "text-white" },
-  1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", text: "text-gray-800" },
-  2: { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", text: "text-white" },
-  5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", text: "text-black" },
-};
 
 function cardDisplay(card: { rank: number; suit: number }) {
   return { rank: RANKS[card.rank] || "?", suit: SUITS[card.suit] || "?", isRed: card.suit === 1 || card.suit === 2 };
@@ -119,6 +116,7 @@ export default function VideoPoker() {
   const isComplete = game?.status === "complete";
   const isPending = dealMutation.isPending || drawMutation.isPending;
   const cash = casinoBalance ?? 20;
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
 
   const toggleHold = useCallback((i: number) => {
     if (!isHolding) return;
@@ -196,33 +194,31 @@ export default function VideoPoker() {
               <div className="pt-3 border-t border-white/[0.05]">
                 {(!game || isComplete) ? (
                   <div className="space-y-3">
-                    <div className="flex gap-1.5 justify-center">
-                      {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
-                        const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                        const selected = parseFloat(betAmount) === amt;
-                        const disabled = cash < amt;
-                        const colors = CHIP_COLORS[amt];
-                        return (
-                          <motion.button key={amt} whileHover={disabled ? {} : { y: -3 }} whileTap={disabled ? {} : { scale: 0.92 }}
-                            onClick={() => !disabled && setBetAmount(amt.toString())} disabled={disabled}
-                            className={`w-10 h-10 rounded-full font-mono font-bold text-[9px] shadow-md border-[2px] border-dashed transition-all ${
-                              disabled ? "opacity-25 cursor-not-allowed bg-gray-700 border-gray-600 text-gray-500" :
-                              selected ? `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} ring-2 ring-white/40 ring-offset-1 ring-offset-zinc-900`
-                                : `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} opacity-70 hover:opacity-100`
-                            }`}>{label}</motion.button>
-                        );
-                      })}
-                    </div>
+                    <CasinoBetControls
+                      language={language}
+                      value={betAmount}
+                      cash={cash}
+                      disabled={isPending}
+                      onChange={setBetAmount}
+                    />
                     <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                       onClick={() => {
-                        const amt = parseFloat(betAmount);
-                        if (isNaN(amt) || amt < 0.10 || amt > 5) return toast.error("Bet $0.10–$5.00");
+                        const amt = parsedBetAmount;
+                        if (Number.isNaN(amt) || amt < MIN_CASINO_BET || amt > MAX_CASINO_BET) {
+                          return toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+                        }
                         dealMutation.mutate({ bet: amt });
                       }}
-                      disabled={isPending || !isAuthenticated || cash < parseFloat(betAmount || "0")}
+                      disabled={
+                        isPending ||
+                        !isAuthenticated ||
+                        parsedBetAmount < MIN_CASINO_BET ||
+                        parsedBetAmount > MAX_CASINO_BET ||
+                        cash < parsedBetAmount
+                      }
                       className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg shadow-indigo-500/15">
                       {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                        `${language === "ko" ? "딜" : "DEAL"} $${parseFloat(betAmount || "0").toFixed(2)}`}
+                        `${language === "ko" ? "딜" : "DEAL"} $${parsedBetAmount.toFixed(2)}`}
                     </motion.button>
                   </div>
                 ) : isHolding ? (
@@ -263,6 +259,8 @@ export default function VideoPoker() {
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "잭스 오어 베터 · ~2% 하우스 엣지" : "Jacks or Better · ~2% house edge"}
         </p>
+
+        <GamblingDisclaimer />
       </div>
     </div>
   );

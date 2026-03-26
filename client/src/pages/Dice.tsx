@@ -7,23 +7,20 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
-
-const CHIP_COLORS: Record<number, { bg: string; border: string; txt: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", txt: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", txt: "text-white" },
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", txt: "text-white" },
-  1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", txt: "text-gray-800" },
-  2: { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", txt: "text-white" },
-  5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", txt: "text-black" },
-};
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 export default function Dice() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const [selectedChip, setSelectedChip] = useState(0.50);
+  const [betAmount, setBetAmount] = useState("0.50");
   const [target, setTarget] = useState(50);
   const [direction, setDirection] = useState<"over" | "under">("over");
   const [lastResult, setLastResult] = useState<any>(null);
+  const [lastBetAmount, setLastBetAmount] = useState<number | null>(null);
   const [rolling, setRolling] = useState(false);
   const [displayRoll, setDisplayRoll] = useState<number | null>(null);
   const [barFlash, setBarFlash] = useState<"win" | "lose" | null>(null);
@@ -57,6 +54,7 @@ export default function Dice() {
   });
 
   const cash = balance ?? 20;
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
   const multiplier = useMemo(() => {
     if (direction === "over") return Math.round((99 / (99 - target)) * 100) / 100;
     return Math.round((99 / target) * 100) / 100;
@@ -65,10 +63,15 @@ export default function Dice() {
 
   const handleRoll = useCallback(() => {
     if (rolling || !isAuthenticated) return;
+    if (parsedBetAmount < MIN_CASINO_BET || parsedBetAmount > MAX_CASINO_BET) {
+      toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+      return;
+    }
     setRolling(true);
+    setLastBetAmount(parsedBetAmount);
     setBarFlash(null);
-    rollMutation.mutate({ bet: selectedChip, target, direction });
-  }, [selectedChip, target, direction, rolling]);
+    rollMutation.mutate({ bet: parsedBetAmount, target, direction });
+  }, [direction, isAuthenticated, language, parsedBetAmount, rolling, rollMutation, target]);
 
   const isWinZoneLeft = direction === "under";
 
@@ -123,7 +126,7 @@ export default function Dice() {
               </AnimatePresence>
               {lastResult && (
                 <p className={`text-sm font-mono mt-0.5 ${lastResult.won ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-                  {lastResult.won ? `+$${lastResult.payout.toFixed(2)}` : `-$${selectedChip.toFixed(2)}`}
+                  {lastResult.won ? `+$${lastResult.payout.toFixed(2)}` : `-$${(lastBetAmount ?? parsedBetAmount).toFixed(2)}`}
                 </p>
               )}
             </div>
@@ -234,22 +237,14 @@ export default function Dice() {
               </div>
             </div>
 
-            {/* Chips */}
-            <div className="flex gap-1.5 justify-center mb-3">
-              {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
-                const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                const sel = selectedChip === amt;
-                const dis = cash < amt;
-                const clr = CHIP_COLORS[amt];
-                return (
-                  <button key={amt} onClick={() => !dis && setSelectedChip(amt)} disabled={dis}
-                    className={`w-10 h-10 rounded-full font-mono font-bold text-[9px] shadow-md border-[2.5px] border-dashed transition-all ${
-                      dis ? "opacity-25 bg-gray-700 border-gray-600 text-gray-500" :
-                      sel ? `bg-gradient-to-b ${clr.bg} ${clr.txt} ${clr.border} ring-2 ring-white/40` :
-                      `bg-gradient-to-b ${clr.bg} ${clr.txt} ${clr.border} opacity-70 hover:opacity-100`
-                    }`}>{label}</button>
-                );
-              })}
+            <div className="mb-3">
+              <CasinoBetControls
+                language={language}
+                value={betAmount}
+                cash={cash}
+                disabled={rolling}
+                onChange={setBetAmount}
+              />
             </div>
 
             {/* Roll Button */}
@@ -257,10 +252,16 @@ export default function Dice() {
               whileHover={!rolling ? { scale: 1.01 } : {}}
               whileTap={!rolling ? { scale: 0.98 } : {}}
               onClick={handleRoll}
-              disabled={rolling || !isAuthenticated || cash < selectedChip}
+              disabled={
+                rolling ||
+                !isAuthenticated ||
+                parsedBetAmount < MIN_CASINO_BET ||
+                parsedBetAmount > MAX_CASINO_BET ||
+                cash < parsedBetAmount
+              }
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
             >
-              {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `ROLL · $${selectedChip.toFixed(2)}`}
+              {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `ROLL · $${parsedBetAmount.toFixed(2)}`}
             </motion.button>
           </div>
         </div>

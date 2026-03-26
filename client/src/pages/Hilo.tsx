@@ -7,15 +7,11 @@ import { ArrowLeft, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
-
-const CHIP_COLORS: Record<number, { bg: string; border: string; txt: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", txt: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", txt: "text-white" },
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", txt: "text-white" },
-  1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", txt: "text-gray-800" },
-  2: { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", txt: "text-white" },
-  5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", txt: "text-black" },
-};
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 function CardFace({ rank, suit }: { rank: number; suit: string }) {
   const label = rank === 14 ? "A" : rank === 13 ? "K" : rank === 12 ? "Q" : rank === 11 ? "J" : String(rank);
@@ -44,7 +40,7 @@ export default function Hilo() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
-  const [selectedChip, setSelectedChip] = useState(0.50);
+  const [betAmount, setBetAmount] = useState("0.50");
 
   const { data: activeGame } = trpc.casino.hilo.active.useQuery(undefined, { enabled: isAuthenticated, staleTime: 30_000 });
   const { data: balance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
@@ -77,14 +73,19 @@ export default function Hilo() {
   const isOver = game && game.status !== "playing";
   const isPending = startMutation.isPending || guessMutation.isPending || cashoutMutation.isPending;
   const cash = balance ?? 20;
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
   const streak = game?.history?.length ?? 0;
   const streakGlow = streak >= 10 ? "ring-2 ring-yellow-400 shadow-lg shadow-yellow-500/30" :
     streak >= 5 ? "ring-2 ring-purple-400 shadow-lg shadow-purple-500/20" :
     streak >= 3 ? "ring-2 ring-blue-400 shadow-md shadow-blue-500/15" : "";
 
   const handleStart = useCallback(() => {
-    startMutation.mutate({ bet: selectedChip });
-  }, [selectedChip]);
+    if (parsedBetAmount < MIN_CASINO_BET || parsedBetAmount > MAX_CASINO_BET) {
+      toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+      return;
+    }
+    startMutation.mutate({ bet: parsedBetAmount });
+  }, [language, parsedBetAmount, startMutation]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -211,33 +212,29 @@ export default function Hilo() {
               </div>
             ) : (
               <div className="space-y-3">
-                {/* Chips */}
-                <div className="flex gap-1.5 justify-center">
-                  {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
-                    const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                    const sel = selectedChip === amt;
-                    const dis = cash < amt;
-                    const clr = CHIP_COLORS[amt];
-                    return (
-                      <button key={amt} onClick={() => !dis && setSelectedChip(amt)} disabled={dis}
-                        className={`w-10 h-10 rounded-full font-mono font-bold text-[9px] shadow-md border-[2.5px] border-dashed transition-all ${
-                          dis ? "opacity-25 bg-gray-700 border-gray-600 text-gray-500" :
-                          sel ? `bg-gradient-to-b ${clr.bg} ${clr.txt} ${clr.border} ring-2 ring-white/40` :
-                          `bg-gradient-to-b ${clr.bg} ${clr.txt} ${clr.border} opacity-70 hover:opacity-100`
-                        }`}>{label}</button>
-                    );
-                  })}
-                </div>
+                <CasinoBetControls
+                  language={language}
+                  value={betAmount}
+                  cash={cash}
+                  disabled={isPending}
+                  onChange={setBetAmount}
+                />
 
                 {/* Deal Button */}
                 <motion.button
                   whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                   onClick={handleStart}
-                  disabled={isPending || !isAuthenticated || cash < selectedChip}
+                  disabled={
+                    isPending ||
+                    !isAuthenticated ||
+                    parsedBetAmount < MIN_CASINO_BET ||
+                    parsedBetAmount > MAX_CASINO_BET ||
+                    cash < parsedBetAmount
+                  }
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                    `DEAL · $${selectedChip.toFixed(2)}`}
+                    `${language === "ko" ? "딜" : "DEAL"} · $${parsedBetAmount.toFixed(2)}`}
                 </motion.button>
               </div>
             )}

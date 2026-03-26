@@ -861,7 +861,7 @@ export const appRouter = router({
   casino: router({
     crash: router({
       start: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), autoCashout: z.number().min(1.01).optional() }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite(), autoCashout: z.number().min(1.01).optional() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           return withUserLock(ctx.user.id, async () => {
@@ -930,7 +930,7 @@ export const appRouter = router({
     }),
     mines: router({
       start: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).finite(), mineCount: z.number().int().min(1).max(24) }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite(), mineCount: z.number().int().min(1).max(24) }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           return withUserLock(ctx.user.id, async () => {
@@ -990,7 +990,7 @@ export const appRouter = router({
     }),
     poker: router({
       deal: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           return withUserLock(ctx.user.id, async () => {
@@ -1083,7 +1083,7 @@ export const appRouter = router({
     }),
     dice: router({
       roll: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), target: z.number().min(1).max(99), direction: z.enum(["over", "under"]) }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite(), target: z.number().min(1).max(99), direction: z.enum(["over", "under"]) }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
@@ -1109,7 +1109,7 @@ export const appRouter = router({
     }),
     hilo: router({
       start: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
@@ -1160,7 +1160,7 @@ export const appRouter = router({
     }),
     plinko: router({
       drop: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), risk: z.enum(["low", "medium", "high"]) }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite(), risk: z.enum(["low", "medium", "high"]) }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
@@ -1186,7 +1186,7 @@ export const appRouter = router({
     }),
     blackjack: router({
       deal: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
+        .input(z.object({ bet: z.number().min(0.10).max(50).finite() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
           return withUserLock(ctx.user.id, async () => {

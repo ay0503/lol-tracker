@@ -471,7 +471,7 @@ export const ko: TranslationKeys = {
     soon: "준비 중",
     all: "전액",
     amountPlaceholder: "금액",
-    betRangeError: "$0.10–$5.00 범위로 베팅하세요",
+    betRangeError: "$0.10 - $50 범위로 베팅하세요",
     insufficientBalance: "잔고가 부족합니다",
     bonusClaimed: "보너스 수령 완료!",
     depositSuccess: "카지노에 입금 완료",

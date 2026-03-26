@@ -9,17 +9,13 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 const GRID_SIZE = 25;
-
-const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", text: "text-white" },
-  1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", text: "text-gray-800" },
-  5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", text: "text-black" },
-  10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
-  25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
-  50: { bg: "from-purple-400 to-purple-600", border: "border-purple-300/50", text: "text-white" },
-};
 
 const MINE_PRESETS = [1, 3, 5, 10, 15, 20, 24];
 
@@ -116,12 +112,15 @@ export default function Mines() {
   const isOver = game && game.status !== "playing";
   const isPending = startMutation.isPending || revealMutation.isPending || cashoutMutation.isPending;
   const cash = casinoBalance ?? 20;
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
 
   const handleStart = useCallback(() => {
-    const amt = parseFloat(betAmount);
-    if (isNaN(amt) || amt < 0.10) return toast.error("Min bet $0.10");
+    const amt = parsedBetAmount;
+    if (Number.isNaN(amt) || amt < MIN_CASINO_BET || amt > MAX_CASINO_BET) {
+      return toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+    }
     startMutation.mutate({ bet: amt, mineCount });
-  }, [betAmount, mineCount]);
+  }, [language, mineCount, parsedBetAmount]);
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -255,43 +254,30 @@ export default function Mines() {
                   </div>
                 </div>
 
-                {/* Chips */}
-                <div className="flex gap-1.5 justify-center">
-                  {[0.50, 1, 5, 10, 25, 50].map(amt => {
-                    const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                    const selected = parseFloat(betAmount) === amt;
-                    const disabled = cash < amt;
-                    const colors = CHIP_COLORS[amt];
-                    return (
-                      <motion.button
-                        key={amt}
-                        whileHover={disabled ? {} : { y: -3 }}
-                        whileTap={disabled ? {} : { scale: 0.92 }}
-                        onClick={() => !disabled && setBetAmount(amt.toString())}
-                        disabled={disabled}
-                        className={`w-11 h-11 rounded-full font-mono font-bold text-[10px] shadow-md border-[2.5px] border-dashed transition-all ${
-                          disabled ? "opacity-25 cursor-not-allowed bg-gray-700 border-gray-600 text-gray-500" :
-                          selected
-                            ? `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} ring-2 ring-white/40 ring-offset-1 ring-offset-zinc-900 shadow-lg`
-                            : `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} opacity-70 hover:opacity-100`
-                        }`}
-                      >
-                        {label}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                <CasinoBetControls
+                  language={language}
+                  value={betAmount}
+                  cash={cash}
+                  disabled={isPending}
+                  onChange={setBetAmount}
+                />
 
                 {/* Start */}
                 <motion.button
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleStart}
-                  disabled={isPending || !isAuthenticated || cash < parseFloat(betAmount || "0")}
+                  disabled={
+                    isPending ||
+                    !isAuthenticated ||
+                    parsedBetAmount < MIN_CASINO_BET ||
+                    parsedBetAmount > MAX_CASINO_BET ||
+                    cash < parsedBetAmount
+                  }
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-sm hover:from-red-400 hover:to-orange-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-red-500/15"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                    `${language === "ko" ? "시작" : "START"} · ${mineCount} ${language === "ko" ? "지뢰" : "mines"} · $${parseFloat(betAmount || "0").toFixed(2)}`}
+                    `${language === "ko" ? "시작" : "START"} · ${mineCount} ${language === "ko" ? "지뢰" : "mines"} · $${parsedBetAmount.toFixed(2)}`}
                 </motion.button>
               </motion.div>
             )}

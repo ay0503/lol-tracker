@@ -7,6 +7,11 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 const ROWS = 12;
 const BUCKETS = 13;
@@ -24,19 +29,10 @@ const MULTIPLIERS: Record<string, number[]> = {
   high: [110, 41, 10, 5, 3, 1.5, 0.5, 1.5, 3, 5, 10, 41, 110],
 };
 
-const CHIP_COLORS: Record<number, { bg: string; border: string; txt: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", txt: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", txt: "text-white" },
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", txt: "text-white" },
-  1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", txt: "text-gray-800" },
-  2: { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", txt: "text-white" },
-  5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", txt: "text-black" },
-};
-
 interface BallState {
   x: number; y: number; vx: number; vy: number;
   currentRow: number; path: ("L" | "R")[];
-  result: { bucket: number; multiplier: number; payout: number } | null;
+  result: { bucket: number; multiplier: number; payout: number; betAmount: number } | null;
   landed: boolean; launchDelay: number; started: boolean;
   trail: { x: number; y: number }[];
 }
@@ -55,7 +51,7 @@ function getPegRowY(row: number, h: number): number {
 export default function Plinko() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
-  const [selectedChip, setSelectedChip] = useState(0.50);
+  const [betAmount, setBetAmount] = useState("0.50");
   const [risk, setRisk] = useState<"low" | "medium" | "high">("medium");
   const [dropping, setDropping] = useState(false);
   const [ballCount, setBallCount] = useState(1);
@@ -78,6 +74,8 @@ export default function Plinko() {
 
   const cash = balance ?? 20;
   const mults = MULTIPLIERS[risk];
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
+  const totalBetAmount = parsedBetAmount * ballCount;
 
   useEffect(() => {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
@@ -148,7 +146,7 @@ export default function Plinko() {
 
         if (ball.result) {
           setLandedBuckets(prev => [...prev, ball.result!.bucket]);
-          resultsAccRef.current.push({ multiplier: ball.result.multiplier, payout: ball.result.payout, bet: selectedChip });
+          resultsAccRef.current.push({ multiplier: ball.result.multiplier, payout: ball.result.payout, bet: ball.result.betAmount });
           if (ball.result.multiplier >= 10) { setShaking(true); setTimeout(() => setShaking(false), 400); }
         }
         pendingRef.current--;
@@ -185,11 +183,18 @@ export default function Plinko() {
       }
     }
     if (anyActive) rafRef.current = requestAnimationFrame(runPhysics);
-  }, [selectedChip, refetchBalance, refetchHistory]);
+  }, [refetchBalance, refetchHistory]);
 
   const handleDrop = useCallback(async () => {
     if (dropping || !isAuthenticated) return;
-    if (cash < selectedChip * ballCount) { toast.error(`Need $${(selectedChip * ballCount).toFixed(2)}`); return; }
+    if (parsedBetAmount < MIN_CASINO_BET || parsedBetAmount > MAX_CASINO_BET) {
+      toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+      return;
+    }
+    if (cash < totalBetAmount) {
+      toast.error(language === "ko" ? `총 $${totalBetAmount.toFixed(2)} 필요` : `Need $${totalBetAmount.toFixed(2)}`);
+      return;
+    }
 
     setDropping(true);
     setLastResults([]);
@@ -204,12 +209,12 @@ export default function Plinko() {
 
     try {
       const results = await Promise.all(
-        Array.from({ length: ballCount }, () => dropMutation.mutateAsync({ bet: selectedChip, risk }))
+        Array.from({ length: ballCount }, () => dropMutation.mutateAsync({ bet: parsedBetAmount, risk }))
       );
 
       const newBalls: BallState[] = results.map((result, idx) => ({
         x: startX, y: 0, vx: 0, vy: 0, currentRow: 0,
-        path: result.path, result: { bucket: result.bucket, multiplier: result.multiplier, payout: result.payout },
+        path: result.path, result: { bucket: result.bucket, multiplier: result.multiplier, payout: result.payout, betAmount: result.betAmount },
         landed: false, launchDelay: startTime + idx * 200, started: idx === 0, trail: [],
       }));
 
@@ -220,7 +225,7 @@ export default function Plinko() {
       }
       rafRef.current = requestAnimationFrame(runPhysics);
     } catch (err: any) { setDropping(false); toast.error(err.message || "Drop failed"); }
-  }, [selectedChip, risk, dropping, isAuthenticated, ballCount, cash, dropMutation, runPhysics]);
+  }, [ballCount, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runPhysics, totalBetAmount]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -312,7 +317,7 @@ export default function Plinko() {
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="text-center mb-2">
                   {lastResults.length === 1 ? (
                     <p className={`text-2xl font-bold font-mono ${lastResults[0].payout > 0 ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-                      {lastResults[0].multiplier}x {lastResults[0].payout > 0 ? `+$${lastResults[0].payout.toFixed(2)}` : `-$${selectedChip.toFixed(2)}`}
+                      {lastResults[0].multiplier}x {lastResults[0].payout > 0 ? `+$${lastResults[0].payout.toFixed(2)}` : `-$${lastResults[0].bet.toFixed(2)}`}
                     </p>
                   ) : (
                     <p className={`text-2xl font-bold font-mono ${lastResults.reduce((s, r) => s + r.payout, 0) >= lastResults.reduce((s, r) => s + r.bet, 0) ? "text-[#00C805]" : "text-[#FF5252]"}`}>
@@ -342,34 +347,44 @@ export default function Plinko() {
               ))}
             </div>
 
-            {/* Chips */}
-            <div className="flex gap-1.5 justify-center mb-3">
-              {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
-                const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                const sel = selectedChip === amt;
-                const dis = cash < amt * ballCount;
-                const clr = CHIP_COLORS[amt];
-                return (
-                  <button key={amt} onClick={() => !dis && setSelectedChip(amt)} disabled={dis}
-                    className={`w-10 h-10 rounded-full font-mono font-bold text-[9px] shadow-md border-[2.5px] border-dashed transition-all ${
-                      dis ? "opacity-25 bg-gray-700 border-gray-600 text-gray-500" :
-                      sel ? `bg-gradient-to-b ${clr.bg} ${clr.txt} ${clr.border} ring-2 ring-white/40` :
-                      `bg-gradient-to-b ${clr.bg} ${clr.txt} ${clr.border} opacity-70 hover:opacity-100`
-                    }`}>{label}</button>
-                );
-              })}
+            <div className="mb-3">
+              <CasinoBetControls
+                language={language}
+                value={betAmount}
+                cash={cash}
+                disabled={dropping}
+                onChange={setBetAmount}
+              />
             </div>
+
+            <p className="mb-3 text-center text-[10px] font-mono text-zinc-500">
+              {language === "ko"
+                ? `공당 $${parsedBetAmount.toFixed(2)} · 총 $${totalBetAmount.toFixed(2)}`
+                : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
+            </p>
 
             {/* Drop */}
             <motion.button
               whileHover={!dropping ? { scale: 1.01 } : {}}
               whileTap={!dropping ? { scale: 0.98 } : {}}
               onClick={handleDrop}
-              disabled={dropping || !isAuthenticated || cash < selectedChip * ballCount}
+              disabled={
+                dropping ||
+                !isAuthenticated ||
+                parsedBetAmount < MIN_CASINO_BET ||
+                parsedBetAmount > MAX_CASINO_BET ||
+                cash < totalBetAmount
+              }
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
             >
               {dropping ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                ballCount > 1 ? `DROP ${ballCount} BALLS · $${(selectedChip * ballCount).toFixed(2)}` : `DROP · $${selectedChip.toFixed(2)}`}
+                ballCount > 1
+                  ? language === "ko"
+                    ? `${ballCount}개 드롭 · $${totalBetAmount.toFixed(2)}`
+                    : `DROP ${ballCount} BALLS · $${totalBetAmount.toFixed(2)}`
+                  : language === "ko"
+                    ? `드롭 · $${parsedBetAmount.toFixed(2)}`
+                    : `DROP · $${parsedBetAmount.toFixed(2)}`}
             </motion.button>
           </div>
         </div>

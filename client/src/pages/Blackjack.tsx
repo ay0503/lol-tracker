@@ -9,22 +9,17 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 interface Card {
   suit: string;
   rank: string;
   hidden?: boolean;
 }
-
-// ─── Colored casino chips by denomination ───
-const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", text: "text-white" },
-  1:    { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", text: "text-gray-800" },
-  2:    { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", text: "text-white" },
-  5:    { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", text: "text-black" },
-};
 
 // ─── Card Component ───
 const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }: { card: Card; index?: number; isNew?: boolean }) {
@@ -323,6 +318,7 @@ export default function Casino() {
   const playerVal = game ? handValue(game.playerHand) : 0;
   const dealerVal = dealerRevealed.length > 0 ? handValue(dealerRevealed) : 0;
   const playerSoft = game ? isSoftHand(game.playerHand) : false;
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
 
   // Use delayed status for result display (cards animate first)
   const showResult = visibleStatus && visibleStatus !== "playing";
@@ -343,10 +339,12 @@ export default function Casino() {
   }, [isPlaying, isPending, game?.playerHand.length]);
 
   const handleDeal = useCallback((amt?: number) => {
-    const betVal = amt ?? parseFloat(betAmount);
-    if (isNaN(betVal) || betVal < 0.10 || betVal > 5) return toast.error("Bet $0.10–$5.00");
+    const betVal = amt ?? parsedBetAmount;
+    if (Number.isNaN(betVal) || betVal < MIN_CASINO_BET || betVal > MAX_CASINO_BET) {
+      return toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+    }
     dealMutation.mutate({ bet: betVal });
-  }, [betAmount]);
+  }, [language, parsedBetAmount]);
 
   const statusConfig = !showResult ? null :
     visibleStatus === "blackjack" ? { text: "BLACKJACK!", emoji: "🃏", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
@@ -509,43 +507,30 @@ export default function Casino() {
                       </motion.button>
                     )}
 
-                    {/* Chips */}
-                    <div className="flex gap-1.5 justify-center">
-                      {[0.10, 0.25, 0.50, 1, 2, 5].map(amt => {
-                        const label = amt < 1 ? `${Math.round(amt * 100)}¢` : `$${amt}`;
-                        const selected = parseFloat(betAmount) === amt;
-                        const disabled = cash < amt;
-                        const colors = CHIP_COLORS[amt];
-                        return (
-                          <motion.button
-                            key={amt}
-                            whileHover={disabled ? {} : { y: -3 }}
-                            whileTap={disabled ? {} : { scale: 0.92 }}
-                            onClick={() => !disabled && setBetAmount(amt.toString())}
-                            disabled={disabled}
-                            className={`w-11 h-11 rounded-full font-mono font-bold text-[10px] shadow-md border-[2.5px] border-dashed transition-all ${
-                              disabled ? "opacity-25 cursor-not-allowed bg-gray-700 border-gray-600 text-gray-500" :
-                              selected
-                                ? `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} ring-2 ring-white/40 ring-offset-1 ring-offset-[#0d6b32] shadow-lg`
-                                : `bg-gradient-to-b ${colors.bg} ${colors.text} ${colors.border} opacity-70 hover:opacity-100`
-                            }`}
-                          >
-                            {label}
-                          </motion.button>
-                        );
-                      })}
-                    </div>
+                    <CasinoBetControls
+                      language={language}
+                      value={betAmount}
+                      cash={cash}
+                      disabled={isPending}
+                      onChange={setBetAmount}
+                    />
 
                     {/* Deal button */}
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleDeal()}
-                      disabled={isPending || !isAuthenticated || cash < parseFloat(betAmount || "0")}
+                      disabled={
+                        isPending ||
+                        !isAuthenticated ||
+                        parsedBetAmount < MIN_CASINO_BET ||
+                        parsedBetAmount > MAX_CASINO_BET ||
+                        cash < parsedBetAmount
+                      }
                       className="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold text-sm hover:from-yellow-400 hover:to-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-yellow-500/15"
                     >
                       {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                        language === "ko" ? `$${parseFloat(betAmount || "0").toFixed(2)} 딜` : `DEAL $${parseFloat(betAmount || "0").toFixed(2)}`}
+                        language === "ko" ? `$${parsedBetAmount.toFixed(2)} 딜` : `DEAL $${parsedBetAmount.toFixed(2)}`}
                     </motion.button>
                   </motion.div>
                 ) : (

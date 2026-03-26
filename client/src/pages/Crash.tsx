@@ -9,16 +9,11 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
-
-const CHIPS = [0.10, 0.25, 0.50, 1, 2, 5] as const;
-const CHIP_COLORS: Record<number, { bg: string; border: string; text: string }> = {
-  0.10: { bg: "from-blue-400 to-blue-600", border: "border-blue-300/50", text: "text-white" },
-  0.25: { bg: "from-emerald-400 to-emerald-600", border: "border-emerald-300/50", text: "text-white" },
-  0.50: { bg: "from-red-400 to-red-600", border: "border-red-300/50", text: "text-white" },
-  1: { bg: "from-gray-100 to-gray-300", border: "border-gray-200/50", text: "text-gray-800" },
-  2: { bg: "from-pink-400 to-pink-600", border: "border-pink-300/50", text: "text-white" },
-  5: { bg: "from-yellow-400 to-amber-600", border: "border-yellow-300/50", text: "text-black" },
-};
+import CasinoBetControls, {
+  MAX_CASINO_BET,
+  MIN_CASINO_BET,
+  parseCasinoBetAmount,
+} from "@/components/CasinoBetControls";
 
 function multiplierAtTime(ms: number): number {
   return 1 + 0.06 * Math.pow(ms / 1000, 1.5);
@@ -338,8 +333,10 @@ export default function Crash() {
   }, [phase]);
 
   const handleStart = () => {
-    const amt = parseFloat(betAmount);
-    if (isNaN(amt) || amt < 0.10 || amt > 5) return toast.error("Bet $0.10-$5.00");
+    const amt = parseCasinoBetAmount(betAmount);
+    if (Number.isNaN(amt) || amt < MIN_CASINO_BET || amt > MAX_CASINO_BET) {
+      return toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
+    }
     const auto = autoCashout ? parseFloat(autoCashout) : undefined;
     if (auto !== undefined && auto < 1.01) return toast.error("Auto-cashout must be >= 1.01x");
     startMutation.mutate({ bet: amt, autoCashout: auto });
@@ -347,6 +344,7 @@ export default function Crash() {
 
   const cash = casinoBalance ?? 20;
   const isPending = startMutation.isPending || cashoutMutation.isPending;
+  const parsedBetAmount = parseCasinoBetAmount(betAmount);
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -408,7 +406,7 @@ export default function Crash() {
                       {displayMult.toFixed(2)}x
                     </motion.p>
                     <p className="text-xs text-zinc-400/70 font-mono mt-1">
-                      ${(parseFloat(betAmount) * displayMult).toFixed(2)}
+                      ${(parsedBetAmount * displayMult).toFixed(2)}
                     </p>
                   </motion.div>
                 ) : phase === "crashed" ? (
@@ -479,36 +477,18 @@ export default function Crash() {
                 {cashoutMutation.isPending ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                 ) : (
-                  `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(parseFloat(betAmount) * displayMult).toFixed(2)}`
+                  `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(parsedBetAmount * displayMult).toFixed(2)}`
                 )}
               </motion.button>
             ) : (
               <motion.div key="bet-controls" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
-                {/* Chips */}
-                <div className="flex gap-1.5 justify-center">
-                  {CHIPS.map((amt) => {
-                    const label = amt < 1 ? `${Math.round(amt * 100)}c` : `$${amt}`;
-                    const selected = parseFloat(betAmount) === amt;
-                    const disabled = cash < amt;
-                    const c = CHIP_COLORS[amt];
-                    return (
-                      <motion.button
-                        key={amt}
-                        whileHover={disabled ? {} : { y: -3 }}
-                        whileTap={disabled ? {} : { scale: 0.92 }}
-                        onClick={() => !disabled && setBetAmount(amt.toString())}
-                        disabled={disabled}
-                        className={`w-11 h-11 rounded-full font-mono font-bold text-[10px] shadow-md border-[2.5px] border-dashed transition-all ${
-                          disabled ? "opacity-25 cursor-not-allowed bg-gray-700 border-gray-600 text-gray-500" :
-                          selected ? `bg-gradient-to-b ${c.bg} ${c.text} ${c.border} ring-2 ring-white/40 ring-offset-1 ring-offset-zinc-900 shadow-lg` :
-                          `bg-gradient-to-b ${c.bg} ${c.text} ${c.border} opacity-70 hover:opacity-100`
-                        }`}
-                      >
-                        {label}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                <CasinoBetControls
+                  language={language}
+                  value={betAmount}
+                  cash={cash}
+                  disabled={isPending}
+                  onChange={setBetAmount}
+                />
 
                 {/* Auto-cashout input */}
                 <div className="relative">
@@ -531,13 +511,19 @@ export default function Crash() {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleStart}
-                  disabled={isPending || !isAuthenticated || cash < parseFloat(betAmount || "0")}
+                  disabled={
+                    isPending ||
+                    !isAuthenticated ||
+                    parsedBetAmount < MIN_CASINO_BET ||
+                    parsedBetAmount > MAX_CASINO_BET ||
+                    cash < parsedBetAmount
+                  }
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-400 hover:to-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-500/20"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                   ) : (
-                    `${language === "ko" ? "시작" : "START"} $${parseFloat(betAmount || "0").toFixed(2)}`
+                    `${language === "ko" ? "시작" : "START"} $${parsedBetAmount.toFixed(2)}`
                   )}
                 </motion.button>
               </motion.div>

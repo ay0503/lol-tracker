@@ -470,7 +470,7 @@ export const en = {
     soon: "SOON",
     all: "ALL",
     amountPlaceholder: "Amount",
-    betRangeError: "Bet $0.10–$5.00",
+    betRangeError: "Bet $0.10 - $50",
     insufficientBalance: "Insufficient balance",
     bonusClaimed: "Bonus claimed!",
     depositSuccess: "Deposited to casino",
