@@ -1219,7 +1219,7 @@ export const appRouter = router({
           }));
 
           // Also add close friends who don't have cosmetics equipped
-          for (const cfId of closeFriendIds) {
+          for (const cfId of Array.from(closeFriendIds)) {
             if (!equipped.find(e => e.userId === cfId)) {
               equipped.push({ userId: cfId, title: null, nameEffect: null, isCloseFriend: true });
             }

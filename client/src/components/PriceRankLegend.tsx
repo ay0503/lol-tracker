@@ -102,10 +102,10 @@ export default function PriceRankLegend() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-              {tr.legend.title}
+              {t.legend.title}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {tr.legend.subtitle}
+              {t.legend.subtitle}
             </p>
           </div>
         </div>
@@ -308,7 +308,7 @@ export default function PriceRankLegend() {
 
         {/* Formula note */}
         <p className="text-[10px] text-muted-foreground mt-3 text-center font-[var(--font-mono)]">
-          {tr.legend.formula}
+          {t.legend.formula}
         </p>
       </div>
     </div>

@@ -228,10 +228,11 @@ function LiveGameBanner() {
  */
 function PostGameBanner() {
   const { t } = useTranslation();
-  const { data: event } = trpc.player.gameEndEvent.useQuery(undefined, {
-    refetchInterval: event ? 15_000 : 120_000,
-    staleTime: event ? 10_000 : 60_000,
+  const eventQuery = trpc.player.gameEndEvent.useQuery(undefined, {
+    refetchInterval: (query) => query.state.data ? 15_000 : 120_000,
+    staleTime: 60_000,
   });
+  const event = eventQuery.data;
   const dismissMutation = trpc.player.dismissGameEndEvent.useMutation({
     onSuccess: () => {
       utils.player.gameEndEvent.invalidate();

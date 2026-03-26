@@ -238,7 +238,7 @@ export default function Crash() {
   const [payout, setPayout] = useState<number | null>(null);
   const [flash, setFlash] = useState<"red" | "green" | null>(null);
 
-  const animRef = useRef<number>();
+  const animRef = useRef<number | undefined>(undefined);
   const startTimeRef = useRef(0);
   const elapsedRef = useRef(0);
 
