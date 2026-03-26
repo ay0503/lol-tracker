@@ -171,7 +171,7 @@ export function evaluateHand(hand: Card[]): HandResult {
   // Jacks or Better (pair of J, Q, K, or A)
   if (counts[0] === 2) {
     // Find which rank is the pair
-    for (const [rank, count] of rankCounts.entries()) {
+    for (const [rank, count] of Array.from(rankCounts.entries())) {
       if (count === 2 && rank >= 11) {
         return { name: "Jacks or Better", multiplier: 1 };
       }

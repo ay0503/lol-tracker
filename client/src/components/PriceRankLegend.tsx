@@ -16,8 +16,8 @@ import { Info, ChevronDown } from "lucide-react";
 function getTiers(tr: any) {
   return [
     {
-      name: tr.legend.platinum,
-      shortName: tr.legend.platShort,
+      name: t.legend.platinum,
+      shortName: t.legend.platShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 10,
       endPrice: 40,
@@ -26,8 +26,8 @@ function getTiers(tr: any) {
       borderColor: "rgba(79, 166, 141, 0.4)",
     },
     {
-      name: tr.legend.emerald,
-      shortName: tr.legend.emShort,
+      name: t.legend.emerald,
+      shortName: t.legend.emShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 40,
       endPrice: 70,
@@ -36,8 +36,8 @@ function getTiers(tr: any) {
       borderColor: "rgba(0, 200, 5, 0.4)",
     },
     {
-      name: tr.legend.diamond,
-      shortName: tr.legend.diaShort,
+      name: t.legend.diamond,
+      shortName: t.legend.diaShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 70,
       endPrice: 100,
@@ -228,7 +228,7 @@ export default function PriceRankLegend() {
         className="w-full flex items-center justify-center gap-1.5 mt-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
       >
         <span className="font-semibold">
-          {isExpanded ? tr.legend.hideDetails : tr.legend.showDetails}
+          {isExpanded ? t.legend.hideDetails : t.legend.showDetails}
         </span>
         <ChevronDown
           className={`w-3.5 h-3.5 transition-transform duration-300 ${
