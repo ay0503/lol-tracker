@@ -38,18 +38,18 @@ function getTickerColor(ticker: string): string {
 
 type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend" | "bet";
 
-function getTradeTypeStyle(type: string, t: any) {
+function getTradeTypeStyle(type: string, tr: any) {
   switch (type) {
     case "buy":
-      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: t.trading.buy, sign: "-" };
+      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: tr.trading.buy, sign: "-" };
     case "sell":
-      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: t.trading.sell, sign: "+" };
+      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: tr.trading.sell, sign: "+" };
     case "short":
-      return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: t.trading.short, sign: "+" };
+      return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: tr.trading.short, sign: "+" };
     case "cover":
-      return { icon: Repeat, color: "#3b82f6", bg: "bg-blue-500/15", label: t.trading.cover, sign: "-" };
+      return { icon: Repeat, color: "#3b82f6", bg: "bg-blue-500/15", label: tr.trading.cover, sign: "-" };
     case "dividend":
-      return { icon: Gift, color: "#facc15", bg: "bg-yellow-500/15", label: t.portfolio.dividends, sign: "+" };
+      return { icon: Gift, color: "#facc15", bg: "bg-yellow-500/15", label: tr.portfolio.dividends, sign: "+" };
     default:
       return { icon: DollarSign, color: "#fff", bg: "bg-secondary", label: type, sign: "" };
   }

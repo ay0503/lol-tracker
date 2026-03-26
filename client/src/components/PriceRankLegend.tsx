@@ -13,11 +13,11 @@ import { useTranslation } from "@/contexts/LanguageContext";
 import { Info, ChevronDown } from "lucide-react";
 
 // Tier definitions with price ranges and colors
-function getTiers(t: any) {
+function getTiers(tr: any) {
   return [
     {
-      name: t.legend.platinum,
-      shortName: t.legend.platShort,
+      name: tr.legend.platinum,
+      shortName: tr.legend.platShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 10,
       endPrice: 40,
@@ -26,8 +26,8 @@ function getTiers(t: any) {
       borderColor: "rgba(79, 166, 141, 0.4)",
     },
     {
-      name: t.legend.emerald,
-      shortName: t.legend.emShort,
+      name: tr.legend.emerald,
+      shortName: tr.legend.emShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 40,
       endPrice: 70,
@@ -36,8 +36,8 @@ function getTiers(t: any) {
       borderColor: "rgba(0, 200, 5, 0.4)",
     },
     {
-      name: t.legend.diamond,
-      shortName: t.legend.diaShort,
+      name: tr.legend.diamond,
+      shortName: tr.legend.diaShort,
       divisions: ["IV", "III", "II", "I"],
       startPrice: 70,
       endPrice: 100,
@@ -102,10 +102,10 @@ export default function PriceRankLegend() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
-              {t.legend.title}
+              {tr.legend.title}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {t.legend.subtitle}
+              {tr.legend.subtitle}
             </p>
           </div>
         </div>
@@ -228,7 +228,7 @@ export default function PriceRankLegend() {
         className="w-full flex items-center justify-center gap-1.5 mt-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
       >
         <span className="font-semibold">
-          {isExpanded ? t.legend.hideDetails : t.legend.showDetails}
+          {isExpanded ? tr.legend.hideDetails : tr.legend.showDetails}
         </span>
         <ChevronDown
           className={`w-3.5 h-3.5 transition-transform duration-300 ${
@@ -308,7 +308,7 @@ export default function PriceRankLegend() {
 
         {/* Formula note */}
         <p className="text-[10px] text-muted-foreground mt-3 text-center font-[var(--font-mono)]">
-          {t.legend.formula}
+          {tr.legend.formula}
         </p>
       </div>
     </div>

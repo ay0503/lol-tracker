@@ -54,18 +54,18 @@ interface PendingConfirmation {
   action: () => void;
 }
 
-function getTradeTypeStyle(type: string, t: any) {
+function getTradeTypeStyle(type: string, tr: any) {
   switch (type) {
     case "buy":
-      return { icon: ArrowUpCircle, color: "#00C805", label: t.trading.bought };
+      return { icon: ArrowUpCircle, color: "#00C805", label: tr.trading.bought };
     case "sell":
-      return { icon: ArrowDownCircle, color: "#FF5252", label: t.trading.sold };
+      return { icon: ArrowDownCircle, color: "#FF5252", label: tr.trading.sold };
     case "short":
-      return { icon: TrendingDown, color: "#E040FB", label: t.trading.shorted };
+      return { icon: TrendingDown, color: "#E040FB", label: tr.trading.shorted };
     case "cover":
-      return { icon: Repeat, color: "#00C805", label: t.trading.covered };
+      return { icon: Repeat, color: "#00C805", label: tr.trading.covered };
     case "dividend":
-      return { icon: Gift, color: "#FFD54F", label: t.trading.dividends };
+      return { icon: Gift, color: "#FFD54F", label: tr.trading.dividends };
     default:
       return { icon: ArrowUpCircle, color: "#888", label: type };
   }

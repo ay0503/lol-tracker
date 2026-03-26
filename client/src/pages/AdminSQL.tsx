@@ -100,7 +100,7 @@ export default function AdminSQL() {
   };
 
   const totalRows = useMemo(
-    () => dbStatus.data?.tables.reduce((sum, t) => sum + t.count, 0) ?? 0,
+    () => dbStatus.data?.tables.reduce((sum, tbl) => sum + tbl.count, 0) ?? 0,
     [dbStatus.data]
   );
 

@@ -12,11 +12,11 @@ import { toast } from "sonner";
 import StyledName from "@/components/StyledName";
 import { useCosmetics } from "@/hooks/useCosmetics";
 
-function getSentimentConfig(t: any) {
+function getSentimentConfig(tr: any) {
   return {
-    bullish: { icon: TrendingUp, color: "#00C805", label: t.sentiment.bullish, emoji: "\uD83D\uDC02" },
-    bearish: { icon: TrendingDown, color: "#FF5252", label: t.sentiment.bearish, emoji: "\uD83D\uDC3B" },
-    neutral: { icon: Minus, color: "#888", label: t.sentiment.neutral, emoji: "\uD83D\uDE10" },
+    bullish: { icon: TrendingUp, color: "#00C805", label: tr.sentiment.bullish, emoji: "\uD83D\uDC02" },
+    bearish: { icon: TrendingDown, color: "#FF5252", label: tr.sentiment.bearish, emoji: "\uD83D\uDE10" },
+    neutral: { icon: Minus, color: "#888", label: tr.sentiment.neutral, emoji: "\uD83D\uDE10" },
   };
 }
 
