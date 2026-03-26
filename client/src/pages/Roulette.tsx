@@ -51,34 +51,51 @@ const SpinningWheel = memo(function SpinningWheel({
 }) {
   const [visible, setVisible] = useState(false);
   const [landed, setLanded] = useState(false);
+  const [animating, setAnimating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Show wheel when we have a winning number
   useEffect(() => {
-    if (isSpinning) {
+    if (winningNumber !== null && isSpinning) {
       setVisible(true);
       setLanded(false);
+      setAnimating(true);
     }
-  }, [isSpinning]);
+  }, [winningNumber, isSpinning]);
 
+  // Mark as landed after animation completes
   useEffect(() => {
-    if (!isSpinning && winningNumber !== null && visible) {
-      setLanded(true);
+    if (!isSpinning && winningNumber !== null && visible && animating) {
+      // Animation takes ~3s, mark landed after
+      const timer = setTimeout(() => {
+        setLanded(true);
+        setAnimating(false);
+      }, 3200);
+      return () => clearTimeout(timer);
+    }
+  }, [isSpinning, winningNumber, visible, animating]);
+
+  // Hide after showing result
+  useEffect(() => {
+    if (landed) {
       const timer = setTimeout(() => {
         setVisible(false);
         setLanded(false);
-      }, 3500);
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isSpinning, winningNumber, visible]);
+  }, [landed]);
 
-  if (!visible) return null;
+  if (!visible || winningNumber === null) return null;
 
-  const repeated = [...WHEEL_ORDER, ...WHEEL_ORDER, ...WHEEL_ORDER, ...WHEEL_ORDER];
+  // Build strip: 5 full copies so we have room to spin through
+  const repeated = [...WHEEL_ORDER, ...WHEEL_ORDER, ...WHEEL_ORDER, ...WHEEL_ORDER, ...WHEEL_ORDER];
   const cellW = 40;
-  const targetIdx = winningNumber !== null
-    ? WHEEL_ORDER.indexOf(winningNumber) + WHEEL_ORDER.length * 2
-    : 0;
+  // Target: land on the winning number in the 4th copy (gives 3 full rotations)
+  const targetIdx = WHEEL_ORDER.indexOf(winningNumber) + WHEEL_ORDER.length * 3;
   const containerW = containerRef.current?.offsetWidth ?? 340;
+  // Start offset: begin from the middle of the 1st copy
+  const startX = -(WHEEL_ORDER.length * 0.5 * cellW - containerW / 2);
   const finalX = -(targetIdx * cellW - containerW / 2 + cellW / 2);
 
   return (
@@ -86,7 +103,7 @@ const SpinningWheel = memo(function SpinningWheel({
       {/* Center pointer */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center">
         <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-yellow-400" />
-        <div className="w-px h-[calc(100%-6px)] bg-yellow-400/60" style={{ height: "calc(3rem - 6px)" }} />
+        <div className="w-px bg-yellow-400/60" style={{ height: "calc(3rem - 6px)" }} />
       </div>
       {/* Edge fades */}
       <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-zinc-950/90 to-transparent z-10 pointer-events-none" />
@@ -95,24 +112,20 @@ const SpinningWheel = memo(function SpinningWheel({
       <motion.div
         className="flex items-center h-full"
         style={{ willChange: "transform" }}
-        initial={{ x: 0 }}
-        animate={{ x: isSpinning ? -cellW * WHEEL_ORDER.length : finalX }}
-        transition={
-          isSpinning
-            ? { duration: 1.2, ease: "linear" }
-            : { duration: 2, ease: [0.15, 0.85, 0.35, 1] }
-        }
+        initial={{ x: startX }}
+        animate={{ x: finalX }}
+        transition={{ duration: 3, ease: [0.1, 0.25, 0.15, 1] }}
       >
         {repeated.map((num, idx) => {
           const color = getNumberColor(num);
-          const isWinner = landed && num === winningNumber && idx === targetIdx;
+          const isWinner = landed && idx === targetIdx;
           return (
             <div
               key={idx}
               className={`flex-shrink-0 flex items-center justify-center font-bold text-xs sm:text-sm text-white border-r border-white/5 ${
                 color === "green" ? "bg-emerald-600" :
                 color === "red" ? "bg-red-600" : "bg-zinc-800"
-              } ${isWinner ? "ring-2 ring-inset ring-yellow-400 bg-yellow-500/20" : ""}`}
+              } ${isWinner ? "ring-2 ring-inset ring-yellow-400 scale-110 transition-transform" : ""}`}
               style={{ width: cellW, height: "100%" }}
             >
               {num}
