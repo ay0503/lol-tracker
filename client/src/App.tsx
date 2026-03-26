@@ -28,6 +28,11 @@ const Crash = lazy(() => import("./pages/Crash"));
 const Roulette = lazy(() => import("./pages/Roulette"));
 const Poker = lazy(() => import("./pages/VideoPoker"));
 const CasinoShop = lazy(() => import("./pages/CasinoShop"));
+const Dice = lazy(() => import("./pages/Dice"));
+const Limbo = lazy(() => import("./pages/Limbo"));
+const Hilo = lazy(() => import("./pages/Hilo"));
+const Wheel = lazy(() => import("./pages/Wheel"));
+const Plinko = lazy(() => import("./pages/Plinko"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 
 function LoadingFallback() {
@@ -57,6 +62,11 @@ function Router() {
         <Route path={"/casino/roulette"} component={Roulette} />
         <Route path={"/casino/poker"} component={Poker} />
         <Route path={"/casino/shop"} component={CasinoShop} />
+        <Route path={"/casino/dice"} component={Dice} />
+        <Route path={"/casino/limbo"} component={Limbo} />
+        <Route path={"/casino/hilo"} component={Hilo} />
+        <Route path={"/casino/wheel"} component={Wheel} />
+        <Route path={"/casino/plinko"} component={Plinko} />
         <Route path={"/casino"} component={Casino} />
         <Route path={"/admin/sql"} component={AdminSQL} />
         <Route path={"/admin"} component={AdminDB} />

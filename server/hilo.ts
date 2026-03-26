@@ -1,0 +1,159 @@
+/**
+ * Hilo (High/Low) game engine — stateful, card-based.
+ * Guess if next card is higher or lower. Cash out anytime.
+ */
+
+const MAX_PAYOUT = 250;
+const HOUSE_EDGE = 0.02;
+
+interface Card { rank: number; suit: string; label: string; }
+
+const SUITS = ["♠", "♥", "♦", "♣"];
+const RANKS = [
+  { rank: 2, label: "2" }, { rank: 3, label: "3" }, { rank: 4, label: "4" },
+  { rank: 5, label: "5" }, { rank: 6, label: "6" }, { rank: 7, label: "7" },
+  { rank: 8, label: "8" }, { rank: 9, label: "9" }, { rank: 10, label: "10" },
+  { rank: 11, label: "J" }, { rank: 12, label: "Q" }, { rank: 13, label: "K" },
+  { rank: 14, label: "A" },
+];
+
+function createDeck(): Card[] {
+  const deck: Card[] = [];
+  for (const suit of SUITS) {
+    for (const rk of RANKS) {
+      deck.push({ rank: rk.rank, suit, label: rk.label });
+    }
+  }
+  // Fisher-Yates shuffle
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+export interface HiloGame {
+  id: string;
+  userId: number;
+  bet: number;
+  deck: Card[];
+  currentCard: Card;
+  history: Card[];
+  multiplier: number;
+  status: "playing" | "won" | "lost";
+  payout: number;
+  createdAt: number;
+}
+
+export interface PublicHiloGame {
+  id: string;
+  currentCard: { rank: number; suit: string; label: string };
+  history: { rank: number; suit: string; label: string }[];
+  multiplier: number;
+  nextHigherMult: number;
+  nextLowerMult: number;
+  status: "playing" | "won" | "lost";
+  bet: number;
+  payout: number;
+  cardsRemaining: number;
+}
+
+const activeGames = new Map<number, HiloGame>();
+
+function calcMultiplier(currentRank: number, direction: "higher" | "lower", cardsLeft: number): number {
+  // Count cards that would win
+  let winning = 0;
+  for (const rk of RANKS) {
+    for (let s = 0; s < 4; s++) {
+      if (direction === "higher" && rk.rank >= currentRank) winning++;
+      if (direction === "lower" && rk.rank <= currentRank) winning++;
+    }
+  }
+  // Approximate probability
+  const prob = Math.min(winning / 52, 0.99);
+  if (prob <= 0) return 50;
+  return Math.round((1 / prob) * (1 - HOUSE_EDGE) * 100) / 100;
+}
+
+function toPublic(game: HiloGame): PublicHiloGame {
+  return {
+    id: game.id,
+    currentCard: game.currentCard,
+    history: game.history,
+    multiplier: Math.round(game.multiplier * 100) / 100,
+    nextHigherMult: calcMultiplier(game.currentCard.rank, "higher", game.deck.length),
+    nextLowerMult: calcMultiplier(game.currentCard.rank, "lower", game.deck.length),
+    status: game.status,
+    bet: game.bet,
+    payout: Math.round(game.payout * 100) / 100,
+    cardsRemaining: game.deck.length,
+  };
+}
+
+export function startHiloGame(userId: number, bet: number): PublicHiloGame {
+  activeGames.delete(userId);
+  const deck = createDeck();
+  const firstCard = deck.pop()!;
+  const game: HiloGame = {
+    id: `hilo_${Date.now()}_${userId}`, userId, bet,
+    deck, currentCard: firstCard, history: [],
+    multiplier: 1, status: "playing", payout: 0,
+    createdAt: Date.now(),
+  };
+  activeGames.set(userId, game);
+  return toPublic(game);
+}
+
+export function guessHilo(userId: number, direction: "higher" | "lower"): PublicHiloGame {
+  const game = activeGames.get(userId);
+  if (!game || game.status !== "playing") throw new Error("No active game");
+  if (game.deck.length === 0) throw new Error("No cards left");
+
+  const nextCard = game.deck.pop()!;
+  const currentRank = game.currentCard.rank;
+  const nextRank = nextCard.rank;
+
+  const correct =
+    (direction === "higher" && nextRank >= currentRank) ||
+    (direction === "lower" && nextRank <= currentRank);
+
+  game.history.push(game.currentCard);
+  game.currentCard = nextCard;
+
+  if (correct) {
+    const mult = calcMultiplier(currentRank, direction, game.deck.length + 1);
+    game.multiplier *= mult;
+    if (game.deck.length === 0) {
+      game.status = "won";
+      game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);
+    }
+  } else {
+    game.status = "lost";
+    game.multiplier = 0;
+    game.payout = 0;
+  }
+
+  return toPublic(game);
+}
+
+export function cashOutHilo(userId: number): PublicHiloGame {
+  const game = activeGames.get(userId);
+  if (!game || game.status !== "playing") throw new Error("No active game");
+  if (game.history.length === 0) throw new Error("Make at least one guess first");
+  game.status = "won";
+  game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);
+  return toPublic(game);
+}
+
+export function getActiveHiloGame(userId: number): PublicHiloGame | null {
+  const game = activeGames.get(userId);
+  return game ? toPublic(game) : null;
+}
+
+// Cleanup stale games
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [uid, game] of Array.from(activeGames.entries())) {
+    if (game.createdAt < cutoff) activeGames.delete(uid);
+  }
+}, 5 * 60 * 1000);

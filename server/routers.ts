@@ -979,6 +979,161 @@ export const appRouter = router({
         return getHistory();
       }),
     }),
+    dice: router({
+      roll: protectedProcedure
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), target: z.number().min(1).max(99), direction: z.enum(["over", "under"]) }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          const { roll } = await import("./dice");
+          const result = roll(input.bet, input.target, input.direction);
+          if (result.payout > 0) {
+            const fresh = await getOrCreatePortfolio(ctx.user.id);
+            const newBal = parseFloat(fresh.casinoBalance ?? "0") + result.payout;
+            await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          recordCasinoGame(ctx.user.id);
+          cache.invalidate("casino.leaderboard");
+          return result;
+        }),
+      history: publicProcedure.query(async () => {
+        const { getHistory } = await import("./dice");
+        return getHistory();
+      }),
+    }),
+    limbo: router({
+      play: protectedProcedure
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), targetMultiplier: z.number().min(1.01).max(1000) }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          const { play } = await import("./limbo");
+          const result = play(input.bet, input.targetMultiplier);
+          if (result.payout > 0) {
+            const fresh = await getOrCreatePortfolio(ctx.user.id);
+            const newBal = parseFloat(fresh.casinoBalance ?? "0") + result.payout;
+            await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          recordCasinoGame(ctx.user.id);
+          cache.invalidate("casino.leaderboard");
+          return result;
+        }),
+      history: publicProcedure.query(async () => {
+        const { getHistory } = await import("./limbo");
+        return getHistory();
+      }),
+    }),
+    hilo: router({
+      start: protectedProcedure
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          const { startHiloGame } = await import("./hilo");
+          const game = startHiloGame(ctx.user.id, input.bet);
+          recordCasinoGame(ctx.user.id);
+          cache.invalidate("casino.leaderboard");
+          return game;
+        }),
+      guess: protectedProcedure
+        .input(z.object({ direction: z.enum(["higher", "lower"]) }))
+        .mutation(async ({ ctx, input }) => {
+          const { guessHilo } = await import("./hilo");
+          try {
+            const game = guessHilo(ctx.user.id, input.direction);
+            if (game.status === "won" && game.payout > 0) {
+              const portfolio = await getOrCreatePortfolio(ctx.user.id);
+              const db = await getDb();
+              const newBal = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
+              await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+              cache.invalidate("casino.leaderboard");
+            }
+            return game;
+          } catch (err: any) { throw new TRPCError({ code: "BAD_REQUEST", message: err.message }); }
+        }),
+      cashout: protectedProcedure.mutation(async ({ ctx }) => {
+        const { cashOutHilo } = await import("./hilo");
+        try {
+          const game = cashOutHilo(ctx.user.id);
+          if (game.payout > 0) {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const db = await getDb();
+            const newBal = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
+            await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          cache.invalidate("casino.leaderboard");
+          return game;
+        } catch (err: any) { throw new TRPCError({ code: "BAD_REQUEST", message: err.message }); }
+      }),
+      active: protectedProcedure.query(async ({ ctx }) => {
+        const { getActiveHiloGame } = await import("./hilo");
+        return getActiveHiloGame(ctx.user.id);
+      }),
+    }),
+    wheel: router({
+      spin: protectedProcedure
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          const { spin } = await import("./wheel");
+          const result = spin(input.bet);
+          if (result.payout > 0) {
+            const fresh = await getOrCreatePortfolio(ctx.user.id);
+            const newBal = parseFloat(fresh.casinoBalance ?? "0") + result.payout;
+            await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          recordCasinoGame(ctx.user.id);
+          cache.invalidate("casino.leaderboard");
+          return result;
+        }),
+      history: publicProcedure.query(async () => {
+        const { getHistory } = await import("./wheel");
+        return getHistory();
+      }),
+    }),
+    plinko: router({
+      drop: protectedProcedure
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite(), risk: z.enum(["low", "medium", "high"]) }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          const { drop } = await import("./plinko");
+          const result = drop(input.bet, input.risk);
+          if (result.payout > 0) {
+            const fresh = await getOrCreatePortfolio(ctx.user.id);
+            const newBal = parseFloat(fresh.casinoBalance ?? "0") + result.payout;
+            await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+          recordCasinoGame(ctx.user.id);
+          cache.invalidate("casino.leaderboard");
+          return result;
+        }),
+      history: publicProcedure.query(async () => {
+        const { getHistory } = await import("./plinko");
+        return getHistory();
+      }),
+    }),
     blackjack: router({
       deal: protectedProcedure
         .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
