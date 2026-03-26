@@ -881,6 +881,52 @@ export const appRouter = router({
         return getActiveMinesGame(ctx.user.id);
       }),
     }),
+    roulette: router({
+      spin: protectedProcedure
+        .input(z.object({
+          bets: z.array(z.object({
+            type: z.enum(['straight', 'red', 'black', 'odd', 'even', 'high', 'low', 'dozen1', 'dozen2', 'dozen3', 'column1', 'column2', 'column3']),
+            number: z.number().int().min(0).max(36).optional(),
+            amount: z.number().min(0.10).max(5).finite(),
+          })).min(1),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+
+          for (const bet of input.bets) {
+            if (bet.type === 'straight' && (bet.number === undefined || bet.number < 0 || bet.number > 36)) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: "Straight bets require a number (0-36)." });
+            }
+          }
+
+          const totalBet = input.bets.reduce((sum, b) => sum + b.amount, 0);
+          if (totalBet > 25) throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum total bet is $25.00 per spin." });
+
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (totalBet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+
+          const { spin } = await import("./roulette");
+          const result = spin(input.bets);
+
+          if (result.totalPayout > 0) {
+            const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
+            const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + result.totalPayout;
+            await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          }
+
+          recordCasinoGame(ctx.user.id);
+          cache.invalidate("casino.leaderboard");
+          return result;
+        }),
+      history: publicProcedure.query(async () => {
+        const { getHistory } = await import("./roulette");
+        return getHistory();
+      }),
+    }),
     blackjack: router({
       deal: protectedProcedure
         .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
