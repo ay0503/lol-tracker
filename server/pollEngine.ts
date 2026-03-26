@@ -64,6 +64,10 @@ let preGameSnapshot: {
 let previousTier: string | null = null;
 let previousDivision: string | null = null;
 
+// Track last notified streak/match to prevent duplicate Discord messages
+let lastNotifiedStreakCount = 0;
+let lastNotifiedMatchId: string | null = null;
+
 // Snapshot throttling: only store if price changed or 5 min elapsed
 let lastSnapshotPrice: number | null = null;
 let lastSnapshotTime = 0;
@@ -420,20 +424,18 @@ export async function pollNow(): Promise<PollResult> {
       }
     }
 
-    // Discord: rank change detection
-    if (result.newMatches > 0 && previousTier !== null && previousDivision !== null) {
-      if (tier !== previousTier || division !== previousDivision) {
-        // Determine if promotion or demotion using totalLP
-        const prevTotalLP = tierToTotalLP(previousTier, previousDivision, 0);
-        const currTotalLP = tierToTotalLP(tier, division, 0);
-        notifyRankChange(previousTier, previousDivision, tier, division, currTotalLP > prevTotalLP);
-      }
-    }
-    previousTier = tier;
-    previousDivision = division;
-
-    // Discord: win/loss streak detection (from recent matches in DB)
+    // Discord notifications — only fire when new matches are detected (not every poll)
     if (result.newMatches > 0) {
+      // Rank change: only notify if rank actually changed with this batch of matches
+      if (previousTier !== null && previousDivision !== null) {
+        if (tier !== previousTier || division !== previousDivision) {
+          const prevTotalLPVal = tierToTotalLP(previousTier, previousDivision, 0);
+          const currTotalLPVal = tierToTotalLP(tier, division, 0);
+          notifyRankChange(previousTier, previousDivision, tier, division, currTotalLPVal > prevTotalLPVal);
+        }
+      }
+
+      // Streak: only notify if streak count increased (not same streak re-detected)
       try {
         const recentForStreak = await getRecentMatchesFromDB(10);
         const nonRemakes = recentForStreak.filter(m => !m.isRemake);
@@ -444,20 +446,25 @@ export async function pollNow(): Promise<PollResult> {
             if (m.win === firstResult) streakCount++;
             else break;
           }
-          if (streakCount >= 3) {
+          if (streakCount >= 3 && streakCount > lastNotifiedStreakCount) {
             notifyStreak(firstResult ? "win" : "loss", streakCount);
+            lastNotifiedStreakCount = streakCount;
+          } else if (streakCount < 3) {
+            lastNotifiedStreakCount = 0; // Reset when streak breaks
           }
         }
       } catch { /* non-critical */ }
-    }
 
-    // Discord: big price move (>5% from a single match)
-    if (result.newMatches > 0 && prevPrice > 0) {
-      const pricePctChange = Math.abs((price - prevPrice) / prevPrice) * 100;
-      if (pricePctChange >= 5) {
-        notifyBigPriceMove("DORI", prevPrice, price);
+      // Big price move: only notify once per match batch
+      if (prevPrice > 0) {
+        const pricePctChange = Math.abs((price - prevPrice) / prevPrice) * 100;
+        if (pricePctChange >= 5) {
+          notifyBigPriceMove("DORI", prevPrice, price);
+        }
       }
     }
+    previousTier = tier;
+    previousDivision = division;
 
     // Discord: daily summary (once per day, after 10 PM KST / 6 AM PT)
     const nowDate = new Date();
