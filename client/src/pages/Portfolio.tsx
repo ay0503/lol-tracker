@@ -341,9 +341,8 @@ export default function Portfolio() {
       counts[tr.type] = (counts[tr.type] || 0) + 1;
     }
     if (myBets) counts["bet"] = myBets.length;
-    }
     return counts;
-  }, [tradeHistory]);
+  }, [tradeHistory, myBets]);
 
   if (!authLoading && !isAuthenticated) {
     return (
