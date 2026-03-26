@@ -18,15 +18,11 @@ import CasinoBetControls, {
 const ROWS = 12;
 const BUCKETS = 13;
 const MAX_BALLS = 5;
-const GRAVITY = 0.34;
-const BOUNCE_LIFT_BASE = 1.35;
-const BOUNCE_VX_BASE = 2.1;
-const H_FRICTION = 0.992;
-const EDGE_DAMPING = 0.45;
-const JITTER_DEG = 9;
 const TRAIL_LENGTH = 5;
-const LAUNCH_SPREAD = 4;
-const SIDE_PADDING = 8;
+const DEFAULT_BOARD_WIDTH = 360;
+const BOARD_HEIGHT = 390;
+const PEG_SIZE = 8;
+const BALL_SIZE = 12;
 
 const MULTIPLIERS: Record<string, number[]> = {
   low: [8, 3, 2, 1.5, 1.4, 0.8, 0.4, 0.8, 1.4, 1.5, 2, 3, 8],
@@ -49,23 +45,169 @@ const RISK_DESCRIPTIONS = {
   },
 } as const;
 
-interface BallState {
-  x: number; y: number; vx: number; vy: number;
-  currentRow: number; path: ("L" | "R")[];
-  result: { bucket: number; multiplier: number; payout: number; betAmount: number } | null;
-  landed: boolean; launchDelay: number; started: boolean;
-  trail: { x: number; y: number }[];
+interface AnimationPoint {
+  at: number;
+  x: number;
+  y: number;
+  pegRow?: number;
 }
 
-function getBucketColor(mult: number): string {
-  if (mult >= 10) return "bg-yellow-500 text-black";
-  if (mult >= 3) return "bg-orange-500 text-white";
-  if (mult >= 1) return "bg-emerald-600 text-white";
+interface BallState {
+  x: number;
+  y: number;
+  path: ("L" | "R")[];
+  result: { bucket: number; multiplier: number; payout: number; betAmount: number } | null;
+  landed: boolean;
+  launchDelay: number;
+  started: boolean;
+  trail: { x: number; y: number }[];
+  animationPoints: AnimationPoint[];
+  pointIndex: number;
+}
+
+function getBucketColor(multiplier: number): string {
+  if (multiplier >= 10) return "bg-yellow-500 text-black";
+  if (multiplier >= 3) return "bg-orange-500 text-white";
+  if (multiplier >= 1) return "bg-emerald-600 text-white";
   return "bg-red-600 text-white";
 }
 
-function getPegRowY(row: number, h: number): number {
-  return ((row + 1) / (ROWS + 1.5)) * h;
+function getPegRowY(rowIndex: number, boardHeight: number): number {
+  return ((rowIndex + 1) / (ROWS + 1.5)) * boardHeight;
+}
+
+function getBoardPitch(boardWidth: number): number {
+  return boardWidth / (ROWS + 3);
+}
+
+function getBucketPadding(boardWidth: number): number {
+  return getBoardPitch(boardWidth);
+}
+
+function getBucketCenterX(bucket: number, boardWidth: number): number {
+  return boardWidth / 2 + (bucket - ROWS / 2) * getBoardPitch(boardWidth);
+}
+
+function getPathTargetX(position: number, boardWidth: number): number {
+  return boardWidth / 2 + position * (getBoardPitch(boardWidth) / 2);
+}
+
+function lerp(start: number, end: number, progress: number): number {
+  return start + (end - start) * progress;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function easeInOutQuad(progress: number): number {
+  if (progress < 0.5) return 2 * progress * progress;
+  return 1 - Math.pow(-2 * progress + 2, 2) / 2;
+}
+
+function quadraticPoint(
+  start: { x: number; y: number },
+  control: { x: number; y: number },
+  end: { x: number; y: number },
+  progress: number,
+) {
+  const inverse = 1 - progress;
+  return {
+    x: inverse * inverse * start.x + 2 * inverse * progress * control.x + progress * progress * end.x,
+    y: inverse * inverse * start.y + 2 * inverse * progress * control.y + progress * progress * end.y,
+  };
+}
+
+function seededUnit(seed: number, index: number): number {
+  const raw = Math.sin(seed * 12.9898 + index * 78.233) * 43758.5453123;
+  return raw - Math.floor(raw);
+}
+
+function appendQuadraticSegment(
+  points: AnimationPoint[],
+  start: { x: number; y: number },
+  midpoint: { x: number; y: number },
+  end: { x: number; y: number },
+  startAt: number,
+  duration: number,
+  samples: number,
+  pegRow?: number,
+) {
+  const control = {
+    x: 2 * midpoint.x - (start.x + end.x) / 2,
+    y: 2 * midpoint.y - (start.y + end.y) / 2,
+  };
+
+  for (let sampleIndex = 1; sampleIndex <= samples; sampleIndex++) {
+    const progress = sampleIndex / samples;
+    const point = quadraticPoint(start, control, end, progress);
+    points.push({
+      at: startAt + duration * progress,
+      x: point.x,
+      y: point.y,
+      pegRow: pegRow !== undefined && sampleIndex === Math.round(samples / 2) ? pegRow : undefined,
+    });
+  }
+}
+
+function buildAnimationPoints(
+  path: ("L" | "R")[],
+  bucket: number,
+  boardWidth: number,
+  boardHeight: number,
+  seed: number,
+): AnimationPoint[] {
+  const rowGap = boardHeight / (ROWS + 1.5);
+  const pitch = getBoardPitch(boardWidth);
+  const centerX = boardWidth / 2;
+  const launchOffset = (seededUnit(seed, 0) - 0.5) * pitch * 0.35;
+  const points: AnimationPoint[] = [{ at: 0, x: centerX + launchOffset, y: -14 }];
+
+  let currentPoint = { x: centerX + launchOffset, y: -14 };
+  let elapsed = 0;
+  let position = 0;
+
+  for (let rowIndex = 0; rowIndex < path.length; rowIndex++) {
+    const sign = path[rowIndex] === "R" ? 1 : -1;
+    position += sign;
+    const laneX = getPathTargetX(position, boardWidth);
+    const pegY = getPegRowY(rowIndex, boardHeight);
+    const exitPoint = { x: laneX, y: pegY + rowGap * 0.46 };
+    const wobble = (seededUnit(seed, rowIndex + 1) - 0.5) * pitch * 0.12;
+    const midpoint = {
+      x: lerp(currentPoint.x, laneX, 0.5) + wobble,
+      y: pegY,
+    };
+    const duration = Math.max(58, 122 - rowIndex * 4);
+    appendQuadraticSegment(points, currentPoint, midpoint, exitPoint, elapsed, duration, 8, rowIndex);
+    elapsed += duration;
+    currentPoint = exitPoint;
+  }
+
+  const bucketX = getBucketCenterX(bucket, boardWidth);
+  const nearBucketPoint = { x: bucketX, y: boardHeight - rowGap * 0.58 };
+  appendQuadraticSegment(
+    points,
+    currentPoint,
+    { x: lerp(currentPoint.x, bucketX, 0.55), y: boardHeight - rowGap * 0.85 },
+    nearBucketPoint,
+    elapsed,
+    170,
+    10,
+  );
+  elapsed += 170;
+
+  appendQuadraticSegment(
+    points,
+    nearBucketPoint,
+    { x: bucketX, y: boardHeight - 6 },
+    { x: bucketX, y: boardHeight - 12 },
+    elapsed,
+    90,
+    6,
+  );
+
+  return points;
 }
 
 export default function Plinko() {
@@ -74,150 +216,200 @@ export default function Plinko() {
   const [betAmount, setBetAmount] = useState("0.50");
   const [risk, setRisk] = useState<"low" | "medium" | "high">("medium");
   const [dropping, setDropping] = useState(false);
-  const [ballCount, setBallCount] = useState(1);
+  const [ballCount, setBallCount] = useState<1 | 3 | 5>(1);
   const [landedBuckets, setLandedBuckets] = useState<number[]>([]);
   const [lastResults, setLastResults] = useState<{ multiplier: number; payout: number; bet: number }[]>([]);
   const [shaking, setShaking] = useState(false);
+  const [boardWidth, setBoardWidth] = useState(DEFAULT_BOARD_WIDTH);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const ballRefs = useRef<(HTMLDivElement | null)[]>([]);
   const trailRefs = useRef<(HTMLDivElement | null)[][]>([]);
   const pegRefs = useRef<(HTMLDivElement | null)[][]>([]);
+  const pegFlashTimeoutsRef = useRef<number[][]>([]);
   const ballsRef = useRef<BallState[]>([]);
   const rafRef = useRef<number>(0);
   const pendingRef = useRef(0);
   const resultsAccRef = useRef<{ multiplier: number; payout: number; bet: number }[]>([]);
 
-  const { data: balance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
-  const { data: history, refetch: refetchHistory } = trpc.casino.plinko.history.useQuery(undefined, { staleTime: 10_000 });
+  const { data: balance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: history, refetch: refetchHistory } = trpc.casino.plinko.history.useQuery(undefined, {
+    staleTime: 10_000,
+  });
   const dropMutation = trpc.casino.plinko.drop.useMutation();
 
   const cash = balance ?? 20;
-  const mults = MULTIPLIERS[risk];
+  const multipliers = MULTIPLIERS[risk];
   const parsedBetAmount = parseCasinoBetAmount(betAmount);
   const totalBetAmount = parsedBetAmount * ballCount;
 
   useEffect(() => {
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, []);
-
-  // Init peg refs
-  if (pegRefs.current.length === 0) {
-    pegRefs.current = Array.from({ length: ROWS }, (_, r) => new Array(r + 3).fill(null));
-  }
-
-  const runPhysics = useCallback(() => {
     const board = boardRef.current;
     if (!board) return;
-    const bw = board.offsetWidth;
-    const bh = board.offsetHeight;
+
+    const syncBoardWidth = () => setBoardWidth(board.offsetWidth || DEFAULT_BOARD_WIDTH);
+    syncBoardWidth();
+
+    const observer = new ResizeObserver(() => syncBoardWidth());
+    observer.observe(board);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      for (const timeoutRow of pegFlashTimeoutsRef.current) {
+        for (const timeoutId of timeoutRow ?? []) {
+          if (timeoutId) window.clearTimeout(timeoutId);
+        }
+      }
+    };
+  }, []);
+
+  if (pegRefs.current.length === 0) {
+    pegRefs.current = Array.from({ length: ROWS }, (_, rowIndex) => new Array(rowIndex + 3).fill(null));
+  }
+  if (pegFlashTimeoutsRef.current.length === 0) {
+    pegFlashTimeoutsRef.current = Array.from({ length: ROWS }, (_, rowIndex) => new Array(rowIndex + 3).fill(0));
+  }
+
+  const flashPeg = useCallback((rowIndex: number, ballX: number, activeBoardWidth: number) => {
+    const pegsInRow = rowIndex + 3;
+    let closestCol = 0;
+    let closestDistance = Infinity;
+
+    for (let colIndex = 0; colIndex < pegsInRow; colIndex++) {
+      const pegX = activeBoardWidth / 2 + (colIndex - (pegsInRow - 1) / 2) * getBoardPitch(activeBoardWidth);
+      const distance = Math.abs(pegX - ballX);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestCol = colIndex;
+      }
+    }
+
+    const pegEl = pegRefs.current[rowIndex]?.[closestCol];
+    if (!pegEl) return;
+
+    pegEl.classList.add("peg-dot-active");
+    const previousTimeout = pegFlashTimeoutsRef.current[rowIndex]?.[closestCol];
+    if (previousTimeout) window.clearTimeout(previousTimeout);
+    pegFlashTimeoutsRef.current[rowIndex][closestCol] = window.setTimeout(() => {
+      pegEl.classList.remove("peg-dot-active");
+      pegFlashTimeoutsRef.current[rowIndex][closestCol] = 0;
+    }, 180);
+  }, []);
+
+  const settleBallResult = useCallback((ball: BallState, ballIndex: number) => {
+    ball.landed = true;
+    const ballEl = ballRefs.current[ballIndex];
+    if (ballEl) ballEl.style.opacity = "0";
+    for (const trailEl of trailRefs.current[ballIndex] || []) {
+      if (trailEl) trailEl.style.opacity = "0";
+    }
+
+    if (ball.result) {
+      setLandedBuckets(prev => [...prev, ball.result!.bucket]);
+      resultsAccRef.current.push({
+        multiplier: ball.result.multiplier,
+        payout: ball.result.payout,
+        bet: ball.result.betAmount,
+      });
+      if (ball.result.multiplier >= 10) {
+        setShaking(true);
+        window.setTimeout(() => setShaking(false), 400);
+      }
+    }
+
+    pendingRef.current--;
+    if (pendingRef.current > 0) return;
+
+    setDropping(false);
+    setLastResults([...resultsAccRef.current]);
+    refetchBalance();
+    refetchHistory();
+    const totalPayout = resultsAccRef.current.reduce((sum, entry) => sum + entry.payout, 0);
+    if (resultsAccRef.current.length === 1) {
+      const result = resultsAccRef.current[0];
+      if (result.payout > 0) toast.success(`${result.multiplier}x — $${result.payout.toFixed(2)}`);
+      else toast.error(`${result.multiplier}x — Lost`);
+    } else {
+      toast.success(`${resultsAccRef.current.length} balls — Total: $${totalPayout.toFixed(2)}`);
+    }
+    window.setTimeout(() => {
+      setLastResults([]);
+      setLandedBuckets([]);
+    }, 2500);
+  }, [refetchBalance, refetchHistory]);
+
+  const runResolvedAnimation = useCallback(() => {
+    const board = boardRef.current;
+    if (!board) return;
+
+    const activeBoardWidth = board.offsetWidth || boardWidth;
     const now = performance.now();
     let anyActive = false;
 
-    for (let i = 0; i < ballsRef.current.length; i++) {
-      const ball = ballsRef.current[i];
+    for (let ballIndex = 0; ballIndex < ballsRef.current.length; ballIndex++) {
+      const ball = ballsRef.current[ballIndex];
       if (ball.landed) continue;
       if (!ball.started) {
         if (now < ball.launchDelay) continue;
         ball.started = true;
       }
+
+      const elapsed = now - ball.launchDelay;
+      const points = ball.animationPoints;
+      const finalPoint = points[points.length - 1];
       anyActive = true;
 
-      ball.vy += GRAVITY;
-      ball.vx *= H_FRICTION;
-      ball.x += ball.vx;
-      ball.y += ball.vy;
-
-      if (ball.x <= SIDE_PADDING) {
-        ball.x = SIDE_PADDING;
-        ball.vx = Math.abs(ball.vx) * EDGE_DAMPING;
-      } else if (ball.x >= bw - SIDE_PADDING) {
-        ball.x = bw - SIDE_PADDING;
-        ball.vx = -Math.abs(ball.vx) * EDGE_DAMPING;
+      while (ball.pointIndex < points.length - 2 && points[ball.pointIndex + 1].at <= elapsed) {
+        ball.pointIndex++;
+        const reachedPoint = points[ball.pointIndex];
+        if (reachedPoint.pegRow !== undefined) flashPeg(reachedPoint.pegRow, reachedPoint.x, activeBoardWidth);
       }
 
+      const currentPoint = points[Math.min(ball.pointIndex, points.length - 1)];
+      const nextPoint = points[Math.min(ball.pointIndex + 1, points.length - 1)];
+      const span = Math.max(nextPoint.at - currentPoint.at, 1);
+      const eased = easeInOutQuad(clamp((elapsed - currentPoint.at) / span, 0, 1));
+
+      ball.x = lerp(currentPoint.x, nextPoint.x, eased);
+      ball.y = lerp(currentPoint.y, nextPoint.y, eased);
       ball.trail.push({ x: ball.x, y: ball.y });
       if (ball.trail.length > TRAIL_LENGTH) ball.trail.shift();
 
-      if (ball.currentRow < ROWS) {
-        const pegY = getPegRowY(ball.currentRow, bh);
-        if (ball.y >= pegY) {
-          const dir = ball.path[ball.currentRow];
-          const sign = dir === "R" ? 1 : -1;
-          const pegSpacing = bw / (ROWS + 3);
-          const fallSpeed = Math.max(ball.vy, 0.8);
-          const jitter = (Math.random() * 2 - 1) * JITTER_DEG * (Math.PI / 180);
-          const sideImpulse = (BOUNCE_VX_BASE + fallSpeed * 0.08) * sign;
-          const lift = Math.min(BOUNCE_LIFT_BASE + fallSpeed * 0.1, 2.1);
-          ball.vx = sideImpulse * Math.cos(jitter) + ball.vx * 0.18;
-          ball.vy = -lift + sideImpulse * Math.sin(jitter);
-          ball.x += sign * pegSpacing * 0.14;
-          ball.y = pegY + 1;
-
-          // Glow peg
-          const pegsInRow = ball.currentRow + 3;
-          let closestCol = 0, closestDist = Infinity;
-          for (let c = 0; c < pegsInRow; c++) {
-            const pegX = bw / 2 + (c - (pegsInRow - 1) / 2) * (bw / (ROWS + 3));
-            const dist = Math.abs(pegX - ball.x);
-            if (dist < closestDist) { closestDist = dist; closestCol = c; }
-          }
-          const pegEl = pegRefs.current[ball.currentRow]?.[closestCol];
-          if (pegEl) {
-            pegEl.style.background = "radial-gradient(circle, #fbbf24, #f59e0b)";
-            pegEl.style.boxShadow = "0 0 8px rgba(250,204,21,0.7)";
-            pegEl.style.transform = "scale(1.4)";
-            setTimeout(() => { pegEl.style.background = ""; pegEl.style.boxShadow = ""; pegEl.style.transform = ""; }, 300);
-          }
-          ball.currentRow++;
-        }
-      } else if (ball.y >= bh - 5) {
-        ball.landed = true;
-        ball.y = bh - 5;
-        const ballEl = ballRefs.current[i];
-        if (ballEl) ballEl.style.opacity = "0";
-        for (const tEl of (trailRefs.current[i] || [])) { if (tEl) tEl.style.opacity = "0"; }
-
-        if (ball.result) {
-          setLandedBuckets(prev => [...prev, ball.result!.bucket]);
-          resultsAccRef.current.push({ multiplier: ball.result.multiplier, payout: ball.result.payout, bet: ball.result.betAmount });
-          if (ball.result.multiplier >= 10) { setShaking(true); setTimeout(() => setShaking(false), 400); }
-        }
-        pendingRef.current--;
-        if (pendingRef.current <= 0) {
-          setDropping(false);
-          setLastResults([...resultsAccRef.current]);
-          refetchBalance();
-          refetchHistory();
-          const totalPayout = resultsAccRef.current.reduce((s, r) => s + r.payout, 0);
-          if (resultsAccRef.current.length === 1) {
-            const r = resultsAccRef.current[0];
-            if (r.payout > 0) toast.success(`${r.multiplier}x — $${r.payout.toFixed(2)}`);
-            else toast.error(`${r.multiplier}x — Lost`);
-          } else {
-            toast.success(`${resultsAccRef.current.length} balls — Total: $${totalPayout.toFixed(2)}`);
-          }
-          setTimeout(() => { setLastResults([]); setLandedBuckets([]); }, 2500);
-        }
+      const ballEl = ballRefs.current[ballIndex];
+      if (ballEl) {
+        ballEl.style.transform = `translate3d(${ball.x - BALL_SIZE / 2}px, ${ball.y - BALL_SIZE / 2}px, 0)`;
       }
 
-      const ballEl = ballRefs.current[i];
-      if (ballEl) ballEl.style.transform = `translate3d(${ball.x - 6}px, ${ball.y - 6}px, 0)`;
-      const trails = trailRefs.current[i] || [];
-      for (let tr = 0; tr < TRAIL_LENGTH; tr++) {
-        const tEl = trails[tr];
-        if (!tEl) continue;
-        const tp = ball.trail[ball.trail.length - 1 - (tr + 1)];
-        if (tp) {
-          const sz = Math.max(4 - tr, 1);
-          tEl.style.transform = `translate3d(${tp.x - sz / 2}px, ${tp.y - sz / 2}px, 0)`;
-          tEl.style.width = `${sz}px`; tEl.style.height = `${sz}px`;
-          tEl.style.opacity = `${Math.max(0.4 - tr * 0.1, 0)}`;
-        } else { tEl.style.opacity = "0"; }
+      const trails = trailRefs.current[ballIndex] || [];
+      for (let trailIndex = 0; trailIndex < TRAIL_LENGTH; trailIndex++) {
+        const trailEl = trails[trailIndex];
+        if (!trailEl) continue;
+        const trailPoint = ball.trail[ball.trail.length - 1 - (trailIndex + 1)];
+        if (!trailPoint) {
+          trailEl.style.opacity = "0";
+          continue;
+        }
+
+        const size = Math.max(4 - trailIndex, 1);
+        trailEl.style.transform = `translate3d(${trailPoint.x - size / 2}px, ${trailPoint.y - size / 2}px, 0)`;
+        trailEl.style.width = `${size}px`;
+        trailEl.style.height = `${size}px`;
+        trailEl.style.opacity = `${Math.max(0.4 - trailIndex * 0.1, 0)}`;
+      }
+
+      if (elapsed >= finalPoint.at) {
+        settleBallResult(ball, ballIndex);
       }
     }
-    if (anyActive) rafRef.current = requestAnimationFrame(runPhysics);
-  }, [refetchBalance, refetchHistory]);
+
+    if (anyActive) rafRef.current = requestAnimationFrame(runResolvedAnimation);
+  }, [boardWidth, flashPeg, settleBallResult]);
 
   const handleDrop = useCallback(async () => {
     if (dropping || !isAuthenticated) return;
@@ -230,40 +422,64 @@ export default function Plinko() {
       return;
     }
 
+    const board = boardRef.current;
+    if (!board) return;
+
     setDropping(true);
     setLastResults([]);
     setLandedBuckets([]);
     resultsAccRef.current = [];
-    pendingRef.current = ballCount;
 
-    const board = boardRef.current;
-    if (!board) return;
-    const startX = board.offsetWidth / 2;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const activeBoardWidth = board.offsetWidth || boardWidth;
+    const activeBoardHeight = board.offsetHeight || BOARD_HEIGHT;
     const startTime = performance.now();
 
     try {
-      const results = await Promise.all(
-        Array.from({ length: ballCount }, () => dropMutation.mutateAsync({ bet: parsedBetAmount, risk }))
-      );
+      const response = await dropMutation.mutateAsync({ bet: parsedBetAmount, risk, count: ballCount });
+      const results = response.results;
+      pendingRef.current = results.length;
 
-      const newBalls: BallState[] = results.map((result, idx) => ({
-        x: startX + (Math.random() * 2 - 1) * LAUNCH_SPREAD,
-        y: 0,
-        vx: (Math.random() * 2 - 1) * 0.18,
-        vy: 0,
-        currentRow: 0,
-        path: result.path, result: { bucket: result.bucket, multiplier: result.multiplier, payout: result.payout, betAmount: result.betAmount },
-        landed: false, launchDelay: startTime + idx * 200, started: idx === 0, trail: [],
-      }));
+      const newBalls: BallState[] = results.map((result, index) => {
+        const seed = result.path.reduce(
+          (accumulator, dir, rowIndex) => accumulator + (dir === "R" ? 17 : 31) * (rowIndex + 1),
+          result.bucket * 43 + index * 101,
+        );
+        const points = buildAnimationPoints(result.path, result.bucket, activeBoardWidth, activeBoardHeight, seed);
+        return {
+          x: points[0].x,
+          y: points[0].y,
+          path: result.path,
+          result: {
+            bucket: result.bucket,
+            multiplier: result.multiplier,
+            payout: result.payout,
+            betAmount: result.betAmount,
+          },
+          landed: false,
+          launchDelay: startTime + index * 170,
+          started: false,
+          trail: [],
+          animationPoints: points,
+          pointIndex: 0,
+        };
+      });
 
       ballsRef.current = newBalls;
-      for (let idx = 0; idx < newBalls.length; idx++) {
-        const el = ballRefs.current[idx];
-        if (el) { el.style.opacity = "1"; el.style.transform = `translate3d(${startX - 6}px, -6px, 0)`; }
+      for (let ballIndex = 0; ballIndex < newBalls.length; ballIndex++) {
+        const ballEl = ballRefs.current[ballIndex];
+        if (ballEl) {
+          ballEl.style.opacity = "1";
+          ballEl.style.transform = `translate3d(${newBalls[ballIndex].x - BALL_SIZE / 2}px, ${newBalls[ballIndex].y - BALL_SIZE / 2}px, 0)`;
+        }
       }
-      rafRef.current = requestAnimationFrame(runPhysics);
-    } catch (err: any) { setDropping(false); toast.error(err.message || "Drop failed"); }
-  }, [ballCount, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runPhysics, totalBetAmount]);
+
+      rafRef.current = requestAnimationFrame(runResolvedAnimation);
+    } catch (err: any) {
+      setDropping(false);
+      toast.error(err.message || "Drop failed");
+    }
+  }, [ballCount, boardWidth, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runResolvedAnimation, totalBetAmount]);
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -290,68 +506,115 @@ export default function Plinko() {
           <style>{`
             @keyframes shake { 0%,100%{transform:translate(0)} 10%{transform:translate(-3px,1px)} 30%{transform:translate(3px,-2px)} 50%{transform:translate(-2px,3px)} 70%{transform:translate(2px,-1px)} 90%{transform:translate(-1px,2px)} }
             .animate-shake { animation: shake 0.4s ease-in-out; }
-            .peg-dot { transition: background 0.2s, box-shadow 0.2s, transform 0.2s; }
+            .peg-dot { transition: background 0.18s, box-shadow 0.18s, transform 0.18s; }
+            .peg-dot-active {
+              background: radial-gradient(circle, #fbbf24, #f59e0b) !important;
+              box-shadow: 0 0 8px rgba(250,204,21,0.7);
+              transform: scale(1.35);
+            }
           `}</style>
           <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/80 to-zinc-900" />
           <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
           <div className="relative p-3 sm:p-5">
-            {/* Results Strip */}
             {history && history.length > 0 && (
               <div className="flex gap-1 overflow-x-auto mb-2 pb-0.5 scrollbar-hide">
-                {history.slice(0, 15).map((rr, idx) => (
-                  <div key={idx} className={`flex-shrink-0 px-1.5 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold ${
-                    rr.multiplier >= 3 ? "bg-yellow-500/30 text-yellow-400" : rr.multiplier >= 1 ? "bg-emerald-600/30 text-emerald-400" : "bg-red-600/30 text-red-400"
-                  }`}>{rr.multiplier}x</div>
+                {history.slice(0, 15).map((historyEntry, index) => (
+                  <div
+                    key={index}
+                    className={`flex-shrink-0 px-1.5 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold ${
+                      historyEntry.multiplier >= 3
+                        ? "bg-yellow-500/30 text-yellow-400"
+                        : historyEntry.multiplier >= 1
+                          ? "bg-emerald-600/30 text-emerald-400"
+                          : "bg-red-600/30 text-red-400"
+                    }`}
+                  >
+                    {historyEntry.multiplier}x
+                  </div>
                 ))}
               </div>
             )}
 
-            {/* Peg Board */}
-            <div ref={boardRef} className="relative mx-auto mb-2 overflow-hidden" style={{ maxWidth: 340, height: 380 }}>
-              {Array.from({ length: ROWS }).map((_, row) => (
-                <div key={row} className="absolute left-0 right-0 flex justify-center" style={{ top: `${((row + 1) / (ROWS + 1.5)) * 100}%` }}>
-                  {Array.from({ length: row + 3 }).map((_, col) => {
-                    const pegsInRow = row + 3;
-                    return (
-                      <div key={col}
-                        ref={el => { if (!pegRefs.current[row]) pegRefs.current[row] = []; pegRefs.current[row][col] = el; }}
-                        className="peg-dot rounded-full absolute"
-                        style={{ width: 8, height: 8, background: "radial-gradient(circle at 35% 35%, #a1a1aa, #52525b)", left: `calc(50% + ${(col - (pegsInRow - 1) / 2) * (340 / (ROWS + 3))}px - 4px)` }}
+            <div className="mx-auto w-full mb-3" style={{ maxWidth: DEFAULT_BOARD_WIDTH }}>
+              <div ref={boardRef} className="relative overflow-hidden mb-2" style={{ width: "100%", height: BOARD_HEIGHT }}>
+                {Array.from({ length: ROWS }).map((_, rowIndex) => (
+                  <div
+                    key={rowIndex}
+                    className="absolute left-0 right-0 flex justify-center"
+                    style={{ top: `${((rowIndex + 1) / (ROWS + 1.5)) * 100}%` }}
+                  >
+                    {Array.from({ length: rowIndex + 3 }).map((_, colIndex) => {
+                      const pegsInRow = rowIndex + 3;
+                      return (
+                        <div
+                          key={colIndex}
+                          ref={el => {
+                            if (!pegRefs.current[rowIndex]) pegRefs.current[rowIndex] = [];
+                            pegRefs.current[rowIndex][colIndex] = el;
+                          }}
+                          className="peg-dot rounded-full absolute"
+                          style={{
+                            width: PEG_SIZE,
+                            height: PEG_SIZE,
+                            background: "radial-gradient(circle at 35% 35%, #a1a1aa, #52525b)",
+                            left: `calc(50% + ${(colIndex - (pegsInRow - 1) / 2) * getBoardPitch(boardWidth)}px - ${PEG_SIZE / 2}px)`,
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+
+                {Array.from({ length: MAX_BALLS }).map((_, ballIndex) => (
+                  <div key={`ball-${ballIndex}`}>
+                    {Array.from({ length: TRAIL_LENGTH }).map((_, trailIndex) => (
+                      <div
+                        key={`trail-${ballIndex}-${trailIndex}`}
+                        ref={el => {
+                          if (!trailRefs.current[ballIndex]) trailRefs.current[ballIndex] = [];
+                          trailRefs.current[ballIndex][trailIndex] = el;
+                        }}
+                        className="absolute rounded-full bg-yellow-400/40 pointer-events-none"
+                        style={{ opacity: 0, width: 4, height: 4, willChange: "transform" }}
                       />
-                    );
-                  })}
-                </div>
-              ))}
-
-              {/* Ball elements */}
-              {Array.from({ length: MAX_BALLS }).map((_, idx) => (
-                <div key={`ball-${idx}`}>
-                  {Array.from({ length: TRAIL_LENGTH }).map((_, tr) => (
-                    <div key={`trail-${idx}-${tr}`}
-                      ref={el => { if (!trailRefs.current[idx]) trailRefs.current[idx] = []; trailRefs.current[idx][tr] = el; }}
-                      className="absolute rounded-full bg-yellow-400/40 pointer-events-none"
-                      style={{ opacity: 0, width: 4, height: 4, willChange: "transform" }}
+                    ))}
+                    <div
+                      ref={el => {
+                        ballRefs.current[ballIndex] = el;
+                      }}
+                      className="absolute rounded-full pointer-events-none z-10"
+                      style={{
+                        width: BALL_SIZE,
+                        height: BALL_SIZE,
+                        background: "radial-gradient(circle at 40% 35%, #fde047, #f59e0b)",
+                        boxShadow: "0 0 10px rgba(250,204,21,0.5)",
+                        opacity: 0,
+                        willChange: "transform",
+                      }}
                     />
-                  ))}
-                  <div ref={el => { ballRefs.current[idx] = el; }}
-                    className="absolute rounded-full pointer-events-none z-10"
-                    style={{ width: 12, height: 12, background: "radial-gradient(circle at 40% 35%, #fde047, #f59e0b)", boxShadow: "0 0 10px rgba(250,204,21,0.5)", opacity: 0, willChange: "transform" }}
-                  />
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="flex gap-0.5"
+                style={{
+                  paddingLeft: `${getBucketPadding(boardWidth)}px`,
+                  paddingRight: `${getBucketPadding(boardWidth)}px`,
+                }}
+              >
+                {multipliers.map((multiplier, index) => (
+                  <div
+                    key={index}
+                    className={`flex-1 py-1.5 rounded text-center text-[7px] sm:text-[8px] font-mono font-bold transition-all duration-300 ${getBucketColor(multiplier)} ${landedBuckets.includes(index) ? "ring-2 ring-yellow-400 scale-110 z-10" : ""}`}
+                  >
+                    {multiplier}x
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Buckets */}
-            <div className="flex gap-0.5 mb-3">
-              {mults.map((mult, idx) => (
-                <div key={idx} className={`flex-1 py-1.5 rounded text-center text-[7px] sm:text-[8px] font-mono font-bold transition-all duration-300 ${getBucketColor(mult)} ${landedBuckets.includes(idx) ? "ring-2 ring-yellow-400 scale-110 z-10" : ""}`}>
-                  {mult}x
-                </div>
-              ))}
-            </div>
-
-            {/* Result */}
             <AnimatePresence>
               {lastResults.length > 0 && (
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="text-center mb-2">
@@ -360,30 +623,46 @@ export default function Plinko() {
                       {lastResults[0].multiplier}x {lastResults[0].payout > 0 ? `+$${lastResults[0].payout.toFixed(2)}` : `-$${lastResults[0].bet.toFixed(2)}`}
                     </p>
                   ) : (
-                    <p className={`text-2xl font-bold font-mono ${lastResults.reduce((s, r) => s + r.payout, 0) >= lastResults.reduce((s, r) => s + r.bet, 0) ? "text-[#00C805]" : "text-[#FF5252]"}`}>
-                      {lastResults.length} balls · ${lastResults.reduce((s, r) => s + r.payout, 0).toFixed(2)}
+                    <p className={`text-2xl font-bold font-mono ${lastResults.reduce((sum, entry) => sum + entry.payout, 0) >= lastResults.reduce((sum, entry) => sum + entry.bet, 0) ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                      {lastResults.length} balls · ${lastResults.reduce((sum, entry) => sum + entry.payout, 0).toFixed(2)}
                     </p>
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Ball Count */}
             <div className="flex gap-1.5 justify-center mb-3">
               <span className="text-[10px] text-zinc-500 self-center mr-1">Balls:</span>
-              {[1, 3, 5].map(n => (
-                <button key={n} onClick={() => !dropping && setBallCount(n)} disabled={dropping}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${ballCount === n ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}>{n}</button>
+              {([1, 3, 5] as const).map((countOption) => (
+                <button
+                  key={countOption}
+                  onClick={() => !dropping && setBallCount(countOption)}
+                  disabled={dropping}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}
+                >
+                  {countOption}
+                </button>
               ))}
             </div>
 
-            {/* Risk */}
             <div className="flex gap-1.5 justify-center mb-3">
-              {(["low", "medium", "high"] as const).map(rk => (
-                <button key={rk} onClick={() => !dropping && setRisk(rk)} disabled={dropping}
+              {(["low", "medium", "high"] as const).map(riskOption => (
+                <button
+                  key={riskOption}
+                  onClick={() => !dropping && setRisk(riskOption)}
+                  disabled={dropping}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                    risk === rk ? rk === "high" ? "bg-red-500/30 text-red-300 border border-red-500/40" : rk === "medium" ? "bg-yellow-500/30 text-yellow-300 border border-yellow-500/40" : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
-                  }`}>{rk}</button>
+                    risk === riskOption
+                      ? riskOption === "high"
+                        ? "bg-red-500/30 text-red-300 border border-red-500/40"
+                        : riskOption === "medium"
+                          ? "bg-yellow-500/30 text-yellow-300 border border-yellow-500/40"
+                          : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
+                      : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
+                  }`}
+                >
+                  {riskOption}
+                </button>
               ))}
             </div>
 
@@ -407,7 +686,6 @@ export default function Plinko() {
                 : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
             </p>
 
-            {/* Drop */}
             <motion.button
               whileHover={!dropping ? { scale: 1.01 } : {}}
               whileTap={!dropping ? { scale: 0.98 } : {}}

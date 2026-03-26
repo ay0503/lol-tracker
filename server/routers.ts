@@ -74,7 +74,10 @@ async function checkCasinoCooldown(userId: number): Promise<void> {
       }
     }
   } catch (err) {
-    if (err instanceof TRPCError) throw err;
+    if (err instanceof TRPCError) {
+      releaseCasinoLock(userId);
+      throw err;
+    }
     // Table doesn't exist yet — no cooldowns
   }
 }
@@ -530,11 +533,11 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(200).default(50) }).optional())
       .query(async ({ ctx, input }) => {
         const raw = await getUserTrades(ctx.user.id, input?.limit ?? 50);
-         return raw.map((t) => ({
-           id: t.id, ticker: t.ticker, type: t.type,
-           shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
-           totalAmount: parseFloat(t.totalAmount),
-           createdAt: typeof t.createdAt === 'string' && !t.createdAt.endsWith('Z') ? t.createdAt + 'Z' : (t.createdAt ?? null),
+         return raw.map((tradeEntry) => ({
+           id: tradeEntry.id, ticker: tradeEntry.ticker, type: tradeEntry.type,
+           shares: parseFloat(tradeEntry.shares), pricePerShare: parseFloat(tradeEntry.pricePerShare),
+           totalAmount: parseFloat(tradeEntry.totalAmount),
+           createdAt: typeof tradeEntry.createdAt === 'string' && !tradeEntry.createdAt.endsWith('Z') ? tradeEntry.createdAt + 'Z' : (tradeEntry.createdAt ?? null),
          }));
       }),
 
@@ -665,12 +668,12 @@ export const appRouter = router({
         const limit = input?.limit ?? 100;
         return cache.getOrSet(`ledger.all.${limit}`, async () => {
           const raw = await getAllTrades(limit);
-           return raw.map((t) => ({
-             id: t.id, userId: t.userId, userName: t.userName ?? "Anonymous",
-             ticker: t.ticker, type: t.type,
-             shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
-             totalAmount: parseFloat(t.totalAmount),
-             createdAt: typeof t.createdAt === 'string' && !t.createdAt.endsWith('Z') ? t.createdAt + 'Z' : (t.createdAt ?? null),
+           return raw.map((tradeEntry) => ({
+             id: tradeEntry.id, userId: tradeEntry.userId, userName: tradeEntry.userName ?? "Anonymous",
+             ticker: tradeEntry.ticker, type: tradeEntry.type,
+             shares: parseFloat(tradeEntry.shares), pricePerShare: parseFloat(tradeEntry.pricePerShare),
+             totalAmount: parseFloat(tradeEntry.totalAmount),
+             createdAt: typeof tradeEntry.createdAt === 'string' && !tradeEntry.createdAt.endsWith('Z') ? tradeEntry.createdAt + 'Z' : (tradeEntry.createdAt ?? null),
            }));
         }, FIVE_MIN);
       }),
@@ -1150,24 +1153,46 @@ export const appRouter = router({
     }),
     plinko: router({
       drop: protectedProcedure
-        .input(z.object({ bet: z.number().min(0.10).max(50).finite(), risk: z.enum(["low", "medium", "high"]) }))
+        .input(z.object({
+          bet: z.number().min(0.10).max(50).finite(),
+          risk: z.enum(["low", "medium", "high"]),
+          count: z.union([z.literal(1), z.literal(3), z.literal(5)]).default(1),
+        }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
-          const portfolio = await getOrCreatePortfolio(ctx.user.id);
-          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
-          const db = await getDb();
-          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-          const { drop } = await import("./plinko");
-          const result = drop(input.bet, input.risk);
-          if (result.payout > 0) {
-            const fresh = await getOrCreatePortfolio(ctx.user.id);
-            const newBal = parseFloat(fresh.casinoBalance ?? "0") + result.payout;
-            await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          try {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+            const totalBet = Math.round(input.bet * input.count * 100) / 100;
+            if (totalBet > casinoCash) {
+              throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+            }
+
+            const db = await getDb();
+            await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+
+            const { dropMany } = await import("./plinko");
+            const results = dropMany(input.bet, input.risk, input.count);
+            const totalPayout = Math.round(results.reduce((sum, entry) => sum + entry.payout, 0) * 100) / 100;
+
+            if (totalPayout > 0) {
+              const fresh = await getOrCreatePortfolio(ctx.user.id);
+              const newBal = parseFloat(fresh.casinoBalance ?? "0") + totalPayout;
+              await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            }
+
+            recordCasinoGame(ctx.user.id);
+            cache.invalidate("casino.leaderboard");
+
+            return {
+              count: input.count,
+              totalBet,
+              totalPayout,
+              results,
+            };
+          } finally {
+            releaseCasinoLock(ctx.user.id);
           }
-          recordCasinoGame(ctx.user.id);
-          cache.invalidate("casino.leaderboard");
-          return result;
         }),
       history: publicProcedure.query(async () => {
         const { getHistory } = await import("./plinko");

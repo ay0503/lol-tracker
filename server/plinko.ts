@@ -35,7 +35,12 @@ export interface PlinkoHistory {
 const recentResults: PlinkoHistory[] = [];
 const MAX_HISTORY = 20;
 
-export function drop(betAmount: number, risk: PlinkoRisk): PlinkoResult {
+function pushHistory(bucket: number, multiplier: number, risk: PlinkoRisk, timestamp: number) {
+  recentResults.unshift({ bucket, multiplier, risk, timestamp });
+  if (recentResults.length > MAX_HISTORY) recentResults.pop();
+}
+
+function resolveDrop(betAmount: number, risk: PlinkoRisk): PlinkoResult {
   const path: ("L" | "R")[] = [];
   let position = 0; // Start centered
 
@@ -57,11 +62,19 @@ export function drop(betAmount: number, risk: PlinkoRisk): PlinkoResult {
 
   const rawPayout = betAmount * multiplier;
   const payout = Math.min(Math.round(rawPayout * 100) / 100, MAX_PAYOUT);
+  const timestamp = Date.now();
 
-  recentResults.unshift({ bucket, multiplier, risk, timestamp: Date.now() });
-  if (recentResults.length > MAX_HISTORY) recentResults.pop();
+  pushHistory(bucket, multiplier, risk, timestamp);
 
-  return { path, bucket, multiplier, betAmount, payout, risk, timestamp: Date.now() };
+  return { path, bucket, multiplier, betAmount, payout, risk, timestamp };
+}
+
+export function drop(betAmount: number, risk: PlinkoRisk): PlinkoResult {
+  return resolveDrop(betAmount, risk);
+}
+
+export function dropMany(betAmount: number, risk: PlinkoRisk, count: number): PlinkoResult[] {
+  return Array.from({ length: count }, () => resolveDrop(betAmount, risk));
 }
 
 export function getHistory(): PlinkoHistory[] {
