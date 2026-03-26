@@ -147,38 +147,57 @@ function useCardCount(hand: Card[] | undefined): number {
 // ─── Sequential Dealer Reveal ───
 function useDealerReveal(game: any) {
   const [revealed, setRevealed] = useState<Card[]>([]);
-  const prevStatus = useRef<string | null>(null);
+  const prevStatusRef = useRef<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   useEffect(() => {
-    if (!game) { setRevealed([]); return; }
+    // Clear any pending reveal timer
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = undefined; }
 
-    if (game.status === "playing") {
-      setRevealed(game.dealerHand);
-      prevStatus.current = "playing";
+    if (!game || !game.dealerHand || game.dealerHand.length === 0) {
+      setRevealed([]);
+      prevStatusRef.current = null;
       return;
     }
 
-    // Game just ended — reveal sequentially
-    if (prevStatus.current === "playing" && game.status !== "playing") {
-      const hand = game.dealerHand;
-      // First: reveal the hole card (show first 2 cards face up)
-      setRevealed([hand[0], hand[1]]);
+    const hand: Card[] = game.dealerHand;
 
-      // Then reveal additional cards one by one
-      if (hand.length > 2) {
-        let i = 2;
-        const timer = setInterval(() => {
-          if (i >= hand.length) { clearInterval(timer); return; }
-          setRevealed(prev => [...prev, hand[i]]);
-          i++;
-        }, 500);
-        return () => clearInterval(timer);
-      }
-    } else {
-      setRevealed(game.dealerHand);
+    if (game.status === "playing") {
+      setRevealed([...hand]);
+      prevStatusRef.current = "playing";
+      return;
     }
-    prevStatus.current = game.status;
-  }, [game?.status, game?.dealerHand]);
+
+    // Game just ended from playing — reveal sequentially
+    if (prevStatusRef.current === "playing") {
+      // Show first 2 cards (hole card revealed)
+      setRevealed(hand.slice(0, 2));
+
+      if (hand.length > 2) {
+        let idx = 2;
+        timerRef.current = setInterval(() => {
+          idx++;
+          if (idx > hand.length) {
+            clearInterval(timerRef.current);
+            timerRef.current = undefined;
+            return;
+          }
+          setRevealed(hand.slice(0, idx));
+        }, 500);
+      }
+
+      prevStatusRef.current = game.status;
+      return;
+    }
+
+    // Default: show all cards (page load with finished game, etc.)
+    setRevealed([...hand]);
+    prevStatusRef.current = game.status;
+
+    return () => {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = undefined; }
+    };
+  }, [game?.status, game?.id]);
 
   return revealed;
 }
