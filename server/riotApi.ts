@@ -293,17 +293,14 @@ export interface CurrentGameInfo {
 export async function getActiveGame(puuid: string): Promise<CurrentGameInfo | null> {
   try {
     const url = `${NA1_URL}/lol/spectator/v5/active-games/by-summoner/${puuid}`;
-    console.log(`[RiotAPI] Spectator check: ${url.substring(0, 60)}...`);
     const res = await axios.get<CurrentGameInfo>(url, { headers: headers() });
-    console.log(`[RiotAPI] Spectator: IN GAME (queue=${res.data.gameQueueConfigId}, length=${res.data.gameLength}s)`);
+    console.log(`[RiotAPI] IN GAME (queue=${res.data.gameQueueConfigId}, ${res.data.gameLength}s)`);
     return res.data;
   } catch (err: any) {
     // 404 means player is not in a game
-    if (err?.response?.status === 404) {
-      console.log("[RiotAPI] Spectator: not in game (404)");
-      return null;
-    }
-    console.warn(`[RiotAPI] Spectator check failed: ${err?.response?.status || 'no status'} — ${err?.response?.data?.status?.message || err?.message}`);
+    if (err?.response?.status === 404) return null;
+    // Single-line warning for 502s and other transient errors
+    console.warn(`[RiotAPI] Spectator ${err?.response?.status || 'error'}`);
     throw err; // Re-throw so pollEngine can preserve previous state on API errors
   }
 }

@@ -355,8 +355,11 @@ async function getAIDecision(ctx: MarketContext): Promise<TradeDecision> {
     }
 
     return decision;
-  } catch (err) {
-    console.error("[Bot] AI decision failed:", err);
+  } catch (err: any) {
+    // Suppress verbose LLM errors (quota, rate limit, etc.) to single line
+    const msg = err?.message || String(err);
+    const shortMsg = msg.includes("429") ? "quota exceeded" : msg.includes("404") ? "endpoint not found" : msg.substring(0, 80);
+    console.warn(`[Bot] LLM unavailable (${shortMsg}) — using fallback`);
     // Fallback: hold
     return {
       action: "hold",

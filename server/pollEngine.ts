@@ -151,7 +151,7 @@ export async function pollNow(): Promise<PollResult> {
       activeGameData = await getActiveGame(playerData.account.puuid);
       rawIsInGame = !!activeGameData;
     } catch (err: any) {
-      console.warn("[Poll] Live game check failed:", err?.message);
+      // Spectator API flaky — suppress verbose logging
       rawIsInGame = previousRawIsInGame ?? false;
     }
 
