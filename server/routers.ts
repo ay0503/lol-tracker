@@ -788,23 +788,23 @@ export const appRouter = router({
       }),
       double: protectedProcedure.mutation(async ({ ctx }) => {
         const { doubleDown, getActiveGame: getGame } = await import("./blackjack");
-        // Deduct additional bet
         const currentGame = getGame(ctx.user.id);
         if (!currentGame) throw new TRPCError({ code: "BAD_REQUEST", message: "No active game" });
 
         const portfolio = await getOrCreatePortfolio(ctx.user.id);
         const cash = parseFloat(portfolio.cashBalance);
-        const additionalBet = currentGame.bet; // Double means matching original bet
+        const additionalBet = currentGame.bet;
         if (additionalBet > cash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient cash to double down. Need $${additionalBet.toFixed(2)}.` });
 
-        const { getDb } = await import("./db");
-        const db = await getDb();
-        const { portfolios } = await import("../drizzle/schema");
-        const { eq } = await import("drizzle-orm");
-        await db.update(portfolios).set({ cashBalance: (cash - additionalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-
         try {
+          // Execute double FIRST, then deduct cash (prevents race condition)
           const game = doubleDown(ctx.user.id);
+
+          const { getDb } = await import("./db");
+          const db = await getDb();
+          const { portfolios } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(portfolios).set({ cashBalance: (cash - additionalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           if (game.payout > 0) {
             const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
             const newCash = parseFloat(freshPortfolio.cashBalance) + game.payout;
