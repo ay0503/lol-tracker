@@ -18,7 +18,7 @@ import {
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
   getRawClient, getDb, toggleAdminHalt,
-  placeBet, getUserBets, getPendingBets, getAllDividends,
+  placeBet, getUserBets, getPendingBets, getAllDividends, getAllBets,
 } from "./db";
 import { users, portfolios } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -624,6 +624,20 @@ export const appRouter = router({
             totalPayout: parseFloat(d.totalPayout),
             reason: d.reason,
             createdAt: typeof d.createdAt === 'string' && !d.createdAt.endsWith('Z') ? d.createdAt + 'Z' : (d.createdAt ?? null),
+          }));
+        }, FIVE_MIN);
+      }),
+    bets: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(500).default(100) }).optional())
+      .query(async ({ input }) => {
+        const limit = input?.limit ?? 100;
+        return cache.getOrSet(`ledger.bets.${limit}`, async () => {
+          const raw = await getAllBets(limit);
+          return raw.map(b => ({
+            id: b.id, userName: String(b.userName ?? "Anonymous"),
+            prediction: b.prediction, amount: parseFloat(b.amount),
+            status: b.status, payout: b.payout ? parseFloat(b.payout) : null,
+            createdAt: typeof b.createdAt === 'string' && !b.createdAt.endsWith('Z') ? b.createdAt + 'Z' : (b.createdAt ?? null),
           }));
         }, FIVE_MIN);
       }),

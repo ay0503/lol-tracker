@@ -788,6 +788,18 @@ export async function getUserBets(userId: number, limit = 20) {
   return db.select().from(bets).where(eq(bets.userId, userId)).orderBy(desc(bets.createdAt)).limit(limit);
 }
 
+export async function getAllBets(limit = 100) {
+  const db = await getDb();
+  return db.select({
+    id: bets.id, userId: bets.userId,
+    userName: sql`COALESCE(${users.displayName}, ${users.name})`.as('userName'),
+    prediction: bets.prediction, amount: bets.amount,
+    status: bets.status, payout: bets.payout,
+    createdAt: bets.createdAt,
+  }).from(bets).leftJoin(users, eq(bets.userId, users.id))
+    .orderBy(desc(bets.createdAt)).limit(limit);
+}
+
 export async function resolveBets(matchId: string, playerWon: boolean) {
   const db = await getDb();
   const pending = await db.select().from(bets).where(eq(bets.status, "pending"));

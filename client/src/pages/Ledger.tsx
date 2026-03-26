@@ -6,7 +6,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "wouter";
 import { TICKERS } from "@/lib/playerData";
 import { formatTimeAgoFromDate, translateTickerDescription } from "@/lib/formatters";
@@ -15,17 +15,18 @@ function getTickerColor(ticker: string): string {
   return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
 }
 
-type LedgerTab = "trades" | "dividends";
+type LedgerTab = "trades" | "dividends" | "bets";
 
 export default function Ledger() {
   const { t, language } = useTranslation();
   const [tab, setTab] = useState<LedgerTab>("trades");
   const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
   const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
+  const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });
 
-  const isLoading = tab === "trades" ? tradesLoading : dividendsLoading;
-  const isRefetching = tab === "trades" ? tradesRefetching : dividendsRefetching;
-  const refetch = tab === "trades" ? refetchTrades : refetchDividends;
+  const isLoading = tab === "trades" ? tradesLoading : tab === "dividends" ? dividendsLoading : betsLoading;
+  const isRefetching = tab === "trades" ? tradesRefetching : tab === "dividends" ? dividendsRefetching : betsRefetching;
+  const refetch = tab === "trades" ? refetchTrades : tab === "dividends" ? refetchDividends : refetchBets;
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,6 +79,15 @@ export default function Ledger() {
           >
             <Coins className="w-3.5 h-3.5" />
             {language === "ko" ? "배당금" : "Dividends"}
+          </button>
+          <button
+            onClick={() => setTab("bets")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              tab === "bets" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Dice5 className="w-3.5 h-3.5" />
+            {language === "ko" ? "베팅" : "Bets"}
           </button>
         </div>
 
@@ -291,6 +301,116 @@ export default function Ledger() {
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
                 {language === "ko" ? "게임이 끝나면 배당금이 지급됩니다" : "Dividends are paid after each game"}
+              </p>
+            </div>
+          )
+        ) : (
+          /* ─── Bets Tab ─── */
+          allBets && allBets.length > 0 ? (
+            <>
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                <div className="col-span-2">{t.ledger.user}</div>
+                <div className="col-span-2">{language === "ko" ? "예측" : "Prediction"}</div>
+                <div className="col-span-2 text-right">{language === "ko" ? "금액" : "Amount"}</div>
+                <div className="col-span-2">{language === "ko" ? "결과" : "Result"}</div>
+                <div className="col-span-2 text-right">{language === "ko" ? "수익" : "Payout"}</div>
+                <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
+              </div>
+
+              <div className="space-y-1.5">
+                {allBets.map((bet, i) => {
+                  const isPending = bet.status === "pending";
+                  const isWon = bet.status === "won";
+                  return (
+                    <motion.div
+                      key={bet.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.02, duration: 0.3 }}
+                    >
+                      {/* Desktop row */}
+                      <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                        <div className="col-span-2 flex items-center gap-2 min-w-0">
+                          <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                            <Dice5 className="w-3 h-3 text-yellow-400" />
+                          </div>
+                          <span className="text-xs text-foreground truncate font-[var(--font-mono)]">{bet.userName}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                            bet.prediction === "win" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                          }`}>
+                            {bet.prediction === "win" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                            {bet.prediction === "win" ? "WIN" : "LOSS"}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-xs text-foreground font-[var(--font-mono)]">${bet.amount.toFixed(2)}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            isPending ? "bg-yellow-500/15 text-yellow-400" :
+                            isWon ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                          }`}>
+                            {isPending ? "⏳ PENDING" : isWon ? "✅ WON" : "❌ LOST"}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          {isWon && bet.payout ? (
+                            <span className="text-xs text-[#00C805] font-bold font-[var(--font-mono)]">+${bet.payout.toFixed(2)}</span>
+                          ) : !isPending ? (
+                            <span className="text-xs text-[#FF5252] font-[var(--font-mono)]">-${bet.amount.toFixed(2)}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-[10px] text-muted-foreground">{formatTimeAgoFromDate(bet.createdAt, language)}</span>
+                        </div>
+                      </div>
+
+                      {/* Mobile card */}
+                      <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                              <Dice5 className="w-3 h-3 text-yellow-400" />
+                            </div>
+                            <span className="text-xs text-foreground font-semibold truncate max-w-[80px]">{bet.userName}</span>
+                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                              bet.prediction === "win" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                            }`}>
+                              {bet.prediction === "win" ? "WIN" : "LOSS"}
+                            </span>
+                          </div>
+                          {isWon && bet.payout ? (
+                            <span className="text-xs text-[#00C805] font-bold font-[var(--font-mono)]">+${bet.payout.toFixed(2)}</span>
+                          ) : !isPending ? (
+                            <span className="text-xs text-[#FF5252] font-[var(--font-mono)]">-${bet.amount.toFixed(2)}</span>
+                          ) : (
+                            <span className="text-xs text-yellow-400 font-[var(--font-mono)]">${bet.amount.toFixed(2)}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className={`font-bold ${isPending ? "text-yellow-400" : isWon ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                            {isPending ? "⏳ PENDING" : isWon ? "✅ WON" : "❌ LOST"}
+                          </span>
+                          <span className="text-muted-foreground">{formatTimeAgoFromDate(bet.createdAt, language)}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-20">
+              <Dice5 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">
+                {language === "ko" ? "아직 베팅이 없습니다" : "No bets yet"}
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                {language === "ko" ? "홈에서 다음 게임 결과를 예측하세요" : "Predict the next game result from the home page"}
               </p>
             </div>
           )
