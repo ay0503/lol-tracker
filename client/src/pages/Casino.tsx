@@ -210,14 +210,14 @@ export default function Casino() {
                 <NumberInput
                   value={betAmount}
                   onChange={setBetAmount}
-                  min={1} max={50} step={5}
+                  min={1} max={5} step={1}
                   prefix="$" placeholder="1-50"
                   className="w-32"
                 />
                 <button
                   onClick={() => {
                     const amt = parseFloat(betAmount);
-                    if (isNaN(amt) || amt < 1 || amt > 50) return toast.error("Bet $1-$50");
+                    if (isNaN(amt) || amt < 1 || amt > 5) return toast.error("Bet $1-$5");
                     dealMutation.mutate({ bet: amt });
                   }}
                   disabled={isPending || !isAuthenticated}
@@ -267,7 +267,7 @@ export default function Casino() {
         {/* Quick bet amounts */}
         {(!game || isOver) && (
           <div className="flex gap-2 mt-4 justify-center">
-            {[1, 5, 10, 25, 50].map(amt => (
+            {[1, 2, 3, 4, 5].map(amt => (
               <button
                 key={amt}
                 onClick={() => setBetAmount(String(amt))}
