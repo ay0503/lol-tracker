@@ -18,18 +18,36 @@ import CasinoBetControls, {
 const ROWS = 12;
 const BUCKETS = 13;
 const MAX_BALLS = 5;
-const GRAVITY = 0.25;
-const BOUNCE_VY = -3.5;
-const BOUNCE_VX_BASE = 2.8;
-const H_FRICTION = 0.98;
-const JITTER_DEG = 5;
-const TRAIL_LENGTH = 4;
+const GRAVITY = 0.34;
+const BOUNCE_LIFT_BASE = 1.35;
+const BOUNCE_VX_BASE = 2.1;
+const H_FRICTION = 0.992;
+const EDGE_DAMPING = 0.45;
+const JITTER_DEG = 9;
+const TRAIL_LENGTH = 5;
+const LAUNCH_SPREAD = 4;
+const SIDE_PADDING = 8;
 
 const MULTIPLIERS: Record<string, number[]> = {
-  low: [5.6, 2.1, 1.4, 1.1, 1, 0.5, 0.3, 0.5, 1, 1.1, 1.4, 2.1, 5.6],
-  medium: [13, 3, 1.5, 1, 0.5, 0.3, 0.3, 0.3, 0.5, 1, 1.5, 3, 13],
-  high: [110, 41, 10, 5, 3, 1.5, 0.5, 1.5, 3, 5, 10, 41, 110],
+  low: [8, 3, 2, 1.5, 1.4, 0.8, 0.4, 0.8, 1.4, 1.5, 2, 3, 8],
+  medium: [26, 6, 3, 2, 1, 0.6, 0.6, 0.6, 1, 2, 3, 6, 26],
+  high: [39, 14, 3.5, 1.8, 1.1, 0.6, 0.2, 0.6, 1.1, 1.8, 3.5, 14, 39],
 };
+
+const RISK_DESCRIPTIONS = {
+  low: {
+    en: "Steadier board, gentler swings, smaller spikes.",
+    ko: "변동폭이 가장 낮고, 완만한 수익 곡선입니다.",
+  },
+  medium: {
+    en: "Balanced volatility with bigger edge buckets.",
+    ko: "중간 변동성에 더 큰 외곽 배율이 섞입니다.",
+  },
+  high: {
+    en: "Sharply volatile with rare big hits and punishing center bins.",
+    ko: "희귀한 큰 당첨과 강한 중앙 손실이 공존하는 고변동 모드입니다.",
+  },
+} as const;
 
 interface BallState {
   x: number; y: number; vx: number; vy: number;
@@ -109,6 +127,15 @@ export default function Plinko() {
       ball.vx *= H_FRICTION;
       ball.x += ball.vx;
       ball.y += ball.vy;
+
+      if (ball.x <= SIDE_PADDING) {
+        ball.x = SIDE_PADDING;
+        ball.vx = Math.abs(ball.vx) * EDGE_DAMPING;
+      } else if (ball.x >= bw - SIDE_PADDING) {
+        ball.x = bw - SIDE_PADDING;
+        ball.vx = -Math.abs(ball.vx) * EDGE_DAMPING;
+      }
+
       ball.trail.push({ x: ball.x, y: ball.y });
       if (ball.trail.length > TRAIL_LENGTH) ball.trail.shift();
 
@@ -117,10 +144,15 @@ export default function Plinko() {
         if (ball.y >= pegY) {
           const dir = ball.path[ball.currentRow];
           const sign = dir === "R" ? 1 : -1;
+          const pegSpacing = bw / (ROWS + 3);
+          const fallSpeed = Math.max(ball.vy, 0.8);
           const jitter = (Math.random() * 2 - 1) * JITTER_DEG * (Math.PI / 180);
-          ball.vx = BOUNCE_VX_BASE * sign * Math.cos(jitter) - BOUNCE_VY * Math.sin(jitter);
-          ball.vy = BOUNCE_VX_BASE * sign * Math.sin(jitter) + BOUNCE_VY * Math.cos(jitter);
-          ball.y = pegY;
+          const sideImpulse = (BOUNCE_VX_BASE + fallSpeed * 0.08) * sign;
+          const lift = Math.min(BOUNCE_LIFT_BASE + fallSpeed * 0.1, 2.1);
+          ball.vx = sideImpulse * Math.cos(jitter) + ball.vx * 0.18;
+          ball.vy = -lift + sideImpulse * Math.sin(jitter);
+          ball.x += sign * pegSpacing * 0.14;
+          ball.y = pegY + 1;
 
           // Glow peg
           const pegsInRow = ball.currentRow + 3;
@@ -215,7 +247,11 @@ export default function Plinko() {
       );
 
       const newBalls: BallState[] = results.map((result, idx) => ({
-        x: startX, y: 0, vx: 0, vy: 0, currentRow: 0,
+        x: startX + (Math.random() * 2 - 1) * LAUNCH_SPREAD,
+        y: 0,
+        vx: (Math.random() * 2 - 1) * 0.18,
+        vy: 0,
+        currentRow: 0,
         path: result.path, result: { bucket: result.bucket, multiplier: result.multiplier, payout: result.payout, betAmount: result.betAmount },
         landed: false, launchDelay: startTime + idx * 200, started: idx === 0, trail: [],
       }));
@@ -350,6 +386,10 @@ export default function Plinko() {
                   }`}>{rk}</button>
               ))}
             </div>
+
+            <p className="mb-3 text-center text-[10px] text-zinc-500">
+              {language === "ko" ? RISK_DESCRIPTIONS[risk].ko : RISK_DESCRIPTIONS[risk].en}
+            </p>
 
             <div className="mb-3">
               <CasinoBetControls

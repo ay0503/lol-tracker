@@ -1,6 +1,7 @@
 /**
  * Plinko game engine — instant resolution.
- * Ball drops through 12 rows of pegs into 13 buckets. 2-3% house edge.
+ * Ball drops through 12 rows of pegs into 13 buckets.
+ * Target RTP stays slightly house-favored across all risk tiers.
  */
 
 const MAX_PAYOUT = 500;
@@ -9,9 +10,9 @@ const ROWS = 12;
 export type PlinkoRisk = "low" | "medium" | "high";
 
 const MULTIPLIERS: Record<PlinkoRisk, number[]> = {
-  low:    [5.6, 2.1, 1.4, 1.1, 1, 0.5, 0.3, 0.5, 1, 1.1, 1.4, 2.1, 5.6],
-  medium: [13, 3, 1.5, 1, 0.5, 0.3, 0.3, 0.3, 0.5, 1, 1.5, 3, 13],
-  high:   [110, 41, 10, 5, 3, 1.5, 0.5, 1.5, 3, 5, 10, 41, 110],
+  low:    [8, 3, 2, 1.5, 1.4, 0.8, 0.4, 0.8, 1.4, 1.5, 2, 3, 8],
+  medium: [26, 6, 3, 2, 1, 0.6, 0.6, 0.6, 1, 2, 3, 6, 26],
+  high:   [39, 14, 3.5, 1.8, 1.1, 0.6, 0.2, 0.6, 1.1, 1.8, 3.5, 14, 39],
 };
 
 export interface PlinkoResult {
