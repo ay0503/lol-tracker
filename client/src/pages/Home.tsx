@@ -138,8 +138,8 @@ function StatCard({
 function LiveGameBanner() {
   const { t } = useTranslation();
   const { data: liveGame } = trpc.player.liveGame.useQuery(undefined, {
-    refetchInterval: 30_000, // Check every 30 seconds
-    staleTime: 15_000,
+    refetchInterval: liveGame?.inGame ? 15_000 : 120_000,
+    staleTime: liveGame?.inGame ? 10_000 : 60_000,
   });
 
   const [elapsed, setElapsed] = useState(0);
@@ -228,8 +228,8 @@ function LiveGameBanner() {
 function PostGameBanner() {
   const { t } = useTranslation();
   const { data: event } = trpc.player.gameEndEvent.useQuery(undefined, {
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    refetchInterval: event ? 15_000 : 120_000,
+    staleTime: event ? 10_000 : 60_000,
   });
   const dismissMutation = trpc.player.dismissGameEndEvent.useMutation({
     onSuccess: () => {

@@ -38,6 +38,14 @@ const FIVE_MIN = 5 * 60 * 1000;
 /** Casino cooldown tracking */
 const casinoLastGameTime = new Map<number, number>();
 
+// Clean up stale cooldown entries every 10 min
+setInterval(() => {
+  const cutoff = Date.now() - 3600_000;
+  for (const [userId, time] of Array.from(casinoLastGameTime.entries())) {
+    if (time < cutoff) casinoLastGameTime.delete(userId);
+  }
+}, 600_000);
+
 async function checkCasinoCooldown(userId: number): Promise<void> {
   const client = getRawClient();
   try {

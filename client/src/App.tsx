@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -5,47 +6,62 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import WelcomeModal from "./components/WelcomeModal";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { Loader2 } from "lucide-react";
+
+// Eager: Home + Login (critical path)
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Ledger from "./pages/Ledger";
-import Portfolio from "./pages/Portfolio";
-import Leaderboard from "./pages/Leaderboard";
-import NewsFeed from "./pages/NewsFeed";
-import Sentiment from "./pages/Sentiment";
-import AdminSQL from "./pages/AdminSQL";
-import AdminDB from "./pages/AdminDB";
-import Casino from "./pages/Casino";
-import Blackjack from "./pages/Blackjack";
-import Mines from "./pages/Mines";
-import Crash from "./pages/Crash";
-import Roulette from "./pages/Roulette";
-import Poker from "./pages/VideoPoker";
-import CasinoShop from "./pages/CasinoShop";
+
+// Lazy: everything else
+const Register = lazy(() => import("./pages/Register"));
+const Ledger = lazy(() => import("./pages/Ledger"));
+const Portfolio = lazy(() => import("./pages/Portfolio"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const NewsFeed = lazy(() => import("./pages/NewsFeed"));
+const Sentiment = lazy(() => import("./pages/Sentiment"));
+const AdminSQL = lazy(() => import("./pages/AdminSQL"));
+const AdminDB = lazy(() => import("./pages/AdminDB"));
+const Casino = lazy(() => import("./pages/Casino"));
+const Blackjack = lazy(() => import("./pages/Blackjack"));
+const Mines = lazy(() => import("./pages/Mines"));
+const Crash = lazy(() => import("./pages/Crash"));
+const Roulette = lazy(() => import("./pages/Roulette"));
+const Poker = lazy(() => import("./pages/VideoPoker"));
+const CasinoShop = lazy(() => import("./pages/CasinoShop"));
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/login"} component={Login} />
-      <Route path={"/register"} component={Register} />
-      <Route path={"/ledger"} component={Ledger} />
-      <Route path={"/portfolio"} component={Portfolio} />
-      <Route path={"/leaderboard"} component={Leaderboard} />
-      <Route path={"/news"} component={NewsFeed} />
-      <Route path={"/sentiment"} component={Sentiment} />
-      <Route path={"/casino/blackjack"} component={Blackjack} />
-      <Route path={"/casino/mines"} component={Mines} />
-      <Route path={"/casino/crash"} component={Crash} />
-      <Route path={"/casino/roulette"} component={Roulette} />
-      <Route path={"/casino/poker"} component={Poker} />
-      <Route path={"/casino/shop"} component={CasinoShop} />
-      <Route path={"/casino"} component={Casino} />
-      <Route path={"/admin/sql"} component={AdminSQL} />
-      <Route path={"/admin"} component={AdminDB} />
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<LoadingFallback />}>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path={"/login"} component={Login} />
+        <Route path={"/register"} component={Register} />
+        <Route path={"/ledger"} component={Ledger} />
+        <Route path={"/portfolio"} component={Portfolio} />
+        <Route path={"/leaderboard"} component={Leaderboard} />
+        <Route path={"/news"} component={NewsFeed} />
+        <Route path={"/sentiment"} component={Sentiment} />
+        <Route path={"/casino/blackjack"} component={Blackjack} />
+        <Route path={"/casino/mines"} component={Mines} />
+        <Route path={"/casino/crash"} component={Crash} />
+        <Route path={"/casino/roulette"} component={Roulette} />
+        <Route path={"/casino/poker"} component={Poker} />
+        <Route path={"/casino/shop"} component={CasinoShop} />
+        <Route path={"/casino"} component={Casino} />
+        <Route path={"/admin/sql"} component={AdminSQL} />
+        <Route path={"/admin"} component={AdminDB} />
+        <Route path={"/404"} component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

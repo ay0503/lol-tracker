@@ -466,6 +466,9 @@ export async function pollNow(): Promise<PollResult> {
     previousTier = tier;
     previousDivision = division;
 
+    // Prefetch price history (reused for daily summary + order execution)
+    let fullHistoryCache: Awaited<ReturnType<typeof getPriceHistory>> | null = null;
+
     // Discord: daily summary (once per day, after 10 PM KST / 6 AM PT)
     const nowDate = new Date();
     const todayKey = `${nowDate.getFullYear()}-${nowDate.getMonth()}-${nowDate.getDate()}`;
@@ -474,7 +477,7 @@ export async function pollNow(): Promise<PollResult> {
     if (hourUTC >= 13 && lastDailySummaryDate !== todayKey) {
       try {
         const { users: allUsers, holdingsByUser } = await getLeaderboard();
-        const fullHist = await getPriceHistory();
+        const fullHist = fullHistoryCache ?? await getPriceHistory();
         const etfPrices = fullHist.length > 0 ? computeAllETFPricesSync(fullHist) : { DORI: price };
 
         const rankings = allUsers.map(u => {
@@ -501,8 +504,8 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // 6. Execute pending orders
-    // Compute ETF prices from full history (unified compounding)
-    const fullHistory = await getPriceHistory();
+    // Compute ETF prices from full history (fetched once, reused for orders + snapshots)
+    const fullHistory = fullHistoryCache ?? await getPriceHistory();
     const currentETFPrices = fullHistory.length > 0
       ? computeAllETFPricesSync(fullHistory)
       : { DORI: price, DDRI: price, TDRI: price, SDRI: price, XDRI: price };

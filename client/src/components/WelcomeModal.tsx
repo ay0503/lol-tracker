@@ -36,8 +36,8 @@ export default function WelcomeModal() {
     {
       icon: <ArrowRightLeft className="w-8 h-8 text-purple-400" />,
       title: "송금",
-      desc: "트레이딩 캐시를 카지노 캐시로 전환할 수 있습니다. 환율은 20배입니다 — $1 트레이딩 = $20 카지노. 카지노 페이지에서 입금하세요.",
-      highlight: "$1 → $20 (20배)",
+      desc: "트레이딩 캐시를 카지노 캐시로 전환할 수 있습니다. 환율은 10배입니다 — $1 트레이딩 = $10 카지노. 카지노 페이지에서 입금하세요.",
+      highlight: "$1 → $10 (10배)",
     },
     {
       icon: <Sparkles className="w-8 h-8 text-pink-400" />,
@@ -61,8 +61,8 @@ export default function WelcomeModal() {
     {
       icon: <ArrowRightLeft className="w-8 h-8 text-purple-400" />,
       title: "Transfers",
-      desc: "You can convert trading cash to casino cash. The exchange rate is 20x — $1 trading = $20 casino. Deposit from the Casino page.",
-      highlight: "$1 → $20 (20x)",
+      desc: "You can convert trading cash to casino cash. The exchange rate is 10x — $1 trading = $10 casino. Deposit from the Casino page.",
+      highlight: "$1 → $10 (10x)",
     },
     {
       icon: <Sparkles className="w-8 h-8 text-pink-400" />,

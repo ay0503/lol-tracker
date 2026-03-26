@@ -847,9 +847,9 @@ export async function resolveBets(matchId: string, playerWon: boolean) {
 
 // ─── Live Stats (computed from stored matches) ───
 
-export async function getAllMatchesFromDB() {
+export async function getAllMatchesFromDB(limit = 200) {
   const db = await getDb();
-  return db.select().from(matches).orderBy(sql`${matches.gameCreation} DESC`);
+  return db.select().from(matches).orderBy(sql`${matches.gameCreation} DESC`).limit(limit);
 }
 
 export async function getMatchesSince(sinceTimestamp: number) {
