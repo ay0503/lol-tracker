@@ -1,3 +1,4 @@
+import AppNav from "@/components/AppNav";
 /*
  * Ledger: Public trade ledger with Trades and Dividends tabs.
  * Full i18n support (EN/KR).
@@ -30,11 +31,8 @@ export default function Ledger() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppNav />
       <div className="container py-8 max-w-4xl">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          {t.common.back} $DORI
-        </Link>
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

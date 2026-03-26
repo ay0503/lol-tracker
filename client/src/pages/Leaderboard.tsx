@@ -1,3 +1,4 @@
+import AppNav from "@/components/AppNav";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -160,27 +161,7 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex items-center justify-between h-14">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              {t.common.back}
-            </Link>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">{t.nav.leaderboard}</span>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-4">
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
-            <Link href="/portfolio" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.portfolio}</Link>
-            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.news}</Link>
-            <Link href="/sentiment" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.sentiment}</Link>
-          </div>
-        </div>
-      </nav>
+      <AppNav />
 
       <main className="container py-6">
         <div className="mb-6">

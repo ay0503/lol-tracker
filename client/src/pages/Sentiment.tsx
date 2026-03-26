@@ -1,3 +1,4 @@
+import AppNav from "@/components/AppNav";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -80,26 +81,7 @@ export default function Sentiment() {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="container flex items-center justify-between h-14">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              {t.common.back}
-            </Link>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">{t.nav.sentiment}</span>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-4">
-            <Link href="/leaderboard" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.leaderboard}</Link>
-            <Link href="/news" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.news}</Link>
-            <Link href="/ledger" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{t.nav.ledger}</Link>
-          </div>
-        </div>
-      </nav>
+      <AppNav />
 
       <main className="container py-6 max-w-3xl">
         <div className="mb-6">
