@@ -130,7 +130,6 @@ export async function pollNow(): Promise<PollResult> {
 
   try {
     // 1. Fetch player data (single call, reused for game check + LP)
-    console.log("[Poll] Fetching player data...");
     let playerData: Awaited<ReturnType<typeof fetchFullPlayerData>>;
     try {
       playerData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
@@ -146,7 +145,6 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // 2. Check live game status with two-consecutive-confirmation
-    console.log("[Poll] Checking live game status...");
     let rawIsInGame = false;
     let activeGameData: Awaited<ReturnType<typeof getActiveGame>> = null;
     try {
@@ -162,10 +160,6 @@ export async function pollNow(): Promise<PollResult> {
     if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
       confirmedIsInGame = rawIsInGame;
       console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
-    } else if (rawIsInGame !== previousRawIsInGame) {
-      console.log(`[Poll] Live game raw: ${rawIsInGame ? "IN GAME" : "not in game"} (waiting for confirmation, confirmed: ${confirmedIsInGame ? "IN GAME" : "not in game"})`);
-    } else {
-      console.log(`[Poll] Live game: confirmed=${confirmedIsInGame ? "IN GAME" : "not in game"}, raw=${rawIsInGame ? "IN GAME" : "not in game"}`);
     }
     previousRawIsInGame = rawIsInGame;
 
@@ -258,18 +252,15 @@ export async function pollNow(): Promise<PollResult> {
       lastSnapshotPrice = price;
       lastSnapshotTime = now;
     } else {
-      console.log(`[Poll] Price: $${price.toFixed(2)} (${tier} ${division} ${lp}LP) — unchanged, skipping snapshot`);
     }
 
     // 3. Fetch and process new matches
     // First get match IDs, filter out already-processed ones, then only fetch details for new ones
-    console.log("[Poll] Fetching recent match IDs...");
     const puuid = playerData.account.puuid;
     const recentMatchIds = await getMatchIds(puuid, 10, 420);
     const processedIds = await getProcessedMatchIds();
     const newMatchIds = recentMatchIds.filter(id => !processedIds.has(id));
 
-    console.log(`[Poll] ${newMatchIds.length} new matches to process (${recentMatchIds.length - newMatchIds.length} already processed)`);
 
     const prevPrice = previousPrice ? parseFloat(previousPrice.price) : price;
 
@@ -504,13 +495,11 @@ export async function pollNow(): Promise<PollResult> {
 
     // 6. Execute pending orders
     // Compute ETF prices from full history (unified compounding)
-    console.log("[Poll] Computing ETF prices from full history...");
     const fullHistory = await getPriceHistory();
     const currentETFPrices = fullHistory.length > 0
       ? computeAllETFPricesSync(fullHistory)
       : { DORI: price, DDRI: price, TDRI: price, SDRI: price, XDRI: price };
 
-    console.log("[Poll] Checking pending orders...");
     const pendingOrders = await getPendingOrders();
     for (const order of pendingOrders) {
       const orderTicker = order.ticker;
@@ -557,7 +546,6 @@ export async function pollNow(): Promise<PollResult> {
       if (nowMs - lastPortfolioSnapshotTime >= PORTFOLIO_SNAPSHOT_INTERVAL_MS) {
         await recordPortfolioSnapshots(currentETFPrices as Record<string, number>);
         lastPortfolioSnapshotTime = nowMs;
-        console.log("[Poll] Portfolio snapshots recorded");
       }
     } catch (err: any) {
       result.errors.push(`Portfolio snapshot error: ${err.message}`);

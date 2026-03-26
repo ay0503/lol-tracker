@@ -653,46 +653,29 @@ async function postBotComment(
 export async function runBotTrader(): Promise<boolean> {
   const isInGame = cache.get<boolean>("player.liveGame.check");
 
-  console.log("[Bot] ═══════════════════════════════════════");
-  console.log(`[Bot] QuantBot trading cycle — ${isInGame ? "LIVE GAME" : "no live game"}`);
-
   try {
-
-    // Ensure bot user exists
     const botUserId = await ensureBotUser();
-
-    // Gather market data
-    console.log("[Bot] Gathering market data...");
     const marketData = await gatherMarketData(botUserId);
-
-    // Check if LLM is available
     const hasLLM = !!(ENV.openaiApiUrl && ENV.openaiApiKey);
 
-    // Get trading decision
     let decision: TradeDecision;
     if (hasLLM) {
-      console.log("[Bot] Requesting AI analysis...");
       decision = await getAIDecision(marketData);
     } else {
-      console.log("[Bot] LLM not configured — using momentum fallback strategy");
       decision = getFallbackDecision(marketData);
     }
 
-    console.log(`[Bot] Decision: ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} (confidence: ${decision.confidence}%, sentiment: ${decision.sentiment})`);
-    console.log(`[Bot] Reasoning: ${decision.reasoning}`);
-
-    // Execute the trade
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
-    console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
+    if (decision.action !== "hold") {
+      console.log(`[Bot] ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} → ${result.success ? '✅' : '❌'} ${result.message}`);
+    }
 
     // Bot comments disabled
     // await postBotComment(botUserId, decision, result, marketData);
 
-    console.log("[Bot] ═══════════════════════════════════════");
     return decision.action !== "hold";
   } catch (err) {
-    console.error("[Bot] Unexpected error:", err);
-    console.log("[Bot] ═══════════════════════════════════════");
+    console.error("[Bot] Error:", err);
     return false;
   }
 }
@@ -726,19 +709,15 @@ export async function forceRunBot(): Promise<boolean> {
       console.log("[Bot] Requesting AI analysis...");
       decision = await getAIDecision(marketData);
     } else {
-      console.log("[Bot] LLM not configured — using momentum fallback strategy");
       decision = getFallbackDecision(marketData);
     }
-    console.log(`[Bot] Decision: ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} (confidence: ${decision.confidence}%, sentiment: ${decision.sentiment})`);
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
-    console.log(`[Bot] Result: ${result.success ? '✅' : '❌'} ${result.message}`);
+    console.log(`[Bot] Force: ${decision.action} $${decision.ticker} → ${result.success ? '✅' : '❌'} ${result.message}`);
     // Bot comments disabled
     // await postBotComment(botUserId, decision, result, marketData);
-    console.log("[Bot] ═══════════════════════════════════════");
     return true;
   } catch (err) {
     console.error("[Bot] Force run error:", err);
-    console.log("[Bot] ═══════════════════════════════════════");
     return false;
   }
 }

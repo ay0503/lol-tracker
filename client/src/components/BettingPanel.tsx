@@ -6,7 +6,7 @@ import { Loader2, Trophy, TrendingUp, TrendingDown, Dice5 } from "lucide-react";
 import NumberInput from "./NumberInput";
 
 export default function BettingPanel() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [amount, setAmount] = useState("");
   const [prediction, setPrediction] = useState<"win" | "loss" | null>(null);
 
@@ -45,7 +45,7 @@ export default function BettingPanel() {
       <div className="flex items-center gap-2 mb-4">
         <Dice5 className="w-4 h-4 text-yellow-400" />
         <h3 className="text-sm font-bold font-[var(--font-heading)]">
-          {t.language === "ko" ? "다음 게임 베팅" : "Bet on Next Game"}
+          {language === "ko" ? "다음 게임 베팅" : "Bet on Next Game"}
         </h3>
         {pendingPool && pendingPool.total > 0 && (
           <span className="ml-auto text-[10px] text-muted-foreground font-mono">
@@ -57,7 +57,7 @@ export default function BettingPanel() {
       {hasPendingBet && pendingBet ? (
         <div className="text-center py-3">
           <p className="text-sm font-bold text-foreground">
-            {t.language === "ko" ? "베팅 진행 중" : "Bet Active"}
+            {language === "ko" ? "베팅 진행 중" : "Bet Active"}
           </p>
           <div className="flex items-center justify-center gap-2 mt-2">
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -70,7 +70,7 @@ export default function BettingPanel() {
             <span className="text-sm font-mono font-bold">${pendingBet.amount.toFixed(2)}</span>
           </div>
           <p className="text-[10px] text-muted-foreground mt-2">
-            {t.language === "ko" ? "게임 끝나면 자동 정산됩니다" : "Auto-resolved when game ends"}
+            {language === "ko" ? "게임 끝나면 자동 정산됩니다" : "Auto-resolved when game ends"}
           </p>
         </div>
       ) : (
@@ -136,7 +136,7 @@ export default function BettingPanel() {
           </div>
 
           <p className="text-[10px] text-muted-foreground text-center">
-            {t.language === "ko"
+            {language === "ko"
               ? "맞추면 2배! 다음 솔랭 결과에 베팅하세요"
               : "2x payout if correct! Bet on next ranked game result"}
           </p>
@@ -147,7 +147,7 @@ export default function BettingPanel() {
       {recentBets.length > 0 && (
         <div className="mt-4 pt-3 border-t border-border/50">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-            {t.language === "ko" ? "최근 베팅" : "Recent Bets"}
+            {language === "ko" ? "최근 베팅" : "Recent Bets"}
           </p>
           <div className="space-y-1">
             {recentBets.map(bet => (

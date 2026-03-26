@@ -473,7 +473,7 @@ export async function distributeDividends(
 
   let totalDistributed = 0;
 
-  for (const [userId, userHolds] of userHoldings) {
+  for (const [userId, userHolds] of Array.from(userHoldings.entries())) {
     // Calculate share bonus across all tickers
     let shareBonus = 0;
     let primaryTicker = "DORI";
