@@ -30,6 +30,7 @@ export const portfolios = sqliteTable("portfolios", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("userId").notNull().unique(),
   cashBalance: text("cashBalance").notNull().default("200.00"),
+  casinoBalance: text("casinoBalance").notNull().default("20.00"),
   totalDividends: text("totalDividends").notNull().default("0.00"),
   createdAt: text("createdAt").default(sql`(datetime('now'))`).notNull(),
   updatedAt: text("updatedAt").default(sql`(datetime('now'))`).notNull(),

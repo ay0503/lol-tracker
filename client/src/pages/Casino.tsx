@@ -214,16 +214,17 @@ export default function Casino() {
   const { data: activeGame } = trpc.casino.blackjack.active.useQuery(undefined, {
     enabled: isAuthenticated, staleTime: 30_000,
   });
-  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, {
-    enabled: isAuthenticated, refetchInterval: 60_000,
+  const { data: casinoBalance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, {
+    enabled: isAuthenticated,
   });
+  const { data: casinoLeaderboard } = trpc.casino.leaderboard.useQuery();
 
   const dealMutation = trpc.casino.blackjack.deal.useMutation({
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       setLastBet(game.bet);
       if (game.status === "blackjack") toast.success("BLACKJACK! 🃏");
-      utils.trading.portfolio.invalidate();
+      refetchBalance();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -232,7 +233,7 @@ export default function Casino() {
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       if (game.status === "player_bust") toast.error("Bust! 💥");
-      utils.trading.portfolio.invalidate();
+      refetchBalance();
     },
     onError: (err) => { toast.error(err.message); utils.casino.blackjack.active.invalidate(); },
   });
@@ -240,7 +241,7 @@ export default function Casino() {
   const standMutation = trpc.casino.blackjack.stand.useMutation({
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
-      utils.trading.portfolio.invalidate();
+      refetchBalance();
       // Delay toast for dealer reveal animation
       const dealerCards = game.dealerHand.length;
       const delay = dealerCards > 2 ? (dealerCards - 2) * 500 + 300 : 300;
@@ -257,7 +258,7 @@ export default function Casino() {
   const doubleMutation = trpc.casino.blackjack.double.useMutation({
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
-      utils.trading.portfolio.invalidate();
+      refetchBalance();
       setTimeout(() => {
         const s = game.status;
         if (s === "player_win" || s === "dealer_bust") toast.success("Double down wins! 🎉🎉");
@@ -273,7 +274,7 @@ export default function Casino() {
   const isPlaying = game?.status === "playing";
   const isOver = game && game.status !== "playing";
   const isPending = dealMutation.isPending || hitMutation.isPending || standMutation.isPending || doubleMutation.isPending;
-  const cash = portfolio?.cashBalance ?? 0;
+  const cash = casinoBalance ?? 20;
 
   const prevPlayerCards = useCardCount(game?.playerHand);
   const prevDealerCards = useCardCount(game?.dealerHand);
@@ -564,6 +565,35 @@ export default function Casino() {
             ? "딜러 17 스탠드 · 블랙잭 3:2 · 더블다운 첫 패"
             : "Dealer stands 17 · BJ pays 3:2 · Double on first hand"}
         </p>
+
+        {/* Casino Leaderboard */}
+        {casinoLeaderboard && casinoLeaderboard.length > 0 && (
+          <div className="mt-6 bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Dice5 className="w-3.5 h-3.5 text-yellow-400" />
+              {language === "ko" ? "카지노 랭킹" : "Casino Leaderboard"}
+            </h3>
+            <div className="space-y-1.5">
+              {casinoLeaderboard.slice(0, 10).map((player, i) => {
+                const isProfit = player.profit >= 0;
+                return (
+                  <div key={player.userId} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-zinc-500 w-4">{i + 1}</span>
+                      <span className="text-xs text-zinc-300 font-medium">{player.userName}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-mono ${isProfit ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                        {isProfit ? "+" : ""}{player.profit.toFixed(2)}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-zinc-200">${player.casinoBalance.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
