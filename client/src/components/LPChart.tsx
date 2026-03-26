@@ -402,14 +402,6 @@ export default function LPChart() {
     [activeRange]
   );
 
-  const firstPrice = data[0]?.price ?? 0;
-  // Use etfPrices (single source of truth) for current price, fallback to last chart point
-  const livePrice = etfPrices?.find((p: any) => p.ticker === activeTicker)?.price;
-  const lastPrice = livePrice ?? data[data.length - 1]?.price ?? 0;
-  const priceChange = lastPrice - firstPrice;
-  const isPositive = priceChange >= 0;
-  const chartColor = isPositive ? tickerColor : "#FF5252";
-
   // Apply zoom to data
   const zoomedData = useMemo(() => {
     if (data.length === 0 || (zoomRange[0] === 0 && zoomRange[1] === 1)) return data;
@@ -417,6 +409,14 @@ export default function LPChart() {
     const endIdx = Math.ceil(zoomRange[1] * data.length);
     return data.slice(startIdx, endIdx);
   }, [data, zoomRange]);
+
+  // P&L reflects what's visible on chart
+  const firstPrice = zoomedData[0]?.price ?? 0;
+  const livePrice = etfPrices?.find((p: any) => p.ticker === activeTicker)?.price;
+  const lastPrice = livePrice ?? zoomedData[zoomedData.length - 1]?.price ?? 0;
+  const priceChange = lastPrice - firstPrice;
+  const isPositive = priceChange >= 0;
+  const chartColor = isPositive ? tickerColor : "#FF5252";
 
   const minPrice = zoomedData.length > 0 ? Math.min(...zoomedData.map((d) => d.price)) : 0;
   const maxPrice = zoomedData.length > 0 ? Math.max(...zoomedData.map((d) => d.price)) : 100;
