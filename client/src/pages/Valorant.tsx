@@ -7,6 +7,22 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import AppNav from "@/components/AppNav";
 
+const TEST_PLAYERS = [
+  "I SEE U BABY BOI#LVgod", "envy ion#469", "9ENN#aaaaa", "MICKNUTTY333#meow",
+  "SR exa#VIC", "Tofu#taps", "shawz#000", "TheDragonWarrior#fmboy",
+  "EG stunna#2006", "awkua#777", "QOR Notexxd#KTTA", "Shae#Shon",
+  "milan#frelo", "nonentity#0704", "needy#owo", "raiku#hsp",
+  "asianvyn#rank1", "smk#zerra", "tonza#tones", "ahm4xx はあ#15yr",
+  "xup#tanl", "twitch toozy#2005", "Harmful#boop", "EG jakee#thief",
+  "supamen#612", "LEV spikezin#ayra", "Subroza#RULT", "mikeE#scan",
+  "icy#madi", "SR Smoke#jamon", "LEV Sato#emyna", "PowerPixele#Autum",
+  "PaMstou#Kunai", "twitch haeyoday#hyd", "M80 Boni#angie", "M80 alvin#NO1",
+  "zanks#15yo", "klamran#4566", "twitch zeeraval#BRON", "endless#lll",
+  "ENVY Eggsterr#NJLTC", "dihawk#wya", "Siz#9487", "YPM#maid",
+  "God Of Arcadia#Gav", "carve#1111", "heartless#css", "kuroza#fps",
+  "LEV blowz#1111", "biG ORaNgE#katie", "kinetic#ysh", "ttv regannator#123",
+];
+
 const REGIONS = [
   { value: "na", label: "NA" },
   { value: "eu", label: "EU" },
@@ -227,9 +243,18 @@ export default function Valorant() {
                     region === rg.value ? "bg-red-500/20 text-red-400 border border-red-500/40" : "bg-secondary text-muted-foreground hover:text-foreground"
                   }`}>{rg.label}</button>
               ))}
-              <button onClick={handlePaste} className="ml-auto px-3 py-1 rounded-lg text-[10px] font-bold bg-secondary text-muted-foreground hover:text-foreground transition-all">
-                Paste 10
-              </button>
+              <div className="ml-auto flex gap-1.5">
+                <button onClick={() => {
+                  const shuffled = [...TEST_PLAYERS].sort(() => Math.random() - 0.5);
+                  setInputs(shuffled.slice(0, 10));
+                  toast.success("Loaded 10 random Radiant players");
+                }} className="px-3 py-1 rounded-lg text-[10px] font-bold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-all">
+                  Test Radiants
+                </button>
+                <button onClick={handlePaste} className="px-3 py-1 rounded-lg text-[10px] font-bold bg-secondary text-muted-foreground hover:text-foreground transition-all">
+                  Paste 10
+                </button>
+              </div>
             </div>
 
             {/* Player Inputs */}
