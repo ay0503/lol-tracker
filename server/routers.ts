@@ -777,6 +777,7 @@ export const appRouter = router({
         const trades = await getUserTrades(input.userId, 20);
         const holdings = await getUserHoldings(input.userId);
         const history = await getPortfolioHistory(input.userId, Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const userBets = await getUserBets(input.userId, 10);
         return {
           trades: trades.map(t => ({
             ticker: t.ticker, type: t.type,
@@ -795,6 +796,18 @@ export const appRouter = router({
             totalValue: parseFloat(s.totalValue),
             timestamp: Number(s.timestamp),
           })),
+          bets: userBets.map(b => ({
+            prediction: b.prediction, amount: parseFloat(b.amount),
+            status: b.status, payout: b.payout ? parseFloat(b.payout) : null,
+          })),
+          betStats: {
+            total: userBets.length,
+            won: userBets.filter(b => b.status === "won").length,
+            lost: userBets.filter(b => b.status === "lost").length,
+            pending: userBets.filter(b => b.status === "pending").length,
+            totalWinnings: userBets.filter(b => b.status === "won").reduce((s, b) => s + parseFloat(b.payout || "0"), 0),
+            totalLost: userBets.filter(b => b.status === "lost").reduce((s, b) => s + parseFloat(b.amount), 0),
+          },
         };
       }),
   }),

@@ -25,6 +25,7 @@ import {
   Repeat,
   Gift,
   LineChart,
+  Dice5,
 } from "lucide-react";
 import { Link } from "wouter";
 import { TICKERS } from "@/lib/playerData";
@@ -34,7 +35,7 @@ function getTickerColor(ticker: string): string {
   return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
 }
 
-type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend";
+type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend" | "bet";
 
 function getTradeTypeStyle(type: string, t: any) {
   switch (type) {
@@ -252,6 +253,7 @@ export default function Portfolio() {
     { id: "short", label: t.trading.short },
     { id: "cover", label: t.trading.cover },
     { id: "dividend", label: t.portfolio.dividends },
+    { id: "bet", label: language === "ko" ? "베팅" : "Bets" },
   ];
 
   const { data: portfolio, isLoading: portfolioLoading } = trpc.trading.portfolio.useQuery(
@@ -262,6 +264,7 @@ export default function Portfolio() {
     { limit: 200 },
     { enabled: isAuthenticated }
   );
+  const { data: myBets } = trpc.betting.myBets.useQuery(undefined, { enabled: isAuthenticated });
 
   // Single source of truth for all current prices
   const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, {
@@ -325,6 +328,7 @@ export default function Portfolio() {
   }, [portfolio, etfPrices]);
 
   const filteredTrades = useMemo(() => {
+    if (filter === "bet") return []; // Bets shown separately
     if (!tradeHistory) return [];
     if (filter === "all") return tradeHistory;
     return tradeHistory.filter(t => t.type === filter);
@@ -335,6 +339,8 @@ export default function Portfolio() {
     const counts: Record<string, number> = {};
     for (const tr of tradeHistory) {
       counts[tr.type] = (counts[tr.type] || 0) + 1;
+    }
+    if (myBets) counts["bet"] = myBets.length;
     }
     return counts;
   }, [tradeHistory]);
@@ -673,6 +679,67 @@ export default function Portfolio() {
                     <div key={i} className="animate-pulse h-12 bg-secondary rounded-lg" />
                   ))}
                 </div>
+              ) : filter === "bet" ? (
+                /* Bets list */
+                myBets && myBets.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {myBets.map((bet) => {
+                      const isPending = bet.status === "pending";
+                      const isWon = bet.status === "won";
+                      return (
+                        <div
+                          key={bet.id}
+                          className="flex items-center justify-between py-3 px-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              isPending ? "bg-yellow-500/20" : isWon ? "bg-[#00C805]/20" : "bg-[#FF5252]/20"
+                            }`}>
+                              <Dice5 className="w-4 h-4" style={{ color: isPending ? "#eab308" : isWon ? "#00C805" : "#FF5252" }} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold uppercase ${
+                                  bet.prediction === "win" ? "text-[#00C805]" : "text-[#FF5252]"
+                                }`}>
+                                  {bet.prediction}
+                                </span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  isPending ? "bg-yellow-500/15 text-yellow-400" :
+                                  isWon ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                                }`}>
+                                  {isPending ? "PENDING" : isWon ? "WON" : "LOST"}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
+                                ${bet.amount.toFixed(2)} {language === "ko" ? "베팅" : "bet"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-semibold font-[var(--font-mono)] ${
+                              isPending ? "text-yellow-400" : isWon ? "text-[#00C805]" : "text-[#FF5252]"
+                            }`}>
+                              {isPending ? `$${bet.amount.toFixed(2)}` :
+                               isWon ? `+$${(bet.payout ?? 0).toFixed(2)}` :
+                               `-$${bet.amount.toFixed(2)}`}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {formatDateTime(bet.createdAt, language)}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Dice5 className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      {language === "ko" ? "아직 베팅 기록이 없습니다" : "No bets yet"}
+                    </p>
+                  </div>
+                )
               ) : filteredTrades.length > 0 ? (
                 <div className="space-y-1.5">
                   {filteredTrades.map((trade) => {

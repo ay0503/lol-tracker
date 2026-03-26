@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award, ChevronDown, ChevronUp, Loader2, Dice5 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function getRankIcon(rank: number) {
@@ -119,6 +119,24 @@ function UserProfile({ userId }: { userId: number }) {
           </div>
         )}
       </div>
+
+      {/* Bet stats */}
+      {data.betStats && data.betStats.total > 0 && (
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            <Dice5 className="w-3 h-3 inline mr-1" />Bets
+          </p>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-[#00C805] font-mono font-bold">{data.betStats.won}W</span>
+            <span className="text-[#FF5252] font-mono font-bold">{data.betStats.lost}L</span>
+            {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} pending</span>}
+            <span className="text-muted-foreground">|</span>
+            <span className={`font-mono font-bold ${data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+              {data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "+" : ""}${(data.betStats.totalWinnings - data.betStats.totalLost).toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Portfolio sparkline */}
       {data.portfolioHistory.length >= 2 && (
