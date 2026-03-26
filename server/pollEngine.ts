@@ -21,7 +21,7 @@ import {
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
   getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory,
-  resolveBets,
+  pruneOldPortfolioSnapshots, resolveBets,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
@@ -187,7 +187,7 @@ export async function pollNow(): Promise<PollResult> {
         const participant = activeGameData?.participants.find(p => p.puuid === playerData.account.puuid);
         const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
         const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
-        notifyGameStart(participant?.championId ? `ID ${participant.championId}` : undefined, gameMode);
+        notifyGameStart(participant?.championId ? `ID ${participant.championId}` : undefined, gameMode).catch(() => {});
       } catch (err: any) {
         console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
       }
@@ -230,7 +230,7 @@ export async function pollNow(): Promise<PollResult> {
       console.log(`[Poll] Game END event: LP ${preGameSnapshot.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${preGameSnapshot.price.toFixed(2)} → $${price.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(2)})`);
 
       // Discord notification for game end
-      notifyGameEnd(lpDelta, preGameSnapshot.price, price);
+      notifyGameEnd(lpDelta, preGameSnapshot.price, price).catch(() => {});
 
       // Clear pre-game snapshot
       preGameSnapshot = null;
@@ -420,7 +420,7 @@ export async function pollNow(): Promise<PollResult> {
         console.log(`[Poll] Game END event (fallback from match): LP ${prevLp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${prevPriceVal.toFixed(2)} → $${price.toFixed(2)}`);
 
         // Discord notification
-        notifyGameEnd(lpDelta, prevPriceVal, price);
+        notifyGameEnd(lpDelta, prevPriceVal, price).catch(() => {});
       }
     }
 
@@ -431,7 +431,7 @@ export async function pollNow(): Promise<PollResult> {
         if (tier !== previousTier || division !== previousDivision) {
           const prevTotalLPVal = tierToTotalLP(previousTier, previousDivision, 0);
           const currTotalLPVal = tierToTotalLP(tier, division, 0);
-          notifyRankChange(previousTier, previousDivision, tier, division, currTotalLPVal > prevTotalLPVal);
+          notifyRankChange(previousTier, previousDivision, tier, division, currTotalLPVal > prevTotalLPVal).catch(() => {});
         }
       }
 
@@ -447,7 +447,7 @@ export async function pollNow(): Promise<PollResult> {
             else break;
           }
           if (streakCount >= 3 && streakCount > lastNotifiedStreakCount) {
-            notifyStreak(firstResult ? "win" : "loss", streakCount);
+            notifyStreak(firstResult ? "win" : "loss", streakCount).catch(() => {});
             lastNotifiedStreakCount = streakCount;
           } else if (streakCount < 3) {
             lastNotifiedStreakCount = 0; // Reset when streak breaks
@@ -459,7 +459,7 @@ export async function pollNow(): Promise<PollResult> {
       if (prevPrice > 0) {
         const pricePctChange = Math.abs((price - prevPrice) / prevPrice) * 100;
         if (pricePctChange >= 5) {
-          notifyBigPriceMove("DORI", prevPrice, price);
+          notifyBigPriceMove("DORI", prevPrice, price).catch(() => {});
         }
       }
     }
@@ -478,6 +478,7 @@ export async function pollNow(): Promise<PollResult> {
       try {
         const { users: allUsers, holdingsByUser } = await getLeaderboard();
         const fullHist = fullHistoryCache ?? await getPriceHistory();
+        if (!fullHistoryCache) fullHistoryCache = fullHist;
         const etfPrices = fullHist.length > 0 ? computeAllETFPricesSync(fullHist) : { DORI: price };
 
         const rankings = allUsers.map(u => {
@@ -496,8 +497,9 @@ export async function pollNow(): Promise<PollResult> {
         lastDailySummaryDate = todayKey;
         console.log("[Poll] Daily summary sent to Discord");
 
-        // Daily price history cleanup
+        // Daily cleanup: prune old price history + portfolio snapshots
         await pruneOldPriceHistory();
+        await pruneOldPortfolioSnapshots();
       } catch (err: any) {
         console.warn("[Poll] Daily summary failed:", err?.message);
       }

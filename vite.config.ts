@@ -20,10 +20,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-charts": ["recharts", "lightweight-charts"],
+          "vendor-motion": ["framer-motion"],
+        },
+      },
+    },
   },
-  esbuild: {
-    keepNames: true,
-  },
+  esbuild: {},
   server: {
     host: true,
     allowedHosts: true,

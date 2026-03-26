@@ -142,7 +142,7 @@ export async function getUserHoldings(userId: number) {
 // Uses a queue-based pattern: each call chains onto the previous one, ensuring serialization.
 const userTradeLocks = new Map<number, { queue: Promise<void> }>();
 
-async function withUserLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
+export async function withUserLock<T>(userId: number, fn: () => Promise<T>): Promise<T> {
   let entry = userTradeLocks.get(userId);
   if (!entry) {
     entry = { queue: Promise.resolve() };
@@ -912,6 +912,38 @@ export async function getPortfolioHistory(userId: number, since?: number) {
   return db.select().from(portfolioSnapshots)
     .where(eq(portfolioSnapshots.userId, userId))
     .orderBy(portfolioSnapshots.timestamp);
+}
+
+/**
+ * Prune old portfolio snapshots: keep all from last 7 days,
+ * then keep only 1 per hour for 7-30 days, and 1 per day for 30+ days.
+ * Returns number of rows deleted.
+ */
+export async function pruneOldPortfolioSnapshots(): Promise<number> {
+  const client = getRawClient();
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+  // For 7-30 days: keep only the last snapshot per user per hour
+  const hourlyResult = await client.execute({
+    sql: `DELETE FROM portfolioSnapshots WHERE timestamp < ? AND timestamp >= ? AND id NOT IN (
+      SELECT MAX(id) FROM portfolioSnapshots WHERE timestamp < ? AND timestamp >= ? GROUP BY userId, CAST(timestamp / 3600000 AS INTEGER)
+    )`,
+    args: [sevenDaysAgo, thirtyDaysAgo, sevenDaysAgo, thirtyDaysAgo],
+  });
+
+  // For 30+ days: keep only the last snapshot per user per day
+  const dailyResult = await client.execute({
+    sql: `DELETE FROM portfolioSnapshots WHERE timestamp < ? AND id NOT IN (
+      SELECT MAX(id) FROM portfolioSnapshots WHERE timestamp < ? GROUP BY userId, CAST(timestamp / 86400000 AS INTEGER)
+    )`,
+    args: [thirtyDaysAgo, thirtyDaysAgo],
+  });
+
+  const total = (hourlyResult.rowsAffected ?? 0) + (dailyResult.rowsAffected ?? 0);
+  if (total > 0) console.log(`[DB] Pruned ${total} old portfolio snapshot rows`);
+  return total;
 }
 
 // ─── Notifications ───

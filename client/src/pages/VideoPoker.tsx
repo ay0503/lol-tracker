@@ -126,7 +126,7 @@ export default function VideoPoker() {
   }, [isHolding]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-6 sm:py-8 max-w-2xl mx-auto">

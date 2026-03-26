@@ -349,7 +349,7 @@ export default function Crash() {
   const isPending = startMutation.isPending || cashoutMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
       {/* Full-screen flash */}

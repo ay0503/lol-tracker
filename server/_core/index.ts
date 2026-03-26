@@ -1,4 +1,12 @@
 import "dotenv/config";
+
+// Global error handlers — prevent silent crashes
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] Unhandled promise rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] Uncaught exception:", err);
+});
 import express from "express";
 // cors handled manually below
 import { createServer } from "http";

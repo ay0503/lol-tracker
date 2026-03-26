@@ -67,7 +67,7 @@ export default function CasinoShop() {
     .sort((a, b) => (TIER_ORDER[b.tier] ?? 0) - (TIER_ORDER[a.tier] ?? 0) || b.price - a.price);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <div className="container py-6 sm:py-8 max-w-2xl mx-auto px-4">
         <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
           <ArrowLeft className="w-3.5 h-3.5" /> Casino

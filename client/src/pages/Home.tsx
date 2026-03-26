@@ -609,35 +609,42 @@ function ChampionPoolSection() {
   );
 }
 
-function ThemeToggleButton() {
-  const { theme, toggleTheme } = useTheme();
+function PortfolioSummary() {
   const { t } = useTranslation();
-  return (
-    <button
-      onClick={toggleTheme}
-      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-      title={theme === "dark" ? t.common.switchToLight : t.common.switchToDark}
-    >
-      {theme === "dark" ? (
-        <Sun className="w-4 h-4" />
-      ) : (
-        <Moon className="w-4 h-4" />
-      )}
-    </button>
-  );
-}
+  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { staleTime: 60_000 });
+  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { staleTime: 60_000 });
 
-function LanguageToggle() {
-  const { language, setLanguage, t } = useTranslation();
+  if (!portfolio || !etfPrices) return null;
+
+  const cash = portfolio.cashBalance ?? 0;
+  let holdVal = 0, shortPnl = 0;
+  for (const h of portfolio.holdings ?? []) {
+    const p = etfPrices.find((e: any) => e.ticker === h.ticker)?.price ?? 0;
+    holdVal += (h.shares ?? 0) * p;
+    shortPnl += (h.shortShares ?? 0) * ((h.shortAvgPrice ?? 0) - p);
+  }
+  const totalValue = cash + holdVal + shortPnl;
+  const pnl = totalValue - 200;
+  const pnlPct = (pnl / 200) * 100;
+  const isUp = pnl >= 0;
+
   return (
-    <button
-      onClick={() => setLanguage(language === "en" ? "ko" : "en")}
-      className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all font-[var(--font-mono)]"
-      title={t.common.toggleLanguage}
-    >
-      <Globe className="w-3.5 h-3.5" />
-      {language === "en" ? "KR" : "EN"}
-    </button>
+    <section className="mt-4">
+      <Link href="/portfolio">
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-card border border-border hover:bg-secondary/30 transition-all cursor-pointer">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{t.nav.portfolio}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold font-mono text-foreground">${totalValue.toFixed(2)}</span>
+            <span className={`text-xs font-mono font-bold ${isUp ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+              {isUp ? "+" : ""}{pnlPct.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      </Link>
+    </section>
   );
 }
 
@@ -681,6 +688,9 @@ export default function Home() {
         <section className="pt-6 sm:pt-8">
           <PlayerHeader />
         </section>
+
+        {/* Portfolio Summary (logged in only) */}
+        {isAuthenticated && <PortfolioSummary />}
 
         {/* Live Game Alert */}
         <LiveGameBanner />

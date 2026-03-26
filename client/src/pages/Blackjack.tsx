@@ -360,7 +360,7 @@ export default function Casino() {
   const canDouble = isPlaying && game.playerHand.length === 2 && cash >= game.bet;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-6 sm:py-8 max-w-lg mx-auto">

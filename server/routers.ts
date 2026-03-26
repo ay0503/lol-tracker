@@ -19,6 +19,7 @@ import {
   getUserByEmail, createLocalUser, setUserPassword,
   getRawClient, getDb, toggleAdminHalt,
   placeBet, getUserBets, getPendingBets, getAllDividends, getAllBets,
+  withUserLock,
 } from "./db";
 import { users, portfolios } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -480,11 +481,12 @@ export const appRouter = router({
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed: " + (market.reason || "") });
 
-        // Server-side price validation: compute real ETF price and reject stale client prices
-        const history = await getPriceHistory() ?? [];
-        const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
-        const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
-        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
+        // Server-side price validation: use cached ETF prices (avoid full table scan)
+        const cachedPrices = cache.get<{ ticker: string; price: number }[]>("prices.etfPrices");
+        const serverPrice = cachedPrices
+          ? cachedPrices.find(p => p.ticker === input.ticker)?.price ?? input.pricePerShare
+          : input.pricePerShare;
+        if (cachedPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
@@ -496,7 +498,7 @@ export const appRouter = router({
         }
 
         // Invalidate ledger and leaderboard caches after trade
-        cache.invalidate("ledger.all");
+        cache.invalidatePrefix("ledger.");
         cache.invalidate("leaderboard.rankings");
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
@@ -528,11 +530,12 @@ export const appRouter = router({
         if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Trading halted — player is in a live game. Trades resume after the match ends." });
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
 
-        // Server-side price validation
-        const history = await getPriceHistory() ?? [];
-        const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
-        const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
-        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
+        // Server-side price validation (cached, no full table scan)
+        const cachedPrices = cache.get<{ ticker: string; price: number }[]>("prices.etfPrices");
+        const serverPrice = cachedPrices
+          ? cachedPrices.find(p => p.ticker === input.ticker)?.price ?? input.pricePerShare
+          : input.pricePerShare;
+        if (cachedPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
@@ -543,7 +546,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Short failed" });
         }
 
-        cache.invalidate("ledger.all");
+        cache.invalidatePrefix("ledger.");
         cache.invalidate("leaderboard.rankings");
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
@@ -562,11 +565,12 @@ export const appRouter = router({
         const market = await getMarketStatus();
         if (!market.isOpen) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Market is currently closed" });
 
-        // Server-side price validation
-        const history = await getPriceHistory() ?? [];
-        const etfPrices = history.length > 0 ? computeAllETFPricesSync(history) : null;
-        const serverPrice = etfPrices ? etfPrices[input.ticker] : input.pricePerShare;
-        if (etfPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
+        // Server-side price validation (cached, no full table scan)
+        const cachedPrices = cache.get<{ ticker: string; price: number }[]>("prices.etfPrices");
+        const serverPrice = cachedPrices
+          ? cachedPrices.find(p => p.ticker === input.ticker)?.price ?? input.pricePerShare
+          : input.pricePerShare;
+        if (cachedPrices && Math.abs(input.pricePerShare - serverPrice) / serverPrice > 0.005) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Price has changed. Please refresh and try again." });
         }
 
@@ -577,7 +581,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Cover failed" });
         }
 
-        cache.invalidate("ledger.all");
+        cache.invalidatePrefix("ledger.");
         cache.invalidate("leaderboard.rankings");
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
@@ -704,7 +708,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         await postComment(ctx.user.id, input.content, input.ticker, input.sentiment);
-        cache.invalidate("comments.list");
+        cache.invalidatePrefix("comments.");
         return { success: true };
       }),
   }),
@@ -770,28 +774,30 @@ export const appRouter = router({
         .input(z.object({ bet: z.number().min(0.10).max(5).finite(), autoCashout: z.number().min(1.01).optional() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
-          const portfolio = await getOrCreatePortfolio(ctx.user.id);
-          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          return withUserLock(ctx.user.id, async () => {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+            if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
 
-          const db = await getDb();
-          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            const db = await getDb();
+            await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-          const { startCrashGame } = await import("./crash");
-          try {
-            const game = startCrashGame(ctx.user.id, input.bet, input.autoCashout);
-            recordCasinoGame(ctx.user.id);
+            const { startCrashGame } = await import("./crash");
+            try {
+              const game = startCrashGame(ctx.user.id, input.bet, input.autoCashout);
+              recordCasinoGame(ctx.user.id);
 
-            // Instant crash — no payout
-            if (game.status === "crashed") {
-              cache.invalidate("casino.leaderboard");
+              // Instant crash — no payout
+              if (game.status === "crashed") {
+                cache.invalidate("casino.leaderboard");
+              }
+              return game;
+            } catch (err: any) {
+              // Refund on error
+              await db.update(portfolios).set({ casinoBalance: casinoCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+              throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
             }
-            return game;
-          } catch (err: any) {
-            // Refund on error
-            await db.update(portfolios).set({ casinoBalance: casinoCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
-          }
+          });
         }),
       cashout: protectedProcedure.mutation(async ({ ctx }) => {
         const { cashoutCrash } = await import("./crash");
@@ -837,18 +843,20 @@ export const appRouter = router({
         .input(z.object({ bet: z.number().min(0.10).finite(), mineCount: z.number().int().min(1).max(24) }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
-          const portfolio = await getOrCreatePortfolio(ctx.user.id);
-          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          return withUserLock(ctx.user.id, async () => {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+            if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
 
-          const db = await getDb();
-          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            const db = await getDb();
+            await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-          const { startMinesGame } = await import("./mines");
-          const game = startMinesGame(ctx.user.id, input.bet, input.mineCount);
-          recordCasinoGame(ctx.user.id);
-          cache.invalidate("casino.leaderboard");
-          return game;
+            const { startMinesGame } = await import("./mines");
+            const game = startMinesGame(ctx.user.id, input.bet, input.mineCount);
+            recordCasinoGame(ctx.user.id);
+            cache.invalidate("casino.leaderboard");
+            return game;
+          });
         }),
       reveal: protectedProcedure
         .input(z.object({ position: z.number().int().min(0).max(24) }))
@@ -895,22 +903,24 @@ export const appRouter = router({
         .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
-          const portfolio = await getOrCreatePortfolio(ctx.user.id);
-          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          return withUserLock(ctx.user.id, async () => {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+            if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
 
-          const db = await getDb();
-          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            const db = await getDb();
+            await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-          const { dealPoker } = await import("./videoPoker");
-          try {
-            const game = dealPoker(ctx.user.id, input.bet);
-            recordCasinoGame(ctx.user.id);
-            return game;
-          } catch (err: any) {
-            await db.update(portfolios).set({ casinoBalance: casinoCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
-          }
+            const { dealPoker } = await import("./videoPoker");
+            try {
+              const game = dealPoker(ctx.user.id, input.bet);
+              recordCasinoGame(ctx.user.id);
+              return game;
+            } catch (err: any) {
+              await db.update(portfolios).set({ casinoBalance: casinoCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+              throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+            }
+          });
         }),
       draw: protectedProcedure
         .input(z.object({ held: z.array(z.boolean()).length(5) }))
@@ -954,25 +964,27 @@ export const appRouter = router({
           }
 
           const totalBet = input.bets.reduce((sum, b) => sum + b.amount, 0);
-          const portfolio = await getOrCreatePortfolio(ctx.user.id);
-          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-          if (totalBet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          return withUserLock(ctx.user.id, async () => {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+            if (totalBet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
 
-          const db = await getDb();
-          await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            const db = await getDb();
+            await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-          const { spin } = await import("./roulette");
-          const result = spin(input.bets);
+            const { spin } = await import("./roulette");
+            const result = spin(input.bets);
 
-          if (result.totalPayout > 0) {
-            const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
-            const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + result.totalPayout;
-            await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-          }
+            if (result.totalPayout > 0) {
+              const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
+              const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + result.totalPayout;
+              await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            }
 
-          recordCasinoGame(ctx.user.id);
-          cache.invalidate("casino.leaderboard");
-          return result;
+            recordCasinoGame(ctx.user.id);
+            cache.invalidate("casino.leaderboard");
+            return result;
+          });
         }),
       history: publicProcedure.query(async () => {
         const { getHistory } = await import("./roulette");
@@ -1139,28 +1151,27 @@ export const appRouter = router({
         .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
         .mutation(async ({ ctx, input }) => {
           await checkCasinoCooldown(ctx.user.id);
-          const portfolio = await getOrCreatePortfolio(ctx.user.id);
-          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+          return withUserLock(ctx.user.id, async () => {
+            const portfolio = await getOrCreatePortfolio(ctx.user.id);
+            const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+            if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
 
-          const { getDb } = await import("./db");
-          const db = await getDb();
-          const { portfolios } = await import("../drizzle/schema");
-          const { eq } = await import("drizzle-orm");
-          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            const db = await getDb();
+            await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-          const { dealGame } = await import("./blackjack");
-          const game = dealGame(ctx.user.id, input.bet);
-          recordCasinoGame(ctx.user.id);
+            const { dealGame } = await import("./blackjack");
+            const game = dealGame(ctx.user.id, input.bet);
+            recordCasinoGame(ctx.user.id);
 
-          if (game.status !== "playing" && game.payout > 0) {
-            const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
-            const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + game.payout;
-            await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-          }
+            if (game.status !== "playing" && game.payout > 0) {
+              const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
+              const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + game.payout;
+              await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            }
 
-          cache.invalidate("casino.leaderboard");
-          return game;
+            cache.invalidate("casino.leaderboard");
+            return game;
+          });
         }),
       hit: protectedProcedure.mutation(async ({ ctx }) => {
         const { hitGame } = await import("./blackjack");
