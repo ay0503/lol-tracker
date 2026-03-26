@@ -6,7 +6,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, BookOpen, Crown, Newspaper, MessageCircle, Gamepad2,
-  Wallet, Shield, LogIn, LogOut, User, Menu, Moon, Sun, Globe,
+  Wallet, Shield, LogIn, LogOut, User, Menu, Moon, Sun, Globe, Swords,
 } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 
@@ -50,6 +50,7 @@ export default function AppNav() {
     { href: "/news", label: t.nav.news, icon: Newspaper },
     { href: "/sentiment", label: t.nav.sentiment, icon: MessageCircle },
     { href: "/casino", label: (t as any).casino?.casino ?? "Casino", icon: Gamepad2, className: "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30" },
+    { href: "/valorant", label: "Valorant", icon: Swords, className: "text-red-400 hover:text-red-300 hover:bg-red-950/30" },
     { href: "/portfolio", label: t.nav.portfolio, icon: Wallet, auth: true },
     { href: "/admin", label: (t as any).casino?.admin ?? "Admin", icon: Shield, admin: true, className: "text-red-400 hover:text-red-300 hover:bg-red-950/30" },
   ];
