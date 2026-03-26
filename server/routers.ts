@@ -692,6 +692,10 @@ export const appRouter = router({
         amount: z.number().min(1).max(50).finite(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // Block bets during live games
+        const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
+        if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Betting locked — game in progress. Place bets before the match starts." });
+
         let bet;
         try {
           bet = await placeBet(ctx.user.id, input.prediction, input.amount);
