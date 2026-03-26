@@ -4,7 +4,7 @@
  */
 
 const MAX_PAYOUT = 250;
-const HOUSE_EDGE = 0.02;
+const PLAYER_EDGE_BOOST = 1.01;
 
 interface Card { rank: number; suit: string; label: string; }
 
@@ -60,19 +60,16 @@ export interface PublicHiloGame {
 
 const activeGames = new Map<number, HiloGame>();
 
-function calcMultiplier(currentRank: number, direction: "higher" | "lower", cardsLeft: number): number {
-  // Count cards that would win
-  let winning = 0;
-  for (const rk of RANKS) {
-    for (let s = 0; s < 4; s++) {
-      if (direction === "higher" && rk.rank >= currentRank) winning++;
-      if (direction === "lower" && rk.rank <= currentRank) winning++;
-    }
-  }
-  // Approximate probability
-  const prob = Math.min(winning / 52, 0.99);
-  if (prob <= 0) return 50;
-  return Math.round((1 / prob) * (1 - HOUSE_EDGE) * 100) / 100;
+function countWinningCards(deck: Card[], currentRank: number, direction: "higher" | "lower"): number {
+  return deck.filter((card) => (
+    direction === "higher" ? card.rank >= currentRank : card.rank <= currentRank
+  )).length;
+}
+
+function calcMultiplier(currentRank: number, direction: "higher" | "lower", deck: Card[]): number {
+  const winningCards = countWinningCards(deck, currentRank, direction);
+  if (winningCards <= 0) return 50;
+  return Math.round((deck.length / winningCards) * PLAYER_EDGE_BOOST * 100) / 100;
 }
 
 function toPublic(game: HiloGame): PublicHiloGame {
@@ -81,8 +78,8 @@ function toPublic(game: HiloGame): PublicHiloGame {
     currentCard: game.currentCard,
     history: game.history,
     multiplier: Math.round(game.multiplier * 100) / 100,
-    nextHigherMult: calcMultiplier(game.currentCard.rank, "higher", game.deck.length),
-    nextLowerMult: calcMultiplier(game.currentCard.rank, "lower", game.deck.length),
+    nextHigherMult: calcMultiplier(game.currentCard.rank, "higher", game.deck),
+    nextLowerMult: calcMultiplier(game.currentCard.rank, "lower", game.deck),
     status: game.status,
     bet: game.bet,
     payout: Math.round(game.payout * 100) / 100,
@@ -109,8 +106,9 @@ export function guessHilo(userId: number, direction: "higher" | "lower"): Public
   if (!game || game.status !== "playing") throw new Error("No active game");
   if (game.deck.length === 0) throw new Error("No cards left");
 
-  const nextCard = game.deck.pop()!;
   const currentRank = game.currentCard.rank;
+  const guessMultiplier = calcMultiplier(currentRank, direction, game.deck);
+  const nextCard = game.deck.pop()!;
   const nextRank = nextCard.rank;
 
   const correct =
@@ -121,8 +119,7 @@ export function guessHilo(userId: number, direction: "higher" | "lower"): Public
   game.currentCard = nextCard;
 
   if (correct) {
-    const mult = calcMultiplier(currentRank, direction, game.deck.length + 1);
-    game.multiplier *= mult;
+    game.multiplier *= guessMultiplier;
     if (game.deck.length === 0) {
       game.status = "won";
       game.payout = Math.min(game.bet * game.multiplier, MAX_PAYOUT);

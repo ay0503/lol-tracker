@@ -3,23 +3,89 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { useState } from "react";
-import { Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag, Info } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
 import StyledName from "@/components/StyledName";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const GAMES = [
   { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 - $50", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
   { id: "crash", title: "Crash", titleKo: "크래시", emoji: "🚀", desc: "Cash out before it crashes", descKo: "추락 전에 캐시아웃", bet: "$0.10 - $50", href: "/casino/crash", active: true, bg: "from-orange-950/50 to-red-900/30", border: "border-orange-700/40", badge: "from-orange-500 to-red-600" },
-  { id: "roulette", title: "Roulette", titleKo: "룰렛", emoji: "🎡", desc: "European wheel, 2.7% edge", descKo: "유럽식 룰렛", bet: "$0.10 - $50", href: "/casino/roulette", active: true, bg: "from-green-950/50 to-emerald-900/30", border: "border-green-700/40", badge: "from-green-500 to-emerald-600" },
+  { id: "roulette", title: "Roulette", titleKo: "룰렛", emoji: "🎡", desc: "Pick a color and spin", descKo: "색을 고르고 스핀", bet: "$0.10 - $50", href: "/casino/roulette", active: true, bg: "from-green-950/50 to-emerald-900/30", border: "border-green-700/40", badge: "from-green-500 to-emerald-600" },
   { id: "mines", title: "Mines", titleKo: "지뢰찾기", emoji: "💣", desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 - $50", href: "/casino/mines", active: true, bg: "from-red-950/50 to-rose-900/30", border: "border-red-700/40", badge: "from-red-500 to-orange-600" },
-  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "🃑", desc: "Jacks or Better", descKo: "잭스 오어 베터", bet: "$0.10 - $50", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
+  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "🃑", desc: "Draw, hold, and chase a hand", descKo: "카드를 들고 패를 노려라", bet: "$0.10 - $50", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
   { id: "dice", title: "Dice", titleKo: "주사위", emoji: "🎲", desc: "Roll over/under", descKo: "높낮이 베팅", bet: "$0.10 - $50", href: "/casino/dice", active: true, bg: "from-cyan-950/50 to-blue-900/30", border: "border-cyan-700/40", badge: "from-cyan-500 to-blue-600" },
   { id: "hilo", title: "Hi-Lo", titleKo: "하이로", emoji: "🃏", desc: "Higher or lower cards", descKo: "높을까 낮을까", bet: "$0.10 - $50", href: "/casino/hilo", active: true, bg: "from-violet-950/50 to-indigo-900/30", border: "border-violet-700/40", badge: "from-violet-500 to-indigo-600" },
   { id: "plinko", title: "Plinko", titleKo: "플링코", emoji: "📌", desc: "Drop the ball, hit big", descKo: "공을 떨어뜨려라", bet: "$0.10 - $50", href: "/casino/plinko", active: true, bg: "from-pink-950/50 to-rose-900/30", border: "border-pink-700/40", badge: "from-pink-500 to-rose-600" },
+];
+
+const EDGE_DETAILS = [
+  {
+    id: "blackjack",
+    title: "Blackjack",
+    titleKo: "블랙잭",
+    detail: "Blackjack pays 2:1 on naturals while normal wins stay at 2x.",
+    detailKo: "블랙잭은 내추럴에 2:1을 지급하고, 일반 승리는 2배를 유지합니다.",
+  },
+  {
+    id: "crash",
+    title: "Crash",
+    titleKo: "크래시",
+    detail: "The crash curve is slightly softer and cashouts still get the small player-side boost.",
+    detailKo: "크래시 곡선이 조금 더 완만하고, 캐시아웃에도 작은 플레이어 우위 보정이 들어갑니다.",
+  },
+  {
+    id: "roulette",
+    title: "Roulette",
+    titleKo: "룰렛",
+    detail: "Red and black pay 2x, and green refunds color bets. Green itself pays 37x.",
+    detailKo: "빨강과 검정은 2배를 지급하고, 초록이 나오면 컬러 베팅은 환불됩니다. 초록 적중은 37배입니다.",
+  },
+  {
+    id: "mines",
+    title: "Mines",
+    titleKo: "지뢰찾기",
+    detail: "The normal mines math gets a small player-side multiplier boost.",
+    detailKo: "기본 지뢰찾기 배율에 소폭 플레이어 우위 보정이 들어갑니다.",
+  },
+  {
+    id: "poker",
+    title: "Video Poker",
+    titleKo: "비디오 포커",
+    detail: "The table stays classic, but pairs of 10s now qualify instead of only jacks or better.",
+    detailKo: "지급표는 클래식 그대로 두고, 잭 이상 대신 10 한 쌍부터 당첨으로 인정됩니다.",
+  },
+  {
+    id: "dice",
+    title: "Dice",
+    titleKo: "주사위",
+    detail: "Dice uses the 101-based multiplier table instead of a house-cut formula.",
+    detailKo: "주사위는 하우스 컷 공식 대신 101 기반 배율표를 사용합니다.",
+  },
+  {
+    id: "hilo",
+    title: "Hi-Lo",
+    titleKo: "하이로",
+    detail: "Hi-Lo pays from the real remaining deck odds, then adds a small player-side boost.",
+    detailKo: "하이로는 실제 남은 덱 확률로 지급을 계산한 뒤 소폭 플레이어 우위 보정을 더합니다.",
+  },
+  {
+    id: "plinko",
+    title: "Plinko",
+    titleKo: "플링코",
+    detail: "Each risk tier keeps its usual shape, but the bucket values are nudged upward.",
+    detailKo: "각 리스크 티어의 형태는 유지하되, 버킷 배율을 전체적으로 조금 올렸습니다.",
+  },
 ];
 
 function RankIcon({ rank }: { rank: number }) {
@@ -35,6 +101,7 @@ export default function Casino() {
   const utils = trpc.useUtils();
   const [depositAmount, setDepositAmount] = useState("");
   const [showDeposit, setShowDeposit] = useState(false);
+  const [showEdgeDialog, setShowEdgeDialog] = useState(false);
 
   const { data: balance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
   const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { enabled: isAuthenticated });
@@ -74,6 +141,9 @@ export default function Casino() {
   const casinoRules = language === "ko"
     ? "카지노 머니는 트레이딩 머니와 완전히 별개이며, 게임과 코스메틱 구매에만 사용할 수 있습니다. 카지노 머니가 부족하면 트레이딩 머니를 1:10 비율로 옮겨 충전할 수 있지만, 챌린지의 무결성을 위해 카지노 머니를 트레이딩 머니로 되돌리는 것은 불가능합니다."
     : "Casino cash is completely separate from trading cash and can only be used for games and cosmetics. If you run low, you can top up casino cash from trading cash at a 1:10 rate, but casino cash cannot be moved back into trading cash so the challenge stays honest.";
+  const casinoEdge = language === "ko"
+    ? "지금은 모든 카지노 게임이 중립 또는 약한 플레이어 우위로 조정되어 있습니다. 장기적으로 빨아들이는 구조가 아니라, 코스메틱을 위한 보너스 놀이터에 가깝습니다."
+    : "Every casino game is now tuned to be neutral or slightly player-favored, so this is a bonus playground for cosmetics instead of a long-run sink.";
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
@@ -240,6 +310,9 @@ export default function Casino() {
               <p className="max-w-2xl text-xs leading-6 text-zinc-400 sm:text-sm">
                 {casinoRules}
               </p>
+              <p className="mt-3 max-w-2xl text-xs leading-6 text-zinc-400 sm:text-sm">
+                {casinoEdge}
+              </p>
             </div>
 
             <div className="grid gap-2 self-start">
@@ -257,6 +330,24 @@ export default function Casino() {
                 </p>
                 <p className="mt-1 text-xs text-zinc-300">
                   {language === "ko" ? `$1 트레이딩 캐시 = $${mult} 카지노 캐시` : `$1 trading cash = $${mult} casino cash`}
+                </p>
+              </div>
+              <div className="rounded-xl border border-emerald-900/70 bg-emerald-500/5 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                    {language === "ko" ? "플레이어 우위" : "Player Edge"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowEdgeDialog(true)}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-emerald-400/25 bg-emerald-400/10 text-emerald-200 transition-colors hover:border-emerald-300/40 hover:bg-emerald-400/15"
+                    aria-label={language === "ko" ? "플레이어 우위 정보 열기" : "Open player edge details"}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-zinc-300">
+                  {language === "ko" ? "모든 테이블은 중립 또는 소폭 플레이어 우위입니다." : "Every table is neutral or slightly in the player's favor."}
                 </p>
               </div>
               <Link href="/casino/shop">
@@ -366,6 +457,34 @@ export default function Casino() {
         </p>
 
         <GamblingDisclaimer />
+
+        <Dialog open={showEdgeDialog} onOpenChange={setShowEdgeDialog}>
+          <DialogContent className="border-zinc-800 bg-zinc-950 text-white sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-[var(--font-heading)] text-white">
+                {language === "ko" ? "카지노 플레이어 우위 안내" : "Casino Player Edge Details"}
+              </DialogTitle>
+              <DialogDescription className="text-zinc-400">
+                {language === "ko"
+                  ? "각 게임이 왜 중립 또는 플레이어 우위인지 한눈에 볼 수 있습니다."
+                  : "A quick breakdown of how each game was tuned to be neutral or player-favored."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {EDGE_DETAILS.map((entry) => (
+                <div key={entry.id} className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-3">
+                  <p className="text-sm font-semibold text-white">
+                    {language === "ko" ? entry.titleKo : entry.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">
+                    {language === "ko" ? entry.detailKo : entry.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

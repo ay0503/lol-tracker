@@ -588,8 +588,11 @@ export default function Casino() {
         {/* Rules */}
         <p className="text-center text-[10px] text-zinc-600 mt-4 font-mono">
           {language === "ko"
-            ? "딜러 17 스탠드 · 블랙잭 3:2 · 더블다운 첫 패"
-            : "Dealer stands 17 · BJ pays 3:2 · Double on first hand"}
+            ? "딜러 17 스탠드 · 블랙잭 2:1 · 더블다운 첫 패"
+            : "Dealer stands 17 · BJ pays 2:1 · Double on first hand"}
+        </p>
+        <p className="text-center text-[9px] text-zinc-700 mt-2 font-mono">
+          {language === "ko" ? "플레이어 우위 블랙잭 지급표" : "Player-favored blackjack payouts"}
         </p>
 
         <GamblingDisclaimer />

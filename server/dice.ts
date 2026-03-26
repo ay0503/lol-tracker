@@ -1,6 +1,6 @@
 /**
  * Dice game engine — instant resolution.
- * Player sets target (1-99), rolls over/under. 1% house edge.
+ * Player sets target (1-99), rolls over/under. 1% player edge.
  */
 
 const MAX_PAYOUT = 250;
@@ -28,12 +28,12 @@ const recentResults: DiceHistory[] = [];
 const MAX_HISTORY = 20;
 
 function getMultiplier(target: number, direction: DiceDirection): number {
-  if (direction === "over") return 99 / (99 - target);
-  return 99 / target;
+  if (direction === "over") return 101 / (99.99 - target);
+  return 101 / target;
 }
 
 function getWinChance(target: number, direction: DiceDirection): number {
-  if (direction === "over") return 99 - target;
+  if (direction === "over") return 99.99 - target;
   return target;
 }
 

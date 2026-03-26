@@ -58,10 +58,12 @@ export default function Dice() {
   const cash = balance ?? 20;
   const parsedBetAmount = parseCasinoBetAmount(betAmount);
   const multiplier = useMemo(() => {
-    if (direction === "over") return Math.round((99 / (99 - target)) * 100) / 100;
-    return Math.round((99 / target) * 100) / 100;
+    if (direction === "over") return Math.round((101 / (99.99 - target)) * 100) / 100;
+    return Math.round((101 / target) * 100) / 100;
   }, [target, direction]);
-  const winChance = useMemo(() => direction === "over" ? 99 - target : target, [target, direction]);
+  const winChance = useMemo(() => (
+    direction === "over" ? Math.round((99.99 - target) * 100) / 100 : target
+  ), [target, direction]);
 
   const handleRoll = useCallback(() => {
     if (rolling || !isAuthenticated) return;
@@ -270,7 +272,9 @@ export default function Dice() {
           </div>
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">1% house edge · $250 max payout</p>
+        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+          {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
+        </p>
         <GamblingDisclaimer />
       </div>
     </div>

@@ -1,11 +1,11 @@
 /**
  * Mines game engine — server-side logic.
  * 5x5 grid, player-selected mine count (1-24).
- * 2% house edge. Games stored in memory.
+ * Slight player edge. Games stored in memory.
  */
 
 const GRID_SIZE = 25;
-const HOUSE_EDGE = 0.02;
+const PLAYER_EDGE_BOOST = 1.01;
 const MAX_PAYOUT = 5000;
 
 export interface MinesGame {
@@ -43,7 +43,7 @@ function calculateMultiplier(mineCount: number, revealedCount: number): number {
   for (let i = 0; i < revealedCount; i++) {
     mult *= (GRID_SIZE - i) / (GRID_SIZE - mineCount - i);
   }
-  return mult * (1 - HOUSE_EDGE);
+  return mult * PLAYER_EDGE_BOOST;
 }
 
 function gameToPublic(game: MinesGame): PublicMinesGame {

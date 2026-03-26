@@ -1,6 +1,7 @@
 /**
  * Blackjack game engine — server-side logic.
  * Games stored in memory (short-lived, no DB needed).
+ * Clean player-favored payout table.
  */
 
 const SUITS = ["♠", "♥", "♦", "♣"] as const;
@@ -98,7 +99,7 @@ export function dealGame(userId: number, bet: number): Omit<BlackjackGame, "deck
     game.payout = bet; // Return bet
   } else if (playerBJ) {
     game.status = "blackjack";
-    game.payout = bet + bet * 1.5; // 3:2 payout
+    game.payout = bet * 3; // 2:1 payout
   } else if (dealerBJ) {
     game.status = "dealer_win";
     game.payout = 0;

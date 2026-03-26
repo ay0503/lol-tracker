@@ -233,9 +233,18 @@ export default function Roulette() {
     refetchBalance();
     refetchHistory();
 
-    if (result.totalPayout > 0) {
+    if (result.outcome === "win") {
       toast.success(
         `${getColorLabel(result.color, language)} +$${result.totalPayout.toFixed(2)}`,
+      );
+      return;
+    }
+
+    if (result.outcome === "push") {
+      toast(
+        language === "ko"
+          ? "초록 적중 · 컬러 베팅 환불"
+          : "Green hit · color bet refunded",
       );
       return;
     }
@@ -320,11 +329,17 @@ export default function Roulette() {
                       {getColorLabel(latestResult.color, language)}
                     </span>
                     <span className={`text-sm font-mono font-bold ${
-                      latestResult.totalPayout > 0 ? "text-[#00C805]" : "text-[#FF5252]"
+                      latestResult.outcome === "win"
+                        ? "text-[#00C805]"
+                        : latestResult.outcome === "push"
+                          ? "text-yellow-300"
+                          : "text-[#FF5252]"
                     }`}>
-                      {latestResult.totalPayout > 0
+                      {latestResult.outcome === "win"
                         ? `+$${latestResult.totalPayout.toFixed(2)}`
-                        : `-$${latestResult.totalBet.toFixed(2)}`}
+                        : latestResult.outcome === "push"
+                          ? (language === "ko" ? "환불" : "Refund")
+                          : `-$${latestResult.totalBet.toFixed(2)}`}
                     </span>
                   </div>
                 </motion.div>
@@ -332,7 +347,7 @@ export default function Roulette() {
             </AnimatePresence>
 
             <p className="mb-4 text-center text-xs text-zinc-300">
-              {language === "ko" ? "빨강, 검정, 초록 중 하나를 고르고 스핀하세요." : "Pick red, black, or green, then spin."}
+              {language === "ko" ? "빨강, 검정, 초록 중 하나를 고르세요. 초록이 뜨면 컬러 베팅은 환불됩니다." : "Pick red, black, or green. If green hits, red and black bets are refunded."}
             </p>
 
             <div className="grid grid-cols-3 gap-2 mb-4">
@@ -345,7 +360,7 @@ export default function Roulette() {
                 >
                   <div>{getColorLabel(color, language)}</div>
                   <div className="mt-1 text-[10px] font-mono opacity-80">
-                    {color === "green" ? "36x" : "2x"}
+                    {color === "green" ? "37x" : "2x"}
                   </div>
                 </button>
               ))}
@@ -376,7 +391,7 @@ export default function Roulette() {
         </div>
 
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
-          {language === "ko" ? "유럽식 룰렛 · 2.7% 하우스 엣지" : "European roulette · 2.7% house edge"}
+          {language === "ko" ? "초록은 컬러 베팅 환불 · 깔끔한 중립 룰렛" : "Green refunds color bets · clean neutral roulette"}
         </p>
 
         <GamblingDisclaimer />

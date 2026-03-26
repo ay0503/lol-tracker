@@ -1,6 +1,6 @@
 /**
  * Roulette game engine — server-side logic.
- * European roulette: single zero, 37 pockets (0-36), 2.7% house edge.
+ * Simplified roulette: single green pocket, color bets push on green.
  * Instant resolution — no active game state.
  */
 
@@ -20,6 +20,7 @@ export interface RouletteResult {
   bet: RouletteBet;
   number: number;
   color: BetType;
+  outcome: "win" | "push" | "lose";
   won: boolean;
   totalBet: number;
   totalPayout: number;
@@ -42,21 +43,28 @@ export function getColor(n: number): BetType {
 }
 
 function getMultiplier(type: BetType): number {
-  if (type === "green") return 36;
+  if (type === "green") return 37;
   return 2;
 }
 
 export function spin(bet: RouletteBet): RouletteResult {
   const winningNumber = Math.floor(Math.random() * 37);
   const color = getColor(winningNumber);
+  const isPush = color === "green" && bet.type !== "green";
   const won = bet.type === color;
-  const rawPayout = won ? bet.amount * getMultiplier(bet.type) : 0;
+  const outcome: RouletteResult["outcome"] = won ? "win" : isPush ? "push" : "lose";
+  const rawPayout = won
+    ? bet.amount * getMultiplier(bet.type)
+    : isPush
+      ? bet.amount
+      : 0;
   const totalPayout = Math.min(rawPayout, MAX_PAYOUT);
 
   const result: RouletteResult = {
     bet,
     number: winningNumber,
     color,
+    outcome,
     won,
     totalBet: Math.round(bet.amount * 100) / 100,
     totalPayout: Math.round(totalPayout * 100) / 100,

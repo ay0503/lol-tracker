@@ -2,11 +2,14 @@
  * Crash game engine — server-side logic.
  * Multiplier rises from 1.00x until crash point.
  * Player cashes out before crash to win.
- * 1% house edge. Games stored in memory.
+ * Slight player edge via a softer crash curve and boosted payouts.
  */
 
 const MAX_PAYOUT = 500;
 const GRACE_MS = 200; // Latency grace window for cashout
+const PLAYER_EDGE_BOOST = 1.02;
+const INSTANT_CRASH_THRESHOLD = 99.5;
+const CURVE_NUMERATOR = 99.5;
 
 export interface CrashGame {
   id: string;
@@ -44,15 +47,15 @@ const activeGames = new Map<number, CrashGame>();
 const crashHistory = new Map<number, CrashHistoryEntry[]>();
 
 /**
- * Generate crash point with 1% house edge.
- * Formula: max(1.00, floor(99 / (100 - r) * 100) / 100)
+ * Generate crash point with a slightly friendlier crash curve.
+ * Formula: max(1.00, floor(99.5 / (100 - r) * 100) / 100)
  * where r is uniform [0, 100)
  */
 function generateCrashPoint(): number {
   const r = Math.random() * 100;
-  // 1% chance of instant crash (when r >= 99)
-  if (r >= 99) return 1.00;
-  const raw = 99 / (100 - r);
+  // 0.5% chance of instant crash (when r >= 99.5)
+  if (r >= INSTANT_CRASH_THRESHOLD) return 1.00;
+  const raw = CURVE_NUMERATOR / (100 - r);
   return Math.max(1.00, Math.floor(raw * 100) / 100);
 }
 
@@ -61,8 +64,8 @@ function generateCrashPoint(): number {
  * multiplier = 1 + 0.06 * t^1.5
  */
 export function multiplierAtTime(elapsedMs: number): number {
-  const t = elapsedMs / 1000;
-  return 1 + 0.06 * Math.pow(t, 1.5);
+  const elapsedSeconds = elapsedMs / 1000;
+  return 1 + 0.06 * Math.pow(elapsedSeconds, 1.5);
 }
 
 /**
@@ -71,8 +74,8 @@ export function multiplierAtTime(elapsedMs: number): number {
  */
 function timeAtMultiplier(mult: number): number {
   if (mult <= 1) return 0;
-  const t = Math.pow((mult - 1) / 0.06, 1 / 1.5);
-  return t * 1000;
+  const elapsedSeconds = Math.pow((mult - 1) / 0.06, 1 / 1.5);
+  return elapsedSeconds * 1000;
 }
 
 function gameToPublic(game: CrashGame): PublicCrashGame {
@@ -143,7 +146,7 @@ export function startCrashGame(userId: number, bet: number, autoCashout?: number
       if (game.status !== "flying") return;
       game.status = "cashed_out";
       game.cashoutMultiplier = game.autoCashout!;
-      game.payout = Math.min(game.bet * game.autoCashout!, MAX_PAYOUT);
+      game.payout = Math.min(game.bet * game.autoCashout! * PLAYER_EDGE_BOOST, MAX_PAYOUT);
       if (game.crashTimer) clearTimeout(game.crashTimer);
       addToHistory(userId, {
         crashPoint: game.crashPoint, cashedOut: true,
@@ -182,7 +185,7 @@ export function cashoutCrash(userId: number): PublicCrashGame {
 
   game.status = "cashed_out";
   game.cashoutMultiplier = cashMult;
-  game.payout = Math.min(game.bet * cashMult, MAX_PAYOUT);
+  game.payout = Math.min(game.bet * cashMult * PLAYER_EDGE_BOOST, MAX_PAYOUT);
   if (game.crashTimer) clearTimeout(game.crashTimer);
   if (game.autoCashoutTimer) clearTimeout(game.autoCashoutTimer);
   addToHistory(userId, {
@@ -208,7 +211,7 @@ export function checkCrashStatus(userId: number): PublicCrashGame | null {
     if (game.autoCashout && currentMult >= game.autoCashout && game.autoCashout <= game.crashPoint) {
       game.status = "cashed_out";
       game.cashoutMultiplier = game.autoCashout;
-      game.payout = Math.min(game.bet * game.autoCashout, MAX_PAYOUT);
+      game.payout = Math.min(game.bet * game.autoCashout * PLAYER_EDGE_BOOST, MAX_PAYOUT);
       addToHistory(userId, {
         crashPoint: game.crashPoint, cashedOut: true,
         multiplier: game.autoCashout, profit: game.payout - game.bet,

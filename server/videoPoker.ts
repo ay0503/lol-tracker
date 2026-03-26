@@ -1,7 +1,7 @@
 /**
- * Video Poker (Jacks or Better) game engine — server-side logic.
+ * Video Poker (Tens or Better variant) game engine — server-side logic.
  * 52-card deck, deal 5 cards, hold/discard, draw replacements.
- * ~2% house edge via adjusted pay table. Games stored in memory.
+ * Slight player edge via a lower qualifying pair on a classic pay table. Games stored in memory.
  */
 
 export interface Card {
@@ -40,7 +40,7 @@ interface HandResult {
   multiplier: number;
 }
 
-// Pay table (Jacks or Better, adjusted for ~2% house edge)
+// Pay table (classic video poker with a lower qualifying pair)
 const PAY_TABLE: { name: string; multiplier: number }[] = [
   { name: "Royal Flush", multiplier: 250 },
   { name: "Straight Flush", multiplier: 50 },
@@ -50,7 +50,7 @@ const PAY_TABLE: { name: string; multiplier: number }[] = [
   { name: "Straight", multiplier: 4 },
   { name: "Three of a Kind", multiplier: 3 },
   { name: "Two Pair", multiplier: 2 },
-  { name: "Jacks or Better", multiplier: 1 },
+  { name: "Tens or Better", multiplier: 1 },
 ];
 
 const activeGames = new Map<number, VideoPokerGame>();
@@ -168,12 +168,12 @@ export function evaluateHand(hand: Card[]): HandResult {
     return { name: "Two Pair", multiplier: 2 };
   }
 
-  // Jacks or Better (pair of J, Q, K, or A)
+  // Tens or Better (pair of 10, J, Q, K, or A)
   if (counts[0] === 2) {
     // Find which rank is the pair
     for (const [rank, count] of Array.from(rankCounts.entries())) {
-      if (count === 2 && rank >= 11) {
-        return { name: "Jacks or Better", multiplier: 1 };
+      if (count === 2 && rank >= 10) {
+        return { name: "Tens or Better", multiplier: 1 };
       }
     }
   }

@@ -285,7 +285,7 @@ export default function Mines() {
         </div>
 
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
-          {language === "ko" ? "2% 하우스 엣지 · 최대 $250 지급" : "2% house edge · $250 max payout"}
+          {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
 
         <GamblingDisclaimer />

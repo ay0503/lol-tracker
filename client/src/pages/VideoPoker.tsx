@@ -28,7 +28,7 @@ const PAY_TABLE = [
   { hand: "Straight", payout: "4x" },
   { hand: "Three of a Kind", payout: "3x" },
   { hand: "Two Pair", payout: "2x" },
-  { hand: "Jacks or Better", payout: "1x" },
+  { hand: "Tens or Better", payout: "1x" },
 ];
 
 function cardDisplay(card: { rank: number; suit: number }) {
@@ -257,7 +257,7 @@ export default function VideoPoker() {
         </div>
 
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
-          {language === "ko" ? "잭스 오어 베터 · ~2% 하우스 엣지" : "Jacks or Better · ~2% house edge"}
+          {language === "ko" ? "텐즈 오어 베터 · 클래식 비디오 포커" : "Tens or Better · classic video poker"}
         </p>
 
         <GamblingDisclaimer />
