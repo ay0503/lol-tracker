@@ -4,6 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import AppNav from "@/components/AppNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -125,10 +126,9 @@ export default function VideoPoker() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+      <AppNav />
       <div className="container py-6 sm:py-8 max-w-2xl mx-auto">
-        <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> Casino
-        </Link>
+        
 
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">

@@ -3,7 +3,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { useState } from "react";
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag } from "lucide-react";
+import AppNav from "@/components/AppNav";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
@@ -63,11 +64,8 @@ export default function Casino() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+      <AppNav />
       <div className="container py-6 sm:py-8 max-w-5xl mx-auto px-4">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-6">
-          <ArrowLeft className="w-3.5 h-3.5" /> $DORI
-        </Link>
-
         {/* ─── Hero ─── */}
         <div className="relative mb-6 rounded-2xl overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/15 via-amber-500/8 to-yellow-600/15" />
