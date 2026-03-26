@@ -137,10 +137,11 @@ function StatCard({
  */
 function LiveGameBanner() {
   const { t } = useTranslation();
-  const { data: liveGame } = trpc.player.liveGame.useQuery(undefined, {
-    refetchInterval: liveGame?.inGame ? 15_000 : 120_000,
-    staleTime: liveGame?.inGame ? 10_000 : 60_000,
+  const liveGameQuery = trpc.player.liveGame.useQuery(undefined, {
+    refetchInterval: (query) => query.state.data?.inGame ? 15_000 : 120_000,
+    staleTime: 60_000,
   });
+  const liveGame = liveGameQuery.data;
 
   const [elapsed, setElapsed] = useState(0);
 

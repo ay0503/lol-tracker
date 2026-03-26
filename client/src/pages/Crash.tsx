@@ -69,7 +69,7 @@ function CrashCanvas({
   crashPoint: number | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | undefined>(undefined);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -291,13 +291,13 @@ export default function Crash() {
   const cashoutMutation = trpc.casino.crash.cashout.useMutation({
     onSuccess: (game) => {
       if (game.status === "cashed_out") {
-        elapsedRef.current = timeAtMultiplier(game.cashoutMultiplier);
-        endGame("cashed_out", game.crashPoint, game.cashoutMultiplier, game.payout);
-        toast.success(`Cashed out at ${game.cashoutMultiplier.toFixed(2)}x! +$${game.payout.toFixed(2)}`);
+        elapsedRef.current = timeAtMultiplier(game.cashoutMultiplier ?? 1);
+        endGame("cashed_out", game.crashPoint ?? null, game.cashoutMultiplier ?? null, game.payout ?? 0);
+        toast.success(`Cashed out at ${(game.cashoutMultiplier ?? 1).toFixed(2)}x! +$${(game.payout ?? 0).toFixed(2)}`);
       } else {
         elapsedRef.current = timeAtMultiplier(game.crashPoint ?? displayMult);
-        endGame("crashed", game.crashPoint, null, 0);
-        toast.error(`Crashed at ${game.crashPoint?.toFixed(2)}x!`);
+        endGame("crashed", game.crashPoint ?? null, null, 0);
+        toast.error(`Crashed at ${(game.crashPoint ?? 1).toFixed(2)}x!`);
       }
     },
     onError: (err) => toast.error(err.message),
@@ -313,12 +313,12 @@ export default function Crash() {
     const d = statusQuery.data;
     if (d.status === "crashed") {
       elapsedRef.current = timeAtMultiplier(d.crashPoint ?? displayMult);
-      endGame("crashed", d.crashPoint, null, 0);
-      toast.error(`Crashed at ${d.crashPoint?.toFixed(2)}x!`);
+      endGame("crashed", d.crashPoint ?? null, null, 0);
+      toast.error(`Crashed at ${(d.crashPoint ?? 1).toFixed(2)}x!`);
     } else if (d.status === "cashed_out") {
-      elapsedRef.current = timeAtMultiplier(d.cashoutMultiplier);
-      endGame("cashed_out", d.crashPoint, d.cashoutMultiplier, d.payout);
-      toast.success(`Auto-cashout at ${d.cashoutMultiplier.toFixed(2)}x! +$${d.payout.toFixed(2)}`);
+      elapsedRef.current = timeAtMultiplier(d.cashoutMultiplier ?? 1);
+      endGame("cashed_out", d.crashPoint ?? null, d.cashoutMultiplier ?? null, d.payout ?? 0);
+      toast.success(`Auto-cashout at ${(d.cashoutMultiplier ?? 1).toFixed(2)}x! +$${(d.payout ?? 0).toFixed(2)}`);
     }
   }, [statusQuery.data?.status]);
 

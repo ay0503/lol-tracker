@@ -332,7 +332,7 @@ export default function Portfolio() {
     if (filter === "bet") return []; // Bets shown separately
     if (!tradeHistory) return [];
     if (filter === "all") return tradeHistory;
-    return tradeHistory.filter(t => t.type === filter);
+    return tradeHistory.filter(tr => tr.type === filter);
   }, [tradeHistory, filter]);
 
   const tradeCounts = useMemo(() => {
