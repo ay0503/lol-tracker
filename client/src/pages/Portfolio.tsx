@@ -33,7 +33,7 @@ import { TICKERS } from "@/lib/playerData";
 import { formatDateTime } from "@/lib/formatters";
 
 function getTickerColor(ticker: string): string {
-  return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
+  return TICKERS.find(tk => tk.symbol === ticker)?.color ?? "#fff";
 }
 
 type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend" | "bet";

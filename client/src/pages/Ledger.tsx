@@ -15,7 +15,7 @@ import { TICKERS } from "@/lib/playerData";
 import { formatTimeAgoFromDate, translateTickerDescription } from "@/lib/formatters";
 
 function getTickerColor(ticker: string): string {
-  return TICKERS.find(t => t.symbol === ticker)?.color ?? "#fff";
+  return TICKERS.find(tk => tk.symbol === ticker)?.color ?? "#fff";
 }
 
 type LedgerTab = "trades" | "dividends" | "bets";

@@ -641,7 +641,7 @@ export const appRouter = router({
         return cache.getOrSet(`ledger.all.${limit}`, async () => {
           const raw = await getAllTrades(limit);
            return raw.map((t) => ({
-             id: t.id, userName: t.userName ?? "Anonymous",
+             id: t.id, userId: t.userId, userName: t.userName ?? "Anonymous",
              ticker: t.ticker, type: t.type,
              shares: parseFloat(t.shares), pricePerShare: parseFloat(t.pricePerShare),
              totalAmount: parseFloat(t.totalAmount),
@@ -656,7 +656,7 @@ export const appRouter = router({
         return cache.getOrSet(`ledger.dividends.${limit}`, async () => {
           const raw = await getAllDividends(limit);
           return raw.map(d => ({
-            id: d.id, userName: String(d.userName ?? "Anonymous"),
+            id: d.id, userId: d.userId, userName: String(d.userName ?? "Anonymous"),
             ticker: d.ticker, shares: parseFloat(d.shares),
             totalPayout: parseFloat(d.totalPayout),
             reason: d.reason,
@@ -671,7 +671,7 @@ export const appRouter = router({
         return cache.getOrSet(`ledger.bets.${limit}`, async () => {
           const raw = await getAllBets(limit);
           return raw.map(b => ({
-            id: b.id, userName: String(b.userName ?? "Anonymous"),
+            id: b.id, userId: b.userId, userName: String(b.userName ?? "Anonymous"),
             prediction: b.prediction, amount: parseFloat(b.amount),
             status: b.status, payout: b.payout ? parseFloat(b.payout) : null,
             createdAt: typeof b.createdAt === 'string' && !b.createdAt.endsWith('Z') ? b.createdAt + 'Z' : (b.createdAt ?? null),
