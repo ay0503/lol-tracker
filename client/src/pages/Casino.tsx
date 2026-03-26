@@ -2,7 +2,8 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -26,8 +27,11 @@ export default function Casino() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
+  const [depositAmount, setDepositAmount] = useState("");
+  const [showDeposit, setShowDeposit] = useState(false);
 
   const { data: balance } = trpc.casino.blackjack.balance.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { enabled: isAuthenticated });
   const { data: leaderboard } = trpc.casino.leaderboard.useQuery();
   const { data: bonusStatus } = trpc.casino.dailyBonusStatus.useQuery(undefined, { enabled: isAuthenticated });
 
@@ -41,7 +45,20 @@ export default function Casino() {
     onError: (err) => toast.error(err.message),
   });
 
+  const depositMutation = trpc.casino.deposit.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Deposited $${parseFloat(depositAmount).toFixed(2)} to casino`);
+      setDepositAmount("");
+      setShowDeposit(false);
+      utils.casino.blackjack.balance.invalidate();
+      utils.trading.portfolio.invalidate();
+      utils.casino.leaderboard.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const cash = balance ?? 20;
+  const tradingCash = portfolio?.cashBalance ?? 0;
   const canClaim = isAuthenticated && !bonusStatus?.claimed;
 
   return (
@@ -94,10 +111,73 @@ export default function Casino() {
                 <motion.p key={cash} initial={{ scale: 1.05 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl font-bold text-white font-mono leading-none">
                   ${cash.toFixed(2)}
                 </motion.p>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => setShowDeposit(!showDeposit)}
+                    className="mt-2 flex items-center gap-1 text-[10px] text-yellow-400 hover:text-yellow-300 transition-colors font-mono"
+                  >
+                    <ArrowRightLeft className="w-3 h-3" />
+                    {language === "ko" ? "입금하기" : "Deposit from trading"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
+
+        {/* ─── Deposit Panel ─── */}
+        {showDeposit && isAuthenticated && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-4 mb-6 overflow-hidden"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowRightLeft className="w-4 h-4 text-yellow-400" />
+              <h3 className="text-xs font-bold text-white">
+                {language === "ko" ? "트레이딩 → 카지노 입금" : "Transfer Trading → Casino"}
+              </h3>
+            </div>
+            <p className="text-[10px] text-zinc-400 mb-3">
+              {language === "ko"
+                ? `트레이딩 잔고: $${tradingCash.toFixed(2)} · $1–$50 입금 가능`
+                : `Trading balance: $${tradingCash.toFixed(2)} · Deposit $1–$50`}
+            </p>
+            <div className="flex gap-2">
+              <div className="flex gap-1.5 flex-1">
+                {[5, 10, 25, 50].map(amt => (
+                  <button
+                    key={amt}
+                    onClick={() => setDepositAmount(String(amt))}
+                    disabled={tradingCash < amt}
+                    className={`flex-1 py-2 rounded-lg text-xs font-mono font-bold transition-all ${
+                      parseFloat(depositAmount) === amt
+                        ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                        : tradingCash < amt
+                          ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed"
+                          : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
+                    }`}
+                  >
+                    ${amt}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  const amt = parseFloat(depositAmount);
+                  if (isNaN(amt) || amt < 1 || amt > 50) return toast.error("$1–$50");
+                  depositMutation.mutate({ amount: amt });
+                }}
+                disabled={!depositAmount || depositMutation.isPending}
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-bold disabled:opacity-30 transition-colors"
+              >
+                {depositMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                  language === "ko" ? "입금" : "Deposit"}
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* ─── Games ─── */}
         <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">

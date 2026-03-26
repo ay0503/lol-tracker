@@ -802,10 +802,11 @@ export const appRouter = router({
         }
       }),
       status: protectedProcedure.query(async ({ ctx }) => {
-        const { checkCrashStatus } = await import("./crash");
+        const { checkCrashStatus, isPayoutCredited, markPayoutCredited } = await import("./crash");
         const game = checkCrashStatus(ctx.user.id);
-        if (game && (game.status === "cashed_out") && game.payout > 0) {
-          // Auto-cashout resolved — credit payout
+        if (game && game.status === "cashed_out" && game.payout > 0 && !isPayoutCredited(ctx.user.id)) {
+          // Auto-cashout resolved — credit payout once
+          markPayoutCredited(ctx.user.id);
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
           const db = await getDb();
           const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
@@ -1058,6 +1059,32 @@ export const appRouter = router({
         return { claimed: false };
       }
     }),
+    /** Transfer trading cash → casino balance */
+    deposit: protectedProcedure
+      .input(z.object({ amount: z.number().min(1).max(50).finite() }))
+      .mutation(async ({ ctx, input }) => {
+        const portfolio = await getOrCreatePortfolio(ctx.user.id);
+        const tradingCash = parseFloat(portfolio.cashBalance);
+        const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+
+        if (input.amount > tradingCash) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient trading cash. You have $${tradingCash.toFixed(2)}.` });
+        }
+
+        const db = await getDb();
+        await db.update(portfolios).set({
+          cashBalance: (tradingCash - input.amount).toFixed(2),
+          casinoBalance: (casinoCash + input.amount).toFixed(2),
+        }).where(eq(portfolios.userId, ctx.user.id));
+
+        cache.invalidate("leaderboard.rankings");
+        cache.invalidate("casino.leaderboard");
+
+        return {
+          tradingCash: tradingCash - input.amount,
+          casinoCash: casinoCash + input.amount,
+        };
+      }),
     leaderboard: publicProcedure.query(async () => {
       return cache.getOrSet("casino.leaderboard", async () => {
         const client = getRawClient();
