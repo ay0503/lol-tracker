@@ -1833,6 +1833,33 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Valorant Team Balancer ───
+  valorant: router({
+    fetchPlayer: protectedProcedure
+      .input(z.object({ name: z.string().min(1).max(50), tag: z.string().min(1).max(10), region: z.string().default("na") }))
+      .mutation(async ({ input }) => {
+        const { fetchPlayerProfile } = await import("./valorant");
+        return fetchPlayerProfile(input.name, input.tag, input.region);
+      }),
+    balanceTeams: protectedProcedure
+      .input(z.object({
+        players: z.array(z.object({ name: z.string(), tag: z.string(), region: z.string() })).length(10),
+      }))
+      .mutation(async ({ input }) => {
+        const { fetchPlayerProfile, balanceTeams } = await import("./valorant");
+        const profiles = [];
+        for (const pl of input.players) {
+          try {
+            const profile = await fetchPlayerProfile(pl.name, pl.tag, pl.region);
+            profiles.push(profile);
+          } catch (err: any) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Failed to fetch ${pl.name}#${pl.tag}: ${err.message}` });
+          }
+        }
+        return balanceTeams(profiles);
+      }),
+  }),
+
   // ─── Admin SQL Console (admin only) ───
   admin: router({
     sql: adminProcedure
