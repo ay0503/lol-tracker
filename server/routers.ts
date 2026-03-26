@@ -879,33 +879,39 @@ export const appRouter = router({
     }),
     /** Daily bonus: claim once per day, streak increases bonus */
     dailyBonus: protectedProcedure.mutation(async ({ ctx }) => {
-      const db = await getDb();
-      // Check last claim from a simple cache key per user
-      const cacheKey = `casino.dailyBonus.${ctx.user.id}`;
-      const lastClaim = cache.get<string>(cacheKey);
+      const client = getRawClient();
       const today = new Date().toISOString().split("T")[0];
 
-      if (lastClaim === today) {
+      // Create table if not exists (idempotent)
+      await client.execute(`CREATE TABLE IF NOT EXISTS casino_daily_claims (userId INTEGER PRIMARY KEY, lastClaim TEXT NOT NULL)`);
+
+      // Check last claim from DB
+      const existing = await client.execute({ sql: `SELECT lastClaim FROM casino_daily_claims WHERE userId = ?`, args: [ctx.user.id] });
+      if (existing.rows.length > 0 && String(existing.rows[0].lastClaim) === today) {
         throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Already claimed today. Come back tomorrow!" });
       }
 
-      // Base bonus: $1, up to $3 (we keep it modest)
       const bonus = 1.00;
       const portfolio = await getOrCreatePortfolio(ctx.user.id);
       const newBalance = parseFloat(portfolio.casinoBalance ?? "20.00") + bonus;
+      const db = await getDb();
       await db.update(portfolios).set({ casinoBalance: newBalance.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-      // Mark as claimed (24h TTL)
-      cache.set(cacheKey, today, 24 * 60 * 60 * 1000);
+      // Upsert claim record
+      await client.execute({ sql: `INSERT INTO casino_daily_claims (userId, lastClaim) VALUES (?, ?) ON CONFLICT(userId) DO UPDATE SET lastClaim = ?`, args: [ctx.user.id, today, today] });
       cache.invalidate("casino.leaderboard");
 
       return { bonus, newBalance };
     }),
     dailyBonusStatus: protectedProcedure.query(async ({ ctx }) => {
-      const cacheKey = `casino.dailyBonus.${ctx.user.id}`;
-      const lastClaim = cache.get<string>(cacheKey);
+      const client = getRawClient();
       const today = new Date().toISOString().split("T")[0];
-      return { claimed: lastClaim === today };
+      try {
+        const existing = await client.execute({ sql: `SELECT lastClaim FROM casino_daily_claims WHERE userId = ?`, args: [ctx.user.id] });
+        return { claimed: existing.rows.length > 0 && String(existing.rows[0].lastClaim) === today };
+      } catch {
+        return { claimed: false };
+      }
     }),
     leaderboard: publicProcedure.query(async () => {
       return cache.getOrSet("casino.leaderboard", async () => {
