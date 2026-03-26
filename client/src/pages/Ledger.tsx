@@ -216,7 +216,7 @@ export default function Ledger() {
               <p className="text-xs text-muted-foreground/60 mt-1">{t.ledger.beFirst}</p>
             </div>
           )
-        ) : (
+        ) : tab === "dividends" ? (
           /* ─── Dividends Tab ─── */
           dividends && dividends.length > 0 ? (
             <>
