@@ -1966,6 +1966,20 @@ export const appRouter = router({
             : `Set ${input.cooldownSeconds}s cooldown for ${userName}`,
         };
       }),
+    /** Grant all cosmetics to admin */
+    grantAllCosmetics: adminProcedure.mutation(async ({ ctx }) => {
+      const client = getRawClient();
+      const items = await client.execute(`SELECT id FROM cosmetic_items`);
+      let granted = 0;
+      for (const row of items.rows) {
+        try {
+          await client.execute({ sql: `INSERT OR IGNORE INTO user_cosmetics (userId, cosmeticId) VALUES (?, ?)`, args: [ctx.user.id, Number((row as any).id)] });
+          granted++;
+        } catch { /* already owned */ }
+      }
+      cache.invalidate("casino.leaderboard");
+      return { success: true, granted, total: items.rows.length };
+    }),
     /** Get/Set casino deposit multiplier */
     getCasinoMultiplier: adminProcedure.query(async () => {
       const client = getRawClient();

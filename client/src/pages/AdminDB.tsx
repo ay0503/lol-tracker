@@ -27,6 +27,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  ShoppingBag,
 } from "lucide-react";
 import {
   Dialog,
@@ -598,6 +599,36 @@ function QuickActions() {
 
   return (
     <div className="space-y-6">
+      {/* Grant All Cosmetics */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <ShoppingBag className="w-4 h-4 text-purple-400" />
+          <h3 className="text-sm font-bold">Grant All Cosmetics</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Give yourself (admin) ownership of every cosmetic in the shop.
+        </p>
+        <Button
+          size="sm"
+          onClick={() => {
+            fetch('/api/trpc/admin.grantAllCosmetics', {
+              method: 'POST', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ json: {} }),
+            }).then(r => r.json()).then(d => {
+              if (d.result?.data?.json?.success) {
+                toast.success(`Granted ${d.result.data.json.total} cosmetics`);
+              } else {
+                toast.error(d.error?.json?.message || "Failed");
+              }
+            }).catch(() => toast.error("Failed"));
+          }}
+        >
+          <ShoppingBag className="w-3 h-3 mr-1" />
+          Grant All
+        </Button>
+      </div>
+
       {/* Trading Halt Toggle */}
       <div className={`border rounded-xl p-5 ${isHalted ? 'bg-red-950/30 border-red-800/50' : 'bg-card border-border'}`}>
         <div className="flex items-center gap-2 mb-3">
