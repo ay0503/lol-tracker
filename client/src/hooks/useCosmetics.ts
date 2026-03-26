@@ -7,16 +7,16 @@ export function useCosmetics() {
   });
 
   const lookup = useMemo(() => {
-    const map = new Map<number, { title: any; nameEffect: any }>();
+    const map = new Map<number, { title: any; nameEffect: any; isCloseFriend: boolean }>();
     if (data) {
       for (const entry of data) {
-        map.set(entry.userId, { title: entry.title, nameEffect: entry.nameEffect });
+        map.set(entry.userId, { title: entry.title, nameEffect: entry.nameEffect, isCloseFriend: (entry as any).isCloseFriend ?? false });
       }
     }
     return map;
   }, [data]);
 
   return {
-    getCosmetics: (userId: number) => lookup.get(userId) ?? { title: null, nameEffect: null },
+    getCosmetics: (userId: number) => lookup.get(userId) ?? { title: null, nameEffect: null, isCloseFriend: false },
   };
 }

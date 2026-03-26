@@ -151,18 +151,24 @@ interface StyledNameProps {
   nameEffectCss?: string | null;
   titleName?: string | null;
   titleCss?: string | null;
+  isCloseFriend?: boolean;
   className?: string;
   showTitle?: boolean;
 }
 
 export default function StyledName({
-  name, nameEffectCss, titleName, titleCss, className = "", showTitle = true,
+  name, nameEffectCss, titleName, titleCss, isCloseFriend, className = "", showTitle = true,
 }: StyledNameProps) {
   const effectKey = nameEffectCss ? getEffectKey(nameEffectCss) : null;
   const effect = effectKey ? EFFECT_STYLES[effectKey] : null;
 
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
+      {isCloseFriend && (
+        <span className="flex-shrink-0 w-3.5 h-3.5 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center" title="Close Friend">
+          <span className="text-[8px] text-green-400">★</span>
+        </span>
+      )}
       <span
         className={`font-bold ${effect?.className || "text-current"}`}
         style={effect?.style}

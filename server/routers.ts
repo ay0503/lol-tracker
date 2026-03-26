@@ -1104,11 +1104,24 @@ export const appRouter = router({
         return { claimed: false };
       }
     }),
-    /** Transfer trading cash → casino balance (10x multiplier) */
+    /** Get current deposit multiplier (public) */
+    depositMultiplier: publicProcedure.query(async () => {
+      try {
+        const client = getRawClient();
+        const res = await client.execute(`SELECT value FROM app_config WHERE key = 'casino_multiplier'`);
+        return { multiplier: res.rows.length > 0 ? Number(res.rows[0].value) : 10 };
+      } catch { return { multiplier: 10 }; }
+    }),
+    /** Transfer trading cash → casino balance (configurable multiplier) */
     deposit: protectedProcedure
       .input(z.object({ amount: z.number().min(0.50).max(200).finite() }))
       .mutation(async ({ ctx, input }) => {
-        const CASINO_MULTIPLIER = 10;
+        let CASINO_MULTIPLIER = 10;
+        try {
+          const client = getRawClient();
+          const res = await client.execute(`SELECT value FROM app_config WHERE key = 'casino_multiplier'`);
+          if (res.rows.length > 0) CASINO_MULTIPLIER = Number(res.rows[0].value) || 10;
+        } catch { /* table might not exist, use default */ }
         const portfolio = await getOrCreatePortfolio(ctx.user.id);
         const tradingCash = parseFloat(portfolio.cashBalance);
         const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
@@ -1177,6 +1190,7 @@ export const appRouter = router({
       allEquipped: publicProcedure.query(async () => {
         try {
           const client = getRawClient();
+          // Get equipped cosmetics
           const result = await client.execute(`
             SELECT ue.userId, t.name as titleName, t.cssClass as titleCss, n.name as nameEffectName, n.cssClass as nameEffectCss
             FROM user_equipped ue
@@ -1184,11 +1198,28 @@ export const appRouter = router({
             LEFT JOIN cosmetic_items n ON ue.equippedNameEffect = n.id
             WHERE ue.equippedTitle IS NOT NULL OR ue.equippedNameEffect IS NOT NULL
           `);
-          return (result.rows as any[]).map(r => ({
+          // Get close friends
+          let closeFriendIds = new Set<number>();
+          try {
+            const cf = await client.execute(`SELECT userId FROM close_friends`);
+            closeFriendIds = new Set(cf.rows.map((r: any) => Number(r.userId)));
+          } catch { /* table might not exist yet */ }
+
+          const equipped = (result.rows as any[]).map(r => ({
             userId: Number(r.userId),
             title: r.titleName ? { name: String(r.titleName), cssClass: r.titleCss ? String(r.titleCss) : null } : null,
             nameEffect: r.nameEffectName ? { name: String(r.nameEffectName), cssClass: r.nameEffectCss ? String(r.nameEffectCss) : null } : null,
+            isCloseFriend: closeFriendIds.has(Number(r.userId)),
           }));
+
+          // Also add close friends who don't have cosmetics equipped
+          for (const cfId of closeFriendIds) {
+            if (!equipped.find(e => e.userId === cfId)) {
+              equipped.push({ userId: cfId, title: null, nameEffect: null, isCloseFriend: true });
+            }
+          }
+
+          return equipped;
         } catch { return []; }
       }),
       catalog: publicProcedure.query(async () => {
@@ -1927,6 +1958,79 @@ export const appRouter = router({
             : `Set ${input.cooldownSeconds}s cooldown for ${userName}`,
         };
       }),
+    /** Get/Set casino deposit multiplier */
+    getCasinoMultiplier: adminProcedure.query(async () => {
+      const client = getRawClient();
+      try {
+        await client.execute(`CREATE TABLE IF NOT EXISTS app_config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+        const res = await client.execute(`SELECT value FROM app_config WHERE key = 'casino_multiplier'`);
+        return { multiplier: res.rows.length > 0 ? Number(res.rows[0].value) : 10 };
+      } catch { return { multiplier: 10 }; }
+    }),
+    setCasinoMultiplier: adminProcedure
+      .input(z.object({ multiplier: z.number().min(1).max(100).finite() }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        await client.execute(`CREATE TABLE IF NOT EXISTS app_config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+        await client.execute({
+          sql: `INSERT INTO app_config (key, value) VALUES ('casino_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+          args: [String(input.multiplier), String(input.multiplier)],
+        });
+        return { success: true, multiplier: input.multiplier };
+      }),
+    /** Toggle close friend tag for a user */
+    toggleCloseFriend: adminProcedure
+      .input(z.object({ displayName: z.string().optional(), userId: z.number().optional() }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        await client.execute(`CREATE TABLE IF NOT EXISTS close_friends (userId INTEGER PRIMARY KEY, addedAt TEXT DEFAULT (datetime('now')))`);
+
+        const db = await getDb();
+        let userId: number | null = null;
+        let userName: string | null = null;
+
+        if (input.userId) {
+          const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+          if (user.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: `User not found` });
+          userId = user[0].id;
+          userName = user[0].displayName || user[0].name;
+        } else if (input.displayName) {
+          const allUsers = await db.select().from(users);
+          const match = allUsers.find(u => (u.displayName || u.name) === input.displayName);
+          if (!match) throw new TRPCError({ code: "NOT_FOUND", message: `User "${input.displayName}" not found` });
+          userId = match.id;
+          userName = match.displayName || match.name;
+        } else {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Provide either displayName or userId" });
+        }
+
+        const existing = await client.execute({ sql: `SELECT 1 FROM close_friends WHERE userId = ?`, args: [userId] });
+        if (existing.rows.length > 0) {
+          await client.execute({ sql: `DELETE FROM close_friends WHERE userId = ?`, args: [userId] });
+          cache.invalidateAll();
+          return { success: true, userId, userName, isCloseFriend: false, message: `Removed ${userName} from Close Friends` };
+        } else {
+          await client.execute({ sql: `INSERT INTO close_friends (userId) VALUES (?)`, args: [userId] });
+          cache.invalidateAll();
+          return { success: true, userId, userName, isCloseFriend: true, message: `Added ${userName} to Close Friends` };
+        }
+      }),
+    /** List all close friends */
+    listCloseFriends: adminProcedure.query(async () => {
+      const client = getRawClient();
+      try {
+        await client.execute(`CREATE TABLE IF NOT EXISTS close_friends (userId INTEGER PRIMARY KEY, addedAt TEXT DEFAULT (datetime('now')))`);
+        const result = await client.execute(
+          `SELECT cf.userId, COALESCE(u.displayName, u.name) as userName, cf.addedAt
+           FROM close_friends cf LEFT JOIN users u ON cf.userId = u.id`
+        );
+        return (result.rows as any[]).map(r => ({
+          userId: Number(r.userId),
+          userName: String(r.userName || "Unknown"),
+          addedAt: String(r.addedAt),
+        }));
+      } catch { return []; }
+    }),
     /** List all casino cooldowns */
     listCasinoCooldowns: adminProcedure.query(async () => {
       const client = getRawClient();

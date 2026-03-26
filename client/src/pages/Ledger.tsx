@@ -250,7 +250,7 @@ export default function Ledger() {
                         <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                           <Coins className="w-3 h-3 text-green-400" />
                         </div>
-                        <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate" />
+                        <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(div.userId).isCloseFriend} showTitle={false} className="text-xs truncate" />
                       </div>
                       <div className="col-span-2">
                         <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>
@@ -281,7 +281,7 @@ export default function Ledger() {
                           <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
                             <Coins className="w-3 h-3 text-green-400" />
                           </div>
-                          <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate max-w-[80px]" />
+                          <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(div.userId).isCloseFriend} showTitle={false} className="text-xs truncate max-w-[80px]" />
                         </div>
                         <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">+${div.totalPayout.toFixed(2)}</span>
                       </div>
@@ -338,7 +338,7 @@ export default function Ledger() {
                           <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
                             <Dice5 className="w-3 h-3 text-yellow-400" />
                           </div>
-                          <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate" />
+                          <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(bet.userId).isCloseFriend} showTitle={false} className="text-xs truncate" />
                         </div>
                         <div className="col-span-2">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
@@ -380,7 +380,7 @@ export default function Ledger() {
                             <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
                               <Dice5 className="w-3 h-3 text-yellow-400" />
                             </div>
-                            <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} showTitle={false} className="text-xs truncate max-w-[80px]" />
+                            <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(bet.userId).isCloseFriend} showTitle={false} className="text-xs truncate max-w-[80px]" />
                             <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                               bet.prediction === "win" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                             }`}>

@@ -563,6 +563,8 @@ function QuickActions() {
   const [casinoAmount, setCasinoAmount] = useState("20");
   const [cooldownName, setCooldownName] = useState("");
   const [cooldownSeconds, setCooldownSeconds] = useState("60");
+  const [closeFriendName, setCloseFriendName] = useState("");
+  const [newMultiplier, setNewMultiplier] = useState("");
 
   const utils = trpc.useUtils();
 
@@ -808,6 +810,98 @@ function QuickActions() {
             className="h-9"
           >
             Set
+          </Button>
+        </div>
+      </div>
+
+      {/* Casino Deposit Multiplier */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign className="w-4 h-4 text-green-400" />
+          <h3 className="text-sm font-bold">Casino Deposit Multiplier</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Set how much casino cash users get per $1 of trading cash deposited. Current: fetched on load.
+        </p>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="text-xs text-muted-foreground mb-1 block">Multiplier (1-100)</label>
+            <input
+              type="number"
+              value={newMultiplier}
+              onChange={(e) => setNewMultiplier(e.target.value)}
+              placeholder="e.g. 10"
+              min={1}
+              max={100}
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              const mult = parseInt(newMultiplier);
+              if (isNaN(mult) || mult < 1 || mult > 100) return toast.error("Enter 1-100");
+              fetch('/api/trpc/admin.setCasinoMultiplier', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ json: { multiplier: mult } }),
+              }).then(r => r.json()).then(d => {
+                if (d.result?.data?.json?.success) {
+                  toast.success(`Multiplier set to ${mult}x`);
+                  setNewMultiplier("");
+                } else {
+                  toast.error(d.error?.json?.message || "Failed");
+                }
+              }).catch(() => toast.error("Failed"));
+            }}
+            disabled={!newMultiplier}
+            className="h-9"
+          >
+            Set
+          </Button>
+        </div>
+      </div>
+
+      {/* Close Friends */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-green-400 text-sm">★</span>
+          <h3 className="text-sm font-bold">Close Friends</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Toggle close friend status for a user. Close friends get a green star next to their name everywhere.
+        </p>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="text-xs text-muted-foreground mb-1 block">Display Name</label>
+            <input
+              type="text"
+              value={closeFriendName}
+              onChange={(e) => setCloseFriendName(e.target.value)}
+              placeholder="e.g. 윤여균"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              fetch('/api/trpc/admin.toggleCloseFriend', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ json: { displayName: closeFriendName } }),
+              }).then(r => r.json()).then(d => {
+                if (d.result?.data?.json?.success) {
+                  toast.success(d.result.data.json.message);
+                  setCloseFriendName("");
+                } else {
+                  toast.error(d.error?.json?.message || "Failed");
+                }
+              }).catch(() => toast.error("Failed"));
+            }}
+            disabled={!closeFriendName.trim()}
+            className="h-9"
+          >
+            Toggle
           </Button>
         </div>
       </div>
