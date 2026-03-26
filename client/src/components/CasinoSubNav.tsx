@@ -8,6 +8,7 @@ const CASINO_GAMES = [
   { href: "/casino/roulette", label: "Roulette", labelKo: "룰렛", emoji: "🎡" },
   { href: "/casino/mines", label: "Mines", labelKo: "지뢰", emoji: "💣" },
   { href: "/casino/poker", label: "Poker", labelKo: "포커", emoji: "🃑" },
+  { href: "/casino/shop", label: "Shop", labelKo: "상점", emoji: "🛍️" },
 ];
 
 export default function CasinoSubNav() {

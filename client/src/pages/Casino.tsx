@@ -106,16 +106,6 @@ export default function Casino() {
                         ? (language === "ko" ? "일일 보너스 $1.00 받기" : "Claim Daily $1.00")
                         : (language === "ko" ? "✓ 오늘 보너스 수령 완료" : "✓ Claimed Today")}
                     </motion.button>
-                    <Link href="/casino/shop">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition-all"
-                      >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        {language === "ko" ? "상점" : "Shop"}
-                      </motion.button>
-                    </Link>
                   </div>
                 )}
               </div>
