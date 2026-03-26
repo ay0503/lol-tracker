@@ -730,7 +730,7 @@ export const appRouter = router({
   casino: router({
     blackjack: router({
       deal: protectedProcedure
-        .input(z.object({ bet: z.number().min(1).max(5).finite() }))
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
         .mutation(async ({ ctx, input }) => {
           // Deduct bet from cash
           const portfolio = await getOrCreatePortfolio(ctx.user.id);
