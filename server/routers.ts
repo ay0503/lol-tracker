@@ -821,6 +821,36 @@ export const appRouter = router({
         return parseFloat(portfolio.casinoBalance ?? "20.00");
       }),
     }),
+    /** Daily bonus: claim once per day, streak increases bonus */
+    dailyBonus: protectedProcedure.mutation(async ({ ctx }) => {
+      const db = await getDb();
+      // Check last claim from a simple cache key per user
+      const cacheKey = `casino.dailyBonus.${ctx.user.id}`;
+      const lastClaim = cache.get<string>(cacheKey);
+      const today = new Date().toISOString().split("T")[0];
+
+      if (lastClaim === today) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Already claimed today. Come back tomorrow!" });
+      }
+
+      // Base bonus: $1, up to $3 (we keep it modest)
+      const bonus = 1.00;
+      const portfolio = await getOrCreatePortfolio(ctx.user.id);
+      const newBalance = parseFloat(portfolio.casinoBalance ?? "20.00") + bonus;
+      await db.update(portfolios).set({ casinoBalance: newBalance.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+
+      // Mark as claimed (24h TTL)
+      cache.set(cacheKey, today, 24 * 60 * 60 * 1000);
+      cache.invalidate("casino.leaderboard");
+
+      return { bonus, newBalance };
+    }),
+    dailyBonusStatus: protectedProcedure.query(async ({ ctx }) => {
+      const cacheKey = `casino.dailyBonus.${ctx.user.id}`;
+      const lastClaim = cache.get<string>(cacheKey);
+      const today = new Date().toISOString().split("T")[0];
+      return { claimed: lastClaim === today };
+    }),
     leaderboard: publicProcedure.query(async () => {
       return cache.getOrSet("casino.leaderboard", async () => {
         const db = await getDb();
