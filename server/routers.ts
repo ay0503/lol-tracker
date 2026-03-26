@@ -882,6 +882,51 @@ export const appRouter = router({
         return getActiveMinesGame(ctx.user.id);
       }),
     }),
+    poker: router({
+      deal: protectedProcedure
+        .input(z.object({ bet: z.number().min(0.10).max(5).finite() }))
+        .mutation(async ({ ctx, input }) => {
+          await checkCasinoCooldown(ctx.user.id);
+          const portfolio = await getOrCreatePortfolio(ctx.user.id);
+          const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+          if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
+
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+
+          const { dealPoker } = await import("./videoPoker");
+          try {
+            const game = dealPoker(ctx.user.id, input.bet);
+            recordCasinoGame(ctx.user.id);
+            return game;
+          } catch (err: any) {
+            await db.update(portfolios).set({ casinoBalance: casinoCash.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          }
+        }),
+      draw: protectedProcedure
+        .input(z.object({ held: z.array(z.boolean()).length(5) }))
+        .mutation(async ({ ctx, input }) => {
+          const { drawPoker } = await import("./videoPoker");
+          try {
+            const game = drawPoker(ctx.user.id, input.held);
+            if (game.payout > 0) {
+              const portfolio = await getOrCreatePortfolio(ctx.user.id);
+              const db = await getDb();
+              const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
+              await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            }
+            cache.invalidate("casino.leaderboard");
+            return game;
+          } catch (err: any) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+          }
+        }),
+      active: protectedProcedure.query(async ({ ctx }) => {
+        const { getActivePokerGame } = await import("./videoPoker");
+        return getActivePokerGame(ctx.user.id);
+      }),
+    }),
     roulette: router({
       spin: protectedProcedure
         .input(z.object({
@@ -1059,10 +1104,11 @@ export const appRouter = router({
         return { claimed: false };
       }
     }),
-    /** Transfer trading cash → casino balance */
+    /** Transfer trading cash → casino balance (20x multiplier) */
     deposit: protectedProcedure
-      .input(z.object({ amount: z.number().min(1).max(50).finite() }))
+      .input(z.object({ amount: z.number().min(0.50).max(200).finite() }))
       .mutation(async ({ ctx, input }) => {
+        const CASINO_MULTIPLIER = 20;
         const portfolio = await getOrCreatePortfolio(ctx.user.id);
         const tradingCash = parseFloat(portfolio.cashBalance);
         const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
@@ -1071,18 +1117,21 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient trading cash. You have $${tradingCash.toFixed(2)}.` });
         }
 
+        const casinoAmount = input.amount * CASINO_MULTIPLIER;
         const db = await getDb();
         await db.update(portfolios).set({
           cashBalance: (tradingCash - input.amount).toFixed(2),
-          casinoBalance: (casinoCash + input.amount).toFixed(2),
+          casinoBalance: (casinoCash + casinoAmount).toFixed(2),
         }).where(eq(portfolios.userId, ctx.user.id));
 
         cache.invalidate("leaderboard.rankings");
         cache.invalidate("casino.leaderboard");
 
         return {
+          deposited: input.amount,
+          received: casinoAmount,
           tradingCash: tradingCash - input.amount,
-          casinoCash: casinoCash + input.amount,
+          casinoCash: casinoCash + casinoAmount,
         };
       }),
     leaderboard: publicProcedure.query(async () => {

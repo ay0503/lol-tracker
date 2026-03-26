@@ -11,9 +11,10 @@ const GAMES = [
   { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 – $5", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
   { id: "crash", title: "Crash", titleKo: "크래시", emoji: "🚀", desc: "Cash out before it crashes", descKo: "추락 전에 캐시아웃", bet: "$0.10 – $5", href: "/casino/crash", active: true, bg: "from-orange-950/50 to-red-900/30", border: "border-orange-700/40", badge: "from-orange-500 to-red-600" },
   { id: "roulette", title: "Roulette", titleKo: "룰렛", emoji: "🎡", desc: "European wheel, 2.7% edge", descKo: "유럽식 룰렛", bet: "$0.10 – $5", href: "/casino/roulette", active: true, bg: "from-green-950/50 to-emerald-900/30", border: "border-green-700/40", badge: "from-green-500 to-emerald-600" },
-  { id: "coinflip", title: "Coin Flip", titleKo: "코인 플립", emoji: "🪙", desc: "Heads or tails, 50/50", descKo: "앞면 뒷면 50/50", bet: "$0.10 – $5", href: "#", active: false, bg: "from-yellow-950/30 to-amber-900/15", border: "border-zinc-800/50", badge: "" },
+  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "🃑", desc: "Jacks or Better", descKo: "잭스 오어 베터", bet: "$0.10 – $5", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
   { id: "dice", title: "Dice", titleKo: "주사위", emoji: "🎲", desc: "Roll over/under", descKo: "높낮이 베팅", bet: "$0.10 – $5", href: "#", active: false, bg: "from-purple-950/30 to-violet-900/15", border: "border-zinc-800/50", badge: "" },
   { id: "mines", title: "Mines", titleKo: "지뢰찾기", emoji: "💣", desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 – $5", href: "/casino/mines", active: true, bg: "from-red-950/50 to-rose-900/30", border: "border-red-700/40", badge: "from-red-500 to-orange-600" },
+  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "♠️", desc: "Jacks or Better", descKo: "잭 이상 페어", bet: "$0.10 – $5", href: "/casino/poker", active: true, bg: "from-purple-950/50 to-indigo-900/30", border: "border-purple-700/40", badge: "from-purple-500 to-indigo-600" },
 ];
 
 function RankIcon({ rank }: { rank: number }) {
@@ -47,7 +48,7 @@ export default function Casino() {
 
   const depositMutation = trpc.casino.deposit.useMutation({
     onSuccess: (data) => {
-      toast.success(`Deposited $${parseFloat(depositAmount).toFixed(2)} to casino`);
+      toast.success(`$${data.deposited.toFixed(2)} → $${data.received.toFixed(0)} casino cash (20x)`);
       setDepositAmount("");
       setShowDeposit(false);
       utils.casino.blackjack.balance.invalidate();
@@ -133,40 +134,71 @@ export default function Casino() {
             exit={{ height: 0, opacity: 0 }}
             className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-4 mb-6 overflow-hidden"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <ArrowRightLeft className="w-4 h-4 text-yellow-400" />
-              <h3 className="text-xs font-bold text-white">
-                {language === "ko" ? "트레이딩 → 카지노 입금" : "Transfer Trading → Casino"}
-              </h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-yellow-400" />
+                <h3 className="text-xs font-bold text-white">
+                  {language === "ko" ? "트레이딩 → 카지노 입금 (20배)" : "Trading → Casino (20x)"}
+                </h3>
+              </div>
+              <span className="text-[10px] text-yellow-400/60 font-mono">
+                {language === "ko" ? "트레이딩" : "Trading"}: ${tradingCash.toFixed(2)}
+              </span>
             </div>
             <p className="text-[10px] text-zinc-400 mb-3">
               {language === "ko"
-                ? `트레이딩 잔고: $${tradingCash.toFixed(2)} · $1–$50 입금 가능`
-                : `Trading balance: $${tradingCash.toFixed(2)} · Deposit $1–$50`}
+                ? `$1 트레이딩 캐시 = $20 카지노 캐시`
+                : `$1 trading cash = $20 casino cash`}
             </p>
+            <div className="flex gap-1.5 mb-2">
+              {[1, 2, 5, 10].map(amt => (
+                <button
+                  key={amt}
+                  onClick={() => setDepositAmount(String(amt))}
+                  disabled={tradingCash < amt}
+                  className={`flex-1 py-2 rounded-lg text-xs font-mono font-bold transition-all ${
+                    parseFloat(depositAmount) === amt
+                      ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                      : tradingCash < amt
+                        ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed"
+                        : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
+                  }`}
+                >
+                  ${amt}→${amt * 20}
+                </button>
+              ))}
+              <button
+                onClick={() => setDepositAmount(Math.floor(tradingCash).toString())}
+                disabled={tradingCash < 0.5}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                  tradingCash < 0.5 ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed" : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
+                }`}
+              >
+                ALL
+              </button>
+            </div>
             <div className="flex gap-2">
-              <div className="flex gap-1.5 flex-1">
-                {[5, 10, 25, 50].map(amt => (
-                  <button
-                    key={amt}
-                    onClick={() => setDepositAmount(String(amt))}
-                    disabled={tradingCash < amt}
-                    className={`flex-1 py-2 rounded-lg text-xs font-mono font-bold transition-all ${
-                      parseFloat(depositAmount) === amt
-                        ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                        : tradingCash < amt
-                          ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed"
-                          : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
-                    }`}
-                  >
-                    ${amt}
-                  </button>
-                ))}
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">$</span>
+                <input
+                  type="number"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="Amount"
+                  min={0.5}
+                  step={0.5}
+                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700/50 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/50"
+                />
+              </div>
+              <div className="flex items-center text-xs text-zinc-500 font-mono px-2">→</div>
+              <div className="flex items-center text-sm font-mono font-bold text-yellow-400 min-w-[4rem]">
+                ${((parseFloat(depositAmount) || 0) * 20).toFixed(0)}
               </div>
               <button
                 onClick={() => {
                   const amt = parseFloat(depositAmount);
-                  if (isNaN(amt) || amt < 1 || amt > 50) return toast.error("$1–$50");
+                  if (isNaN(amt) || amt < 0.5) return toast.error("Min $0.50");
+                  if (amt > tradingCash) return toast.error(`Max $${tradingCash.toFixed(2)}`);
                   depositMutation.mutate({ amount: amt });
                 }}
                 disabled={!depositAmount || depositMutation.isPending}
