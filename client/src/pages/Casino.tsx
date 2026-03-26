@@ -152,7 +152,7 @@ function useDealerReveal(game: any) {
 
   useEffect(() => {
     // Clear any pending reveal timer
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) { if (timerRef.current) clearInterval(timerRef.current); timerRef.current = null; }
 
     if (!game || !game.dealerHand || game.dealerHand.length === 0) {
       setRevealed([]);
@@ -195,7 +195,7 @@ function useDealerReveal(game: any) {
     prevStatusRef.current = game.status;
 
     return () => {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (timerRef.current) { if (timerRef.current) clearInterval(timerRef.current); timerRef.current = null; }
     };
   }, [game?.status, game?.id]);
 
