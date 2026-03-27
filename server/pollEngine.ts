@@ -244,7 +244,7 @@ export async function pollNow(): Promise<PollResult> {
         isRanked: activeGameData.gameQueueConfigId === 420 || activeGameData.gameQueueConfigId === 440,
       }, 45_000);
     } else if (!confirmedIsInGame) {
-      cache.delete("player.liveGame.details");
+      cache.invalidate("player.liveGame.details");
     }
 
     const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
@@ -324,7 +324,7 @@ export async function pollNow(): Promise<PollResult> {
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
       cache.set("player.liveGame.check", false, 45_000);
-      cache.delete("player.liveGame.details");
+      cache.invalidate("player.liveGame.details");
     }
 
     // Max game duration safety valve: no LoL game lasts >90 min
@@ -334,7 +334,7 @@ export async function pollNow(): Promise<PollResult> {
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
       cache.set("player.liveGame.check", false, 45_000);
-      cache.delete("player.liveGame.details");
+      cache.invalidate("player.liveGame.details");
     }
 
 
