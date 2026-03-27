@@ -8,17 +8,15 @@
 - Code splitting: React.lazy() for all pages except Home + Login
 - Vite manual chunks: vendor-charts, vendor-motion
 
-## Casino Games (10 total)
+## Casino Games (8 total)
 1. Blackjack — standard, BJ 3:2, keyboard H/S/D
 2. Crash — canvas graph, server timers, 200ms grace, 1% edge
 3. Mines — 5x5 grid, 1-24 mines, 2% edge, no-limit
 4. Roulette — European wheel, no-limit, single smooth spin
 5. Video Poker — Jacks or Better 9/5, ~2% edge
 6. Dice — roll over/under, 1% edge, animated result bar
-7. Limbo — target multiplier, 1% edge, rising meter animation
-8. Hi-Lo — guess higher/lower on cards, 2% edge, cashout anytime
-9. Wheel — 50 segments, CSS conic-gradient, ~3.5% edge
-10. Plinko — 12 rows, 3 risk levels, physics ball drop, 2-3% edge
+7. Hi-Lo — guess higher/lower on cards, 2% edge, cashout anytime
+8. Plinko — 12 rows, 3 risk levels, physics ball drop, 2-3% edge
 
 ## Cosmetics System
 - StyledName component with inline styles registry (EFFECT_STYLES)

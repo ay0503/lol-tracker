@@ -9,9 +9,7 @@ const CASINO_GAMES = [
   { href: "/casino/mines", label: "Mines", labelKo: "지뢰", emoji: "💣" },
   { href: "/casino/poker", label: "Poker", labelKo: "포커", emoji: "🃑" },
   { href: "/casino/dice", label: "Dice", labelKo: "주사위", emoji: "🎲" },
-  { href: "/casino/limbo", label: "Limbo", labelKo: "림보", emoji: "📈" },
   { href: "/casino/hilo", label: "Hi-Lo", labelKo: "하이로", emoji: "🃏" },
-  { href: "/casino/wheel", label: "Wheel", labelKo: "휠", emoji: "🎡" },
   { href: "/casino/plinko", label: "Plinko", labelKo: "플링코", emoji: "📌" },
   { href: "/casino/shop", label: "Shop", labelKo: "상점", emoji: "🛍️" },
 ];
