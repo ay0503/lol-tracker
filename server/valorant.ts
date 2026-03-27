@@ -6,7 +6,7 @@
 import { cache } from "./cache";
 
 const HENRIK_BASE = "https://api.henrikdev.xyz/valorant";
-const CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
+const CACHE_TTL = 3 * 24 * 60 * 60 * 1000; // 3 days
 
 // ─── Types ───
 
@@ -42,7 +42,8 @@ export interface TeamResult {
 
 // ─── Henrik API Client ───
 
-async function henrikFetch(path: string): Promise<any> {
+async function henrikFetch(path: string, retries = 0): Promise<any> {
+  const MAX_RETRIES = 3;
   const apiKey = process.env.HENRIK_API_KEY;
   const url = `${HENRIK_BASE}${path}`;
   const headers: Record<string, string> = { "User-Agent": "DORI-TeamBalancer/1.0" };
@@ -55,10 +56,13 @@ async function henrikFetch(path: string): Promise<any> {
     console.log(`[Valorant] Response: ${resp.status} ${resp.statusText}`);
 
     if (resp.status === 429) {
+      if (retries >= MAX_RETRIES) {
+        throw new Error(`Henrik API rate limited after ${MAX_RETRIES} retries: ${path}`);
+      }
       const retryAfter = parseInt(resp.headers.get("retry-after") || "5");
-      console.log(`[Valorant] Rate limited, waiting ${retryAfter}s`);
+      console.log(`[Valorant] Rate limited, retry ${retries + 1}/${MAX_RETRIES} in ${retryAfter}s`);
       await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      return henrikFetch(path);
+      return henrikFetch(path, retries + 1);
     }
 
     const text = await resp.text();
@@ -109,17 +113,16 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
     console.error(`[Valorant] MMR failed for ${name}#${tag}: ${err.message}`);
   }
 
-  // Wait between requests
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  // Rate limit spacing between MMR and matches calls
+  await new Promise(resolve => setTimeout(resolve, 3000));
 
-  // Fetch match history
+  // Fetch match history (10 competitive matches)
   let matches: any[] = [];
   try {
     const matchData = await henrikFetch(`/v3/matches/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?mode=competitive&size=10`);
     if (Array.isArray(matchData)) {
       matches = matchData;
     } else if (matchData && typeof matchData === "object") {
-      // Some responses wrap in a different structure
       matches = matchData.data || matchData.matches || [];
     }
     console.log(`[Valorant] ${name}#${tag}: ${matches.length} matches found`);
@@ -127,8 +130,8 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
     console.error(`[Valorant] Matches failed for ${name}#${tag}: ${err.message}`);
   }
 
-  // Wait between players
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  // Wait before next player's requests
+  await new Promise(resolve => setTimeout(resolve, 3000));
 
   // Parse MMR — handle both v2 response formats
   let rank = "Unranked", rankTier = 0, rr = 0, elo = 0;
