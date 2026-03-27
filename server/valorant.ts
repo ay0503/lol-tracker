@@ -28,6 +28,7 @@ export interface PlayerProfile {
   topAgents: { agent: string; games: number; winRate: number }[];
   primaryRole: string;
   overallScore: number;
+  error?: string;
 }
 
 export interface TeamResult {
@@ -43,22 +44,46 @@ export interface TeamResult {
 
 async function henrikFetch(path: string): Promise<any> {
   const apiKey = process.env.HENRIK_API_KEY;
+  const url = `${HENRIK_BASE}${path}`;
   const headers: Record<string, string> = { "User-Agent": "DORI-TeamBalancer/1.0" };
   if (apiKey) headers["Authorization"] = apiKey;
 
-  const resp = await fetch(`${HENRIK_BASE}${path}`, { headers });
-  if (resp.status === 429) {
-    const retryAfter = parseInt(resp.headers.get("retry-after") || "5");
-    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-    return henrikFetch(path);
-  }
-  if (!resp.ok) {
+  console.log(`[Valorant] Fetching: ${url}`);
+
+  try {
+    const resp = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    console.log(`[Valorant] Response: ${resp.status} ${resp.statusText}`);
+
+    if (resp.status === 429) {
+      const retryAfter = parseInt(resp.headers.get("retry-after") || "5");
+      console.log(`[Valorant] Rate limited, waiting ${retryAfter}s`);
+      await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      return henrikFetch(path);
+    }
+
     const text = await resp.text();
-    throw new Error(`Henrik API ${resp.status}: ${text.slice(0, 200)}`);
+
+    if (!resp.ok) {
+      console.error(`[Valorant] Error response: ${text.slice(0, 300)}`);
+      throw new Error(`Henrik API ${resp.status}: ${text.slice(0, 200)}`);
+    }
+
+    let json: any;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      console.error(`[Valorant] Failed to parse JSON: ${text.slice(0, 300)}`);
+      throw new Error("Invalid JSON response from Henrik API");
+    }
+
+    console.log(`[Valorant] Response status field: ${json.status}, has data: ${!!json.data}`);
+    return json.data ?? json;
+  } catch (err: any) {
+    if (err.name === "TimeoutError" || err.name === "AbortError") {
+      throw new Error("Henrik API request timed out (15s)");
+    }
+    throw err;
   }
-  const json = await resp.json();
-  console.log(`[Valorant] API ${path} status=${json.status}`);
-  return json.data;
 }
 
 // ─── Fetch Player Stats ───
@@ -68,90 +93,121 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
   const cached = cache.get<PlayerProfile>(cacheKey);
   if (cached) return cached;
 
+  const emptyProfile: PlayerProfile = {
+    riotId: `${name}#${tag}`, name, tag, region,
+    rank: "Unranked", rankTier: 0, rr: 0, elo: 0,
+    avgACS: 0, avgKD: 0, avgADR: 0, hsPercent: 0, winRate: 0, gamesAnalyzed: 0,
+    topAgents: [], primaryRole: "Flex", overallScore: 0,
+  };
+
   // Fetch MMR (rank, RR, elo)
   let mmrData: any = null;
   try {
     mmrData = await henrikFetch(`/v2/mmr/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
-    console.log(`[Valorant] MMR for ${name}#${tag}: rank=${mmrData?.current_data?.currenttierpatched}, elo=${mmrData?.current_data?.elo}`);
+    console.log(`[Valorant] MMR raw:`, JSON.stringify(mmrData).slice(0, 200));
   } catch (err: any) {
-    console.error(`[Valorant] MMR fetch failed for ${name}#${tag}:`, err.message);
+    console.error(`[Valorant] MMR failed for ${name}#${tag}: ${err.message}`);
   }
 
-  // Fetch match history (20 competitive matches)
+  // Wait between requests
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  // Fetch match history
   let matches: any[] = [];
   try {
-    const matchData = await henrikFetch(`/v3/matches/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?mode=competitive&size=20`);
-    matches = Array.isArray(matchData) ? matchData : [];
-    console.log(`[Valorant] Matches for ${name}#${tag}: ${matches.length} games found`);
+    const matchData = await henrikFetch(`/v3/matches/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?mode=competitive&size=10`);
+    if (Array.isArray(matchData)) {
+      matches = matchData;
+    } else if (matchData && typeof matchData === "object") {
+      // Some responses wrap in a different structure
+      matches = matchData.data || matchData.matches || [];
+    }
+    console.log(`[Valorant] ${name}#${tag}: ${matches.length} matches found`);
   } catch (err: any) {
-    console.error(`[Valorant] Match fetch failed for ${name}#${tag}:`, err.message);
+    console.error(`[Valorant] Matches failed for ${name}#${tag}: ${err.message}`);
   }
 
-  // Wait 2s for rate limiting
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // Wait between players
+  await new Promise(resolve => setTimeout(resolve, 1500));
 
-  // Parse MMR
-  const rank = mmrData?.current_data?.currenttierpatched || "Unranked";
-  const rankTier = mmrData?.current_data?.currenttier || 0;
-  const rr = mmrData?.current_data?.ranking_in_tier || 0;
-  const elo = mmrData?.current_data?.elo || rankTier * 100 + rr;
+  // Parse MMR — handle both v2 response formats
+  let rank = "Unranked", rankTier = 0, rr = 0, elo = 0;
+  if (mmrData) {
+    // v2 format: { current_data: { currenttierpatched, currenttier, ranking_in_tier, elo } }
+    const cd = mmrData.current_data || mmrData;
+    rank = cd.currenttierpatched || cd.current_tier_patched || "Unranked";
+    rankTier = cd.currenttier || cd.current_tier || 0;
+    rr = cd.ranking_in_tier || cd.rr || 0;
+    elo = cd.elo || (rankTier * 100 + rr);
+    console.log(`[Valorant] Parsed MMR: rank=${rank}, tier=${rankTier}, rr=${rr}, elo=${elo}`);
+  }
 
   // Analyze matches
   let totalACS = 0, totalKills = 0, totalDeaths = 0, totalDamage = 0, totalRounds = 0;
   let totalHS = 0, totalShots = 0, wins = 0;
   const agentCounts = new Map<string, { games: number; wins: number }>();
-  const riotIdLower = `${name}#${tag}`.toLowerCase();
 
   for (const match of matches) {
-    const players = match?.players?.all_players || [];
-    const me = players.find((p: any) =>
-      `${p.name}#${p.tag}`.toLowerCase() === riotIdLower
-    );
-    if (!me) continue;
+    try {
+      const players = match?.players?.all_players || [];
+      // Find this player in the match — try multiple matching strategies
+      const me = players.find((p: any) => {
+        const pName = (p.name || "").toLowerCase();
+        const pTag = (p.tag || "").toLowerCase();
+        return pName === name.toLowerCase() && pTag === tag.toLowerCase();
+      });
 
-    const stats = me.stats || {};
-    const acs = stats.score ? stats.score / (match.metadata?.rounds_played || 1) : 0;
-    totalACS += acs;
-    totalKills += stats.kills || 0;
-    totalDeaths += Math.max(stats.deaths || 1, 1);
-    totalDamage += me.damage_made || 0;
-    totalRounds += match.metadata?.rounds_played || 0;
-    totalHS += stats.headshots || 0;
-    totalShots += (stats.headshots || 0) + (stats.bodyshots || 0) + (stats.legshots || 0) || 1;
+      if (!me) continue;
 
-    const myTeam = me.team?.toLowerCase();
-    const won = match.teams?.[myTeam]?.has_won ?? false;
-    if (won) wins++;
+      const stats = me.stats || {};
+      const roundsPlayed = match.metadata?.rounds_played || match.metadata?.roundsplayed || 1;
+      const acs = stats.score ? stats.score / roundsPlayed : 0;
+      totalACS += acs;
+      totalKills += stats.kills || 0;
+      totalDeaths += Math.max(stats.deaths || 1, 1);
+      totalDamage += me.damage_made || me.damage || 0;
+      totalRounds += roundsPlayed;
+      totalHS += stats.headshots || 0;
+      totalShots += (stats.headshots || 0) + (stats.bodyshots || 0) + (stats.legshots || 0) || 1;
 
-    const agent = me.character || "Unknown";
-    const ac = agentCounts.get(agent) || { games: 0, wins: 0 };
-    ac.games++;
-    if (won) ac.wins++;
-    agentCounts.set(agent, ac);
+      const myTeam = (me.team || "").toLowerCase();
+      const teamData = match.teams?.[myTeam] || match.teams?.red || match.teams?.blue;
+      const won = teamData?.has_won ?? false;
+      if (won) wins++;
+
+      const agent = me.character || me.agent?.name || "Unknown";
+      const ac = agentCounts.get(agent) || { games: 0, wins: 0 };
+      ac.games++;
+      if (won) ac.wins++;
+      agentCounts.set(agent, ac);
+    } catch (matchErr) {
+      // Skip malformed match
+      continue;
+    }
   }
 
-  const gamesAnalyzed = matches.length || 1;
+  const gamesAnalyzed = Math.max(matches.length, 1);
   const avgACS = Math.round(totalACS / gamesAnalyzed);
   const avgKD = Math.round((totalKills / Math.max(totalDeaths, 1)) * 100) / 100;
   const avgADR = totalRounds > 0 ? Math.round(totalDamage / totalRounds) : 0;
   const hsPercent = totalShots > 0 ? Math.round((totalHS / totalShots) * 1000) / 10 : 0;
-  const winRate = Math.round((wins / gamesAnalyzed) * 1000) / 10;
+  const winRate = matches.length > 0 ? Math.round((wins / matches.length) * 1000) / 10 : 0;
 
   // Top agents
   const topAgents = Array.from(agentCounts.entries())
     .map(([agent, data]) => ({
       agent,
       games: data.games,
-      winRate: Math.round((data.wins / data.games) * 100),
+      winRate: Math.round((data.wins / Math.max(data.games, 1)) * 100),
     }))
     .sort((a, b) => b.games - a.games)
     .slice(0, 3);
 
-  // Determine primary role
+  // Primary role
   const AGENT_ROLES: Record<string, string> = {
-    Jett: "Duelist", Reyna: "Duelist", Raze: "Duelist", Phoenix: "Duelist", Yoru: "Duelist", Neon: "Duelist", Iso: "Duelist", Waylay: "Duelist",
+    Jett: "Duelist", Reyna: "Duelist", Raze: "Duelist", Phoenix: "Duelist", Yoru: "Duelist", Neon: "Duelist", Iso: "Duelist",
     Sage: "Sentinel", Cypher: "Sentinel", Killjoy: "Sentinel", Chamber: "Sentinel", Deadlock: "Sentinel", Vyse: "Sentinel",
-    Brimstone: "Controller", Omen: "Controller", Viper: "Controller", Astra: "Controller", Harbor: "Controller", Clove: "Controller", Tejo: "Controller",
+    Brimstone: "Controller", Omen: "Controller", Viper: "Controller", Astra: "Controller", Harbor: "Controller", Clove: "Controller",
     Sova: "Initiator", Breach: "Initiator", Skye: "Initiator", "KAY/O": "Initiator", Fade: "Initiator", Gekko: "Initiator",
   };
 
@@ -166,8 +222,8 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
     if (count > maxRoleGames) { primaryRole = role; maxRoleGames = count; }
   }
 
-  // Composite score (0-100 scale)
-  const normalizedRank = Math.min(rankTier / 27, 1); // Radiant = 27
+  // Composite score
+  const normalizedRank = Math.min(rankTier / 27, 1);
   const normalizedACS = Math.min(avgACS / 300, 1);
   const normalizedKD = Math.min(avgKD / 2, 1);
   const normalizedWR = winRate / 100;
@@ -180,11 +236,12 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
   const profile: PlayerProfile = {
     riotId: `${name}#${tag}`, name, tag, region,
     rank, rankTier, rr, elo,
-    avgACS, avgKD, avgADR, hsPercent, winRate, gamesAnalyzed,
+    avgACS, avgKD, avgADR, hsPercent, winRate, gamesAnalyzed: matches.length,
     topAgents, primaryRole, overallScore,
   };
 
   cache.set(cacheKey, profile, CACHE_TTL);
+  console.log(`[Valorant] Profile built: ${name}#${tag} → score=${overallScore}, rank=${rank}, ACS=${avgACS}, games=${matches.length}`);
   return profile;
 }
 
@@ -196,7 +253,6 @@ export function balanceTeams(players: PlayerProfile[]): TeamResult[] {
   const results: TeamResult[] = [];
   const indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-  // Generate all C(10,5) = 252 combinations
   function combine(start: number, combo: number[]) {
     if (combo.length === 5) {
       const teamAIdx = [...combo];
@@ -208,7 +264,6 @@ export function balanceTeams(players: PlayerProfile[]): TeamResult[] {
       const teamBScore = teamB.reduce((s, p) => s + p.overallScore, 0);
       const scoreDiff = Math.abs(teamAScore - teamBScore);
 
-      // Role balance penalty
       const roleCount = (team: PlayerProfile[]) => {
         const counts = new Map<string, number>();
         for (const p of team) counts.set(p.primaryRole, (counts.get(p.primaryRole) || 0) + 1);
@@ -221,7 +276,6 @@ export function balanceTeams(players: PlayerProfile[]): TeamResult[] {
 
       const totalPenalty = roleCount(teamA) + roleCount(teamB);
       const adjustedDiff = scoreDiff + totalPenalty;
-
       const totalScore = teamAScore + teamBScore;
       const teamAWin = totalScore > 0 ? Math.round((teamAScore / totalScore) * 100) : 50;
 
@@ -240,8 +294,6 @@ export function balanceTeams(players: PlayerProfile[]): TeamResult[] {
   }
 
   combine(0, []);
-
-  // Sort by smallest score difference, return top 5
   results.sort((a, b) => a.scoreDiff - b.scoreDiff);
   return results.slice(0, 5);
 }
