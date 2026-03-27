@@ -57,6 +57,7 @@ async function henrikFetch(path: string): Promise<any> {
     throw new Error(`Henrik API ${resp.status}: ${text.slice(0, 200)}`);
   }
   const json = await resp.json();
+  console.log(`[Valorant] API ${path} status=${json.status}`);
   return json.data;
 }
 
@@ -71,14 +72,20 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
   let mmrData: any = null;
   try {
     mmrData = await henrikFetch(`/v2/mmr/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`);
-  } catch { /* MMR may fail for unranked */ }
+    console.log(`[Valorant] MMR for ${name}#${tag}: rank=${mmrData?.current_data?.currenttierpatched}, elo=${mmrData?.current_data?.elo}`);
+  } catch (err: any) {
+    console.error(`[Valorant] MMR fetch failed for ${name}#${tag}:`, err.message);
+  }
 
   // Fetch match history (20 competitive matches)
   let matches: any[] = [];
   try {
     const matchData = await henrikFetch(`/v3/matches/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?mode=competitive&size=20`);
     matches = Array.isArray(matchData) ? matchData : [];
-  } catch { /* matches may fail */ }
+    console.log(`[Valorant] Matches for ${name}#${tag}: ${matches.length} games found`);
+  } catch (err: any) {
+    console.error(`[Valorant] Match fetch failed for ${name}#${tag}:`, err.message);
+  }
 
   // Wait 2s for rate limiting
   await new Promise(resolve => setTimeout(resolve, 2000));
