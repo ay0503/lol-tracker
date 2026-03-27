@@ -35,6 +35,7 @@ import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSna
 const THIRTY_MIN = 30 * 60 * 1000;
 const TEN_MIN = 10 * 60 * 1000;
 const FIVE_MIN = 5 * 60 * 1000;
+const DAILY_CASINO_BONUS = 20.00;
 
 /** Casino cooldown tracking */
 const casinoLastGameTime = new Map<number, number>();
@@ -1323,7 +1324,7 @@ export const appRouter = router({
         throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Already claimed today. Come back tomorrow!" });
       }
 
-      const bonus = 1.00;
+      const bonus = DAILY_CASINO_BONUS;
       const portfolio = await getOrCreatePortfolio(ctx.user.id);
       const newBalance = parseFloat(portfolio.casinoBalance ?? "20.00") + bonus;
       const db = await getDb();

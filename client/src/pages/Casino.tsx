@@ -182,7 +182,7 @@ export default function Casino() {
                     >
                       {claimBonus.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
                       {canClaim
-                        ? (language === "ko" ? "일일 보너스 $1.00 받기" : "Claim Daily $1.00")
+                        ? (language === "ko" ? "일일 보너스 $20.00 받기" : "Claim Daily $20.00")
                         : (language === "ko" ? "✓ 오늘 보너스 수령 완료" : "✓ Claimed Today")}
                     </motion.button>
                   </div>

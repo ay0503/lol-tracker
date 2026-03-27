@@ -67,8 +67,8 @@ export default function WelcomeModal() {
     {
       icon: <Sparkles className="w-8 h-8 text-pink-400" />,
       title: "Dividends & Betting",
-      desc: "Hold stocks to earn dividends based on game results. You can also bet on the next game's outcome (WIN/LOSS). Claim $1 daily casino bonus!",
-      highlight: "Daily bonus: $1",
+      desc: "Hold stocks to earn dividends based on game results. You can also bet on the next game's outcome (WIN/LOSS). Claim $20 daily casino bonus!",
+      highlight: "Daily bonus: $20",
     },
   ];
 
