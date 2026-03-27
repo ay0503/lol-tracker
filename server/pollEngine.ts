@@ -316,6 +316,27 @@ export async function pollNow(): Promise<PollResult> {
     const processedIds = await getProcessedMatchIds();
     const newMatchIds = recentMatchIds.filter(id => !processedIds.has(id));
 
+    // Match-history-based game end: if we're "in game" but new matches appeared,
+    // the game is definitely over — more reliable than waiting for spectator 404
+    if (confirmedIsInGame && newMatchIds.length > 0) {
+      console.log(`[Poll] New match detected while in-game → forcing game END`);
+      confirmedIsInGame = false;
+      previousRawIsInGame = false;
+      consecutiveApiErrors = 0;
+      cache.set("player.liveGame.check", false, 45_000);
+      cache.delete("player.liveGame.details");
+    }
+
+    // Max game duration safety valve: no LoL game lasts >90 min
+    if (confirmedIsInGame && preGameSnapshot && (Date.now() - preGameSnapshot.timestamp > 90 * 60 * 1000)) {
+      console.log(`[Poll] Game exceeded 90min → forcing game END (safety valve)`);
+      confirmedIsInGame = false;
+      previousRawIsInGame = false;
+      consecutiveApiErrors = 0;
+      cache.set("player.liveGame.check", false, 45_000);
+      cache.delete("player.liveGame.details");
+    }
+
 
     const prevPrice = previousPrice ? parseFloat(previousPrice.price) : price;
 
