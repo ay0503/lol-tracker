@@ -30,6 +30,7 @@ const REGIONS = [
   { value: "kr", label: "KR" },
 ];
 
+// Rank badge color mapping
 const RANK_COLORS: Record<string, string> = {
   Iron: "text-zinc-400",
   Bronze: "text-amber-700",
