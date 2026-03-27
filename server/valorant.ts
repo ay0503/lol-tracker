@@ -28,6 +28,7 @@ export interface PlayerProfile {
   topAgents: { agent: string; games: number; winRate: number }[];
   primaryRole: string;
   overallScore: number;
+  rankIconUrl?: string;
   error?: string;
 }
 
@@ -134,14 +135,15 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
   await new Promise(resolve => setTimeout(resolve, 3000));
 
   // Parse MMR — handle both v2 response formats
-  let rank = "Unranked", rankTier = 0, rr = 0, elo = 0;
+  let rank = "Unranked", rankTier = 0, rr = 0, elo = 0, rankIconUrl: string | undefined;
   if (mmrData) {
-    // v2 format: { current_data: { currenttierpatched, currenttier, ranking_in_tier, elo } }
+    // v2 format: { current_data: { currenttierpatched, currenttier, ranking_in_tier, elo, images } }
     const cd = mmrData.current_data || mmrData;
     rank = cd.currenttierpatched || cd.current_tier_patched || "Unranked";
     rankTier = cd.currenttier || cd.current_tier || 0;
     rr = cd.ranking_in_tier || cd.rr || 0;
     elo = cd.elo || (rankTier * 100 + rr);
+    rankIconUrl = cd.images?.small || cd.images?.large || undefined;
     console.log(`[Valorant] Parsed MMR: rank=${rank}, tier=${rankTier}, rr=${rr}, elo=${elo}`);
   }
 
@@ -238,7 +240,7 @@ export async function fetchPlayerProfile(name: string, tag: string, region: stri
 
   const profile: PlayerProfile = {
     riotId: `${name}#${tag}`, name, tag, region,
-    rank, rankTier, rr, elo,
+    rank, rankTier, rr, elo, rankIconUrl,
     avgACS, avgKD, avgADR, hsPercent, winRate, gamesAnalyzed: matches.length,
     topAgents, primaryRole, overallScore,
   };

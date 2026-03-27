@@ -66,6 +66,7 @@ interface PlayerProfile {
   gamesAnalyzed: number;
   topAgents: { agent: string; games: number; winRate: number }[];
   primaryRole: string; overallScore: number;
+  rankIconUrl?: string;
 }
 
 interface TeamResult {
@@ -78,10 +79,14 @@ function PlayerCard({ player, compact }: { player: PlayerProfile; compact?: bool
   return (
     <div className="bg-zinc-800/50 rounded-lg p-2.5 border border-zinc-700/30">
       <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-xs font-bold ${getRankColor(player.rank)}`}>
-            {player.rank.replace("Immortal", "Imm").replace("Ascendant", "Asc")}
-          </span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {player.rankIconUrl ? (
+            <img src={player.rankIconUrl} alt={player.rank} className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <span className={`text-xs font-bold ${getRankColor(player.rank)}`}>
+              {player.rank.replace("Immortal", "Imm").replace("Ascendant", "Asc")}
+            </span>
+          )}
           <span className="text-sm font-bold text-white truncate">{player.name}</span>
         </div>
         <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${ROLE_COLORS[player.primaryRole] || ROLE_COLORS.Flex}`}>
