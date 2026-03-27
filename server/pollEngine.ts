@@ -172,22 +172,25 @@ export async function pollNow(): Promise<PollResult> {
 
     // 2. Check live game status with two-consecutive-confirmation
     let rawIsInGame = false;
+    let spectatorApiOk = false;
     let activeGameData: Awaited<ReturnType<typeof getActiveGame>> = null;
     try {
       activeGameData = await getActiveGame(playerData.account.puuid);
       rawIsInGame = !!activeGameData;
+      spectatorApiOk = true;
     } catch (err: any) {
-      // Spectator API flaky — suppress verbose logging
-      rawIsInGame = previousRawIsInGame ?? false;
+      // Spectator API flaky — skip confirmation this cycle
     }
 
-    // Two-consecutive-confirmation logic
+    // Two-consecutive-confirmation logic (only update when API responded cleanly)
     const wasConfirmedInGame = confirmedIsInGame;
-    if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
-      confirmedIsInGame = rawIsInGame;
-      console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
+    if (spectatorApiOk) {
+      if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
+        confirmedIsInGame = rawIsInGame;
+        console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
+      }
+      previousRawIsInGame = rawIsInGame;
     }
-    previousRawIsInGame = rawIsInGame;
 
     // Track game-start: capture pre-game LP/price snapshot
     if (!wasConfirmedInGame && confirmedIsInGame) {
