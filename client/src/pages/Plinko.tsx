@@ -2,8 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Link } from "wouter";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
@@ -244,6 +243,89 @@ export default function Plinko() {
   const multipliers = MULTIPLIERS[risk];
   const parsedBetAmount = parseCasinoBetAmount(betAmount);
   const totalBetAmount = parsedBetAmount * ballCount;
+  function renderControlPanel() {
+    return (
+      <>
+      <div className="flex gap-1.5 justify-center lg:justify-start mb-3">
+        <span className="text-[10px] text-zinc-500 self-center mr-1">Balls:</span>
+        {([1, 3, 5] as const).map((countOption) => (
+          <button
+            key={countOption}
+            onClick={() => !dropping && setBallCount(countOption)}
+            disabled={dropping}
+            className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}
+          >
+            {countOption}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1.5 justify-center lg:justify-start mb-3">
+        {(["low", "medium", "high"] as const).map(riskOption => (
+          <button
+            key={riskOption}
+            onClick={() => !dropping && setRisk(riskOption)}
+            disabled={dropping}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
+              risk === riskOption
+                ? riskOption === "high"
+                  ? "bg-red-500/30 text-red-300 border border-red-500/40"
+                  : riskOption === "medium"
+                    ? "bg-yellow-500/30 text-yellow-300 border border-yellow-500/40"
+                    : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
+                : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
+            }`}
+          >
+            {riskOption}
+          </button>
+        ))}
+      </div>
+
+      <p className="mb-3 text-center lg:text-left text-[10px] text-zinc-500">
+        {language === "ko" ? RISK_DESCRIPTIONS[risk].ko : RISK_DESCRIPTIONS[risk].en}
+      </p>
+
+      <div className="mb-3">
+        <CasinoBetControls
+          language={language}
+          value={betAmount}
+          cash={cash}
+          disabled={dropping}
+          onChange={setBetAmount}
+        />
+      </div>
+
+      <p className="mb-3 text-center lg:text-left text-[10px] font-mono text-zinc-500">
+        {language === "ko"
+          ? `공당 $${parsedBetAmount.toFixed(2)} · 총 $${totalBetAmount.toFixed(2)}`
+          : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
+      </p>
+
+      <motion.button
+        whileHover={!dropping ? { scale: 1.01 } : {}}
+        whileTap={!dropping ? { scale: 0.98 } : {}}
+        onClick={handleDrop}
+        disabled={
+          dropping ||
+          !isAuthenticated ||
+          parsedBetAmount < MIN_CASINO_BET ||
+          parsedBetAmount > MAX_CASINO_BET ||
+          cash < totalBetAmount
+        }
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
+      >
+        {dropping ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
+          ballCount > 1
+            ? language === "ko"
+              ? `${ballCount}개 드롭 · $${totalBetAmount.toFixed(2)}`
+              : `DROP ${ballCount} BALLS · $${totalBetAmount.toFixed(2)}`
+            : language === "ko"
+              ? `드롭 · $${parsedBetAmount.toFixed(2)}`
+              : `DROP · $${parsedBetAmount.toFixed(2)}`}
+      </motion.button>
+      </>
+    );
+  }
 
   useEffect(() => {
     const board = boardRef.current;
@@ -485,11 +567,7 @@ export default function Plinko() {
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
-        <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> Casino
-        </Link>
-
+      <div className="container py-6 sm:py-8 max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-pink-500/25 to-rose-600/15 border border-pink-500/20">
@@ -502,7 +580,8 @@ export default function Plinko() {
           </div>
         </div>
 
-        <div className={`relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] ${shaking ? "animate-shake" : ""}`}>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+          <div className={`relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)] ${shaking ? "animate-shake" : ""}`}>
           <style>{`
             @keyframes shake { 0%,100%{transform:translate(0)} 10%{transform:translate(-3px,1px)} 30%{transform:translate(3px,-2px)} 50%{transform:translate(-2px,3px)} 70%{transform:translate(2px,-1px)} 90%{transform:translate(-1px,2px)} }
             .animate-shake { animation: shake 0.4s ease-in-out; }
@@ -631,83 +710,17 @@ export default function Plinko() {
               )}
             </AnimatePresence>
 
-            <div className="flex gap-1.5 justify-center mb-3">
-              <span className="text-[10px] text-zinc-500 self-center mr-1">Balls:</span>
-              {([1, 3, 5] as const).map((countOption) => (
-                <button
-                  key={countOption}
-                  onClick={() => !dropping && setBallCount(countOption)}
-                  disabled={dropping}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}
-                >
-                  {countOption}
-                </button>
-              ))}
+            <div className="lg:hidden">
+              {renderControlPanel()}
             </div>
+          </div>
+          </div>
 
-            <div className="flex gap-1.5 justify-center mb-3">
-              {(["low", "medium", "high"] as const).map(riskOption => (
-                <button
-                  key={riskOption}
-                  onClick={() => !dropping && setRisk(riskOption)}
-                  disabled={dropping}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
-                    risk === riskOption
-                      ? riskOption === "high"
-                        ? "bg-red-500/30 text-red-300 border border-red-500/40"
-                        : riskOption === "medium"
-                          ? "bg-yellow-500/30 text-yellow-300 border border-yellow-500/40"
-                          : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
-                      : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
-                  }`}
-                >
-                  {riskOption}
-                </button>
-              ))}
-            </div>
-
-            <p className="mb-3 text-center text-[10px] text-zinc-500">
-              {language === "ko" ? RISK_DESCRIPTIONS[risk].ko : RISK_DESCRIPTIONS[risk].en}
+          <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+              {language === "ko" ? "드롭 패널" : "Drop Panel"}
             </p>
-
-            <div className="mb-3">
-              <CasinoBetControls
-                language={language}
-                value={betAmount}
-                cash={cash}
-                disabled={dropping}
-                onChange={setBetAmount}
-              />
-            </div>
-
-            <p className="mb-3 text-center text-[10px] font-mono text-zinc-500">
-              {language === "ko"
-                ? `공당 $${parsedBetAmount.toFixed(2)} · 총 $${totalBetAmount.toFixed(2)}`
-                : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
-            </p>
-
-            <motion.button
-              whileHover={!dropping ? { scale: 1.01 } : {}}
-              whileTap={!dropping ? { scale: 0.98 } : {}}
-              onClick={handleDrop}
-              disabled={
-                dropping ||
-                !isAuthenticated ||
-                parsedBetAmount < MIN_CASINO_BET ||
-                parsedBetAmount > MAX_CASINO_BET ||
-                cash < totalBetAmount
-              }
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
-            >
-              {dropping ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                ballCount > 1
-                  ? language === "ko"
-                    ? `${ballCount}개 드롭 · $${totalBetAmount.toFixed(2)}`
-                    : `DROP ${ballCount} BALLS · $${totalBetAmount.toFixed(2)}`
-                  : language === "ko"
-                    ? `드롭 · $${parsedBetAmount.toFixed(2)}`
-                    : `DROP · $${parsedBetAmount.toFixed(2)}`}
-            </motion.button>
+            {renderControlPanel()}
           </div>
         </div>
 

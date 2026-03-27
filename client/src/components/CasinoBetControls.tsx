@@ -14,7 +14,7 @@ interface CasinoBetControlsProps {
 }
 
 function formatShortcutAmount(amount: number): string {
-  if (amount < 1) return `$${amount.toFixed(2)}`;
+  if (amount < 1) return `${Math.round(amount * 100)}¢`;
   return Number.isInteger(amount) ? `$${amount.toFixed(0)}` : `$${amount.toFixed(2)}`;
 }
 
@@ -71,7 +71,7 @@ export default function CasinoBetControls({
               whileTap={isUnavailable ? {} : { scale: 0.98 }}
               onClick={() => onChange(amount.toFixed(2))}
               disabled={isUnavailable}
-              className={`rounded-lg border px-2 py-2 text-xs font-mono font-bold transition-all ${
+              className={`min-w-0 rounded-lg border px-2 py-2 text-[11px] font-mono font-bold whitespace-nowrap transition-all sm:text-xs ${
                 isUnavailable
                   ? "cursor-not-allowed border-zinc-800 bg-zinc-900/70 text-zinc-600"
                   : isSelected

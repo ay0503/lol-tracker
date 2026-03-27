@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Link } from "wouter";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
@@ -364,9 +363,16 @@ export default function Crash() {
       </AnimatePresence>
 
       <div className="container py-4 sm:py-6 max-w-lg mx-auto px-4">
-        <div className="flex items-center justify-between mb-4">
-          
-          <span className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</span>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500/25 to-red-600/15 border border-orange-500/20">
+              <span className="text-lg">🚀</span>
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Crash</h1>
+              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+            </div>
+          </div>
         </div>
 
         {/* History pills */}

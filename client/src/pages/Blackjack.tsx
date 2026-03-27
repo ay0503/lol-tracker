@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Link } from "wouter";
-import { ArrowLeft, Dice5, Loader2 } from "lucide-react";
+import { Dice5, Loader2 } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
@@ -21,7 +20,6 @@ interface Card {
   hidden?: boolean;
 }
 
-// ─── Card Component ───
 const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }: { card: Card; index?: number; isNew?: boolean }) {
   const isRed = card.suit === "♥" || card.suit === "♦";
 
@@ -36,12 +34,14 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
         style={{ zIndex: index }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900" />
-        {/* Crosshatch pattern */}
         <div className="absolute inset-[3px] border border-blue-400/15 rounded-md overflow-hidden">
-          <div className="absolute inset-0 opacity-20" style={{
-            backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(96,165,250,0.3) 4px, rgba(96,165,250,0.3) 5px),
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(96,165,250,0.3) 4px, rgba(96,165,250,0.3) 5px),
                              repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(96,165,250,0.3) 4px, rgba(96,165,250,0.3) 5px)`,
-          }} />
+            }}
+          />
         </div>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
@@ -62,27 +62,22 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
       className="w-[3.75rem] h-[5.25rem] sm:w-[4.75rem] sm:h-[6.75rem] rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.15)] relative overflow-hidden select-none flex-shrink-0"
       style={{ zIndex: index }}
     >
-      {/* Top-left */}
       <div className={`absolute top-1 left-1.5 leading-tight ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <div className="text-[11px] sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
         <div className="text-[10px] sm:text-xs leading-none">{card.suit}</div>
       </div>
-      {/* Center */}
       <div className={`absolute inset-0 flex items-center justify-center ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <span className="text-2xl sm:text-3xl drop-shadow-sm">{card.suit}</span>
       </div>
-      {/* Bottom-right */}
       <div className={`absolute bottom-1 right-1.5 leading-tight rotate-180 ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <div className="text-[11px] sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
         <div className="text-[10px] sm:text-xs leading-none">{card.suit}</div>
       </div>
-      {/* Shine */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/15 via-white/5 to-transparent pointer-events-none rounded-lg" />
     </motion.div>
   );
 });
 
-// ─── Hand Value Badge ───
 function HandValue({ value, bust, blackjack, soft }: { value: number; bust?: boolean; blackjack?: boolean; soft?: boolean }) {
   return (
     <motion.span
@@ -113,44 +108,61 @@ function PlaceholderCards() {
 }
 
 function handValue(hand: Card[]): number {
-  let total = 0; let aces = 0;
+  let total = 0;
+  let aces = 0;
   for (const card of hand) {
     if (card.hidden) continue;
-    if (card.rank === "A") { total += 11; aces++; }
-    else if (["K", "Q", "J"].includes(card.rank)) total += 10;
-    else total += parseInt(card.rank);
+    if (card.rank === "A") {
+      total += 11;
+      aces++;
+    } else if (["K", "Q", "J"].includes(card.rank)) {
+      total += 10;
+    } else {
+      total += parseInt(card.rank);
+    }
   }
-  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
   return total;
 }
 
 function isSoftHand(hand: Card[]): boolean {
-  let total = 0; let aces = 0;
+  let total = 0;
+  let aces = 0;
   for (const card of hand) {
     if (card.hidden) continue;
-    if (card.rank === "A") { total += 11; aces++; }
-    else if (["K", "Q", "J"].includes(card.rank)) total += 10;
-    else total += parseInt(card.rank);
+    if (card.rank === "A") {
+      total += 11;
+      aces++;
+    } else if (["K", "Q", "J"].includes(card.rank)) {
+      total += 10;
+    } else {
+      total += parseInt(card.rank);
+    }
   }
-  // Soft if an ace is counted as 11 and total <= 21
   return aces > 0 && total <= 21;
 }
 
 function useCardCount(hand: Card[] | undefined): number {
   const prevRef = useRef(0);
-  useEffect(() => { if (hand) prevRef.current = hand.length; }, [hand]);
+  useEffect(() => {
+    if (hand) prevRef.current = hand.length;
+  }, [hand]);
   return prevRef.current;
 }
 
-// ─── Sequential Dealer Reveal ───
 function useDealerReveal(game: any) {
   const [revealed, setRevealed] = useState<Card[]>([]);
   const prevStatusRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    // Clear any pending reveal timer
-    if (timerRef.current) { if (timerRef.current) clearInterval(timerRef.current); timerRef.current = null; }
+    if (timerRef.current) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
     if (!game || !game.dealerHand || game.dealerHand.length === 0) {
       setRevealed([]);
@@ -166,9 +178,7 @@ function useDealerReveal(game: any) {
       return;
     }
 
-    // Game just ended from playing — reveal sequentially
     if (prevStatusRef.current === "playing") {
-      // Show first 2 cards (hole card revealed)
       setRevealed(hand.slice(0, 2));
 
       if (hand.length > 2) {
@@ -189,27 +199,30 @@ function useDealerReveal(game: any) {
       return;
     }
 
-    // Default: show all cards (page load with finished game, etc.)
     setRevealed([...hand]);
     prevStatusRef.current = game.status;
 
     return () => {
-      if (timerRef.current) { if (timerRef.current) clearInterval(timerRef.current); timerRef.current = null; }
+      if (timerRef.current) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [game?.status, game?.id]);
 
   return revealed;
 }
 
-// ─── Delayed Status (show result AFTER card animations) ───
 function useDelayedStatus(game: any) {
   const [visibleStatus, setVisibleStatus] = useState<string | null>(null);
   const prevGameId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!game) { setVisibleStatus(null); return; }
+    if (!game) {
+      setVisibleStatus(null);
+      return;
+    }
 
-    // New game dealt — reset immediately
     if (game.id !== prevGameId.current) {
       setVisibleStatus(game.status === "playing" ? null : game.status);
       prevGameId.current = game.id;
@@ -221,11 +234,7 @@ function useDelayedStatus(game: any) {
       return;
     }
 
-    // Game just ended — delay showing result so cards animate first
-    const delay = game.dealerHand?.length > 2
-      ? (game.dealerHand.length - 1) * 500 + 400  // Sequential dealer reveal
-      : 700; // Single card animation
-
+    const delay = game.dealerHand?.length > 2 ? (game.dealerHand.length - 1) * 500 + 400 : 700;
     const timer = setTimeout(() => {
       setVisibleStatus(game.status);
     }, delay);
@@ -236,7 +245,6 @@ function useDelayedStatus(game: any) {
   return visibleStatus;
 }
 
-// ─── Casino Page ───
 export default function Casino() {
   const { language } = useTranslation();
   const { isAuthenticated } = useAuth();
@@ -245,7 +253,8 @@ export default function Casino() {
   const utils = trpc.useUtils();
 
   const { data: activeGame } = trpc.casino.blackjack.active.useQuery(undefined, {
-    enabled: isAuthenticated, staleTime: 30_000,
+    enabled: isAuthenticated,
+    staleTime: 30_000,
   });
   const { data: casinoBalance, refetch: refetchBalance } = trpc.casino.blackjack.balance.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -269,24 +278,29 @@ export default function Casino() {
       }
       refetchBalance();
     },
-    onError: (err) => { toast.error(err.message); utils.casino.blackjack.active.invalidate(); },
+    onError: (err) => {
+      toast.error(err.message);
+      utils.casino.blackjack.active.invalidate();
+    },
   });
 
   const standMutation = trpc.casino.blackjack.stand.useMutation({
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       refetchBalance();
-      // Delay toast for dealer reveal animation
       const dealerCards = game.dealerHand.length;
       const delay = dealerCards > 2 ? (dealerCards - 2) * 500 + 300 : 300;
       setTimeout(() => {
-        const s = game.status;
-        if (s === "player_win" || s === "dealer_bust") toast.success("You win! 🎉");
-        else if (s === "push") toast("Push — bet returned");
+        const status = game.status;
+        if (status === "player_win" || status === "dealer_bust") toast.success("You win! 🎉");
+        else if (status === "push") toast("Push — bet returned");
         else toast.error("Dealer wins 😞");
       }, delay);
     },
-    onError: (err) => { toast.error(err.message); utils.casino.blackjack.active.invalidate(); },
+    onError: (err) => {
+      toast.error(err.message);
+      utils.casino.blackjack.active.invalidate();
+    },
   });
 
   const doubleMutation = trpc.casino.blackjack.double.useMutation({
@@ -294,14 +308,17 @@ export default function Casino() {
       utils.casino.blackjack.active.setData(undefined, game as any);
       refetchBalance();
       setTimeout(() => {
-        const s = game.status;
-        if (s === "player_win" || s === "dealer_bust") toast.success("Double down wins! 🎉🎉");
-        else if (s === "player_bust") toast.error("Bust on double! 💥💥");
-        else if (s === "push") toast("Push — bet returned");
+        const status = game.status;
+        if (status === "player_win" || status === "dealer_bust") toast.success("Double down wins! 🎉🎉");
+        else if (status === "player_bust") toast.error("Bust on double! 💥💥");
+        else if (status === "push") toast("Push — bet returned");
         else toast.error("Dealer wins 😞");
       }, 500);
     },
-    onError: (err) => { toast.error(err.message); utils.casino.blackjack.active.invalidate(); },
+    onError: (err) => {
+      toast.error(err.message);
+      utils.casino.blackjack.active.invalidate();
+    },
   });
 
   const game = activeGame;
@@ -320,31 +337,29 @@ export default function Casino() {
   const playerSoft = game ? isSoftHand(game.playerHand) : false;
   const parsedBetAmount = parseCasinoBetAmount(betAmount);
 
-  // Use delayed status for result display (cards animate first)
   const showResult = visibleStatus && visibleStatus !== "playing";
   const isWin = visibleStatus === "player_win" || visibleStatus === "dealer_bust" || visibleStatus === "blackjack";
   const isLoss = visibleStatus === "player_bust" || visibleStatus === "dealer_win";
 
-  // Keyboard shortcuts
   useEffect(() => {
     if (!isPlaying || isPending) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
-      if (e.key === "h" || e.key === "H") hitMutation.mutate();
-      if (e.key === "s" || e.key === "S") standMutation.mutate();
-      if ((e.key === "d" || e.key === "D") && game?.playerHand.length === 2) doubleMutation.mutate();
+    const handler = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement) return;
+      if (event.key === "h" || event.key === "H") hitMutation.mutate();
+      if (event.key === "s" || event.key === "S") standMutation.mutate();
+      if ((event.key === "d" || event.key === "D") && game?.playerHand.length === 2) doubleMutation.mutate();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isPlaying, isPending, game?.playerHand.length]);
+  }, [isPlaying, isPending, game?.playerHand.length, hitMutation, standMutation, doubleMutation]);
 
-  const handleDeal = useCallback((amt?: number) => {
-    const betVal = amt ?? parsedBetAmount;
+  const handleDeal = useCallback((amount?: number) => {
+    const betVal = amount ?? parsedBetAmount;
     if (Number.isNaN(betVal) || betVal < MIN_CASINO_BET || betVal > MAX_CASINO_BET) {
       return toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
     }
     dealMutation.mutate({ bet: betVal });
-  }, [language, parsedBetAmount]);
+  }, [dealMutation, language, parsedBetAmount]);
 
   const statusConfig = !showResult ? null :
     visibleStatus === "blackjack" ? { text: "BLACKJACK!", emoji: "🃏", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
@@ -355,17 +370,61 @@ export default function Casino() {
     visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
     null;
 
-  const canDouble = isPlaying && game.playerHand.length === 2 && cash >= game.bet;
+  const canDouble = isPlaying && !!game && game.playerHand.length === 2 && cash >= game.bet;
+  const pregameControls = (
+    <motion.div
+      key="deal"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-3"
+    >
+      {isOver && lastBet && (
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => handleDeal(lastBet)}
+          disabled={isPending || cash < lastBet}
+          className="w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/15 disabled:opacity-30 transition-colors border border-white/10"
+        >
+          {language === "ko" ? `다시 ($${lastBet.toFixed(2)})` : `SAME BET ($${lastBet.toFixed(2)})`}
+        </motion.button>
+      )}
+
+      <CasinoBetControls
+        language={language}
+        value={betAmount}
+        cash={cash}
+        disabled={isPending}
+        onChange={setBetAmount}
+      />
+
+      <motion.button
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => handleDeal()}
+        disabled={
+          isPending ||
+          !isAuthenticated ||
+          parsedBetAmount < MIN_CASINO_BET ||
+          parsedBetAmount > MAX_CASINO_BET ||
+          cash < parsedBetAmount
+        }
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold text-sm hover:from-yellow-400 hover:to-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-yellow-500/15"
+      >
+        {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
+          language === "ko" ? `$${parsedBetAmount.toFixed(2)} 딜` : `DEAL $${parsedBetAmount.toFixed(2)}`}
+      </motion.button>
+    </motion.div>
+  );
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-lg mx-auto">
-        {/* Nav */}
-        
-
-        {/* Header */}
+      <div className="container py-6 sm:py-8 max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500/25 to-amber-600/15 border border-yellow-500/20">
@@ -387,205 +446,195 @@ export default function Casino() {
           )}
         </div>
 
-        {/* Table */}
-        <div className="relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)]">
-          {/* Felt */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0a5c2a] via-[#0d6b32] to-[#084d23]" />
-          <div className="absolute inset-0 opacity-[0.07]" style={{
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.4) 0.5px, transparent 0.5px)",
-            backgroundSize: "8px 8px",
-          }} />
-          <div className="absolute inset-3 sm:inset-4 border border-green-500/10 rounded-xl pointer-events-none" />
-          <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+          <div className="relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)]">
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a5c2a] via-[#0d6b32] to-[#084d23]" />
+            <div
+              className="absolute inset-0 opacity-[0.07]"
+              style={{
+                backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.4) 0.5px, transparent 0.5px)",
+                backgroundSize: "8px 8px",
+              }}
+            />
+            <div className="absolute inset-3 sm:inset-4 border border-green-500/10 rounded-xl pointer-events-none" />
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
-          <div className="relative p-5 sm:p-7">
-            {/* Dealer */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.15em]">
-                  {language === "ko" ? "딜러" : "Dealer"}
-                </span>
-                {dealerRevealed.length > 0 && (
-                  <HandValue value={dealerVal} bust={dealerVal > 21} blackjack={dealerVal === 21 && dealerRevealed.length === 2 && !dealerRevealed.some(c => c.hidden)} />
-                )}
+            <div className="relative p-5 sm:p-7">
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.15em]">
+                    {language === "ko" ? "딜러" : "Dealer"}
+                  </span>
+                  {dealerRevealed.length > 0 && (
+                    <HandValue value={dealerVal} bust={dealerVal > 21} blackjack={dealerVal === 21 && dealerRevealed.length === 2 && !dealerRevealed.some((card) => card.hidden)} />
+                  )}
+                </div>
+                <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
+                  <AnimatePresence>
+                    {dealerRevealed.length > 0 ? dealerRevealed.map((card, index) => (
+                      <CardDisplay key={`d-${index}`} card={card} index={index} isNew={index >= prevDealerCards} />
+                    )) : <PlaceholderCards />}
+                  </AnimatePresence>
+                </div>
               </div>
-              <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
+
+              <div className="relative min-h-[4.5rem] flex items-center justify-center my-2">
+                <div className="absolute inset-x-0 top-1/2 border-t border-white/[0.05]" />
                 <AnimatePresence>
-                  {dealerRevealed.length > 0 ? dealerRevealed.map((card, i) => (
-                    <CardDisplay key={`d-${i}`} card={card} index={i} isNew={i >= prevDealerCards} />
-                  )) : <PlaceholderCards />}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Result zone — fixed height */}
-            <div className="relative min-h-[4.5rem] flex items-center justify-center my-2">
-              <div className="absolute inset-x-0 top-1/2 border-t border-white/[0.05]" />
-              <AnimatePresence>
-                {statusConfig && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className={`relative z-10 px-5 py-2.5 rounded-xl bg-zinc-900/95 backdrop-blur-md border border-zinc-700/50 shadow-xl ${statusConfig.glow}`}
-                  >
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="text-xl">{statusConfig.emoji}</span>
-                        <span className={`text-base font-bold ${statusConfig.color}`}>{statusConfig.text}</span>
-                      </div>
-                      {showResult && game && (
-                        <motion.p
-                          initial={{ y: 5, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          className={`text-xs font-mono font-bold mt-0.5 ${isWin ? "text-[#00C805]" : isLoss ? "text-[#FF5252]" : "text-yellow-400"}`}
-                        >
-                          {isWin ? `+$${game.payout.toFixed(2)}` : isLoss ? `-$${game.bet.toFixed(2)}` : `$${game.payout.toFixed(2)} returned`}
-                        </motion.p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Empty state prompt */}
-              {!game && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="relative z-10 text-green-300/30 text-xs tracking-wide"
-                >
-                  {language === "ko" ? "베팅하고 딜을 눌러 시작하세요" : "Place your bet and press DEAL"}
-                </motion.p>
-              )}
-            </div>
-
-            {/* Player */}
-            <div className="mt-2">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.15em]">
-                  {language === "ko" ? "내 패" : "You"}
-                </span>
-                {game && (
-                  <HandValue value={playerVal} bust={playerVal > 21} blackjack={playerVal === 21 && game.playerHand.length === 2} soft={playerSoft} />
-                )}
-              </div>
-              <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
-                <AnimatePresence>
-                  {game ? game.playerHand.map((card, i) => (
-                    <CardDisplay key={`p-${i}`} card={card} index={i} isNew={i >= prevPlayerCards} />
-                  )) : <PlaceholderCards />}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="mt-6 pt-4 border-t border-white/[0.05]">
-              <AnimatePresence mode="wait">
-                {!game || isOver ? (
-                  <motion.div
-                    key="deal"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-3"
-                  >
-                    {/* Play Again shortcut */}
-                    {isOver && lastBet && (
-                      <motion.button
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => handleDeal(lastBet)}
-                        disabled={isPending || cash < lastBet}
-                        className="w-full py-3 rounded-xl bg-white/10 text-white font-bold text-sm hover:bg-white/15 disabled:opacity-30 transition-colors border border-white/10"
-                      >
-                        {language === "ko" ? `다시 ($${lastBet.toFixed(2)})` : `SAME BET ($${lastBet.toFixed(2)})`}
-                      </motion.button>
-                    )}
-
-                    <CasinoBetControls
-                      language={language}
-                      value={betAmount}
-                      cash={cash}
-                      disabled={isPending}
-                      onChange={setBetAmount}
-                    />
-
-                    {/* Deal button */}
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleDeal()}
-                      disabled={
-                        isPending ||
-                        !isAuthenticated ||
-                        parsedBetAmount < MIN_CASINO_BET ||
-                        parsedBetAmount > MAX_CASINO_BET ||
-                        cash < parsedBetAmount
-                      }
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold text-sm hover:from-yellow-400 hover:to-amber-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-yellow-500/15"
+                  {statusConfig && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      className={`relative z-10 px-5 py-2.5 rounded-xl bg-zinc-900/95 backdrop-blur-md border border-zinc-700/50 shadow-xl ${statusConfig.glow}`}
                     >
-                      {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                        language === "ko" ? `$${parsedBetAmount.toFixed(2)} 딜` : `DEAL $${parsedBetAmount.toFixed(2)}`}
-                    </motion.button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="actions"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xl">{statusConfig.emoji}</span>
+                          <span className={`text-base font-bold ${statusConfig.color}`}>{statusConfig.text}</span>
+                        </div>
+                        {showResult && game && (
+                          <motion.p
+                            initial={{ y: 5, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className={`text-xs font-mono font-bold mt-0.5 ${isWin ? "text-[#00C805]" : isLoss ? "text-[#FF5252]" : "text-yellow-400"}`}
+                          >
+                            {isWin ? `+$${game.payout.toFixed(2)}` : isLoss ? `-$${game.bet.toFixed(2)}` : `$${game.payout.toFixed(2)} returned`}
+                          </motion.p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {!game && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="relative z-10 text-green-300/30 text-xs tracking-wide"
                   >
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => hitMutation.mutate()}
-                        disabled={isPending}
-                        className="py-3.5 rounded-xl bg-[#00C805] text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
-                      >
-                        {hitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                          <span>{language === "ko" ? "히트" : "HIT"} <span className="text-white/40 text-[9px]">H</span></span>}
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => standMutation.mutate()}
-                        disabled={isPending}
-                        className="py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
-                      >
-                        {standMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                          <span>{language === "ko" ? "스탠드" : "STAND"} <span className="text-white/40 text-[9px]">S</span></span>}
-                      </motion.button>
-                      <motion.button
-                        whileHover={canDouble ? { scale: 1.02 } : {}}
-                        whileTap={canDouble ? { scale: 0.96 } : {}}
-                        onClick={() => canDouble && doubleMutation.mutate()}
-                        disabled={isPending || !canDouble}
-                        className={`py-3.5 rounded-xl font-bold text-sm transition-colors shadow-md ${
-                          canDouble
-                            ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black disabled:opacity-40"
-                            : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
-                        }`}
-                      >
-                        {doubleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                          <span>{language === "ko" ? "더블" : "DBL"} <span className={canDouble ? "text-black/30" : "text-zinc-600"} style={{ fontSize: 9 }}>D</span></span>}
-                      </motion.button>
-                    </div>
-                    <p className="text-center text-[9px] text-white/15 mt-2 font-mono">H / S / D</p>
-                  </motion.div>
+                    {language === "ko" ? "베팅하고 딜을 눌러 시작하세요" : "Place your bet and press DEAL"}
+                  </motion.p>
                 )}
-              </AnimatePresence>
+              </div>
+
+              <div className="mt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.15em]">
+                    {language === "ko" ? "내 패" : "You"}
+                  </span>
+                  {game && (
+                    <HandValue value={playerVal} bust={playerVal > 21} blackjack={playerVal === 21 && game.playerHand.length === 2} soft={playerSoft} />
+                  )}
+                </div>
+                <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
+                  <AnimatePresence>
+                    {game ? game.playerHand.map((card, index) => (
+                      <CardDisplay key={`p-${index}`} card={card} index={index} isNew={index >= prevPlayerCards} />
+                    )) : <PlaceholderCards />}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/[0.05]">
+                <AnimatePresence mode="wait">
+                  {!game || isOver ? (
+                    <motion.div
+                      key="deal-mobile"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-3 lg:hidden"
+                    >
+                      {pregameControls}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="actions"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => hitMutation.mutate()}
+                          disabled={isPending}
+                          className="py-3.5 rounded-xl bg-[#00C805] text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
+                        >
+                          {hitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
+                            <span>{language === "ko" ? "히트" : "HIT"} <span className="text-white/40 text-[9px]">H</span></span>}
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => standMutation.mutate()}
+                          disabled={isPending}
+                          className="py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
+                        >
+                          {standMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
+                            <span>{language === "ko" ? "스탠드" : "STAND"} <span className="text-white/40 text-[9px]">S</span></span>}
+                        </motion.button>
+                        <motion.button
+                          whileHover={canDouble ? { scale: 1.02 } : {}}
+                          whileTap={canDouble ? { scale: 0.96 } : {}}
+                          onClick={() => canDouble && doubleMutation.mutate()}
+                          disabled={isPending || !canDouble}
+                          className={`py-3.5 rounded-xl font-bold text-sm transition-colors shadow-md ${
+                            canDouble
+                              ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black disabled:opacity-40"
+                              : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                          }`}
+                        >
+                          {doubleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
+                            <span>{language === "ko" ? "더블" : "DBL"} <span className={canDouble ? "text-black/30" : "text-zinc-600"} style={{ fontSize: 9 }}>D</span></span>}
+                        </motion.button>
+                      </div>
+                      <p className="text-center text-[9px] text-white/15 mt-2 font-mono">H / S / D</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
+
+          {!game || isOver ? (
+            <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                {language === "ko" ? "베팅 패널" : "Bet Panel"}
+              </p>
+              {pregameControls}
+            </div>
+          ) : (
+            <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                {language === "ko" ? "현재 핸드" : "Current Hand"}
+              </p>
+              <div className="space-y-2 text-xs text-zinc-300">
+                <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-black/20 px-3 py-2">
+                  <span>{language === "ko" ? "베팅" : "Bet"}</span>
+                  <span className="font-mono text-white">${game.bet.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-black/20 px-3 py-2">
+                  <span>{language === "ko" ? "핸드 값" : "Hand"}</span>
+                  <span className="font-mono text-white">{playerVal}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-black/20 px-3 py-2">
+                  <span>{language === "ko" ? "더블 가능" : "Double"}</span>
+                  <span className={`font-mono ${canDouble ? "text-yellow-300" : "text-zinc-500"}`}>
+                    {canDouble ? (language === "ko" ? "가능" : "Ready") : (language === "ko" ? "불가" : "Locked")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Rules */}
         <p className="text-center text-[10px] text-zinc-600 mt-4 font-mono">
           {language === "ko"
             ? "딜러 17 스탠드 · 블랙잭 2:1 · 더블다운 첫 패"

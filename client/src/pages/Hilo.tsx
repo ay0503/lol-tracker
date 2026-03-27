@@ -2,8 +2,7 @@ import { useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Link } from "wouter";
-import { ArrowLeft, Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
@@ -94,10 +93,6 @@ export default function Hilo() {
       <AppNav />
       <CasinoSubNav />
       <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
-        <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> Casino
-        </Link>
-
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/25 to-indigo-600/15 border border-violet-500/20">
