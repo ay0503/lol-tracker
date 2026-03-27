@@ -390,7 +390,6 @@ export async function getAllTrades(limit = 100) {
     shares: trades.shares, pricePerShare: trades.pricePerShare,
     totalAmount: trades.totalAmount, createdAt: trades.createdAt,
   }).from(trades).leftJoin(users, eq(trades.userId, users.id))
-    .where(ne(users.role, 'admin'))
     .orderBy(desc(trades.createdAt)).limit(limit);
 }
 
