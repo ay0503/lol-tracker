@@ -21,7 +21,7 @@ import {
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
   getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory, pruneOldPortfolioSnapshots,
-  pruneOldPortfolioSnapshots, resolveBets,
+  pruneOldPortfolioSnapshots, resolveBets, getRawClient,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
@@ -79,6 +79,28 @@ const PORTFOLIO_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
 
 // Daily summary: track last summary date to send once per day
 let lastDailySummaryDate: string | null = null;
+
+// Restore last daily summary date from DB to prevent duplicates across restarts
+async function loadLastDailySummaryDate(): Promise<void> {
+  try {
+    const client = getRawClient();
+    await client.execute(`CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+    const result = await client.execute({ sql: `SELECT value FROM app_state WHERE key = ?`, args: ["lastDailySummaryDate"] });
+    if (result.rows.length > 0) {
+      lastDailySummaryDate = String((result.rows[0] as any).value);
+    }
+  } catch { /* ignore */ }
+}
+
+async function saveLastDailySummaryDate(dateKey: string): Promise<void> {
+  try {
+    const client = getRawClient();
+    await client.execute({
+      sql: `INSERT INTO app_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+      args: ["lastDailySummaryDate", dateKey, dateKey],
+    });
+  } catch { /* ignore */ }
+}
 
 // Game-end event stored in cache for frontend to poll
 export interface GameEndEvent {
@@ -495,6 +517,7 @@ export async function pollNow(): Promise<PollResult> {
 
         await notifyDailySummary(tier, division, lp, price, wins, losses, rankings);
         lastDailySummaryDate = todayKey;
+        await saveLastDailySummaryDate(todayKey);
         console.log("[Poll] Daily summary sent to Discord");
 
         // Daily cleanup: prune old price history + portfolio snapshots
@@ -729,6 +752,9 @@ export function startPolling() {
 
   console.log(`[Poll] Starting polling every ${POLL_INTERVAL_MS / 1000}s`);
   console.log(`[Poll] Discord notifications: ${isDiscordConfigured() ? "enabled" : "disabled (set DISCORD_BOT_TOKEN + DISCORD_CHANNEL_ID)"}`);
+
+  // Load persisted daily summary date to prevent duplicate sends after restart
+  loadLastDailySummaryDate().catch(() => {});
 
   // Small delay before first poll to ensure DB is ready (migrations may still be settling)
   setTimeout(() => {
