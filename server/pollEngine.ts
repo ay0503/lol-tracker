@@ -21,7 +21,7 @@ import {
   fillOrder, executeTrade, setMarketStatus, getLatestPrice, getOrCreateHolding,
   executeShort, executeCover, recordPortfolioSnapshots, createNotification,
   getPriceHistory, getRecentMatchesFromDB, getLeaderboard, pruneOldPriceHistory, pruneOldPortfolioSnapshots,
-  pruneOldPortfolioSnapshots, resolveBets, getRawClient,
+  resolveBets, getRawClient,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { computeAllETFPricesSync, TICKERS as ETF_TICKERS } from "./etfPricing";
