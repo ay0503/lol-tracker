@@ -390,7 +390,7 @@ export async function getAllTrades(limit = 100) {
     shares: trades.shares, pricePerShare: trades.pricePerShare,
     totalAmount: trades.totalAmount, createdAt: trades.createdAt,
   }).from(trades).leftJoin(users, eq(trades.userId, users.id))
-    .where(ne(trades.type, 'dividend'))
+    .where(and(ne(trades.type, 'dividend'), sql`CAST(${trades.totalAmount} AS REAL) >= 0.05`))
     .orderBy(desc(trades.createdAt)).limit(limit);
 }
 
