@@ -23,6 +23,15 @@ const BOARD_HEIGHT = 390;
 const PEG_SIZE = 8;
 const BALL_SIZE = 12;
 
+// ─── Physics Constants ───
+const GRAVITY = 0.15;        // px/frame² — acceleration
+const RESTITUTION = 0.5;     // bounciness off pegs
+const FRICTION = 0.97;       // horizontal dampening per frame
+const PEG_RADIUS = PEG_SIZE / 2;
+const BALL_RADIUS = BALL_SIZE / 2;
+const COLLISION_DIST = PEG_RADIUS + BALL_RADIUS;
+const KICK_STRENGTH = 1.8;   // horizontal impulse on peg hit
+
 const MULTIPLIERS: Record<string, number[]> = {
   low: [8.2, 3.08, 2.05, 1.54, 1.44, 0.82, 0.41, 0.82, 1.44, 1.54, 2.05, 3.08, 8.2],
   medium: [27.12, 6.26, 3.13, 2.09, 1.04, 0.63, 0.63, 0.63, 1.04, 2.09, 3.13, 6.26, 27.12],
@@ -44,24 +53,19 @@ const RISK_DESCRIPTIONS = {
   },
 } as const;
 
-interface AnimationPoint {
-  at: number;
-  x: number;
-  y: number;
-  pegRow?: number;
-}
-
 interface BallState {
   x: number;
   y: number;
+  vx: number;
+  vy: number;
   path: ("L" | "R")[];
+  nextRow: number;           // next peg row to collide with
+  collidedPegs: Set<string>; // "row-col" keys to avoid double-hits
   result: { bucket: number; multiplier: number; payout: number; betAmount: number } | null;
   landed: boolean;
   launchDelay: number;
   started: boolean;
   trail: { x: number; y: number }[];
-  animationPoints: AnimationPoint[];
-  pointIndex: number;
 }
 
 function getBucketColor(multiplier: number): string {
@@ -87,126 +91,70 @@ function getBucketCenterX(bucket: number, boardWidth: number): number {
   return boardWidth / 2 + (bucket - ROWS / 2) * getBoardPitch(boardWidth);
 }
 
-function getPathTargetX(position: number, boardWidth: number): number {
-  return boardWidth / 2 + position * (getBoardPitch(boardWidth) / 2);
+/** Get peg X position for a given row and column */
+function getPegX(rowIndex: number, colIndex: number, boardWidth: number): number {
+  const pegsInRow = rowIndex + 3;
+  return boardWidth / 2 + (colIndex - (pegsInRow - 1) / 2) * getBoardPitch(boardWidth);
 }
 
-function lerp(start: number, end: number, progress: number): number {
-  return start + (end - start) * progress;
-}
+/** Run one physics step for a ball, checking collisions with all pegs in range */
+function physicsTick(ball: BallState, boardWidth: number, boardHeight: number): void {
+  // Apply gravity
+  ball.vy += GRAVITY;
+  // Apply friction to horizontal movement
+  ball.vx *= FRICTION;
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
+  // Update position
+  ball.x += ball.vx;
+  ball.y += ball.vy;
 
-function easeInOutQuad(progress: number): number {
-  if (progress < 0.5) return 2 * progress * progress;
-  return 1 - Math.pow(-2 * progress + 2, 2) / 2;
-}
-
-function quadraticPoint(
-  start: { x: number; y: number },
-  control: { x: number; y: number },
-  end: { x: number; y: number },
-  progress: number,
-) {
-  const inverse = 1 - progress;
-  return {
-    x: inverse * inverse * start.x + 2 * inverse * progress * control.x + progress * progress * end.x,
-    y: inverse * inverse * start.y + 2 * inverse * progress * control.y + progress * progress * end.y,
-  };
-}
-
-function seededUnit(seed: number, index: number): number {
-  const raw = Math.sin(seed * 12.9898 + index * 78.233) * 43758.5453123;
-  return raw - Math.floor(raw);
-}
-
-function appendQuadraticSegment(
-  points: AnimationPoint[],
-  start: { x: number; y: number },
-  midpoint: { x: number; y: number },
-  end: { x: number; y: number },
-  startAt: number,
-  duration: number,
-  samples: number,
-  pegRow?: number,
-) {
-  const control = {
-    x: 2 * midpoint.x - (start.x + end.x) / 2,
-    y: 2 * midpoint.y - (start.y + end.y) / 2,
-  };
-
-  for (let sampleIndex = 1; sampleIndex <= samples; sampleIndex++) {
-    const progress = sampleIndex / samples;
-    const point = quadraticPoint(start, control, end, progress);
-    points.push({
-      at: startAt + duration * progress,
-      x: point.x,
-      y: point.y,
-      pegRow: pegRow !== undefined && sampleIndex === Math.round(samples / 2) ? pegRow : undefined,
-    });
-  }
-}
-
-function buildAnimationPoints(
-  path: ("L" | "R")[],
-  bucket: number,
-  boardWidth: number,
-  boardHeight: number,
-  seed: number,
-): AnimationPoint[] {
-  const rowGap = boardHeight / (ROWS + 1.5);
-  const pitch = getBoardPitch(boardWidth);
-  const centerX = boardWidth / 2;
-  const launchOffset = (seededUnit(seed, 0) - 0.5) * pitch * 0.35;
-  const points: AnimationPoint[] = [{ at: 0, x: centerX + launchOffset, y: -14 }];
-
-  let currentPoint = { x: centerX + launchOffset, y: -14 };
-  let elapsed = 0;
-  let position = 0;
-
-  for (let rowIndex = 0; rowIndex < path.length; rowIndex++) {
-    const sign = path[rowIndex] === "R" ? 1 : -1;
-    position += sign;
-    const laneX = getPathTargetX(position, boardWidth);
+  // Check collision with pegs near the ball
+  for (let rowIndex = Math.max(0, ball.nextRow - 1); rowIndex < Math.min(ROWS, ball.nextRow + 2); rowIndex++) {
+    const pegsInRow = rowIndex + 3;
     const pegY = getPegRowY(rowIndex, boardHeight);
-    const exitPoint = { x: laneX, y: pegY + rowGap * 0.46 };
-    const wobble = (seededUnit(seed, rowIndex + 1) - 0.5) * pitch * 0.12;
-    const midpoint = {
-      x: lerp(currentPoint.x, laneX, 0.5) + wobble,
-      y: pegY,
-    };
-    const duration = Math.max(58, 122 - rowIndex * 4);
-    appendQuadraticSegment(points, currentPoint, midpoint, exitPoint, elapsed, duration, 8, rowIndex);
-    elapsed += duration;
-    currentPoint = exitPoint;
+
+    for (let colIndex = 0; colIndex < pegsInRow; colIndex++) {
+      const pegKey = `${rowIndex}-${colIndex}`;
+      if (ball.collidedPegs.has(pegKey)) continue;
+
+      const pegX = getPegX(rowIndex, colIndex, boardWidth);
+      const dx = ball.x - pegX;
+      const dy = ball.y - pegY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < COLLISION_DIST) {
+        // Collision detected — resolve overlap
+        ball.collidedPegs.add(pegKey);
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Push ball out of peg
+        const overlap = COLLISION_DIST - dist;
+        ball.x += nx * overlap;
+        ball.y += ny * overlap;
+
+        // Reflect velocity off peg surface
+        const dotProduct = ball.vx * nx + ball.vy * ny;
+        ball.vx -= (1 + RESTITUTION) * dotProduct * nx;
+        ball.vy -= (1 + RESTITUTION) * dotProduct * ny;
+
+        // Apply directional kick based on server path
+        if (rowIndex === ball.nextRow && ball.nextRow < ball.path.length) {
+          const direction = ball.path[ball.nextRow] === "R" ? 1 : -1;
+          ball.vx += direction * KICK_STRENGTH;
+          ball.nextRow++;
+        }
+
+        // Clamp downward velocity to prevent tunneling
+        ball.vy = Math.max(ball.vy, 0.5);
+      }
+    }
   }
 
-  const bucketX = getBucketCenterX(bucket, boardWidth);
-  const nearBucketPoint = { x: bucketX, y: boardHeight - rowGap * 0.58 };
-  appendQuadraticSegment(
-    points,
-    currentPoint,
-    { x: lerp(currentPoint.x, bucketX, 0.55), y: boardHeight - rowGap * 0.85 },
-    nearBucketPoint,
-    elapsed,
-    170,
-    10,
-  );
-  elapsed += 170;
-
-  appendQuadraticSegment(
-    points,
-    nearBucketPoint,
-    { x: bucketX, y: boardHeight - 6 },
-    { x: bucketX, y: boardHeight - 12 },
-    elapsed,
-    90,
-    6,
-  );
-
-  return points;
+  // Wall bounces — keep ball on board
+  const margin = BALL_RADIUS + 4;
+  if (ball.x < margin) { ball.x = margin; ball.vx = Math.abs(ball.vx) * 0.5; }
+  if (ball.x > boardWidth - margin) { ball.x = boardWidth - margin; ball.vx = -Math.abs(ball.vx) * 0.5; }
 }
 
 export default function Plinko() {
@@ -426,11 +374,12 @@ export default function Plinko() {
     }, 2500);
   }, [refetchBalance, refetchHistory]);
 
-  const runResolvedAnimation = useCallback(() => {
+  const runPhysicsLoop = useCallback(() => {
     const board = boardRef.current;
     if (!board) return;
 
     const activeBoardWidth = board.offsetWidth || boardWidth;
+    const activeBoardHeight = board.offsetHeight || BOARD_HEIGHT;
     const now = performance.now();
     let anyActive = false;
 
@@ -442,32 +391,28 @@ export default function Plinko() {
         ball.started = true;
       }
 
-      const elapsed = now - ball.launchDelay;
-      const points = ball.animationPoints;
-      const finalPoint = points[points.length - 1];
       anyActive = true;
+      const prevNextRow = ball.nextRow;
 
-      while (ball.pointIndex < points.length - 2 && points[ball.pointIndex + 1].at <= elapsed) {
-        ball.pointIndex++;
-        const reachedPoint = points[ball.pointIndex];
-        if (reachedPoint.pegRow !== undefined) flashPeg(reachedPoint.pegRow, reachedPoint.x, activeBoardWidth);
+      // Run physics step
+      physicsTick(ball, activeBoardWidth, activeBoardHeight);
+
+      // Flash peg when ball advances to a new row
+      if (ball.nextRow > prevNextRow) {
+        flashPeg(prevNextRow, ball.x, activeBoardWidth);
       }
 
-      const currentPoint = points[Math.min(ball.pointIndex, points.length - 1)];
-      const nextPoint = points[Math.min(ball.pointIndex + 1, points.length - 1)];
-      const span = Math.max(nextPoint.at - currentPoint.at, 1);
-      const eased = easeInOutQuad(clamp((elapsed - currentPoint.at) / span, 0, 1));
-
-      ball.x = lerp(currentPoint.x, nextPoint.x, eased);
-      ball.y = lerp(currentPoint.y, nextPoint.y, eased);
+      // Trail
       ball.trail.push({ x: ball.x, y: ball.y });
       if (ball.trail.length > TRAIL_LENGTH) ball.trail.shift();
 
+      // Update ball DOM
       const ballEl = ballRefs.current[ballIndex];
       if (ballEl) {
         ballEl.style.transform = `translate3d(${ball.x - BALL_SIZE / 2}px, ${ball.y - BALL_SIZE / 2}px, 0)`;
       }
 
+      // Update trail DOM
       const trails = trailRefs.current[ballIndex] || [];
       for (let trailIndex = 0; trailIndex < TRAIL_LENGTH; trailIndex++) {
         const trailEl = trails[trailIndex];
@@ -477,7 +422,6 @@ export default function Plinko() {
           trailEl.style.opacity = "0";
           continue;
         }
-
         const size = Math.max(4 - trailIndex, 1);
         trailEl.style.transform = `translate3d(${trailPoint.x - size / 2}px, ${trailPoint.y - size / 2}px, 0)`;
         trailEl.style.width = `${size}px`;
@@ -485,12 +429,17 @@ export default function Plinko() {
         trailEl.style.opacity = `${Math.max(0.4 - trailIndex * 0.1, 0)}`;
       }
 
-      if (elapsed >= finalPoint.at) {
+      // Check if ball has fallen past the board
+      if (ball.y >= activeBoardHeight - 10) {
+        // Snap to correct bucket X
+        if (ball.result) {
+          ball.x = getBucketCenterX(ball.result.bucket, activeBoardWidth);
+        }
         settleBallResult(ball, ballIndex);
       }
     }
 
-    if (anyActive) rafRef.current = requestAnimationFrame(runResolvedAnimation);
+    if (anyActive) rafRef.current = requestAnimationFrame(runPhysicsLoop);
   }, [boardWidth, flashPeg, settleBallResult]);
 
   const handleDrop = useCallback(async () => {
@@ -522,16 +471,18 @@ export default function Plinko() {
       const results = response.results;
       pendingRef.current = results.length;
 
+      const centerX = activeBoardWidth / 2;
       const newBalls: BallState[] = results.map((result, index) => {
-        const seed = result.path.reduce(
-          (accumulator, dir, rowIndex) => accumulator + (dir === "R" ? 17 : 31) * (rowIndex + 1),
-          result.bucket * 43 + index * 101,
-        );
-        const points = buildAnimationPoints(result.path, result.bucket, activeBoardWidth, activeBoardHeight, seed);
+        // Small random horizontal offset for visual variety
+        const offsetX = (Math.random() - 0.5) * getBoardPitch(activeBoardWidth) * 0.3;
         return {
-          x: points[0].x,
-          y: points[0].y,
+          x: centerX + offsetX,
+          y: -BALL_SIZE,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: 0.5,
           path: result.path,
+          nextRow: 0,
+          collidedPegs: new Set<string>(),
           result: {
             bucket: result.bucket,
             multiplier: result.multiplier,
@@ -539,11 +490,9 @@ export default function Plinko() {
             betAmount: result.betAmount,
           },
           landed: false,
-          launchDelay: startTime + index * 170,
+          launchDelay: startTime + index * 220,
           started: false,
           trail: [],
-          animationPoints: points,
-          pointIndex: 0,
         };
       });
 
@@ -556,12 +505,12 @@ export default function Plinko() {
         }
       }
 
-      rafRef.current = requestAnimationFrame(runResolvedAnimation);
+      rafRef.current = requestAnimationFrame(runPhysicsLoop);
     } catch (err: any) {
       setDropping(false);
       toast.error(err.message || "Drop failed");
     }
-  }, [ballCount, boardWidth, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runResolvedAnimation, totalBetAmount]);
+  }, [ballCount, boardWidth, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runPhysicsLoop, totalBetAmount]);
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
