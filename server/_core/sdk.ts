@@ -17,23 +17,6 @@ export type SessionPayload = {
   name: string;
 };
 
-const SERVER_ADMIN_ALIASES = ["shawn", "이시현"];
-
-function matchesServerAdminOverride(user: User): boolean {
-  const normalizedName = (user.name ?? "").trim().toLowerCase();
-  const normalizedDisplayName = (user.displayName ?? "").trim().toLowerCase();
-  const normalizedEmail = (user.email ?? "").trim().toLowerCase();
-
-  return SERVER_ADMIN_ALIASES.some((alias) => {
-    const normalizedAlias = alias.toLowerCase();
-    return (
-      normalizedName === normalizedAlias ||
-      normalizedDisplayName === normalizedAlias ||
-      normalizedEmail.includes(normalizedAlias)
-    );
-  });
-}
-
 class SDKServer {
   private parseCookies(cookieHeader: string | undefined) {
     if (!cookieHeader) {
@@ -136,10 +119,6 @@ class SDKServer {
       openId: user.openId,
       lastSignedIn: new Date().toISOString(),
     });
-
-    if (matchesServerAdminOverride(user)) {
-      return { ...user, role: "admin" };
-    }
 
     return user;
   }
