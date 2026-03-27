@@ -49,6 +49,7 @@ let lastPollResult: PollResult | null = null;
 // This prevents false toggles from API flickers and provides a ~2 min delay.
 let previousRawIsInGame: boolean | null = null; // raw result from last poll
 let confirmedIsInGame = false; // only changes after 2 consecutive agreeing polls
+let consecutiveApiErrors = 0; // auto-release live status after 3 consecutive API failures
 
 // Pre-game snapshot for post-game LP notification banner
 let preGameSnapshot: {
@@ -182,7 +183,7 @@ export async function pollNow(): Promise<PollResult> {
       // Spectator API flaky — skip confirmation this cycle
     }
 
-    // Two-consecutive-confirmation logic (only update when API responded cleanly)
+    // Two-consecutive-confirmation logic
     const wasConfirmedInGame = confirmedIsInGame;
     if (spectatorApiOk) {
       if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
@@ -190,6 +191,15 @@ export async function pollNow(): Promise<PollResult> {
         console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
       }
       previousRawIsInGame = rawIsInGame;
+      consecutiveApiErrors = 0;
+    } else {
+      // If API keeps erroring while we think we're in game, auto-release after 3 consecutive failures
+      consecutiveApiErrors++;
+      if (confirmedIsInGame && consecutiveApiErrors >= 3) {
+        confirmedIsInGame = false;
+        previousRawIsInGame = false;
+        console.log(`[Poll] Live game AUTO-RELEASED after ${consecutiveApiErrors} consecutive API errors`);
+      }
     }
 
     // Track game-start: capture pre-game LP/price snapshot
@@ -220,6 +230,22 @@ export async function pollNow(): Promise<PollResult> {
 
     // Update the cache with the CONFIRMED status (used by trade endpoints + bot)
     cache.set("player.liveGame.check", confirmedIsInGame, 45_000); // 45s TTL (slightly > poll interval)
+
+    // Cache game details from the poll so the liveGame route doesn't re-fetch
+    if (confirmedIsInGame && activeGameData) {
+      const participant = activeGameData.participants.find(pp => pp.puuid === playerData.account.puuid);
+      const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
+      cache.set("player.liveGame.details", {
+        inGame: true as const,
+        gameMode: queueNames[activeGameData.gameQueueConfigId] ?? "Unknown",
+        gameStartTime: activeGameData.gameStartTime,
+        gameLengthSeconds: activeGameData.gameLength,
+        championId: participant?.championId,
+        isRanked: activeGameData.gameQueueConfigId === 420 || activeGameData.gameQueueConfigId === 440,
+      }, 45_000);
+    } else if (!confirmedIsInGame) {
+      cache.delete("player.liveGame.details");
+    }
 
     const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
     const totalLP = tierToTotalLP(tier, division, lp);

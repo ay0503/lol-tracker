@@ -245,41 +245,14 @@ export const appRouter = router({
       }),
     liveGame: publicProcedure.query(async () => {
       // Uses the two-consecutive-confirmation status from the poll engine.
-      // The poll engine sets "player.liveGame.check" only after two consecutive
-      // polls agree, preventing false toggles and providing a ~2 min delay.
+      // The poll engine caches both the boolean and game details every 30s.
+      // This route NEVER re-fetches from spectator API — it only reads cache.
       const confirmedInGame = cache.get<boolean>("player.liveGame.check");
-
-      // If not confirmed in-game, return early
       if (!confirmedInGame) return { inGame: false as const };
 
-      // Confirmed in-game — fetch game details for the UI banner
-      return cache.getOrSet("player.liveGame.details", async () => {
-        try {
-          const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
-          const game = await getActiveGame(account.account.puuid);
-          if (!game) return { inGame: true as const }; // confirmed but details unavailable
-
-          const playerParticipant = game.participants.find(p => p.puuid === account.account.puuid);
-          const gameStartTime = game.gameStartTime;
-          const gameLengthSeconds = game.gameLength;
-          const queueName = getQueueName(game.gameQueueConfigId);
-          const isRanked = game.gameQueueConfigId === 420 || game.gameQueueConfigId === 440;
-
-          return {
-            inGame: true as const,
-            gameMode: queueName,
-            gameStartTime,
-            gameLengthSeconds,
-            championId: playerParticipant?.championId ?? 0,
-            teamId: playerParticipant?.teamId ?? 0,
-            isRanked,
-            queueId: game.gameQueueConfigId,
-          };
-        } catch (err: any) {
-          console.warn("[LiveGame] Details fetch failed:", err?.message);
-          return { inGame: true as const }; // confirmed but details unavailable
-        }
-      }, 60_000);
+      // Read game details cached by poll engine (no extra API call)
+      const details = cache.get<any>("player.liveGame.details");
+      return details || { inGame: true as const };
     }),
     gameEndEvent: publicProcedure.query(() => {
       // Returns the latest game-end event from cache (10-min TTL)
