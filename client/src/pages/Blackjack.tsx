@@ -8,6 +8,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import CasinoBetControls, {
   MAX_CASINO_BET,
   MIN_CASINO_BET,
@@ -644,6 +645,7 @@ export default function Casino() {
           {language === "ko" ? "플레이어 우위 블랙잭 지급표" : "Player-favored blackjack payouts"}
         </p>
 
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

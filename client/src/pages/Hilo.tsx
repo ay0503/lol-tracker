@@ -6,6 +6,7 @@ import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import CasinoBetControls, {
@@ -243,6 +244,7 @@ export default function Hilo() {
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

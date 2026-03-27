@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import CasinoBetControls, {
@@ -727,6 +728,7 @@ export default function Plinko() {
         <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "약 1% 플레이어 우위 · 최대 $500 지급" : "~1% player edge · $500 max payout"}
         </p>
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

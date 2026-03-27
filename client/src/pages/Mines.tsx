@@ -8,6 +8,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import CasinoBetControls, {
   MAX_CASINO_BET,
   MIN_CASINO_BET,
@@ -333,6 +334,7 @@ export default function Mines() {
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
 
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

@@ -88,6 +88,24 @@ function recordCasinoGame(userId: number): void {
   releaseCasinoLock(userId);
 }
 
+async function ensureCasinoGameHistoryTable() {
+  try {
+    const client = getRawClient();
+    await client.execute(`CREATE TABLE IF NOT EXISTS casino_game_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId INTEGER NOT NULL,
+      gameType TEXT NOT NULL,
+      bet TEXT NOT NULL,
+      payout TEXT NOT NULL,
+      result TEXT NOT NULL,
+      multiplier TEXT,
+      createdAt TEXT DEFAULT (datetime('now'))
+    )`);
+  } catch { /* ignore */ }
+}
+// Create table on import
+ensureCasinoGameHistoryTable();
+
 async function recordCasinoGameResult(userId: number, gameType: string, bet: number, payout: number, result: string, multiplier?: number) {
   try {
     const client = getRawClient();
@@ -95,6 +113,7 @@ async function recordCasinoGameResult(userId: number, gameType: string, bet: num
       sql: `INSERT INTO casino_game_history (userId, gameType, bet, payout, result, multiplier) VALUES (?, ?, ?, ?, ?, ?)`,
       args: [userId, gameType, bet.toFixed(2), payout.toFixed(2), result, multiplier?.toFixed(2) ?? null],
     });
+    cache.invalidate("casino.gameFeed");
   } catch { /* table may not exist yet */ }
 }
 
@@ -873,6 +892,7 @@ export const appRouter = router({
               // Instant crash — no payout
               if (game.status === "crashed") {
                 cache.invalidate("casino.leaderboard");
+                recordCasinoGameResult(ctx.user.id, "crash", input.bet, 0, "loss", game.crashPoint);
               }
               return game;
             } catch (err: any) {
@@ -893,6 +913,11 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
           cache.invalidate("casino.leaderboard");
+          if (game.status === "cashed_out") {
+            recordCasinoGameResult(ctx.user.id, "crash", game.bet, game.payout, "win", game.cashedOutAt);
+          } else {
+            recordCasinoGameResult(ctx.user.id, "crash", game.bet, 0, "loss", game.crashPoint);
+          }
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -909,6 +934,7 @@ export const appRouter = router({
           const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
           await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           cache.invalidate("casino.leaderboard");
+          recordCasinoGameResult(ctx.user.id, "crash", game.bet, game.payout, "win", game.cashedOutAt);
         }
         return game;
       }),
@@ -954,6 +980,9 @@ export const appRouter = router({
               const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
               await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
               cache.invalidate("casino.leaderboard");
+              recordCasinoGameResult(ctx.user.id, "mines", game.bet, game.payout, "win", game.multiplier);
+            } else if (game.status === "lost") {
+              recordCasinoGameResult(ctx.user.id, "mines", game.bet, 0, "loss");
             }
             return game;
           } catch (err: any) {
@@ -971,6 +1000,7 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
           cache.invalidate("casino.leaderboard");
+          recordCasinoGameResult(ctx.user.id, "mines", game.bet, game.payout, "win", game.multiplier);
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -1018,6 +1048,8 @@ export const appRouter = router({
               await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
             }
             cache.invalidate("casino.leaderboard");
+            const mult = game.payout > 0 ? game.payout / game.bet : 0;
+            recordCasinoGameResult(ctx.user.id, "poker", game.bet, game.payout, game.payout > 0 ? "win" : "loss", mult);
             return game;
           } catch (err: any) {
             throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -1056,6 +1088,8 @@ export const appRouter = router({
 
             recordCasinoGame(ctx.user.id);
             cache.invalidate("casino.leaderboard");
+            const mult = result.totalPayout > 0 ? result.totalPayout / totalBet : 0;
+            recordCasinoGameResult(ctx.user.id, "roulette", totalBet, result.totalPayout, result.totalPayout > 0 ? "win" : "loss", mult);
             return result;
           });
         }),
@@ -1083,6 +1117,8 @@ export const appRouter = router({
           }
           recordCasinoGame(ctx.user.id);
           cache.invalidate("casino.leaderboard");
+          const mult = result.payout > 0 ? result.payout / input.bet : 0;
+          recordCasinoGameResult(ctx.user.id, "dice", input.bet, result.payout, result.payout > 0 ? "win" : "loss", mult);
           return result;
         }),
       history: publicProcedure.query(async () => {
@@ -1118,6 +1154,9 @@ export const appRouter = router({
               const newBal = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
               await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
               cache.invalidate("casino.leaderboard");
+              recordCasinoGameResult(ctx.user.id, "hilo", game.bet, game.payout, "win", game.multiplier);
+            } else if (game.status === "lost") {
+              recordCasinoGameResult(ctx.user.id, "hilo", game.bet, 0, "loss");
             }
             return game;
           } catch (err: any) { throw new TRPCError({ code: "BAD_REQUEST", message: err.message }); }
@@ -1133,6 +1172,7 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: newBal.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
           cache.invalidate("casino.leaderboard");
+          recordCasinoGameResult(ctx.user.id, "hilo", game.bet, game.payout, "win", game.multiplier);
           return game;
         } catch (err: any) { throw new TRPCError({ code: "BAD_REQUEST", message: err.message }); }
       }),
@@ -1173,6 +1213,8 @@ export const appRouter = router({
 
             recordCasinoGame(ctx.user.id);
             cache.invalidate("casino.leaderboard");
+            const avgMult = totalBet > 0 ? totalPayout / totalBet : 0;
+            recordCasinoGameResult(ctx.user.id, "plinko", totalBet, totalPayout, totalPayout >= totalBet ? "win" : "loss", avgMult);
 
             return {
               count: input.count,
@@ -1213,6 +1255,10 @@ export const appRouter = router({
             }
 
             cache.invalidate("casino.leaderboard");
+            if (game.status !== "playing") {
+              const mult = game.payout > 0 ? game.payout / game.bet : 0;
+              recordCasinoGameResult(ctx.user.id, "blackjack", game.bet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+            }
             return game;
           });
         }),
@@ -1220,7 +1266,9 @@ export const appRouter = router({
         const { hitGame } = await import("./blackjack");
         try {
           const game = hitGame(ctx.user.id);
-          // If busted, no payout needed (already deducted)
+          if (game.status === "bust") {
+            recordCasinoGameResult(ctx.user.id, "blackjack", game.bet, 0, "loss");
+          }
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -1240,6 +1288,8 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
           cache.invalidate("casino.leaderboard");
+          const mult = game.payout > 0 ? game.payout / game.bet : 0;
+          recordCasinoGameResult(ctx.user.id, "blackjack", game.bet, game.payout, game.payout > 0 ? "win" : "loss", mult);
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -1269,6 +1319,11 @@ export const appRouter = router({
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
           cache.invalidate("casino.leaderboard");
+          if (game.status !== "playing") {
+            const totalBet = game.bet; // doubled bet is already included
+            const mult = game.payout > 0 ? game.payout / totalBet : 0;
+            recordCasinoGameResult(ctx.user.id, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+          }
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -1338,6 +1393,40 @@ export const appRouter = router({
             createdAt: String(r.createdAt),
           }));
         } catch { return []; }
+      }),
+    /** Public game feed — recent results across all players */
+    gameFeed: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+      .query(async ({ input }) => {
+        const limit = input?.limit ?? 20;
+        return cache.getOrSet(`casino.gameFeed.${limit}`, async () => {
+          try {
+            const client = getRawClient();
+            const result = await client.execute({
+              sql: `SELECT h.id, h.userId, COALESCE(u.displayName, u.name) as userName,
+                h.gameType, h.bet, h.payout, h.result, h.multiplier, h.createdAt,
+                n.cssClass as nameEffectCss
+                FROM casino_game_history h
+                LEFT JOIN users u ON h.userId = u.id
+                LEFT JOIN user_equipped ue ON h.userId = ue.userId
+                LEFT JOIN cosmetic_items n ON ue.equippedNameEffect = n.id
+                ORDER BY h.id DESC LIMIT ?`,
+              args: [limit],
+            });
+            return (result.rows as any[]).map(row => ({
+              id: Number(row.id),
+              userId: Number(row.userId),
+              userName: String(row.userName || "Anonymous"),
+              game: String(row.gameType),
+              bet: parseFloat(String(row.bet)),
+              payout: parseFloat(String(row.payout)),
+              result: String(row.result),
+              multiplier: row.multiplier ? parseFloat(String(row.multiplier)) : null,
+              createdAt: String(row.createdAt),
+              nameEffectCss: row.nameEffectCss ? String(row.nameEffectCss) : null,
+            }));
+          } catch { return []; }
+        }, 10_000); // 10s cache
       }),
     /** Get current deposit multiplier (public) */
     depositMultiplier: publicProcedure.query(async () => {

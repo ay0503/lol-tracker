@@ -8,6 +8,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import CasinoBetControls, {
   MAX_CASINO_BET,
   MIN_CASINO_BET,
@@ -541,6 +542,7 @@ export default function Crash() {
           {language === "ko" ? "더 부드러운 크래시 곡선 | 플레이어 우위 | 최대 $500 지급" : "Softer crash curve | player edge | $500 max payout"}
         </p>
 
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

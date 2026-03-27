@@ -8,6 +8,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import CasinoBetControls, {
   MAX_CASINO_BET,
   MIN_CASINO_BET,
@@ -259,6 +260,7 @@ export default function VideoPoker() {
           {language === "ko" ? "텐즈 오어 베터 · 클래식 비디오 포커" : "Tens or Better · classic video poker"}
         </p>
 
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

@@ -8,6 +8,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import CasinoBetControls, {
   MAX_CASINO_BET,
   MIN_CASINO_BET,
@@ -389,6 +390,7 @@ export default function Roulette() {
           {language === "ko" ? "초록은 컬러 베팅 환불 · 깔끔한 중립 룰렛" : "Green refunds color bets · clean neutral roulette"}
         </p>
 
+        <CasinoGameLog />
         <GamblingDisclaimer />
       </div>
     </div>

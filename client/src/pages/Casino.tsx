@@ -9,6 +9,7 @@ import CasinoSubNav from "@/components/CasinoSubNav";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
+import CasinoGameLog from "@/components/CasinoGameLog";
 import StyledName from "@/components/StyledName";
 import {
   Dialog,
@@ -456,6 +457,7 @@ export default function Casino() {
           {language === "ko" ? "가상 캐시 · 실제 돈 아님" : "Virtual cash · Not real money"}
         </p>
 
+        <CasinoGameLog />
         <GamblingDisclaimer />
 
         <Dialog open={showEdgeDialog} onOpenChange={setShowEdgeDialog}>
