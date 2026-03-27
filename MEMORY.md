@@ -9,14 +9,14 @@
 - Vite manual chunks: vendor-charts, vendor-motion
 
 ## Casino Games (8 total)
-1. Blackjack — standard, BJ 3:2, keyboard H/S/D
-2. Crash — canvas graph, server timers, 200ms grace, 1% edge
-3. Mines — 5x5 grid, 1-24 mines, 2% edge, no-limit
-4. Roulette — European wheel, no-limit, single smooth spin
-5. Video Poker — Jacks or Better 9/5, ~2% edge
-6. Dice — roll over/under, 1% edge, animated result bar
-7. Hi-Lo — guess higher/lower on cards, 2% edge, cashout anytime
-8. Plinko — 12 rows, 3 risk levels, physics ball drop, 2-3% edge
+1. Blackjack — standard flow, keyboard H/S/D, naturals pay 2:1, regular wins pay 2x
+2. Crash — canvas graph, server timers, softer curve, slight player edge
+3. Mines — 5x5 grid, 1-24 mines, boosted multiplier table, cashout anytime
+4. Roulette — simplified to red/black/green bets only, strip spin animation, green refunds color bets
+5. Video Poker — classic pay table with Tens or Better qualifier
+6. Dice — roll over/under, 101-based multiplier table, animated result bar
+7. Hi-Lo — guess higher/lower on cards, odds-based payouts with small player boost, cashout anytime
+8. Plinko — 12 rows, 3 risk levels, deterministic resolved-path animation, 1/3/5-ball drops
 
 ## Cosmetics System
 - StyledName component with inline styles registry (EFFECT_STYLES)
@@ -30,6 +30,7 @@
 - resetCasinoBalance, setCasinoCooldown, setCasinoMultiplier
 - toggleCloseFriend, grantAllCosmetics
 - Configurable deposit multiplier (default 10x, stored in app_config table)
+- Local admin bootstrap: `shawn` can be re-granted admin directly in local SQLite when needed
 
 ## Key Gotchas
 - **NEVER use 't' as variable/param name** (TDZ with esbuild + useTranslation)
@@ -43,6 +44,10 @@
 - Casino deposit rate: configurable via admin (default 10x)
 - esbuild keepNames: true in vite.config.ts
 - Casino in-flight lock: acquireCasinoLock in checkCasinoCooldown
+- Casino cash and trading cash are intentionally one-way separated: trading -> casino allowed, casino -> trading not allowed
+- Casino bet controls use freeform amount entry with quick shortcuts; no chip UI remains
+- Desktop casino pages may move betting/action panels into a right column to avoid vertical scrolling
+- All casino game pages should use a consistent top header with game icon + name and no back-to-casino row
 
 ## AI Contributor Docs (from other session)
 - CLAUDE.md → points to CLAUDE_CONTEXT.md as primary entry point
@@ -53,6 +58,14 @@
 ## Sprint Status
 ### Sprint 1-3 ✅ Complete
 ### Sprint 4 🟡 Partial (casino game history done, challenges + router split TODO)
+### Casino Refactor / Debug Sprint ✅ Complete
+- Removed Limbo and Wheel again after upstream reintroduced them; casino is back to 8 games
+- Standardized casino bet controls to $0.10-$50 with quick buttons: 10c, 25c, 50c, $1, $2, $5
+- Added casino landing info section, one-way transfer explanation, purple cosmetics shop CTA, and player-edge info modal
+- Expanded casino hotbar coverage for the active 8 games + shop
+- Simplified Roulette to red/black/green while keeping the strip animation and fixing the end-of-spin snap
+- Reworked Plinko frontend to deterministic resolved-path animation, fixed multi-ball locking, and aligned visuals to the actual resolved bucket
+- Tuned casino payouts/copy toward neutral or slightly player-favored play using clean-number tables
 
 ## Still TODO
 - Wire recordCasinoGameResult into game resolution points
@@ -61,4 +74,4 @@
 - Trade markers on candlestick chart
 - Comment reactions frontend UI
 - Price alerts frontend UI
-- Casino → Trading withdrawal
+- Better non-gambling casino-cash faucets if the product needs them later
