@@ -117,6 +117,7 @@ export interface GameEndEvent {
   priceChange: number;
   priceChangePct: number;
   timestamp: number;
+  win?: boolean; // actual match result from Riot API (may be set after initial event)
 }
 
 export interface PollResult {
@@ -379,6 +380,15 @@ export async function pollNow(): Promise<PollResult> {
         });
         result.newMatches++;
 
+        // Update game-end event with actual match result (win/loss)
+        if (!isRemake) {
+          const existingEndEvent = cache.get<GameEndEvent>("player.gameEndEvent");
+          if (existingEndEvent && existingEndEvent.win === undefined) {
+            existingEndEvent.win = participant.win;
+            cache.set("player.gameEndEvent", existingEndEvent, 10 * 60 * 1000);
+          }
+        }
+
         // Skip news generation and dividends for remakes
         if (isRemake) {
           console.log(`[Poll] Skipping news/dividends for remake match ${matchId}`);
@@ -473,6 +483,10 @@ export async function pollNow(): Promise<PollResult> {
         const priceChangeVal = price - prevPriceVal;
         const priceChangePctVal = prevPriceVal > 0 ? (priceChangeVal / prevPriceVal) * 100 : 0;
 
+        // Get the actual match result from the most recently processed match
+        const recentDBMatches = await getRecentMatchesFromDB(1);
+        const lastMatchWin = recentDBMatches.length > 0 ? recentDBMatches[0].win : undefined;
+
         const fallbackEvent: GameEndEvent = {
           lpBefore: prevLp,
           lpAfter: lp,
@@ -486,6 +500,7 @@ export async function pollNow(): Promise<PollResult> {
           priceChange: priceChangeVal,
           priceChangePct: priceChangePctVal,
           timestamp: Date.now(),
+          win: lastMatchWin !== undefined ? Boolean(lastMatchWin) : undefined,
         };
 
         cache.set("player.gameEndEvent", fallbackEvent, 10 * 60 * 1000);

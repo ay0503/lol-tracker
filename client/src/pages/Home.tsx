@@ -265,7 +265,8 @@ function PostGameBanner() {
 
   if (!event || dismissed) return null;
 
-  const isPositive = event.lpDelta >= 0;
+  // Use actual match result when available, fall back to LP delta
+  const isPositive = event.win !== undefined ? event.win : event.lpDelta >= 0;
   const borderColor = isPositive ? "border-green-500/40" : "border-red-500/40";
   const bgColor = isPositive ? "bg-green-500/5" : "bg-red-500/5";
   const accentColor = isPositive ? "text-green-400" : "text-red-400";
