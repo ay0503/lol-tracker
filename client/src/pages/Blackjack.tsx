@@ -322,10 +322,31 @@ export default function Casino() {
     },
   });
 
+  const splitMutation = trpc.casino.blackjack.split.useMutation({
+    onSuccess: (game) => {
+      utils.casino.blackjack.active.setData(undefined, game as any);
+      refetchBalance();
+      toast.success(language === "ko" ? "스플릿!" : "Split!");
+      if (game.status !== "playing") {
+        // Split aces auto-resolved
+        setTimeout(() => {
+          if (game.payout > 0) toast.success(`Won $${game.payout.toFixed(2)}`);
+          else toast.error("Both hands lost");
+        }, 1000);
+      }
+    },
+    onError: (err) => {
+      toast.error(err.message);
+      utils.casino.blackjack.active.invalidate();
+    },
+  });
+
   const game = activeGame;
   const isPlaying = game?.status === "playing";
   const isOver = game && game.status !== "playing";
-  const isPending = dealMutation.isPending || hitMutation.isPending || standMutation.isPending || doubleMutation.isPending;
+  const isPending = dealMutation.isPending || hitMutation.isPending || standMutation.isPending || doubleMutation.isPending || splitMutation.isPending;
+  const isSplitGame = !!(game as any)?.splitHand;
+  const activeHand = (game as any)?.activeHand as "main" | "split" | undefined;
   const cash = casinoBalance ?? 20;
 
   const prevPlayerCards = useCardCount(game?.playerHand);
@@ -342,17 +363,26 @@ export default function Casino() {
   const isWin = visibleStatus === "player_win" || visibleStatus === "dealer_bust" || visibleStatus === "blackjack";
   const isLoss = visibleStatus === "player_bust" || visibleStatus === "dealer_win";
 
+  const canSplitHand = isPlaying && !!game && !isSplitGame && game.playerHand.length === 2 &&
+    game.playerHand[0] && game.playerHand[1] &&
+    (() => {
+      const v1 = ["K","Q","J","10"].includes(game.playerHand[0].rank) ? 10 : game.playerHand[0].rank === "A" ? 11 : parseInt(game.playerHand[0].rank);
+      const v2 = ["K","Q","J","10"].includes(game.playerHand[1].rank) ? 10 : game.playerHand[1].rank === "A" ? 11 : parseInt(game.playerHand[1].rank);
+      return v1 === v2;
+    })() && cash >= game.bet;
+
   useEffect(() => {
     if (!isPlaying || isPending) return;
     const handler = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement) return;
       if (event.key === "h" || event.key === "H") hitMutation.mutate();
       if (event.key === "s" || event.key === "S") standMutation.mutate();
-      if ((event.key === "d" || event.key === "D") && game?.playerHand.length === 2) doubleMutation.mutate();
+      if ((event.key === "d" || event.key === "D") && canDouble) doubleMutation.mutate();
+      if ((event.key === "p" || event.key === "P") && canSplitHand) splitMutation.mutate();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isPlaying, isPending, game?.playerHand.length, hitMutation, standMutation, doubleMutation]);
+  }, [isPlaying, isPending, canDouble, canSplitHand, hitMutation, standMutation, doubleMutation, splitMutation]);
 
   const handleDeal = useCallback((amount?: number) => {
     const betVal = amount ?? parsedBetAmount;
@@ -371,7 +401,8 @@ export default function Casino() {
     visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
     null;
 
-  const canDouble = isPlaying && !!game && game.playerHand.length === 2 && cash >= game.bet;
+  const activeHandCards = isSplitGame && activeHand === "split" ? ((game as any)?.splitHand as Card[] ?? []) : game?.playerHand ?? [];
+  const canDouble = isPlaying && !!game && activeHandCards.length === 2 && cash >= game.bet;
   const pregameControls = (
     <motion.div
       key="deal"
@@ -522,21 +553,66 @@ export default function Casino() {
               </div>
 
               <div className="mt-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.15em]">
-                    {language === "ko" ? "내 패" : "You"}
-                  </span>
-                  {game && (
-                    <HandValue value={playerVal} bust={playerVal > 21} blackjack={playerVal === 21 && game.playerHand.length === 2} soft={playerSoft} />
-                  )}
-                </div>
-                <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
-                  <AnimatePresence>
-                    {game ? game.playerHand.map((card, index) => (
-                      <CardDisplay key={`p-${index}`} card={card} index={index} isNew={index >= prevPlayerCards} />
-                    )) : <PlaceholderCards />}
-                  </AnimatePresence>
-                </div>
+                {isSplitGame && game ? (
+                  /* Split hands view */
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Main hand */}
+                    <div className={`rounded-xl p-2 transition-all ${activeHand === "main" ? "ring-2 ring-yellow-400/60 bg-white/[0.03]" : "opacity-70"}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
+                          {language === "ko" ? "핸드 1" : "Hand 1"}
+                        </span>
+                        <HandValue value={handValue(game.playerHand)} bust={handValue(game.playerHand) > 21} soft={isSoftHand(game.playerHand)} />
+                        {activeHand === "main" && <span className="text-[8px] text-yellow-400 animate-pulse">ACTIVE</span>}
+                      </div>
+                      <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
+                        <AnimatePresence>
+                          {game.playerHand.map((card, index) => (
+                            <CardDisplay key={`p1-${index}`} card={card} index={index} isNew={false} />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                    {/* Split hand */}
+                    <div className={`rounded-xl p-2 transition-all ${activeHand === "split" ? "ring-2 ring-yellow-400/60 bg-white/[0.03]" : "opacity-70"}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
+                          {language === "ko" ? "핸드 2" : "Hand 2"}
+                        </span>
+                        {(game as any).splitHand && (
+                          <HandValue value={handValue((game as any).splitHand)} bust={handValue((game as any).splitHand) > 21} soft={isSoftHand((game as any).splitHand)} />
+                        )}
+                        {activeHand === "split" && <span className="text-[8px] text-yellow-400 animate-pulse">ACTIVE</span>}
+                      </div>
+                      <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
+                        <AnimatePresence>
+                          {((game as any).splitHand as Card[] || []).map((card, index) => (
+                            <CardDisplay key={`p2-${index}`} card={card} index={index} isNew={false} />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Normal single hand view */
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.15em]">
+                        {language === "ko" ? "내 패" : "You"}
+                      </span>
+                      {game && (
+                        <HandValue value={playerVal} bust={playerVal > 21} blackjack={playerVal === 21 && game.playerHand.length === 2} soft={playerSoft} />
+                      )}
+                    </div>
+                    <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
+                      <AnimatePresence>
+                        {game ? game.playerHand.map((card, index) => (
+                          <CardDisplay key={`p-${index}`} card={card} index={index} isNew={index >= prevPlayerCards} />
+                        )) : <PlaceholderCards />}
+                      </AnimatePresence>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mt-6 pt-4 border-t border-white/[0.05]">
@@ -560,7 +636,7 @@ export default function Casino() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="grid grid-cols-3 gap-2.5">
+                      <div className={`grid gap-2.5 ${canSplitHand ? "grid-cols-4" : "grid-cols-3"}`}>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.96 }}
@@ -595,8 +671,20 @@ export default function Casino() {
                           {doubleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
                             <span>{language === "ko" ? "더블" : "DBL"} <span className={canDouble ? "text-black/30" : "text-zinc-600"} style={{ fontSize: 9 }}>D</span></span>}
                         </motion.button>
+                        {canSplitHand && (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => splitMutation.mutate()}
+                            disabled={isPending}
+                            className="py-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-violet-500 text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
+                          >
+                            {splitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
+                              <span>{language === "ko" ? "스플릿" : "SPLIT"} <span className="text-white/40 text-[9px]">P</span></span>}
+                          </motion.button>
+                        )}
                       </div>
-                      <p className="text-center text-[9px] text-white/15 mt-2 font-mono">H / S / D</p>
+                      <p className="text-center text-[9px] text-white/15 mt-2 font-mono">{canSplitHand ? "H / S / D / P" : "H / S / D"}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -638,8 +726,8 @@ export default function Casino() {
 
         <p className="text-center text-[10px] text-zinc-600 mt-4 font-mono">
           {language === "ko"
-            ? "딜러 17 스탠드 · 블랙잭 2:1 · 더블다운 첫 패"
-            : "Dealer stands 17 · BJ pays 2:1 · Double on first hand"}
+            ? "딜러 17 스탠드 · 블랙잭 2:1 · 더블다운 · 스플릿 페어"
+            : "Dealer stands 17 · BJ pays 2:1 · Double · Split pairs"}
         </p>
         <p className="text-center text-[9px] text-zinc-700 mt-2 font-mono">
           {language === "ko" ? "플레이어 우위 블랙잭 지급표" : "Player-favored blackjack payouts"}

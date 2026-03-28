@@ -1329,6 +1329,36 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
         }
       }),
+      split: protectedProcedure.mutation(async ({ ctx }) => {
+        const { splitGame, getActiveGame: getGame, canSplit: checkSplit } = await import("./blackjack");
+        const currentGame = getGame(ctx.user.id);
+        if (!currentGame) throw new TRPCError({ code: "BAD_REQUEST", message: "No active game" });
+
+        // Check balance for the additional bet
+        const portfolio = await getOrCreatePortfolio(ctx.user.id);
+        const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
+        if (currentGame.bet > casinoCash) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash to split. Need $${currentGame.bet.toFixed(2)}.` });
+        }
+
+        try {
+          const game = splitGame(ctx.user.id);
+          // Deduct the additional bet for the split hand
+          const db = await getDb();
+          await db.update(portfolios).set({ casinoBalance: (casinoCash - currentGame.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+          cache.invalidate("casino.leaderboard");
+
+          // If split resolved immediately (split aces), record result
+          if (game.status !== "playing") {
+            const totalBet = game.bet + (game.splitBet ?? 0);
+            const mult = game.payout > 0 ? game.payout / totalBet : 0;
+            recordCasinoGameResult(ctx.user.id, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+          }
+          return game;
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+      }),
       active: protectedProcedure.query(async ({ ctx }) => {
         const { getActiveGame: getGame } = await import("./blackjack");
         return getGame(ctx.user.id);
