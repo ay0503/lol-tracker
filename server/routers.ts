@@ -914,7 +914,7 @@ export const appRouter = router({
           }
           cache.invalidate("casino.leaderboard");
           if (game.status === "cashed_out") {
-            recordCasinoGameResult(ctx.user.id, "crash", game.bet, game.payout, "win", game.cashedOutAt);
+            recordCasinoGameResult(ctx.user.id, "crash", game.bet, game.payout, "win", game.cashoutMultiplier);
           } else {
             recordCasinoGameResult(ctx.user.id, "crash", game.bet, 0, "loss", game.crashPoint);
           }
@@ -934,7 +934,7 @@ export const appRouter = router({
           const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
           await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           cache.invalidate("casino.leaderboard");
-          recordCasinoGameResult(ctx.user.id, "crash", game.bet, game.payout, "win", game.cashedOutAt);
+          recordCasinoGameResult(ctx.user.id, "crash", game.bet, game.payout, "win", game.cashoutMultiplier);
         }
         return game;
       }),
@@ -1266,7 +1266,7 @@ export const appRouter = router({
         const { hitGame } = await import("./blackjack");
         try {
           const game = hitGame(ctx.user.id);
-          if (game.status === "bust") {
+          if (game.status === "player_bust") {
             recordCasinoGameResult(ctx.user.id, "blackjack", game.bet, 0, "loss");
           }
           return game;

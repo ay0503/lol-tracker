@@ -363,6 +363,8 @@ export default function Casino() {
   const isWin = visibleStatus === "player_win" || visibleStatus === "dealer_bust" || visibleStatus === "blackjack";
   const isLoss = visibleStatus === "player_bust" || visibleStatus === "dealer_win";
 
+  const activeHandCards = isSplitGame && activeHand === "split" ? ((game as any)?.splitHand as Card[] ?? []) : game?.playerHand ?? [];
+  const canDouble = isPlaying && !!game && activeHandCards.length === 2 && cash >= game.bet;
   const canSplitHand = isPlaying && !!game && !isSplitGame && game.playerHand.length === 2 &&
     game.playerHand[0] && game.playerHand[1] &&
     (() => {
@@ -401,8 +403,6 @@ export default function Casino() {
     visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
     null;
 
-  const activeHandCards = isSplitGame && activeHand === "split" ? ((game as any)?.splitHand as Card[] ?? []) : game?.playerHand ?? [];
-  const canDouble = isPlaying && !!game && activeHandCards.length === 2 && cash >= game.bet;
   const pregameControls = (
     <motion.div
       key="deal"
