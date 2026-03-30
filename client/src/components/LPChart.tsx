@@ -276,6 +276,8 @@ export default function LPChart() {
    */
   const intraday = isIntradayRange(activeRange);
 
+  const currentPrice = etfPrices?.find((ep: any) => ep.ticker === activeTicker)?.price;
+
   const data: ChartDataPoint[] = useMemo(() => {
     if (!etfHistory || etfHistory.length === 0) return [];
 
@@ -342,12 +344,12 @@ export default function LPChart() {
     // For non-intraday: use index-based X to compress dead time between sessions
     // For intraday: keep real timestamps
     let prevDay = "";
-    return points.map((p, i) => {
+    const result = points.map((p, i) => {
       const day = dateKey(p.timestamp);
       const isNewDay = day !== prevDay;
       prevDay = day;
       return {
-        ts: intraday ? p.timestamp : i, // index-based for compressed timeline
+        ts: intraday ? p.timestamp : i,
         originalTs: p.timestamp,
         date: formatTimestamp(p.timestamp, language, intraday),
         price: p.price,
@@ -356,7 +358,26 @@ export default function LPChart() {
         isNewDay,
       };
     });
-  }, [etfHistory, language, intraday]);
+
+    // Sync chart endpoint with current live price to prevent mismatch
+    if (currentPrice !== undefined && result.length > 0) {
+      const lastPoint = result[result.length - 1];
+      if (Math.abs(lastPoint.price - currentPrice) > 0.005) {
+        result.push({
+          ts: intraday ? Date.now() : result.length,
+          originalTs: Date.now(),
+          date: formatTimestamp(Date.now(), language, intraday),
+          price: currentPrice,
+          label: `$${currentPrice.toFixed(2)}`,
+          isLast: true,
+          isNewDay: false,
+        });
+        lastPoint.isLast = false;
+      }
+    }
+
+    return result;
+  }, [etfHistory, language, intraday, currentPrice]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
