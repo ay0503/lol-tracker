@@ -757,9 +757,17 @@ export const appRouter = router({
         amount: z.number().min(1).max(50).finite(),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Block bets during live games
+        // Allow bets in first 5 minutes of a live game, block after
         const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
-        if (liveGame) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Betting locked — game in progress. Place bets before the match starts." });
+        if (liveGame) {
+          const details = cache.get<{ gameStartTime?: number; gameLengthSeconds?: number }>("player.liveGame.details");
+          const gameElapsed = details?.gameStartTime
+            ? Math.floor((Date.now() - details.gameStartTime) / 1000) + (details.gameLengthSeconds ?? 0)
+            : Infinity;
+          if (gameElapsed > 300) {
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Betting locked — game has been live for more than 5 minutes." });
+          }
+        }
 
         let bet;
         try {
@@ -788,6 +796,34 @@ export const appRouter = router({
         lossBets: raw.filter(b => b.prediction === "loss").length,
         totalPool: raw.reduce((s, b) => s + parseFloat(b.amount), 0),
       };
+    }),
+    /** Betting status: is betting open, time remaining, sentiment */
+    status: publicProcedure.query(async () => {
+      const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
+      const details = cache.get<{ gameStartTime?: number; gameLengthSeconds?: number }>("player.liveGame.details");
+      const raw = await getPendingBets();
+
+      const winBets = raw.filter(b => b.prediction === "win");
+      const lossBets = raw.filter(b => b.prediction === "loss");
+      const winPool = winBets.reduce((s, b) => s + parseFloat(b.amount), 0);
+      const lossPool = lossBets.reduce((s, b) => s + parseFloat(b.amount), 0);
+      const totalPool = winPool + lossPool;
+      const winPct = totalPool > 0 ? Math.round((winPool / totalPool) * 100) : 50;
+
+      if (!liveGame) {
+        return { open: true, reason: "pre-game" as const, secondsLeft: null, winPct, lossPct: 100 - winPct, totalBets: raw.length, totalPool };
+      }
+
+      const gameElapsed = details?.gameStartTime
+        ? Math.floor((Date.now() - details.gameStartTime) / 1000) + (details.gameLengthSeconds ?? 0)
+        : Infinity;
+      const secondsLeft = Math.max(0, 300 - gameElapsed);
+
+      if (gameElapsed <= 300) {
+        return { open: true, reason: "early-game" as const, secondsLeft, winPct, lossPct: 100 - winPct, totalBets: raw.length, totalPool };
+      }
+
+      return { open: false, reason: "locked" as const, secondsLeft: 0, winPct, lossPct: 100 - winPct, totalBets: raw.length, totalPool };
     }),
   }),
 

@@ -55,6 +55,7 @@ import {
   Gamepad2,
   AlertTriangle,
   Menu,
+  Lock,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -136,6 +137,95 @@ function StatCard({
 /**
  * Live game alert banner — shows when the tracked player is in an active game.
  */
+function LiveBettingPanel() {
+  const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
+  const [betAmount, setBetAmount] = useState(5);
+
+  const statusQuery = trpc.betting.status.useQuery(undefined, {
+    refetchInterval: 5_000,
+  });
+  const placeBetMutation = trpc.betting.place.useMutation({
+    onSuccess: () => {
+      toast.success("Bet placed!");
+      statusQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const status = statusQuery.data;
+  if (!status) return null;
+
+  const bettingOpen = status.open;
+  const timeLeft = status.secondsLeft;
+  const timeStr = timeLeft !== null ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, "0")}` : null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-primary/10">
+      {/* Sentiment bar */}
+      {status.totalBets > 0 && (
+        <div className="mb-2.5">
+          <div className="flex justify-between text-[10px] font-bold mb-1">
+            <span className="text-green-400">WIN {status.winPct}%</span>
+            <span className="text-[9px] text-muted-foreground">{status.totalBets} bet{status.totalBets !== 1 ? "s" : ""} · ${status.totalPool.toFixed(0)} pool</span>
+            <span className="text-red-400">{status.lossPct}% LOSS</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden flex">
+            <div className="bg-green-500 transition-all duration-500" style={{ width: `${status.winPct}%` }} />
+            <div className="bg-red-500 transition-all duration-500" style={{ width: `${status.lossPct}%` }} />
+          </div>
+        </div>
+      )}
+
+      {bettingOpen ? (
+        <div className="flex items-center gap-2">
+          {/* Amount selector */}
+          <div className="flex gap-1">
+            {[1, 5, 10, 25].map(amt => (
+              <button
+                key={amt}
+                onClick={() => setBetAmount(amt)}
+                className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                  betAmount === amt
+                    ? "bg-primary/20 text-primary border border-primary/40"
+                    : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                ${amt}
+              </button>
+            ))}
+          </div>
+
+          {/* Win/Loss buttons */}
+          <button
+            onClick={() => isAuthenticated && placeBetMutation.mutate({ prediction: "win", amount: betAmount })}
+            disabled={!isAuthenticated || placeBetMutation.isPending}
+            className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-30 text-white text-[11px] font-bold transition-colors"
+          >
+            WIN
+          </button>
+          <button
+            onClick={() => isAuthenticated && placeBetMutation.mutate({ prediction: "loss", amount: betAmount })}
+            disabled={!isAuthenticated || placeBetMutation.isPending}
+            className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-30 text-white text-[11px] font-bold transition-colors"
+          >
+            LOSS
+          </button>
+
+          {timeLeft !== null && timeLeft > 0 && (
+            <span className="text-[9px] text-yellow-400 font-mono whitespace-nowrap">{timeStr} left</span>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center gap-2 py-1.5">
+          <Lock className="w-3 h-3 text-zinc-500" />
+          <span className="text-[10px] text-zinc-500 font-bold">BETTING LOCKED</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LiveGameBanner() {
   const { t } = useTranslation();
   const liveGameQuery = trpc.player.liveGame.useQuery(undefined, {
@@ -172,51 +262,52 @@ function LiveGameBanner() {
       transition={{ duration: 0.4 }}
     >
       <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
-        {/* Subtle background */}
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10" />
 
-        <div className="relative flex items-center gap-4 px-5 py-4">
-          {/* Pulsing game icon */}
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-primary/20" />
-            <div className="relative p-2.5 rounded-full bg-primary/20 border border-primary/40">
-              <Gamepad2 className="w-5 h-5 text-primary" />
+        <div className="relative px-5 py-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-primary/20" />
+              <div className="relative p-2.5 rounded-full bg-primary/20 border border-primary/40">
+                <Gamepad2 className="w-5 h-5 text-primary" />
+              </div>
             </div>
-          </div>
 
-          {/* Game info */}
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary text-primary-foreground">
-                {t.common.inGame}
-              </span>
-              <span className="text-sm font-semibold text-foreground">
-                목도리 도마뱀 {t.common.liveGameAlert}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Activity className="w-3 h-3" />
-                {liveGame.gameMode}
-              </span>
-              <span className="flex items-center gap-1 font-[var(--font-mono)]">
-                <Clock className="w-3 h-3" />
-                {timeStr}
-              </span>
-              {liveGame.isRanked && (
-                <span className="flex items-center gap-1 text-yellow-500">
-                  <AlertTriangle className="w-3 h-3" />
-                  {t.common.rankedWarning}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary text-primary-foreground">
+                  {t.common.inGame}
                 </span>
-              )}
+                <span className="text-sm font-semibold text-foreground">
+                  목도리 도마뱀 {t.common.liveGameAlert}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Activity className="w-3 h-3" />
+                  {liveGame.gameMode}
+                </span>
+                <span className="flex items-center gap-1 font-[var(--font-mono)]">
+                  <Clock className="w-3 h-3" />
+                  {timeStr}
+                </span>
+                {liveGame.isRanked && (
+                  <span className="flex items-center gap-1 text-yellow-500">
+                    <AlertTriangle className="w-3 h-3" />
+                    {t.common.rankedWarning}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-xs font-bold text-red-400 uppercase tracking-wider">{t.common.live}</span>
             </div>
           </div>
 
-          {/* Live indicator dot */}
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-xs font-bold text-red-400 uppercase tracking-wider">{t.common.live}</span>
-          </div>
+          {/* Inline betting panel */}
+          <LiveBettingPanel />
         </div>
       </div>
     </motion.section>
