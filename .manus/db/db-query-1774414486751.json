@@ -1,9 +1,0 @@
-{
-  "query": "SELECT id, displayName, role FROM users WHERE displayName LIKE '%윤%' OR displayName LIKE '%여%' OR displayName LIKE '%균%';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4RDapMJqQiukiqZ.root --database EqpY4GjGxu3PtSNi8r37GF --execute SELECT id, displayName, role FROM users WHERE displayName LIKE '%윤%' OR displayName LIKE '%여%' OR displayName LIKE '%균%';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 59
-}

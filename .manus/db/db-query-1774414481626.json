@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE users SET role = 'admin' WHERE displayName = '윤여균';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4RDapMJqQiukiqZ.root --database EqpY4GjGxu3PtSNi8r37GF --execute UPDATE users SET role = 'admin' WHERE displayName = '윤여균';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1949
-}
