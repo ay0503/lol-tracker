@@ -173,12 +173,18 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // 2. Check live game status with two-consecutive-confirmation
+    // ONLY Ranked Solo/Duo (queue 420) counts as "in game" for trading purposes.
+    // Other modes (Flex, ARAM, Normals) don't affect DORI price and should not halt trading.
     let rawIsInGame = false;
     let spectatorApiOk = false;
     let activeGameData: Awaited<ReturnType<typeof getActiveGame>> = null;
     try {
       activeGameData = await getActiveGame(playerData.account.puuid);
-      rawIsInGame = !!activeGameData;
+      // Only treat Ranked Solo/Duo as "in game"
+      rawIsInGame = !!activeGameData && activeGameData.gameQueueConfigId === 420;
+      if (activeGameData && activeGameData.gameQueueConfigId !== 420) {
+        console.log(`[Poll] Ignoring non-Solo/Duo game (queue=${activeGameData.gameQueueConfigId})`);
+      }
       spectatorApiOk = true;
     } catch (err: any) {
       // Spectator API flaky — skip confirmation this cycle
@@ -233,16 +239,16 @@ export async function pollNow(): Promise<PollResult> {
     cache.set("player.liveGame.check", confirmedIsInGame, 45_000); // 45s TTL (slightly > poll interval)
 
     // Cache game details from the poll so the liveGame route doesn't re-fetch
-    if (confirmedIsInGame && activeGameData) {
+    // Only cache for Solo/Duo games (the only mode that triggers confirmedIsInGame)
+    if (confirmedIsInGame && activeGameData && activeGameData.gameQueueConfigId === 420) {
       const participant = activeGameData.participants.find(pp => pp.puuid === playerData.account.puuid);
-      const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
       cache.set("player.liveGame.details", {
         inGame: true as const,
-        gameMode: queueNames[activeGameData.gameQueueConfigId] ?? "Unknown",
+        gameMode: "Ranked Solo/Duo",
         gameStartTime: activeGameData.gameStartTime,
         gameLengthSeconds: activeGameData.gameLength,
         championId: participant?.championId,
-        isRanked: activeGameData.gameQueueConfigId === 420 || activeGameData.gameQueueConfigId === 440,
+        isRanked: true,
       }, 45_000);
     } else if (!confirmedIsInGame) {
       cache.invalidate("player.liveGame.details");
@@ -255,13 +261,17 @@ export async function pollNow(): Promise<PollResult> {
     // Emit game-end event now that we have current LP/price
     if (wasConfirmedInGame && !confirmedIsInGame && preGameSnapshot) {
       // Use totalLP (absolute LP across all tiers) for accurate delta calculation
-      // Raw LP difference is wrong when tier/division changes (e.g., Emerald 2 10LP -> Emerald 3 96LP = -14 LP, not +86)
       const lpDelta = totalLP - preGameSnapshot.totalLP;
       const priceChange = price - preGameSnapshot.price;
       const priceChangePct = preGameSnapshot.price > 0
         ? (priceChange / preGameSnapshot.price) * 100
         : 0;
 
+      // Skip game-end event if LP didn't change (likely a false detection or non-Solo/Duo game)
+      if (lpDelta === 0 && priceChange === 0) {
+        console.log(`[Poll] Suppressing game-end event: 0 LP change, likely false detection`);
+        preGameSnapshot = null;
+      } else {
       const gameEndEvent: GameEndEvent = {
         lpBefore: preGameSnapshot.lp,
         lpAfter: lp,
@@ -286,6 +296,7 @@ export async function pollNow(): Promise<PollResult> {
 
       // Clear pre-game snapshot
       preGameSnapshot = null;
+      } // end else (lpDelta !== 0)
     }
 
     result.price = price;
