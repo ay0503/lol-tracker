@@ -35,6 +35,8 @@ import { TICKERS, type Ticker, computeAllETFPricesSync, computeETFHistoryFromSna
 const THIRTY_MIN = 30 * 60 * 1000;
 const TEN_MIN = 10 * 60 * 1000;
 const FIVE_MIN = 5 * 60 * 1000;
+const ONE_MIN = 60 * 1000;
+const TWO_MIN = 2 * 60 * 1000;
 const DAILY_CASINO_BONUS = 20.00;
 
 /** Casino cooldown tracking */
@@ -420,12 +422,12 @@ export const appRouter = router({
         const since = input?.since;
         return cache.getOrSet(`prices.history.${since ?? "all"}`, async () => {
           return getPriceHistory(since);
-        }, THIRTY_MIN);
+        }, TWO_MIN);
       }),
     latest: publicProcedure.query(async () => {
       return cache.getOrSet("prices.latest", async () => {
         return getLatestPrice();
-      }, THIRTY_MIN);
+      }, ONE_MIN);
     }),
     etfPrices: publicProcedure.query(async () => {
       return cache.getOrSet("prices.etfPrices", async () => {
@@ -445,7 +447,7 @@ export const appRouter = router({
             changePct: prevPrice > 0 ? ((price - prevPrice) / prevPrice) * 100 : 0,
           };
         });
-      }, THIRTY_MIN);
+      }, ONE_MIN);
     }),
     etfHistory: publicProcedure
       .input(z.object({
@@ -458,7 +460,7 @@ export const appRouter = router({
         return cache.getOrSet(`prices.etfHistory.${input.ticker}.${sinceBucket}`, async () => {
           const history = await getPriceHistory(input.since);
           return computeETFHistoryFromSnapshots(input.ticker, history);
-        }, THIRTY_MIN);
+        }, TWO_MIN);
       }),
     tickers: publicProcedure.query(() => [
       { ticker: "DORI", name: "DORI", description: "1x LP Tracker", leverage: 1, inverse: false },
