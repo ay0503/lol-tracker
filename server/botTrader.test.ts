@@ -64,7 +64,7 @@ import { invokeLLM } from "./_core/llm";
 import { cache } from "./cache";
 
 // Import after mocks
-import { runBotTrader, forceRunBot, ensureBotUser, getBotUserId } from "./botTrader";
+import { runBotTrader, forceRunBot, ensureBotUser, getBotUserId, resetBotCooldown } from "./botTrader";
 
 // Helper to create mock DB
 function createMockDb() {
@@ -122,6 +122,7 @@ function setupBotRunMocks(overrides: {
 describe("Bot Trader", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetBotCooldown();
   });
 
   describe("always trades", () => {
