@@ -523,9 +523,9 @@ export default function Plinko() {
       const results = response.results;
       pendingRef.current = results.length;
 
-      const newBalls: BallState[] = results.map((result, index) => {
+      const newBalls: BallState[] = results.map((result: any, index: number) => {
         const seed = result.path.reduce(
-          (accumulator, dir, rowIndex) => accumulator + (dir === "R" ? 17 : 31) * (rowIndex + 1),
+          (accumulator: number, dir: string, rowIndex: number) => accumulator + (dir === "R" ? 17 : 31) * (rowIndex + 1),
           result.bucket * 43 + index * 101,
         );
         const points = buildAnimationPoints(result.path, result.bucket, activeBoardWidth, activeBoardHeight, seed);
@@ -599,7 +599,7 @@ export default function Plinko() {
           <div className="relative p-3 sm:p-5">
             {history && history.length > 0 && (
               <div className="flex gap-1 overflow-x-auto mb-2 pb-0.5 scrollbar-hide">
-                {history.slice(0, 15).map((historyEntry, index) => (
+                {history.slice(0, 15).map((historyEntry: any, index: number) => (
                   <div
                     key={index}
                     className={`flex-shrink-0 px-1.5 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold ${

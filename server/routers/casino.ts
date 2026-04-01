@@ -28,7 +28,7 @@ export const casinoRouter = router({
             const db = await getDb();
             await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-            const { startCrashGame } = await import("./crash");
+            const { startCrashGame } = await import("../crash");
             try {
               const game = startCrashGame(ctx.user.id, input.bet, input.autoCashout);
               recordCasinoGame(ctx.user.id);
@@ -47,7 +47,7 @@ export const casinoRouter = router({
           });
         }),
       cashout: protectedProcedure.mutation(async ({ ctx }) => {
-        const { cashoutCrash } = await import("./crash");
+        const { cashoutCrash } = await import("../crash");
         try {
           const game = cashoutCrash(ctx.user.id);
           if (game.status === "cashed_out" && game.payout > 0) {
@@ -68,7 +68,7 @@ export const casinoRouter = router({
         }
       }),
       status: protectedProcedure.query(async ({ ctx }) => {
-        const { checkCrashStatus, isPayoutCredited, markPayoutCredited } = await import("./crash");
+        const { checkCrashStatus, isPayoutCredited, markPayoutCredited } = await import("../crash");
         const game = checkCrashStatus(ctx.user.id);
         if (game && game.status === "cashed_out" && game.payout > 0 && !isPayoutCredited(ctx.user.id)) {
           // Auto-cashout resolved — credit payout once
@@ -83,11 +83,11 @@ export const casinoRouter = router({
         return game;
       }),
       active: protectedProcedure.query(async ({ ctx }) => {
-        const { getActiveCrashGame } = await import("./crash");
+        const { getActiveCrashGame } = await import("../crash");
         return getActiveCrashGame(ctx.user.id);
       }),
       history: protectedProcedure.query(async ({ ctx }) => {
-        const { getCrashHistory } = await import("./crash");
+        const { getCrashHistory } = await import("../crash");
         return getCrashHistory(ctx.user.id);
       }),
     }),
@@ -104,7 +104,7 @@ export const casinoRouter = router({
             const db = await getDb();
             await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-            const { startMinesGame } = await import("./mines");
+            const { startMinesGame } = await import("../mines");
             const game = startMinesGame(ctx.user.id, input.bet, input.mineCount);
             recordCasinoGame(ctx.user.id);
             cache.invalidate("casino.leaderboard");
@@ -114,7 +114,7 @@ export const casinoRouter = router({
       reveal: protectedProcedure
         .input(z.object({ position: z.number().int().min(0).max(24) }))
         .mutation(async ({ ctx, input }) => {
-          const { revealTile } = await import("./mines");
+          const { revealTile } = await import("../mines");
           try {
             const game = revealTile(ctx.user.id, input.position);
             // If won (all safe tiles found), credit payout
@@ -134,7 +134,7 @@ export const casinoRouter = router({
           }
         }),
       cashout: protectedProcedure.mutation(async ({ ctx }) => {
-        const { cashOutMines } = await import("./mines");
+        const { cashOutMines } = await import("../mines");
         try {
           const game = cashOutMines(ctx.user.id);
           if (game.payout > 0) {
@@ -151,7 +151,7 @@ export const casinoRouter = router({
         }
       }),
       active: protectedProcedure.query(async ({ ctx }) => {
-        const { getActiveMinesGame } = await import("./mines");
+        const { getActiveMinesGame } = await import("../mines");
         return getActiveMinesGame(ctx.user.id);
       }),
     }),
@@ -168,7 +168,7 @@ export const casinoRouter = router({
             const db = await getDb();
             await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-            const { dealPoker } = await import("./videoPoker");
+            const { dealPoker } = await import("../videoPoker");
             try {
               const game = dealPoker(ctx.user.id, input.bet);
               recordCasinoGame(ctx.user.id);
@@ -182,7 +182,7 @@ export const casinoRouter = router({
       draw: protectedProcedure
         .input(z.object({ held: z.array(z.boolean()).length(5) }))
         .mutation(async ({ ctx, input }) => {
-          const { drawPoker } = await import("./videoPoker");
+          const { drawPoker } = await import("../videoPoker");
           try {
             const game = drawPoker(ctx.user.id, input.held);
             if (game.payout > 0) {
@@ -200,7 +200,7 @@ export const casinoRouter = router({
           }
         }),
       active: protectedProcedure.query(async ({ ctx }) => {
-        const { getActivePokerGame } = await import("./videoPoker");
+        const { getActivePokerGame } = await import("../videoPoker");
         return getActivePokerGame(ctx.user.id);
       }),
     }),
@@ -221,7 +221,7 @@ export const casinoRouter = router({
             const db = await getDb();
             await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-            const { spin } = await import("./roulette");
+            const { spin } = await import("../roulette");
             const result = spin({ type: input.type, amount: input.amount });
 
             if (result.totalPayout > 0) {
@@ -238,7 +238,7 @@ export const casinoRouter = router({
           });
         }),
       history: publicProcedure.query(async () => {
-        const { getHistory } = await import("./roulette");
+        const { getHistory } = await import("../roulette");
         return getHistory();
       }),
     }),
@@ -252,7 +252,7 @@ export const casinoRouter = router({
           if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
           const db = await getDb();
           await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-          const { roll } = await import("./dice");
+          const { roll } = await import("../dice");
           const result = roll(input.bet, input.target, input.direction);
           if (result.payout > 0) {
             const fresh = await getOrCreatePortfolio(ctx.user.id);
@@ -266,7 +266,7 @@ export const casinoRouter = router({
           return result;
         }),
       history: publicProcedure.query(async () => {
-        const { getHistory } = await import("./dice");
+        const { getHistory } = await import("../dice");
         return getHistory();
       }),
     }),
@@ -280,7 +280,7 @@ export const casinoRouter = router({
           if (input.bet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash. You have $${casinoCash.toFixed(2)}.` });
           const db = await getDb();
           await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
-          const { startHiloGame } = await import("./hilo");
+          const { startHiloGame } = await import("../hilo");
           const game = startHiloGame(ctx.user.id, input.bet);
           recordCasinoGame(ctx.user.id);
           cache.invalidate("casino.leaderboard");
@@ -289,7 +289,7 @@ export const casinoRouter = router({
       guess: protectedProcedure
         .input(z.object({ direction: z.enum(["higher", "lower"]) }))
         .mutation(async ({ ctx, input }) => {
-          const { guessHilo } = await import("./hilo");
+          const { guessHilo } = await import("../hilo");
           try {
             const game = guessHilo(ctx.user.id, input.direction);
             if (game.status === "won" && game.payout > 0) {
@@ -306,7 +306,7 @@ export const casinoRouter = router({
           } catch (err: any) { throw new TRPCError({ code: "BAD_REQUEST", message: err.message }); }
         }),
       cashout: protectedProcedure.mutation(async ({ ctx }) => {
-        const { cashOutHilo } = await import("./hilo");
+        const { cashOutHilo } = await import("../hilo");
         try {
           const game = cashOutHilo(ctx.user.id);
           if (game.payout > 0) {
@@ -321,7 +321,7 @@ export const casinoRouter = router({
         } catch (err: any) { throw new TRPCError({ code: "BAD_REQUEST", message: err.message }); }
       }),
       active: protectedProcedure.query(async ({ ctx }) => {
-        const { getActiveHiloGame } = await import("./hilo");
+        const { getActiveHiloGame } = await import("../hilo");
         return getActiveHiloGame(ctx.user.id);
       }),
     }),
@@ -345,7 +345,7 @@ export const casinoRouter = router({
             const db = await getDb();
             await db.update(portfolios).set({ casinoBalance: (casinoCash - totalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-            const { dropMany } = await import("./plinko");
+            const { dropMany } = await import("../plinko");
             const results = dropMany(input.bet, input.risk, input.count);
             const totalPayout = Math.round(results.reduce((sum, entry) => sum + entry.payout, 0) * 100) / 100;
 
@@ -371,7 +371,7 @@ export const casinoRouter = router({
           }
         }),
       history: publicProcedure.query(async () => {
-        const { getHistory } = await import("./plinko");
+        const { getHistory } = await import("../plinko");
         return getHistory();
       }),
     }),
@@ -388,7 +388,7 @@ export const casinoRouter = router({
             const db = await getDb();
             await db.update(portfolios).set({ casinoBalance: (casinoCash - input.bet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
 
-            const { dealGame } = await import("./blackjack");
+            const { dealGame } = await import("../blackjack");
             const game = dealGame(ctx.user.id, input.bet);
             recordCasinoGame(ctx.user.id);
 
@@ -407,7 +407,7 @@ export const casinoRouter = router({
           });
         }),
       hit: protectedProcedure.mutation(async ({ ctx }) => {
-        const { hitGame } = await import("./blackjack");
+        const { hitGame } = await import("../blackjack");
         try {
           const game = hitGame(ctx.user.id);
           if (game.status === "player_bust") {
@@ -419,7 +419,7 @@ export const casinoRouter = router({
         }
       }),
       stand: protectedProcedure.mutation(async ({ ctx }) => {
-        const { standGame } = await import("./blackjack");
+        const { standGame } = await import("../blackjack");
         try {
           const game = standGame(ctx.user.id);
           if (game.payout > 0) {
@@ -440,7 +440,7 @@ export const casinoRouter = router({
         }
       }),
       double: protectedProcedure.mutation(async ({ ctx }) => {
-        const { doubleDown, getActiveGame: getGame } = await import("./blackjack");
+        const { doubleDown, getActiveGame: getGame } = await import("../blackjack");
         const currentGame = getGame(ctx.user.id);
         if (!currentGame) throw new TRPCError({ code: "BAD_REQUEST", message: "No active game" });
 
@@ -474,7 +474,7 @@ export const casinoRouter = router({
         }
       }),
       split: protectedProcedure.mutation(async ({ ctx }) => {
-        const { splitGame, getActiveGame: getGame, canSplit: checkSplit } = await import("./blackjack");
+        const { splitGame, getActiveGame: getGame, canSplit: checkSplit } = await import("../blackjack");
         const currentGame = getGame(ctx.user.id);
         if (!currentGame) throw new TRPCError({ code: "BAD_REQUEST", message: "No active game" });
 
@@ -504,7 +504,7 @@ export const casinoRouter = router({
         }
       }),
       active: protectedProcedure.query(async ({ ctx }) => {
-        const { getActiveGame: getGame } = await import("./blackjack");
+        const { getActiveGame: getGame } = await import("../blackjack");
         return getGame(ctx.user.id);
       }),
       balance: protectedProcedure.query(async ({ ctx }) => {

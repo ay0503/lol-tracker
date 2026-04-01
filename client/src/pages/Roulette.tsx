@@ -288,7 +288,7 @@ export default function Roulette() {
           <div className="relative p-4 sm:p-5">
             {history && history.length > 0 && (
               <div className="flex gap-1 overflow-x-auto mb-3 pb-0.5 scrollbar-hide">
-                {history.slice(0, 15).map((entry, index) => (
+                {history.slice(0, 15).map((entry: any, index: number) => (
                   <div
                     key={`${entry.timestamp}-${index}`}
                     className={`h-5 w-5 flex-shrink-0 rounded-full ${
