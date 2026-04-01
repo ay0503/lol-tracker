@@ -364,7 +364,8 @@ export default function Casino() {
   const isLoss = visibleStatus === "player_bust" || visibleStatus === "dealer_win";
 
   const activeHandCards = isSplitGame && activeHand === "split" ? ((game as any)?.splitHand as Card[] ?? []) : game?.playerHand ?? [];
-  const canDouble = isPlaying && !!game && activeHandCards.length === 2 && cash >= game.bet;
+  const activeHandBet = isSplitGame && activeHand === "split" ? ((game as any)?.splitBet as number | undefined) ?? game?.bet ?? 0 : game?.bet ?? 0;
+  const canDouble = isPlaying && !!game && activeHandCards.length === 2 && cash >= activeHandBet;
   const canSplitHand = isPlaying && !!game && !isSplitGame && game.playerHand.length === 2 &&
     game.playerHand[0] && game.playerHand[1] &&
     (() => {

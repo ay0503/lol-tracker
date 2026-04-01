@@ -14,6 +14,22 @@ import {
   releaseCasinoLock, DAILY_CASINO_BONUS, TEN_MIN,
 } from "../casinoUtils";
 
+function getBlackjackTotalBet(game: { bet: number; splitBet?: number | null }): number {
+  return game.bet + (game.splitBet ?? 0);
+}
+
+function getBlackjackActiveBet(game: {
+  bet: number;
+  splitBet?: number | null;
+  splitHand?: unknown;
+  activeHand?: "main" | "split";
+}): number {
+  if (game.splitHand && game.activeHand === "split") {
+    return game.splitBet ?? game.bet;
+  }
+  return game.bet;
+}
+
 export const casinoRouter = router({
     crash: router({
       start: protectedProcedure
@@ -410,8 +426,17 @@ export const casinoRouter = router({
         const { hitGame } = await import("../blackjack");
         try {
           const game = hitGame(ctx.user.id);
-          if (game.status === "player_bust") {
-            recordCasinoGameResult(ctx.user.id, "blackjack", game.bet, 0, "loss");
+          if (game.status !== "playing") {
+            if (game.payout > 0) {
+              const portfolio = await getOrCreatePortfolio(ctx.user.id);
+              const db = await getDb();
+              const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
+              await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            }
+            cache.invalidate("casino.leaderboard");
+            const totalBet = getBlackjackTotalBet(game);
+            const mult = game.payout > 0 ? game.payout / totalBet : 0;
+            recordCasinoGameResult(ctx.user.id, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
           }
           return game;
         } catch (err: any) {
@@ -423,17 +448,20 @@ export const casinoRouter = router({
         try {
           const game = standGame(ctx.user.id);
           if (game.payout > 0) {
-            const { getDb } = await import("./db");
+            const { getDb } = await import("../db");
             const db = await getDb();
-            const { portfolios } = await import("../drizzle/schema");
+            const { portfolios } = await import("../../drizzle/schema");
             const { eq } = await import("drizzle-orm");
             const portfolio = await getOrCreatePortfolio(ctx.user.id);
             const newCasino = parseFloat(portfolio.casinoBalance ?? "0") + game.payout;
             await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           }
           cache.invalidate("casino.leaderboard");
-          const mult = game.payout > 0 ? game.payout / game.bet : 0;
-          recordCasinoGameResult(ctx.user.id, "blackjack", game.bet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+          if (game.status !== "playing") {
+            const totalBet = getBlackjackTotalBet(game);
+            const mult = game.payout > 0 ? game.payout / totalBet : 0;
+            recordCasinoGameResult(ctx.user.id, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+          }
           return game;
         } catch (err: any) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -446,15 +474,15 @@ export const casinoRouter = router({
 
         const portfolio = await getOrCreatePortfolio(ctx.user.id);
         const casinoCash = parseFloat(portfolio.casinoBalance ?? "20.00");
-        const additionalBet = currentGame.bet;
+        const additionalBet = getBlackjackActiveBet(currentGame);
         if (additionalBet > casinoCash) throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient casino cash to double down. Need $${additionalBet.toFixed(2)}.` });
 
         try {
           const game = doubleDown(ctx.user.id);
 
-          const { getDb } = await import("./db");
+          const { getDb } = await import("../db");
           const db = await getDb();
-          const { portfolios } = await import("../drizzle/schema");
+          const { portfolios } = await import("../../drizzle/schema");
           const { eq } = await import("drizzle-orm");
           await db.update(portfolios).set({ casinoBalance: (casinoCash - additionalBet).toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
           if (game.payout > 0) {
@@ -464,7 +492,7 @@ export const casinoRouter = router({
           }
           cache.invalidate("casino.leaderboard");
           if (game.status !== "playing") {
-            const totalBet = game.bet; // doubled bet is already included
+            const totalBet = getBlackjackTotalBet(game);
             const mult = game.payout > 0 ? game.payout / totalBet : 0;
             recordCasinoGameResult(ctx.user.id, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
           }
@@ -494,7 +522,12 @@ export const casinoRouter = router({
 
           // If split resolved immediately (split aces), record result
           if (game.status !== "playing") {
-            const totalBet = game.bet + (game.splitBet ?? 0);
+            if (game.payout > 0) {
+              const freshPortfolio = await getOrCreatePortfolio(ctx.user.id);
+              const newCasino = parseFloat(freshPortfolio.casinoBalance ?? "0") + game.payout;
+              await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, ctx.user.id));
+            }
+            const totalBet = getBlackjackTotalBet(game);
             const mult = game.payout > 0 ? game.payout / totalBet : 0;
             recordCasinoGameResult(ctx.user.id, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
           }
