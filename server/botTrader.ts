@@ -15,7 +15,7 @@ import { ENV } from "./_core/env";
 import {
   getOrCreatePortfolio, getUserHoldings, executeTrade, executeShort,
   executeCover, postComment, getRecentMatchesFromDB, getPriceHistory,
-  getLatestPrice, getDb,
+  getLatestPrice, getDb, getRawClient,
 } from "./db";
 import { computeAllETFPricesSync, TICKERS, type Ticker } from "./etfPricing";
 import { cache } from "./cache";
@@ -27,8 +27,50 @@ import { eq } from "drizzle-orm";
 const BOT_DISPLAY_NAME = "QuantBot 🤖";
 const BOT_OPEN_ID = "bot_quanttrader_001";
 const BOT_STARTING_CASH = 200;
-const BOT_TRADE_COOLDOWN_MS = 10 * 60 * 1000; // 10 min between trades
+const BOT_TRADE_COOLDOWN_MS = 20 * 60 * 1000; // 20 min between trades
 let lastBotTradeTime = 0;
+
+// ─── Decision Logging ───
+async function ensureBotLogTable() {
+  try {
+    const client = getRawClient();
+    await client.execute(`CREATE TABLE IF NOT EXISTS bot_decision_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      ticker TEXT NOT NULL,
+      amount REAL NOT NULL,
+      reasoning TEXT NOT NULL,
+      sentiment TEXT,
+      confidence INTEGER,
+      prompt TEXT,
+      source TEXT NOT NULL,
+      success INTEGER,
+      resultMessage TEXT,
+      createdAt TEXT DEFAULT (datetime('now'))
+    )`);
+  } catch { /* ignore */ }
+}
+ensureBotLogTable();
+
+async function logBotDecision(
+  decision: TradeDecision,
+  source: "llm" | "fallback",
+  prompt: string | null,
+  success: boolean,
+  resultMessage: string,
+) {
+  try {
+    const client = getRawClient();
+    await client.execute({
+      sql: `INSERT INTO bot_decision_log (action, ticker, amount, reasoning, sentiment, confidence, prompt, source, success, resultMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        decision.action, decision.ticker, decision.amount,
+        decision.reasoning, decision.sentiment, decision.confidence,
+        prompt, source, success ? 1 : 0, resultMessage,
+      ],
+    });
+  } catch { /* table may not exist */ }
+}
 
 
 
@@ -668,17 +710,28 @@ export async function runBotTrader(): Promise<boolean> {
     const hasLLM = !!(ENV.openaiApiUrl && ENV.openaiApiKey);
 
     let decision: TradeDecision;
+    let source: "llm" | "fallback";
+    const prompt = buildAnalysisPrompt(marketData);
+
     if (hasLLM) {
       decision = await getAIDecision(marketData);
+      source = decision.confidence > 0 ? "llm" : "fallback"; // confidence=0 means LLM failed → fallback hold
     } else {
       decision = getFallbackDecision(marketData);
+      source = "fallback";
     }
 
-    if (decision.action === "hold") return false;
+    // Log all decisions (including holds) for audit trail
+    if (decision.action === "hold") {
+      logBotDecision(decision, source, prompt, true, "Hold — no trade");
+      return false;
+    }
 
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
+    logBotDecision(decision, source, prompt, result.success, result.message);
+
     if (result.success) {
-      lastBotTradeTime = now; // Only update cooldown on successful trade
+      lastBotTradeTime = now;
       console.log(`[Bot] ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} → ✅ ${result.message}`);
     }
 

@@ -1346,6 +1346,32 @@ export const appRouter = router({
       return { traded, botUserId: botId };
     }),
 
+    /** View bot decision log */
+    botLog: adminProcedure
+      .input(z.object({ limit: z.number().min(1).max(100).default(20) }).optional())
+      .query(async ({ input }) => {
+        try {
+          const client = getRawClient();
+          const result = await client.execute({
+            sql: `SELECT id, action, ticker, amount, reasoning, sentiment, confidence, source, success, resultMessage, createdAt FROM bot_decision_log ORDER BY id DESC LIMIT ?`,
+            args: [input?.limit ?? 20],
+          });
+          return (result.rows as any[]).map(row => ({
+            id: Number(row.id),
+            action: String(row.action),
+            ticker: String(row.ticker),
+            amount: Number(row.amount),
+            reasoning: String(row.reasoning),
+            sentiment: String(row.sentiment),
+            confidence: Number(row.confidence),
+            source: String(row.source),
+            success: Number(row.success) === 1,
+            resultMessage: row.resultMessage ? String(row.resultMessage) : null,
+            createdAt: String(row.createdAt),
+          }));
+        } catch { return []; }
+      }),
+
     /** Get table schema (column info) */
     tableSchema: adminProcedure
       .input(z.object({ table: z.string() }))
