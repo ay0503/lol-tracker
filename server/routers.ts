@@ -37,7 +37,31 @@ import {
   THIRTY_MIN, TEN_MIN, FIVE_MIN, TWO_MIN, ONE_MIN, DAILY_CASINO_BONUS,
 } from "./casinoUtils";
 
-// Casino utilities imported from ./casinoUtils
+// ─── Auth Rate Limiting ───
+const authAttempts = new Map<string, { count: number; resetAt: number }>();
+const AUTH_WINDOW_MS = 15 * 60 * 1000; // 15 min
+const AUTH_MAX_ATTEMPTS = 10; // max 10 attempts per 15 min per IP
+
+function checkAuthRateLimit(req: any): void {
+  const ip = req.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
+  const now = Date.now();
+  const entry = authAttempts.get(ip);
+  if (entry && now < entry.resetAt) {
+    if (entry.count >= AUTH_MAX_ATTEMPTS) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many login attempts. Try again later." });
+    }
+    entry.count++;
+  } else {
+    authAttempts.set(ip, { count: 1, resetAt: now + AUTH_WINDOW_MS });
+  }
+}
+// Clean up stale entries every 30 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of Array.from(authAttempts.entries())) {
+    if (now >= entry.resetAt) authAttempts.delete(ip);
+  }
+}, 30 * 60 * 1000);
 
 
 export const appRouter = router({
@@ -60,6 +84,7 @@ export const appRouter = router({
         displayName: z.string().min(1).max(50),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkAuthRateLimit(ctx.req);
         const existing = await getUserByEmail(input.email);
         if (existing && existing.passwordHash) {
           throw new TRPCError({ code: "CONFLICT", message: "Unable to create account. Please try logging in instead." });
@@ -90,6 +115,7 @@ export const appRouter = router({
         password: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
+        checkAuthRateLimit(ctx.req);
         const user = await getUserByEmail(input.email);
         if (!user || !user.passwordHash) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
@@ -646,7 +672,10 @@ export const appRouter = router({
         sentiment: z.enum(["bullish", "bearish", "neutral"]).default("neutral"),
       }))
       .mutation(async ({ ctx, input }) => {
-        await postComment(ctx.user.id, input.content, input.ticker, input.sentiment);
+        // Sanitize: strip HTML tags and control characters
+        const sanitized = input.content.replace(/<[^>]*>/g, "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "").trim();
+        if (!sanitized) throw new TRPCError({ code: "BAD_REQUEST", message: "Comment cannot be empty" });
+        await postComment(ctx.user.id, sanitized, input.ticker, input.sentiment);
         cache.invalidatePrefix("comments.");
         return { success: true };
       }),
@@ -671,7 +700,8 @@ export const appRouter = router({
         if (input.commentIds.length === 0) return {};
         const client = getRawClient();
         try {
-          const result = await client.execute({ sql: `SELECT commentId, type, COUNT(*) as count FROM comment_reactions WHERE commentId IN (${input.commentIds.join(",")}) GROUP BY commentId, type`, args: [] });
+          const placeholders = input.commentIds.map(() => "?").join(",");
+          const result = await client.execute({ sql: `SELECT commentId, type, COUNT(*) as count FROM comment_reactions WHERE commentId IN (${placeholders}) GROUP BY commentId, type`, args: input.commentIds });
           const map: Record<number, Record<string, number>> = {};
           for (const row of result.rows as any[]) {
             const cid = Number(row.commentId);
@@ -687,7 +717,8 @@ export const appRouter = router({
         if (input.commentIds.length === 0) return {};
         const client = getRawClient();
         try {
-          const result = await client.execute({ sql: `SELECT commentId, type FROM comment_reactions WHERE userId = ? AND commentId IN (${input.commentIds.join(",")})`, args: [ctx.user.id] });
+          const placeholders2 = input.commentIds.map(() => "?").join(",");
+          const result = await client.execute({ sql: `SELECT commentId, type FROM comment_reactions WHERE userId = ? AND commentId IN (${placeholders2})`, args: [ctx.user.id, ...input.commentIds] });
           const map: Record<number, string[]> = {};
           for (const row of result.rows as any[]) {
             const cid = Number(row.commentId);
