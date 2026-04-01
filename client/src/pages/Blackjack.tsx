@@ -567,7 +567,7 @@ export default function Casino() {
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>
-                          {game.playerHand.map((card, index) => (
+                          {game.playerHand.map((card: Card, index: number) => (
                             <CardDisplay key={`p1-${index}`} card={card} index={index} isNew={false} />
                           ))}
                         </AnimatePresence>
@@ -606,7 +606,7 @@ export default function Casino() {
                     </div>
                     <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
                       <AnimatePresence>
-                        {game ? game.playerHand.map((card, index) => (
+                        {game ? game.playerHand.map((card: Card, index: number) => (
                           <CardDisplay key={`p-${index}`} card={card} index={index} isNew={index >= prevPlayerCards} />
                         )) : <PlaceholderCards />}
                       </AnimatePresence>

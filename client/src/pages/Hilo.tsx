@@ -120,7 +120,7 @@ export default function Hilo() {
             {/* Card History */}
             {game && game.history.length > 0 && (
               <div className="flex gap-1.5 overflow-x-auto mb-4 pb-1 scrollbar-hide">
-                {game.history.map((card, idx) => (
+                {game.history.map((card: any, idx: number) => (
                   <div key={idx} className="flex-shrink-0 w-8 h-11 rounded bg-white/10 border border-white/20 flex items-center justify-center">
                     <span className={`text-[10px] font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-white"}`}>
                       {card.label}

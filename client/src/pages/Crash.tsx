@@ -379,7 +379,7 @@ export default function Crash() {
         {/* History pills */}
         {history && history.length > 0 && (
           <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-hide">
-            {history.slice(0, 12).map((h, i) => (
+            {history.slice(0, 12).map((h: any, i: number) => (
               <CrashPill key={i} point={h.crashPoint} won={h.cashedOut} />
             ))}
           </div>

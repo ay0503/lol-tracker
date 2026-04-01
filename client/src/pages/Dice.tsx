@@ -104,7 +104,7 @@ export default function Dice() {
             {/* Results Strip */}
             {history && history.length > 0 && (
               <div className="flex gap-1 overflow-x-auto mb-3 pb-0.5 scrollbar-hide">
-                {history.slice(0, 15).map((rr, idx) => (
+                {history.slice(0, 15).map((rr: any, idx: number) => (
                   <div key={idx} className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-mono font-bold ${rr.won ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
                     {rr.roll.toFixed(0)}
                   </div>
