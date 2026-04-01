@@ -738,36 +738,54 @@ async function generateMemeNews(
   const kda = `${kills}/${deaths}/${assists}`;
   const minutes = Math.floor(gameDuration / 60);
 
-  const prompt = `You are a financial news writer for a meme stock trading platform. The stock $DORI tracks a League of Legends player named "목도리 도마뱀" (dori).
+  // Situation tags for the LLM
+  const situationTags: string[] = [];
+  if (deaths === 0 && kills >= 5) situationTags.push("FLAWLESS GAME — zero deaths, absolute perfection");
+  if (kills >= 10 && deaths <= 3) situationTags.push("HARD CARRY — CEO 1v9'd this lobby");
+  if (deaths >= 10) situationTags.push("FULL INT — CEO literally ran it down, this is a disaster of epic proportions");
+  if (deaths >= 8) situationTags.push("FEEDING — CEO was a walking bag of gold for the enemy team");
+  if (kills === 0 && assists <= 2) situationTags.push("AFK ENERGY — CEO may have been alt-tabbed the entire game");
+  if (minutes <= 20) situationTags.push("SPEEDRUN FF — game ended embarrassingly fast");
+  if (minutes >= 35) situationTags.push("MARATHON — CEO held everyone hostage for way too long");
 
-Generate ONE extremely funny, memey financial news headline and a short body (2-3 sentences) about this match result:
+  const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "목도리 도마뱀" (dori). This is a fake trading platform and you are the news desk.
 
+YOUR VIBE: You write like a deranged r/wallstreetbets poster who also works at Bloomberg. Think loss porn captions, gain screenshots titles, Michael Reeves energy, maximum brainrot. You ARE the shitpost. Financial jargon meets League of Legends meets pure unhinged internet humor.
+
+MATCH DATA:
 - Champion: ${champion}
-- Result: ${win ? "WIN" : "LOSS"}
-- KDA: ${kda}
+- Result: ${win ? "WIN ✅" : "LOSS ❌"}
+- KDA: ${kda} (${kills} kills, ${deaths} deaths, ${assists} assists)
 - CS: ${cs}
 - Position: ${position}
 - Game Duration: ${minutes} minutes
-- Stock Price: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${pctChange}%)
+- $DORI Price: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${pctChange}%)
+${situationTags.length > 0 ? `- SITUATION: ${situationTags.join(". ")}` : ""}
 
-Rules:
-- Write like a Bloomberg/CNBC headline but make it absurdly funny
-- Reference the champion, KDA, and result
-- Use financial jargon mixed with League of Legends terms
-- If it's a loss with many deaths, be extra dramatic (market crash, SEC investigation, etc.)
-- If it's a win, be overly bullish (moon, rocket, institutional investors, etc.)
-- If KDA is terrible (like 0/10), make it catastrophic news
-- If KDA is great, make it sound like the greatest trade ever
-- Keep the headline under 120 characters
-- Keep the body under 200 characters
-- Be creative, sarcastic, and hilarious
+EXAMPLES OF THE ENERGY WE WANT:
+- "CIRCUIT BREAKER: $DORI halted after CEO speedruns 12 deaths on Yasuo. Bagholders in tears."
+- "$DORI CEO goes 0/8 on Vayne. NYSE considering permanent delisting."
+- "Jump Trading's algo briefly achieved consciousness to buy more $DORI. CEO ${kda} on ${champion}."
+- "$DORI prints tendies after CEO's 15/2 Jinx carry. Wife's boyfriend impressed."
+- "SEC halts trading on $DORI after CEO's 11/0 Katarina is 'too good to be real'"
+- "Scale AI offers CEO a labeling job. 'Similar output, better pay.' 0/4/1 on Lux."
 
-Respond in JSON format: { "headline": "...", "body": "..." }`;
+RULES:
+- Headline: under 130 chars, ALL CAPS energy but not literally all caps, must reference ${champion} and the KDA
+- Body: 1-2 sentences, under 200 chars, add extra detail/joke
+- Mix Wall Street jargon with League terms naturally
+- Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB.
+- Reference real companies/people sometimes (Jump Trading, Citadel, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Goldman Sachs)
+- If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
+- If kills are high: make it sound like the greatest investment thesis ever conceived
+- DO NOT be generic or boring. Every headline should make someone laugh out loud.
+
+Respond in JSON: { "headline": "...", "body": "..." }`;
 
   try {
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: "You are a comedic financial news AI. Always respond with valid JSON." },
+        { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who just discovered League of Legends. Pure comedy. Always valid JSON." },
         { role: "user", content: prompt },
       ],
       response_format: {
@@ -861,7 +879,7 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
     ];
     bodies = [
       `High kill participation on ${champion} shows CEO is "locked in." Portfolio managers taking notice. ${kda} in ${minutes} minutes.`,
-      `CEO's ${champion} game was what analysts call "fundamentally sound." ${kda}. Buying pressure intensifies.`,
+      `CEO's ${champion} game made Jim Cramer cry on live TV. ${kda}. He's bullish now. (Inverse Cramer says sell.)`,
       `Scale AI's data labelers unanimously tagged this game as "cracked." Meta's AI models can't replicate it.`,
     ];
   } else if (win) {
@@ -869,20 +887,20 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `$DORI closes green: ${champion} ${kda} dub. Not a lot but it's honest work.`,
       `$DORI edges up ${pctChange}% after CEO secures the W on ${champion}. ${kda}.`,
       `$DORI bulls eating good tonight. CEO ${kda} on ${champion}. Steak's on me.`,
-      `$DORI quarterly earnings beat expectations: CEO's ${champion} ${kda} delivers shareholder value.`,
+      `$DORI earnings call just dropped: CEO ${kda} on ${champion}. "Shareholder value" is what we're calling kills now.`,
       `$DORI wins again. ${champion} ${kda}. At this point shorts are just donating money.`,
       `$DORI CEO brings home the dub on ${champion}. ${kda}. Slow and steady wins the race. JK GO FAST.`,
       `Another day another $DORI W. ${champion} ${kda}. We literally can't stop winning.`,
-      `$DORI: "We see continued momentum." CEO goes ${kda} on ${champion}. Stock up ${pctChange}%.`,
+      `$DORI CEO ${kda} on ${champion}. Portfolio looking thicker than a bowl of oatmeal. +${pctChange}%.`,
       `Jump Trading maintains "accumulate" rating on $DORI after ${champion} ${kda} win`,
       `Meta employees seen placing $DORI limit orders during all-hands. CEO ${kda} on ${champion}.`,
       `Scale AI's Slack is 90% $DORI memes after CEO's ${kda} ${champion} dub. Productivity tanked. Morale ATH.`,
       `$DORI CEO ${kda} on ${champion}. Jump Trading's head of research: "Our models predicted this."`,
     ];
     bodies = [
-      `A solid ${kda} on ${champion} in ${minutes} minutes. Nothing fancy, just consistent alpha generation. This is what the DD predicted.`,
-      `CEO's ${champion} win adds to $DORI's bullish thesis. ${kda}. Accumulation zone identified.`,
-      `$DORI shareholders remain cautiously optimistic after a ${kda} ${champion} victory. Tendies loading...`,
+      `CEO ${kda} on ${champion} in ${minutes} min. Not flashy but my portfolio doesn't care about flashy. It cares about WINNING. LFG.`,
+      `${kda} on ${champion}. My wife left me but at least $DORI is green. This is what financial freedom looks like. Kind of.`,
+      `$DORI holders inhaling copium turned hopium after CEO's ${kda} ${champion} win. Tendies are PRINTING.`,
       `Jump Trading's prop desk quietly adding to their position. Meta interns building a $DORI tracker as a hackathon project. Scale AI offering equity swaps.`,
     ];
   } else if (isInter) {
@@ -987,8 +1005,8 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
     ];
     bodies = [
       `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
-      `CEO's ${champion} game disappointed investors. ${kda}. Time to reassess the bull thesis. Or cope. Probably cope.`,
-      `${kda} on ${champion}. Not the worst we've seen. But definitely not what the prospectus promised.`,
+      `CEO's ${champion} game has me questioning every life decision that led to buying $DORI. ${kda}. I deserve this.`,
+      `${kda} on ${champion}. I showed my portfolio to my therapist. She started crying too. We're both holding though.`,
       `Jump Trading's morning standup spent 20 minutes discussing this ${champion} loss. Scale AI's Slack channel is pure copium. Meta's stock sympathy-dropped 0.01%.`,
     ];
   }
