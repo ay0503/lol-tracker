@@ -796,24 +796,157 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
     console.error("[News] LLM generation failed:", err);
   }
 
-  // Fallback: generate a simple headline without LLM
-  const fallbackHeadlines = win
-    ? [
-        `BREAKING: $DORI rallies ${pctChange}% after ${champion} ${kda} victory`,
-        `$DORI bulls rejoice as CEO goes ${kda} on ${champion}, stock surges`,
-        `Analysts upgrade $DORI to "Strong Buy" after ${champion} carry performance`,
-      ]
-    : [
-        `MARKET CRASH: $DORI plunges after CEO goes ${kda} on ${champion}`,
-        `$DORI shareholders in shambles as ${champion} performance disappoints`,
-        `SEC investigating $DORI after suspicious ${kda} ${champion} game`,
-      ];
+  // Fallback: situation-aware WSB-style templates
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+  const isFeeding = deaths >= 8;
+  const isCarry = kills >= 10 && deaths <= 3;
+  const isPerfect = deaths === 0 && kills >= 5;
+  const isInter = deaths >= 10;
+  const isUseless = kills === 0 && assists <= 2;
+  const isLongGame = minutes >= 35;
+  const isFF = minutes <= 20;
+  const isHighKP = (kills + assists) >= 20;
 
-  const headline = fallbackHeadlines[Math.floor(Math.random() * fallbackHeadlines.length)];
-  const body = win
-    ? `Investors celebrate as $DORI CEO delivers a ${kda} performance on ${champion} in ${minutes} minutes. Institutional buying intensifies.`
-    : `$DORI stock tumbles after CEO's ${kda} ${champion} game lasting ${minutes} minutes. Short sellers rejoice.`;
+  let headlines: string[];
+  let bodies: string[];
 
+  if (win && isPerfect) {
+    headlines = [
+      `$DORI TO THE MOON: CEO goes DEATHLESS ${kda} on ${champion}. Hedgies in shambles.`,
+      `BREAKING: $DORI CEO achieves perfection. ${kda} ${champion}. Shorts liquidated.`,
+      `$DORI GAMMA SQUEEZE IMMINENT after ${champion} ${kda} flawless game. Diamond hands rewarded.`,
+      `SEC halts trading on $DORI after CEO's ${kda} ${champion} is "too good to be real"`,
+      `$DORI hits all-time high. CEO ${kda} on ${champion}. Cathie Wood seen buying.`,
+      `URGENT: $DORI bears found dead in ditch after ${champion} ${kda} perfection`,
+    ];
+    bodies = [
+      `Zero deaths. ${kills} kills. This is what peak performance looks like. Every short seller is currently on the phone with their therapist.`,
+      `Institutional investors are scrambling to increase positions after this flawless ${champion} performance. "I've never seen anything like it," says Goldman analyst.`,
+      `Reddit's r/wallstreetbets unanimously declares $DORI "the play of the century" after CEO's untouchable ${champion} game.`,
+    ];
+  } else if (win && isCarry) {
+    headlines = [
+      `$DORI surges ${pctChange}% as CEO 1v9s on ${champion}. ${kda}. Absolutely disgusting.`,
+      `BREAKING: $DORI CEO goes nuclear on ${champion}. ${kda}. Bears in body bags.`,
+      `$DORI prints tendies after CEO's ${kda} ${champion} carry. Wife's boyfriend impressed.`,
+      `$DORI stock breaks resistance after ${champion} ${kda} hard carry. Apes together strong.`,
+      `Citadel scrambles to cover $DORI shorts after CEO's ${kda} ${champion} performance`,
+      `$DORI bull thesis confirmed: CEO smurfs on ${champion} with ${kda}. Not financial advice btw.`,
+      `ALERT: $DORI CEO just ${kda}'d the entire enemy team on ${champion}. We're all gonna make it.`,
+    ];
+    bodies = [
+      `CEO went absolutely feral on ${champion} — ${kills} kills in ${minutes} minutes. Short interest just evaporated. This stock is the future.`,
+      `"This is the greatest trade I've ever seen," says retail investor who bought at the top. ${kda} on ${champion}. Gains are gains.`,
+      `Wall Street analysts upgrading $DORI from "Overweight" to "BUY EVERYTHING" after this ${champion} masterclass.`,
+    ];
+  } else if (win && isHighKP) {
+    headlines = [
+      `$DORI rallies as CEO participates in ${kills + assists} kills on ${champion}. Team player energy.`,
+      `$DORI green candle: CEO's ${kda} ${champion} shows "strong fundamentals"`,
+      `Bullish on $DORI: CEO goes ${kda} on ${champion}. Jim Cramer in shambles.`,
+    ];
+    bodies = [
+      `High kill participation on ${champion} shows CEO is "locked in." Portfolio managers taking notice. ${kda} in ${minutes} minutes.`,
+      `CEO's ${champion} game was what analysts call "fundamentally sound." ${kda}. Buying pressure intensifies.`,
+    ];
+  } else if (win) {
+    headlines = [
+      `$DORI closes green: ${champion} ${kda} dub. Not a lot but it's honest work.`,
+      `$DORI edges up ${pctChange}% after CEO secures the W on ${champion}. ${kda}.`,
+      `$DORI bulls eating good tonight. CEO ${kda} on ${champion}. Steak's on me.`,
+      `$DORI quarterly earnings beat expectations: CEO's ${champion} ${kda} delivers shareholder value.`,
+      `$DORI wins again. ${champion} ${kda}. At this point shorts are just donating money.`,
+      `$DORI CEO brings home the dub on ${champion}. ${kda}. Slow and steady wins the race. JK GO FAST.`,
+      `Another day another $DORI W. ${champion} ${kda}. We literally can't stop winning.`,
+      `$DORI: "We see continued momentum." CEO goes ${kda} on ${champion}. Stock up ${pctChange}%.`,
+    ];
+    bodies = [
+      `A solid ${kda} on ${champion} in ${minutes} minutes. Nothing fancy, just consistent alpha generation. This is what the DD predicted.`,
+      `CEO's ${champion} win adds to $DORI's bullish thesis. ${kda}. Accumulation zone identified.`,
+      `$DORI shareholders remain cautiously optimistic after a ${kda} ${champion} victory. Tendies loading...`,
+    ];
+  } else if (isInter) {
+    headlines = [
+      `CIRCUIT BREAKER: $DORI halted after CEO speedruns ${deaths} deaths on ${champion}. ${kda}.`,
+      `$DORI -${pctChange.replace("-", "")}%: CEO goes ${kda} on ${champion}. Straight to jail.`,
+      `BREAKING: $DORI CEO under investigation for potential match fixing. ${kda} on ${champion}.`,
+      `$DORI flash crash: CEO runs it down ${deaths} times on ${champion}. Bagholders in tears.`,
+      `$DORI shareholders file class action after CEO's ${kda} ${champion} game. "This was intentional."`,
+      `MAYDAY MAYDAY: $DORI CEO ${kda} on ${champion}. This is not a drill. Sell everything.`,
+      `$DORI CEO ${kda} on ${champion}. NYSE considering permanent delisting.`,
+      `AMBER ALERT: $DORI CEO's dignity last seen before ${kda} ${champion} game`,
+    ];
+    bodies = [
+      `${deaths} deaths in ${minutes} minutes on ${champion}. Congress is scheduling hearings. Nancy Pelosi seen panic selling. This is the worst day in $DORI history.`,
+      `CEO's ${kda} performance on ${champion} has triggered every stop-loss in existence. Margin calls going out as we speak. GG FF at 15.`,
+      `"I've never seen anything this bad," says veteran analyst. ${kda} on ${champion}. Even the bots are selling.`,
+    ];
+  } else if (isFeeding) {
+    headlines = [
+      `$DORI tumbles as CEO goes ${kda} on ${champion}. Wendy's applications open.`,
+      `$DORI bears feast: CEO's ${kda} ${champion} game is "concerning" say analysts.`,
+      `$DORI red day: ${champion} ${kda}. CEO's mom calling to ask if they're okay.`,
+      `SELL RATING: $DORI CEO goes ${kda} on ${champion}. "We've seen enough." - JP Morgan`,
+      `$DORI dips after CEO feeds ${deaths} kills on ${champion}. Loss porn incoming.`,
+      `$DORI CEO's ${kda} ${champion} game classified as a "humanitarian crisis" by the UN`,
+    ];
+    bodies = [
+      `${deaths} deaths on ${champion} in ${minutes} minutes. Analysts downgrading from "Buy" to "Have you considered index funds?"`,
+      `CEO's ${champion} performance triggered 47 stop-losses. Short sellers sending thank you cards. ${kda}.`,
+      `"I am once again asking for my money back," says every $DORI investor after ${kda} on ${champion}.`,
+    ];
+  } else if (!win && isUseless) {
+    headlines = [
+      `$DORI slumps: CEO goes AFK mentally on ${champion}. ${kda}. Did they even play?`,
+      `$DORI CEO ${kda} on ${champion}. Sources say they were watching Netflix the whole time.`,
+      `$DORI underperforms: CEO's ${kda} ${champion} was "uninspiring" — Goldman Sachs`,
+      `$DORI CEO achieves nothing on ${champion}. ${kda}. Shareholders demand drug test.`,
+    ];
+    bodies = [
+      `${kda} on ${champion} in ${minutes} minutes. CEO reportedly alt-tabbed to check $DORI stock price mid-game. It did not help.`,
+      `Zero impact detected. CEO's ${champion} was invisible. ${kda}. The team forgot they had a 5th player.`,
+    ];
+  } else if (!win && isFF) {
+    headlines = [
+      `BREAKING: $DORI speedrun collapse. ${champion} ${kda}. Game over in ${minutes} min. FF@15.`,
+      `$DORI implodes in record time: CEO's ${champion} goes ${kda}. Fastest L in history.`,
+      `$DORI flash crash: ${minutes}-minute ${champion} loss. ${kda}. "Not even close" — no one.`,
+      `$DORI CEO surrenders at ${minutes} min on ${champion}. ${kda}. White flag energy.`,
+    ];
+    bodies = [
+      `Game lasted ${minutes} minutes. That's less time than it takes to microwave a Hot Pocket. ${kda} on ${champion}. Down bad.`,
+      `CEO's ${champion} game ended so fast the price chart looks like a cliff. ${kda}. Early FF = early bed.`,
+    ];
+  } else if (!win && isLongGame) {
+    headlines = [
+      `$DORI bleeds for ${minutes} min before dying: CEO ${kda} on ${champion}. Slow painful death.`,
+      `$DORI CEO edged shareholders for ${minutes} minutes then lost. ${champion} ${kda}. Emotional damage.`,
+      `BREAKING: $DORI CEO wastes ${minutes} minutes of everyone's life on ${champion}. ${kda}.`,
+    ];
+    bodies = [
+      `${minutes} minutes of hope, all for nothing. ${kda} on ${champion}. This is what diamond handing a -99% position feels like.`,
+      `CEO fought for ${minutes} minutes on ${champion} — ${kda} — but in the end, the market always wins. And today the market was the enemy nexus.`,
+    ];
+  } else {
+    headlines = [
+      `$DORI dips: CEO ${kda} on ${champion}. Not great, not terrible. Actually pretty terrible.`,
+      `$DORI closes red after ${champion} ${kda} loss. Tomorrow's another day. Probably red too.`,
+      `$DORI CEO goes ${kda} on ${champion}. Stock drops. Sun rises. Water is wet.`,
+      `$DORI L: ${champion} ${kda}. CEO asks "is this the bottom?" Narrator: it was not the bottom.`,
+      `$DORI takes the L. ${champion} ${kda}. "I'll make it back tomorrow" - CEO (every day)`,
+      `$DORI down ${pctChange}%. CEO's ${kda} ${champion} blamed. Thoughts and prayers for holders.`,
+      `$DORI CEO ${kda} on ${champion}. Loss. The chart is starting to look like my credit score.`,
+      `Rough day for $DORI: ${champion} ${kda}. CEO says "just a dip." Portfolio says otherwise.`,
+    ];
+    bodies = [
+      `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
+      `CEO's ${champion} game disappointed investors. ${kda}. Time to reassess the bull thesis. Or cope. Probably cope.`,
+      `${kda} on ${champion}. Not the worst we've seen. But definitely not what the prospectus promised.`,
+    ];
+  }
+
+  const headline = pick(headlines);
+  const body = pick(bodies);
   return { headline, body };
 }
 
