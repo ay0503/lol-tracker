@@ -71,13 +71,18 @@ export async function notifyNewMatch(
   price: number,
   gameDuration: number,
   cs: number,
+  newsArticle?: { headline: string; body: string } | null,
 ): Promise<void> {
   const emoji = win ? "✅" : "❌";
   const minutes = Math.floor(gameDuration / 60);
   const seconds = gameDuration % 60;
-  await sendMessage(
-    `${emoji} **${champion}** ${kda} | ${cs}CS | ${minutes}:${seconds.toString().padStart(2, "0")} — ${win ? "Victory" : "Defeat"} | $DORI: **$${price.toFixed(2)}**`
-  );
+  const matchLine = `${emoji} **${champion}** ${kda} | ${cs}CS | ${minutes}:${seconds.toString().padStart(2, "0")} — ${win ? "Victory" : "Defeat"} | $DORI: **$${price.toFixed(2)}**`;
+
+  if (newsArticle) {
+    await sendMessage(`${matchLine}\n\n📰 **${newsArticle.headline}**\n${newsArticle.body}`);
+  } else {
+    await sendMessage(matchLine);
+  }
 }
 
 export async function notifyRankChange(

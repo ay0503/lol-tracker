@@ -422,8 +422,9 @@ export async function pollNow(): Promise<PollResult> {
         }
 
         // 5. Generate AI meme news
+        let newsHeadline: { headline: string; body: string } | null = null;
         try {
-          const newsHeadline = await generateMemeNews(
+          newsHeadline = await generateMemeNews(
             participant.championName,
             participant.win,
             participant.kills,
@@ -453,12 +454,13 @@ export async function pollNow(): Promise<PollResult> {
           result.errors.push(`News gen error for ${matchId}: ${err.message}`);
         }
 
-        // Discord: notify new match result
+        // Discord: notify new match result with news article
         notifyNewMatch(
           participant.championName, participant.win,
           `${participant.kills}/${participant.deaths}/${participant.assists}`,
           price, match.info.gameDuration,
           participant.totalMinionsKilled + participant.neutralMinionsKilled,
+          newsHeadline,
         );
 
         // Resolve pending bets against this match result
@@ -765,20 +767,25 @@ ${situationTags.length > 0 ? `- SITUATION: ${situationTags.join(". ")}` : ""}
 EXAMPLES OF THE ENERGY WE WANT:
 - "CIRCUIT BREAKER: $DORI halted after CEO speedruns 12 deaths on Yasuo. Bagholders in tears."
 - "$DORI CEO goes 0/8 on Vayne. NYSE considering permanent delisting."
-- "Jump Trading's algo briefly achieved consciousness to buy more $DORI. CEO ${kda} on ${champion}."
+- "Jump Trading's algo briefly achieved consciousness to buy more $DORI."
 - "$DORI prints tendies after CEO's 15/2 Jinx carry. Wife's boyfriend impressed."
 - "SEC halts trading on $DORI after CEO's 11/0 Katarina is 'too good to be real'"
 - "Scale AI offers CEO a labeling job. 'Similar output, better pay.' 0/4/1 on Lux."
+- "$DORI CEO 0/10 on Yasuo. DC갤: '이건 범죄다' 금감원 조사 착수."
+- "ㅋㅋㅋ CEO 15/2 역대급 캐리. 한국 갤: '존버는 승리한다' 인증 완료."
+- "$DORI 망했다 — CEO 2/9 on Vayne. 네이버 실검 1위: '도리 주식 환불'"
 
 RULES:
-- Headline: under 130 chars, ALL CAPS energy but not literally all caps, must reference ${champion} and the KDA
-- Body: 1-2 sentences, under 200 chars, add extra detail/joke
+- Headline: under 140 chars, ALL CAPS energy but not literally all caps, must reference ${champion} and the KDA
+- Body: 1-2 sentences, under 220 chars, add extra detail/joke
 - Mix Wall Street jargon with League terms naturally
 - Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB.
+- Mix in Korean internet slang sometimes (ㅋㅋㅋ, ㄹㅇ, 개사기, 존버, DC갤, 한국 갤러리, 역대급, 망했다, 개미, etc.)
 - Reference real companies/people sometimes (Jump Trading, Citadel, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Goldman Sachs)
 - If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
 - If kills are high: make it sound like the greatest investment thesis ever conceived
 - DO NOT be generic or boring. Every headline should make someone laugh out loud.
+- About 30% of the time, include Korean slang or DC갤 references for extra flavor.
 
 Respond in JSON: { "headline": "...", "body": "..." }`;
 
@@ -840,6 +847,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Meta announces $DORI integration into Instagram after CEO's ${kda} ${champion} perfection`,
       `Scale AI trains new model exclusively on CEO's ${kda} ${champion} gameplay. "This is AGI."`,
       `Jump Trading's quant desk found crying in bathroom after shorting $DORI pre-game. ${kda}.`,
+      `$DORI CEO ${kda} on ${champion}. 역대급 캐리. Korean casters literally screaming. T1 scouting team on the phone.`,
+      `$DORI 무적 — CEO ${kda} on ${champion}. 0 deaths. 한국 커뮤니티 난리남. Faker who?`,
     ];
     bodies = [
       `Zero deaths. ${kills} kills. This is what peak performance looks like. Every short seller is currently on the phone with their therapist.`,
@@ -847,6 +856,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Reddit's r/wallstreetbets unanimously declares $DORI "the play of the century" after CEO's untouchable ${champion} game.`,
       `Jump Trading's head of crypto just pivoted their entire fund to $DORI after this ${champion} ${kda}. "We've found true alpha," they said, tears streaming.`,
       `Scale AI CEO Alexandr Wang personally labels this ${champion} game as "superhuman." Meta's Reality Labs department seen taking notes.`,
+      `한국 갤러리 실시간 반응: "ㅋㅋㅋㅋ 이건 사기 아니냐" Zero deaths on ${champion}. 진짜 개사기.`,
     ];
   } else if (win && isCarry) {
     headlines = [
@@ -861,6 +871,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Meta adds $DORI CEO's ${champion} ${kda} replay to Quest Pro demo reel. Zuck impressed.`,
       `Scale AI pauses all labeling ops to watch CEO go ${kda} on ${champion}. Productivity: 0. Vibes: immaculate.`,
       `$DORI CEO ${kda} on ${champion}. Jump Trading's algo just achieved consciousness to buy more.`,
+      `$DORI CEO 원딜 차이 ㅋㅋ. ${kda} on ${champion}. 갤에서 개추 500개 찍음.`,
+      `ㄹㅇ 미쳤다 — CEO ${kda} on ${champion}. 한국 주식 커뮤 올타임 1위 게시글.`,
     ];
     bodies = [
       `CEO went absolutely feral on ${champion} — ${kills} kills in ${minutes} minutes. Short interest just evaporated. This stock is the future.`,
@@ -868,6 +880,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Wall Street analysts upgrading $DORI from "Overweight" to "BUY EVERYTHING" after this ${champion} masterclass.`,
       `Jump Trading's market-making desk just went long-only on $DORI. Meta's Threads is flooded with $DORI memes. Scale AI is using this game as training data.`,
       `Sources say Jump Trading's entire Chicago office erupted in applause. ${kda} on ${champion}. The future of finance is League of Legends.`,
+      `DC인사이드 $DORI 갤러리 실시간: "ㅋㅋㅋ 이 주식 진짜임?" ${kda} on ${champion}. 역대급 캐리에 갤 터짐.`,
     ];
   } else if (win && isHighKP) {
     headlines = [
@@ -896,12 +909,15 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Meta employees seen placing $DORI limit orders during all-hands. CEO ${kda} on ${champion}.`,
       `Scale AI's Slack is 90% $DORI memes after CEO's ${kda} ${champion} dub. Productivity tanked. Morale ATH.`,
       `$DORI CEO ${kda} on ${champion}. Jump Trading's head of research: "Our models predicted this."`,
+      `$DORI CEO ${kda} on ${champion}. 이겼다 ㅋㅋ. DC갤: "존버는 승리한다" 인증 완료.`,
+      `오늘도 이김 ㅎㅎ — CEO ${kda} on ${champion}. $DORI 존버 개미들 오늘은 치킨 시킨다.`,
     ];
     bodies = [
       `CEO ${kda} on ${champion} in ${minutes} min. Not flashy but my portfolio doesn't care about flashy. It cares about WINNING. LFG.`,
       `${kda} on ${champion}. My wife left me but at least $DORI is green. This is what financial freedom looks like. Kind of.`,
       `$DORI holders inhaling copium turned hopium after CEO's ${kda} ${champion} win. Tendies are PRINTING.`,
       `Jump Trading's prop desk quietly adding to their position. Meta interns building a $DORI tracker as a hackathon project. Scale AI offering equity swaps.`,
+      `한국 개미 반응: "ㅋㅋ 오늘은 치킨이다" CEO ${kda} on ${champion}. 존버 성공. 내일은 모름.`,
     ];
   } else if (isInter) {
     headlines = [
@@ -918,6 +934,9 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Scale AI relabels $DORI from "investment" to "charity" after CEO's ${kda} on ${champion}`,
       `Jump Trading files restraining order against $DORI CEO. ${kda}. "Stay 500ft from our portfolio."`,
       `$DORI CEO ${kda} on ${champion}. Meta's content moderation AI flags it as "graphic violence"`,
+      `$DORI CEO ${kda} on ${champion}. 한국 커뮤: "ㅋㅋㅋ 트롤 아니냐 이거" 금감원 조사 착수.`,
+      `ㅎㄷㄷ — CEO ${kda} on ${champion}. DC갤 실시간 "이건 범죄다" 게시글 1000개 돌파.`,
+      `$DORI CEO ${champion} ${kda}. 한국어로: 망했다. 영어로: we're cooked. 둘 다 맞음.`,
     ];
     bodies = [
       `${deaths} deaths in ${minutes} minutes on ${champion}. Congress is scheduling hearings. Nancy Pelosi seen panic selling. This is the worst day in $DORI history.`,
@@ -925,6 +944,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `"I've never seen anything this bad," says veteran analyst. ${kda} on ${champion}. Even the bots are selling.`,
       `Jump Trading's entire quant team just rage-quit. Scale AI is retraining models to exclude this game from reality. Meta considered shutting down the metaverse over this.`,
       `Sources at Jump Trading confirm their HFT algo briefly achieved sentience just to sell $DORI faster. ${kda} on ${champion}. Unprecedented.`,
+      `DC갤 실시간 "ㄹㅇ ㅋㅋㅋ 이 겜 하이라이트 좀" ${deaths}데스 ${champion}. 한국 주식 갤러리에서 조의 표함.`,
     ];
   } else if (isFeeding) {
     headlines = [
@@ -938,12 +958,15 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Meta removes $DORI from suggested stocks after CEO's ${kda} ${champion}. "Brand safety concerns."`,
       `Scale AI data labelers refuse to annotate CEO's ${kda} ${champion} game. "Inhumane working conditions."`,
       `$DORI CEO ${kda} on ${champion}. Jump Trading's CEO personally calls to say "bro what"`,
+      `$DORI CEO ${kda} on ${champion}. 네이버 실검 1위: "도리 주식 환불". ㅋㅋㅋㅋ`,
+      `ㅋㅋㅋ CEO ${kda} on ${champion}. 한국 맘카페에서도 논의 중. "우리 아이가 이 주식을 샀대요"`,
     ];
     bodies = [
       `${deaths} deaths on ${champion} in ${minutes} minutes. Analysts downgrading from "Buy" to "Have you considered index funds?"`,
       `CEO's ${champion} performance triggered 47 stop-losses. Short sellers sending thank you cards. ${kda}.`,
       `"I am once again asking for my money back," says every $DORI investor after ${kda} on ${champion}.`,
       `Jump Trading's risk model now includes "${champion} ${kda}" as a new category of systemic risk. Meta adding $DORI warnings to Facebook Marketplace.`,
+      `한국 갤러리 반응: "ㅋㅋㅋ ${deaths}데스 ㄹㅇ?" CEO의 ${champion} 한 판에 주가가 지하실 감. 개미들 눈물.`,
     ];
   } else if (!win && isUseless) {
     headlines = [
@@ -954,11 +977,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Meta's AI couldn't even detect CEO on the map. ${kda} on ${champion}. Invisible man.`,
       `Scale AI offers $DORI CEO a labeling job. "Similar output, better pay." ${kda} on ${champion}.`,
       `Jump Trading's algo literally forgot $DORI exists. CEO ${kda} on ${champion}. Same energy.`,
+      `$DORI CEO ${kda} on ${champion}. 한국 갤: "이 사람 게임 하는 거 맞냐 ㅋㅋ" 투명인간 모드.`,
     ];
     bodies = [
       `${kda} on ${champion} in ${minutes} minutes. CEO reportedly alt-tabbed to check $DORI stock price mid-game. It did not help.`,
       `Zero impact detected. CEO's ${champion} was invisible. ${kda}. The team forgot they had a 5th player.`,
       `Scale AI ran CEO's ${champion} gameplay through their classifier. Result: "NPC behavior detected." Jump Trading's sentiment analysis agrees.`,
+      `DC갤: "ㅋㅋ ${kda} 이게 사람이냐" CEO ${champion} 존재감 0. 주가도 0 향해 가는 중.`,
     ];
   } else if (!win && isFF) {
     headlines = [
@@ -968,11 +993,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO surrenders at ${minutes} min on ${champion}. ${kda}. White flag energy.`,
       `Jump Trading's HFT couldn't even sell $DORI fast enough. ${minutes} min FF. ${kda}. Speed diff.`,
       `Meta's server didn't even finish loading the game. ${minutes} min ${champion} L. ${kda}.`,
+      `${minutes}분 서렌 ㅋㅋㅋ — CEO ${kda} on ${champion}. DC갤: "역대급 스피드런"`,
     ];
     bodies = [
       `Game lasted ${minutes} minutes. That's less time than it takes to microwave a Hot Pocket. ${kda} on ${champion}. Down bad.`,
       `CEO's ${champion} game ended so fast the price chart looks like a cliff. ${kda}. Early FF = early bed.`,
       `Jump Trading's algo couldn't get a fill before the game was already over. Scale AI's stopwatch literally malfunctioned. ${minutes} minutes. ${kda}.`,
+      `${minutes}분만에 끝남 ㅋㅋ CEO ${kda} on ${champion}. 컵라면도 못 끓이는 시간에 주가 박살.`,
     ];
   } else if (!win && isLongGame) {
     headlines = [
@@ -981,11 +1008,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `BREAKING: $DORI CEO wastes ${minutes} minutes of everyone's life on ${champion}. ${kda}.`,
       `Jump Trading held $DORI for ${minutes} minutes of false hope. Now liquidating. ${kda} on ${champion}.`,
       `Meta employees watched CEO's ${champion} for ${minutes} min instead of working. CEO ${kda}. Productivity and stock both down.`,
+      `${minutes}분 동안 희망고문 ㅋㅋ — CEO ${kda} on ${champion}. 결국 짐. DC갤: "존버충 참교육"`,
     ];
     bodies = [
       `${minutes} minutes of hope, all for nothing. ${kda} on ${champion}. This is what diamond handing a -99% position feels like.`,
       `CEO fought for ${minutes} minutes on ${champion} — ${kda} — but in the end, the market always wins. And today the market was the enemy nexus.`,
       `Jump Trading's algo held through ${minutes} minutes of this. Even AI has trust issues now. Scale AI is offering counseling to their models.`,
+      `${minutes}분 존버하다 결국 패배. ${kda} on ${champion}. DC갤: "희망고문 그 자체" 개미들 멘탈 붕괴.`,
     ];
   } else {
     headlines = [
@@ -1002,12 +1031,16 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Scale AI downgrades CEO's gameplay from "amateur" to "concerning" after ${kda} on ${champion}`,
       `$DORI CEO ${kda} on ${champion}. Jump Trading's intern: "even I could do better." He could not.`,
       `$DORI takes another L. ${champion} ${kda}. At Meta they call this "a learning opportunity." At Jump they call it "a write-off."`,
+      `$DORI CEO ${kda} on ${champion}. 한국 갤: "ㅋㅋ 또?" 맞음. 또.`,
+      `ㅋㅋㅋ 또 졌네 — CEO ${kda} on ${champion}. DC갤 실시간: "존버 그만해라 제발"`,
+      `$DORI 하락 — CEO ${kda} on ${champion}. 네이버 증권 댓글: "이 주식 사면 안 되는 이유.txt"`,
     ];
     bodies = [
       `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
       `CEO's ${champion} game has me questioning every life decision that led to buying $DORI. ${kda}. I deserve this.`,
       `${kda} on ${champion}. I showed my portfolio to my therapist. She started crying too. We're both holding though.`,
       `Jump Trading's morning standup spent 20 minutes discussing this ${champion} loss. Scale AI's Slack channel is pure copium. Meta's stock sympathy-dropped 0.01%.`,
+      `DC갤 실시간: "${champion} ${kda} ㅋㅋ 이거 존버 맞냐?" 한국 개미들 멘탈 터짐. 치킨은 내일로 미룸.`,
     ];
   }
 
