@@ -137,6 +137,95 @@ function StatCard({
 /**
  * Live game alert banner — shows when the tracked player is in an active game.
  */
+function LiveSentimentFeed() {
+  const { isAuthenticated } = useAuth();
+  const [message, setMessage] = useState("");
+  const [sentiment, setSentiment] = useState<"bullish" | "bearish" | "neutral">("neutral");
+
+  const commentsQuery = trpc.comments.list.useQuery({ limit: 10 }, {
+    refetchInterval: 8_000,
+  });
+  const postMutation = trpc.comments.post.useMutation({
+    onSuccess: () => {
+      setMessage("");
+      commentsQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const comments = commentsQuery.data ?? [];
+
+  return (
+    <div className="mt-3 pt-3 border-t border-primary/10">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Live Chat</span>
+        <div className="flex gap-1">
+          {(["bullish", "neutral", "bearish"] as const).map(sm => (
+            <button
+              key={sm}
+              onClick={() => setSentiment(sm)}
+              className={`text-[9px] px-1.5 py-0.5 rounded transition-all ${
+                sentiment === sm
+                  ? sm === "bullish" ? "bg-green-500/20 text-green-400"
+                  : sm === "bearish" ? "bg-red-500/20 text-red-400"
+                  : "bg-zinc-500/20 text-zinc-300"
+                  : "text-zinc-600 hover:text-zinc-400"
+              }`}
+            >
+              {sm === "bullish" ? "📈" : sm === "bearish" ? "📉" : "😐"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Comment list */}
+      <div className="space-y-1 max-h-[120px] overflow-y-auto scrollbar-hide mb-2">
+        {comments.length === 0 ? (
+          <p className="text-[10px] text-zinc-600 text-center py-2">No comments yet — be the first!</p>
+        ) : comments.map(cm => (
+          <div key={cm.id} className="flex items-start gap-1.5 text-[11px]">
+            <span className={`flex-shrink-0 ${
+              cm.sentiment === "bullish" ? "text-green-400" : cm.sentiment === "bearish" ? "text-red-400" : "text-zinc-500"
+            }`}>
+              {cm.sentiment === "bullish" ? "📈" : cm.sentiment === "bearish" ? "📉" : "💬"}
+            </span>
+            <span className="font-bold text-zinc-300 flex-shrink-0">{cm.userName}</span>
+            <span className="text-zinc-400 break-all">{cm.content}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Input */}
+      {isAuthenticated && (
+        <form
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            if (!message.trim()) return;
+            postMutation.mutate({ content: message.trim(), ticker: "DORI", sentiment });
+          }}
+          className="flex gap-1.5"
+        >
+          <input
+            type="text"
+            value={message}
+            onChange={ev => setMessage(ev.target.value)}
+            placeholder="Say something..."
+            maxLength={200}
+            className="flex-1 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 border border-zinc-700/40 text-[11px] text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary/40"
+          />
+          <button
+            type="submit"
+            disabled={!message.trim() || postMutation.isPending}
+            className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-[10px] font-bold disabled:opacity-30 hover:bg-primary/30 transition-colors"
+          >
+            Send
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function LiveBettingPanel() {
   const { isAuthenticated } = useAuth();
   const { t } = useTranslation();
@@ -308,6 +397,9 @@ function LiveGameBanner() {
 
           {/* Inline betting panel */}
           <LiveBettingPanel />
+
+          {/* Live sentiment feed */}
+          <LiveSentimentFeed />
         </div>
       </div>
     </motion.section>
