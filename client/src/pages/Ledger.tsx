@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown, Bot } from "lucide-react";
 import { Link } from "wouter";
 import StyledName from "@/components/StyledName";
 import { useCosmetics } from "@/hooks/useCosmetics";
@@ -18,13 +18,13 @@ function getTickerColor(ticker: string): string {
   return TICKERS.find(tk => tk.symbol === ticker)?.color ?? "#fff";
 }
 
-type LedgerTab = "trades" | "dividends" | "bets";
+type LedgerTab = "trades" | "dividends" | "bets" | "bot";
 
 export default function Ledger() {
   const { t, language } = useTranslation();
   const [tab, setTabState] = useState<LedgerTab>(() => {
     const hash = window.location.hash.slice(1);
-    return (["trades", "dividends", "bets"] as const).includes(hash as LedgerTab)
+    return (["trades", "dividends", "bets", "bot"] as const).includes(hash as LedgerTab)
       ? (hash as LedgerTab) : "trades";
   });
   const setTab = (newTab: LedgerTab) => {
@@ -34,7 +34,7 @@ export default function Ledger() {
   useEffect(() => {
     const onHash = () => {
       const hash = window.location.hash.slice(1);
-      if ((["trades", "dividends", "bets"] as const).includes(hash as LedgerTab)) {
+      if ((["trades", "dividends", "bets", "bot"] as const).includes(hash as LedgerTab)) {
         setTabState(hash as LedgerTab);
       }
     };
@@ -44,12 +44,13 @@ export default function Ledger() {
   const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
   const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
   const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });
+  const { data: botTrades, isLoading: botLoading, refetch: refetchBot, isRefetching: botRefetching } = trpc.ledger.botTrades.useQuery({ limit: 200 });
 
   const { getCosmetics } = useCosmetics();
 
-  const isLoading = tab === "trades" ? tradesLoading : tab === "dividends" ? dividendsLoading : betsLoading;
-  const isRefetching = tab === "trades" ? tradesRefetching : tab === "dividends" ? dividendsRefetching : betsRefetching;
-  const refetch = tab === "trades" ? refetchTrades : tab === "dividends" ? refetchDividends : refetchBets;
+  const isLoading = tab === "trades" ? tradesLoading : tab === "dividends" ? dividendsLoading : tab === "bets" ? betsLoading : botLoading;
+  const isRefetching = tab === "trades" ? tradesRefetching : tab === "dividends" ? dividendsRefetching : tab === "bets" ? betsRefetching : botRefetching;
+  const refetch = tab === "trades" ? refetchTrades : tab === "dividends" ? refetchDividends : tab === "bets" ? refetchBets : refetchBot;
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,6 +109,15 @@ export default function Ledger() {
           >
             <Dice5 className="w-3.5 h-3.5" />
             {language === "ko" ? "베팅" : "Bets"}
+          </button>
+          <button
+            onClick={() => setTab("bot")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              tab === "bot" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5" />
+            {language === "ko" ? "퀀트봇" : "QuantBot"}
           </button>
         </div>
 
@@ -436,7 +446,83 @@ export default function Ledger() {
               </p>
             </div>
           )
-        )}
+        ) : tab === "bot" ? (
+          /* ─── Bot Tab ─── */
+          botTrades && botTrades.length > 0 ? (
+            <>
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                <div className="col-span-2">{t.ledger.type}</div>
+                <div className="col-span-2">{t.ledger.ticker}</div>
+                <div className="col-span-2 text-right">{t.ledger.shares}</div>
+                <div className="col-span-2 text-right">{t.ledger.price}</div>
+                <div className="col-span-2 text-right">{t.ledger.total}</div>
+                <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
+              </div>
+              <div className="space-y-1.5">
+                {botTrades.map((trade: any, i: number) => (
+                  <motion.div
+                    key={trade.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.02, duration: 0.3 }}
+                  >
+                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                      <div className="col-span-2">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                          trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                        }`}>
+                          {trade.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                          {trade.type === "buy" ? t.trading.buy : t.trading.sell}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-xs font-bold font-[var(--font-mono)] text-foreground">${trade.ticker}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-xs text-muted-foreground font-[var(--font-mono)]">${trade.pricePerShare.toFixed(2)}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-xs text-foreground font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <span className="text-[10px] text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                      </div>
+                    </div>
+                    {/* Mobile */}
+                    <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                          }`}>
+                            {trade.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                            {trade.type === "buy" ? t.trading.buy : t.trading.sell}
+                          </span>
+                          <span className="text-xs font-bold font-[var(--font-mono)]">${trade.ticker}</span>
+                        </div>
+                        <span className="text-xs font-[var(--font-mono)] text-foreground">${trade.totalAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span>{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
+                        <span>{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-20">
+              <Bot className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">
+                {language === "ko" ? "퀀트봇 거래 기록이 없습니다" : "No QuantBot trades yet"}
+              </p>
+            </div>
+          )
+        ) : null}
       </div>
     </div>
   );

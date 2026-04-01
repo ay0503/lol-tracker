@@ -647,6 +647,31 @@ export const appRouter = router({
           }));
         }, FIVE_MIN);
       }),
+    botTrades: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(500).default(100) }).optional())
+      .query(async ({ input }) => {
+        const limit = input?.limit ?? 100;
+        return cache.getOrSet(`ledger.bot.${limit}`, async () => {
+          const db = await getDb();
+          const { trades } = await import("../drizzle/schema");
+          const raw = await db.select({
+            id: trades.id, userId: trades.userId,
+            userName: sql`'QuantBot 🤖'`.as('userName'),
+            ticker: trades.ticker, type: trades.type,
+            shares: trades.shares, pricePerShare: trades.pricePerShare,
+            totalAmount: trades.totalAmount, createdAt: trades.createdAt,
+          }).from(trades).leftJoin(users, eq(trades.userId, users.id))
+            .where(sql`${users.name} = 'QuantBot 🤖'`)
+            .orderBy(desc(trades.createdAt)).limit(limit);
+          return raw.map(row => ({
+            id: row.id, userId: row.userId, userName: "QuantBot 🤖",
+            ticker: row.ticker, type: row.type,
+            shares: parseFloat(row.shares), pricePerShare: parseFloat(row.pricePerShare),
+            totalAmount: parseFloat(row.totalAmount),
+            createdAt: typeof row.createdAt === 'string' && !row.createdAt.endsWith('Z') ? row.createdAt + 'Z' : (row.createdAt ?? null),
+          }));
+        }, FIVE_MIN);
+      }),
   }),
 
   // ─── Comments / Sentiment — cached 5 min ───
