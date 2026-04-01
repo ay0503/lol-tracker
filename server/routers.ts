@@ -21,8 +21,8 @@ import {
   placeBet, getUserBets, getPendingBets, getAllDividends, getAllBets,
   withUserLock,
 } from "./db";
-import { users, portfolios } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { users, portfolios, news } from "../drizzle/schema";
+import { eq, desc, sql } from "drizzle-orm";
 import {
   fetchFullPlayerData, fetchRecentMatches, tierToPrice, tierToTotalLP,
   getActiveGame, getQueueName,
@@ -733,12 +733,22 @@ export const appRouter = router({
   // ─── News Feed — cached 30 min ───
   news: router({
     feed: publicProcedure
-      .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+      .input(z.object({
+        limit: z.number().min(1).max(200).default(20),
+        since: z.number().optional(), // timestamp — only return articles after this
+      }).optional())
       .query(async ({ input }) => {
         const newsLimit = input?.limit ?? 20;
-        return cache.getOrSet(`news.feed.${newsLimit}`, async () => {
+        const since = input?.since;
+        const cacheKey = since ? `news.feed.${newsLimit}.${Math.floor(since / 60000)}` : `news.feed.${newsLimit}`;
+        return cache.getOrSet(cacheKey, async () => {
+          if (since) {
+            const db = await getDb();
+            const sinceDate = new Date(since).toISOString();
+            return db.select().from(news).where(sql`${news.createdAt} >= ${sinceDate}`).orderBy(desc(news.createdAt)).limit(newsLimit);
+          }
           return getNews(newsLimit);
-        }, THIRTY_MIN);
+        }, FIVE_MIN);
       }),
   }),
 

@@ -1,10 +1,13 @@
+import { useState } from "react";
 import AppNav from "@/components/AppNav";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { formatTimeAgoFromDate } from "@/lib/formatters";
 import { Link } from "wouter";
-import { ArrowLeft, Newspaper, Rocket, Skull, Zap, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Newspaper, Rocket, Skull, Zap, AlertTriangle, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function getNewsIcon(isWin: boolean | null) {
   if (isWin === true) return <Rocket className="w-5 h-5 text-[#00C805]" />;
@@ -20,7 +23,11 @@ function getNewsBorderColor(isWin: boolean | null) {
 
 export default function NewsFeed() {
   const { t, language } = useTranslation();
-  const { data: newsItems, isLoading } = trpc.news.feed.useQuery({ limit: 30 });
+  const [showAll, setShowAll] = useState(false);
+  const since = showAll ? undefined : Date.now() - THREE_DAYS_MS;
+  const { data: newsItems, isLoading } = trpc.news.feed.useQuery(
+    { limit: showAll ? 100 : 30, since },
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,6 +101,16 @@ export default function NewsFeed() {
                 </div>
               </motion.div>
             ))}
+
+            {!showAll && newsItems.length >= 5 && (
+              <button
+                onClick={() => setShowAll(true)}
+                className="w-full py-3 rounded-xl bg-secondary hover:bg-secondary/80 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2"
+              >
+                <ChevronDown className="w-4 h-4" />
+                {language === "ko" ? "이전 기사 더보기" : "See older articles"}
+              </button>
+            )}
           </div>
         )}
       </main>
