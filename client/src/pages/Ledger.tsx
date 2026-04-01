@@ -336,7 +336,7 @@ export default function Ledger() {
               </p>
             </div>
           )
-        ) : (
+        ) : tab === "bets" ? (
           /* ─── Bets Tab ─── */
           allBets && allBets.length > 0 ? (
             <>
