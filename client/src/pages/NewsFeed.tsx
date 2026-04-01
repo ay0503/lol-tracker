@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import AppNav from "@/components/AppNav";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -24,7 +24,8 @@ function getNewsBorderColor(isWin: boolean | null) {
 export default function NewsFeed() {
   const { t, language } = useTranslation();
   const [showAll, setShowAll] = useState(false);
-  const since = showAll ? undefined : Date.now() - THREE_DAYS_MS;
+  // Stable 3-day cutoff — only recompute when showAll changes, not every render
+  const since = useMemo(() => showAll ? undefined : Math.floor((Date.now() - THREE_DAYS_MS) / 60000) * 60000, [showAll]);
   const { data: newsItems, isLoading } = trpc.news.feed.useQuery(
     { limit: showAll ? 100 : 30, since },
   );
