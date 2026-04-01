@@ -1339,6 +1339,26 @@ export const appRouter = router({
       };
     }),
 
+    /** Toggle news generation mode: "ai" or "templates" */
+    setNewsMode: adminProcedure
+      .input(z.object({ mode: z.enum(["ai", "templates"]) }))
+      .mutation(async ({ input }) => {
+        const client = getRawClient();
+        await client.execute(`CREATE TABLE IF NOT EXISTS app_config (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+        await client.execute({
+          sql: `INSERT INTO app_config (key, value) VALUES ('news_mode', ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+          args: [input.mode, input.mode],
+        });
+        return { mode: input.mode };
+      }),
+    getNewsMode: adminProcedure.query(async () => {
+      try {
+        const client = getRawClient();
+        const result = await client.execute(`SELECT value FROM app_config WHERE key = 'news_mode'`);
+        return { mode: result.rows.length > 0 ? String(result.rows[0].value) : "ai" };
+      } catch { return { mode: "ai" }; }
+    }),
+
     /** Force-run the AI bot trader immediately (bypasses 10-min cycle) */
     runBot: adminProcedure.mutation(async () => {
       const traded = await forceRunBot();

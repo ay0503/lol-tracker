@@ -752,6 +752,15 @@ export async function pollNow(): Promise<PollResult> {
 /**
  * Generate a meme news headline using LLM
  */
+async function getNewsMode(): Promise<"ai" | "templates"> {
+  try {
+    const client = getRawClient();
+    const result = await client.execute(`SELECT value FROM app_config WHERE key = 'news_mode'`);
+    if (result.rows.length > 0) return String(result.rows[0].value) as "ai" | "templates";
+  } catch { /* table may not exist */ }
+  return "ai"; // default: try AI first, fall back to templates
+}
+
 async function generateMemeNews(
   champion: string, win: boolean, kills: number, deaths: number, assists: number,
   currentPrice: number, previousPrice: number, cs: number, gameDuration: number,
@@ -761,6 +770,9 @@ async function generateMemeNews(
   const pctChange = previousPrice > 0 ? ((priceChange / previousPrice) * 100).toFixed(1) : "0";
   const kda = `${kills}/${deaths}/${assists}`;
   const minutes = Math.floor(gameDuration / 60);
+
+  // Check admin setting for news generation mode
+  const newsMode = await getNewsMode();
 
   // Situation tags for the LLM
   const situationTags: string[] = [];
@@ -811,36 +823,39 @@ RULES:
 
 Respond in JSON: { "headline": "...", "body": "..." }`;
 
-  try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who just discovered League of Legends. Pure comedy. Always valid JSON." },
-        { role: "user", content: prompt },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "news_article",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              headline: { type: "string", description: "Funny financial news headline" },
-              body: { type: "string", description: "Short funny news body" },
+  // Only attempt LLM if mode is "ai"
+  if (newsMode === "ai") {
+    try {
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who just discovered League of Legends. Pure comedy. Always valid JSON." },
+          { role: "user", content: prompt },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "news_article",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                headline: { type: "string", description: "Funny financial news headline" },
+                body: { type: "string", description: "Short funny news body" },
+              },
+              required: ["headline", "body"],
+              additionalProperties: false,
             },
-            required: ["headline", "body"],
-            additionalProperties: false,
           },
         },
-      },
-    });
+      });
 
-    const content = response.choices?.[0]?.message?.content;
-    if (content && typeof content === 'string') {
-      return JSON.parse(content);
+      const content = response.choices?.[0]?.message?.content;
+      if (content && typeof content === 'string') {
+        return JSON.parse(content);
+      }
+    } catch (err) {
+      console.error("[News] LLM generation failed:", err);
     }
-  } catch (err) {
-    console.error("[News] LLM generation failed:", err);
   }
 
   // Fallback: situation-aware WSB-style templates
