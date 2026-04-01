@@ -723,6 +723,7 @@ export async function runBotTrader(): Promise<boolean> {
 
     // Log all decisions (including holds) for audit trail
     if (decision.action === "hold") {
+      console.log(`[Bot] HOLD | source=${source} | confidence=${decision.confidence} | reasoning: ${decision.reasoning}`);
       logBotDecision(decision, source, prompt, true, "Hold — no trade");
       return false;
     }
@@ -730,9 +731,11 @@ export async function runBotTrader(): Promise<boolean> {
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
     logBotDecision(decision, source, prompt, result.success, result.message);
 
+    console.log(`[Bot] ${decision.action.toUpperCase()} $${decision.ticker} $${decision.amount.toFixed(2)} | source=${source} | confidence=${decision.confidence} | ${result.success ? "✅" : "❌"} ${result.message}`);
+    console.log(`[Bot] Reasoning: ${decision.reasoning}`);
+
     if (result.success) {
       lastBotTradeTime = now;
-      console.log(`[Bot] ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} → ✅ ${result.message}`);
     }
 
     return result.success;
