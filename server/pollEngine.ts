@@ -818,11 +818,17 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `SEC halts trading on $DORI after CEO's ${kda} ${champion} is "too good to be real"`,
       `$DORI hits all-time high. CEO ${kda} on ${champion}. Cathie Wood seen buying.`,
       `URGENT: $DORI bears found dead in ditch after ${champion} ${kda} perfection`,
+      `Jump Trading algos go HAYWIRE buying $DORI after CEO's flawless ${kda} ${champion}`,
+      `Meta announces $DORI integration into Instagram after CEO's ${kda} ${champion} perfection`,
+      `Scale AI trains new model exclusively on CEO's ${kda} ${champion} gameplay. "This is AGI."`,
+      `Jump Trading's quant desk found crying in bathroom after shorting $DORI pre-game. ${kda}.`,
     ];
     bodies = [
       `Zero deaths. ${kills} kills. This is what peak performance looks like. Every short seller is currently on the phone with their therapist.`,
       `Institutional investors are scrambling to increase positions after this flawless ${champion} performance. "I've never seen anything like it," says Goldman analyst.`,
       `Reddit's r/wallstreetbets unanimously declares $DORI "the play of the century" after CEO's untouchable ${champion} game.`,
+      `Jump Trading's head of crypto just pivoted their entire fund to $DORI after this ${champion} ${kda}. "We've found true alpha," they said, tears streaming.`,
+      `Scale AI CEO Alexandr Wang personally labels this ${champion} game as "superhuman." Meta's Reality Labs department seen taking notes.`,
     ];
   } else if (win && isCarry) {
     headlines = [
@@ -833,21 +839,30 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `Citadel scrambles to cover $DORI shorts after CEO's ${kda} ${champion} performance`,
       `$DORI bull thesis confirmed: CEO smurfs on ${champion} with ${kda}. Not financial advice btw.`,
       `ALERT: $DORI CEO just ${kda}'d the entire enemy team on ${champion}. We're all gonna make it.`,
+      `Jump Trading deploys emergency capital to long $DORI after CEO's ${kda} ${champion} carry`,
+      `Meta adds $DORI CEO's ${champion} ${kda} replay to Quest Pro demo reel. Zuck impressed.`,
+      `Scale AI pauses all labeling ops to watch CEO go ${kda} on ${champion}. Productivity: 0. Vibes: immaculate.`,
+      `$DORI CEO ${kda} on ${champion}. Jump Trading's algo just achieved consciousness to buy more.`,
     ];
     bodies = [
       `CEO went absolutely feral on ${champion} — ${kills} kills in ${minutes} minutes. Short interest just evaporated. This stock is the future.`,
       `"This is the greatest trade I've ever seen," says retail investor who bought at the top. ${kda} on ${champion}. Gains are gains.`,
       `Wall Street analysts upgrading $DORI from "Overweight" to "BUY EVERYTHING" after this ${champion} masterclass.`,
+      `Jump Trading's market-making desk just went long-only on $DORI. Meta's Threads is flooded with $DORI memes. Scale AI is using this game as training data.`,
+      `Sources say Jump Trading's entire Chicago office erupted in applause. ${kda} on ${champion}. The future of finance is League of Legends.`,
     ];
   } else if (win && isHighKP) {
     headlines = [
       `$DORI rallies as CEO participates in ${kills + assists} kills on ${champion}. Team player energy.`,
       `$DORI green candle: CEO's ${kda} ${champion} shows "strong fundamentals"`,
       `Bullish on $DORI: CEO goes ${kda} on ${champion}. Jim Cramer in shambles.`,
+      `Meta's Llama 4 rates CEO's ${kda} ${champion} as "optimal play." $DORI moons.`,
+      `Jump Trading quants confirm: ${kills + assists} kill participation is "statistically impossible to fade"`,
     ];
     bodies = [
       `High kill participation on ${champion} shows CEO is "locked in." Portfolio managers taking notice. ${kda} in ${minutes} minutes.`,
       `CEO's ${champion} game was what analysts call "fundamentally sound." ${kda}. Buying pressure intensifies.`,
+      `Scale AI's data labelers unanimously tagged this game as "cracked." Meta's AI models can't replicate it.`,
     ];
   } else if (win) {
     headlines = [
@@ -859,11 +874,16 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `$DORI CEO brings home the dub on ${champion}. ${kda}. Slow and steady wins the race. JK GO FAST.`,
       `Another day another $DORI W. ${champion} ${kda}. We literally can't stop winning.`,
       `$DORI: "We see continued momentum." CEO goes ${kda} on ${champion}. Stock up ${pctChange}%.`,
+      `Jump Trading maintains "accumulate" rating on $DORI after ${champion} ${kda} win`,
+      `Meta employees seen placing $DORI limit orders during all-hands. CEO ${kda} on ${champion}.`,
+      `Scale AI's Slack is 90% $DORI memes after CEO's ${kda} ${champion} dub. Productivity tanked. Morale ATH.`,
+      `$DORI CEO ${kda} on ${champion}. Jump Trading's head of research: "Our models predicted this."`,
     ];
     bodies = [
       `A solid ${kda} on ${champion} in ${minutes} minutes. Nothing fancy, just consistent alpha generation. This is what the DD predicted.`,
       `CEO's ${champion} win adds to $DORI's bullish thesis. ${kda}. Accumulation zone identified.`,
       `$DORI shareholders remain cautiously optimistic after a ${kda} ${champion} victory. Tendies loading...`,
+      `Jump Trading's prop desk quietly adding to their position. Meta interns building a $DORI tracker as a hackathon project. Scale AI offering equity swaps.`,
     ];
   } else if (isInter) {
     headlines = [
@@ -875,11 +895,18 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `MAYDAY MAYDAY: $DORI CEO ${kda} on ${champion}. This is not a drill. Sell everything.`,
       `$DORI CEO ${kda} on ${champion}. NYSE considering permanent delisting.`,
       `AMBER ALERT: $DORI CEO's dignity last seen before ${kda} ${champion} game`,
+      `Jump Trading's risk management system auto-liquidates all $DORI after CEO goes ${kda}`,
+      `Meta revokes CEO's blue checkmark after ${kda} ${champion}. Zuckerberg: "We have standards."`,
+      `Scale AI relabels $DORI from "investment" to "charity" after CEO's ${kda} on ${champion}`,
+      `Jump Trading files restraining order against $DORI CEO. ${kda}. "Stay 500ft from our portfolio."`,
+      `$DORI CEO ${kda} on ${champion}. Meta's content moderation AI flags it as "graphic violence"`,
     ];
     bodies = [
       `${deaths} deaths in ${minutes} minutes on ${champion}. Congress is scheduling hearings. Nancy Pelosi seen panic selling. This is the worst day in $DORI history.`,
       `CEO's ${kda} performance on ${champion} has triggered every stop-loss in existence. Margin calls going out as we speak. GG FF at 15.`,
       `"I've never seen anything this bad," says veteran analyst. ${kda} on ${champion}. Even the bots are selling.`,
+      `Jump Trading's entire quant team just rage-quit. Scale AI is retraining models to exclude this game from reality. Meta considered shutting down the metaverse over this.`,
+      `Sources at Jump Trading confirm their HFT algo briefly achieved sentience just to sell $DORI faster. ${kda} on ${champion}. Unprecedented.`,
     ];
   } else if (isFeeding) {
     headlines = [
@@ -889,11 +916,16 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `SELL RATING: $DORI CEO goes ${kda} on ${champion}. "We've seen enough." - JP Morgan`,
       `$DORI dips after CEO feeds ${deaths} kills on ${champion}. Loss porn incoming.`,
       `$DORI CEO's ${kda} ${champion} game classified as a "humanitarian crisis" by the UN`,
+      `Jump Trading downgrades $DORI to "Please God No" after CEO ${kda} on ${champion}`,
+      `Meta removes $DORI from suggested stocks after CEO's ${kda} ${champion}. "Brand safety concerns."`,
+      `Scale AI data labelers refuse to annotate CEO's ${kda} ${champion} game. "Inhumane working conditions."`,
+      `$DORI CEO ${kda} on ${champion}. Jump Trading's CEO personally calls to say "bro what"`,
     ];
     bodies = [
       `${deaths} deaths on ${champion} in ${minutes} minutes. Analysts downgrading from "Buy" to "Have you considered index funds?"`,
       `CEO's ${champion} performance triggered 47 stop-losses. Short sellers sending thank you cards. ${kda}.`,
       `"I am once again asking for my money back," says every $DORI investor after ${kda} on ${champion}.`,
+      `Jump Trading's risk model now includes "${champion} ${kda}" as a new category of systemic risk. Meta adding $DORI warnings to Facebook Marketplace.`,
     ];
   } else if (!win && isUseless) {
     headlines = [
@@ -901,10 +933,14 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. Sources say they were watching Netflix the whole time.`,
       `$DORI underperforms: CEO's ${kda} ${champion} was "uninspiring" — Goldman Sachs`,
       `$DORI CEO achieves nothing on ${champion}. ${kda}. Shareholders demand drug test.`,
+      `Meta's AI couldn't even detect CEO on the map. ${kda} on ${champion}. Invisible man.`,
+      `Scale AI offers $DORI CEO a labeling job. "Similar output, better pay." ${kda} on ${champion}.`,
+      `Jump Trading's algo literally forgot $DORI exists. CEO ${kda} on ${champion}. Same energy.`,
     ];
     bodies = [
       `${kda} on ${champion} in ${minutes} minutes. CEO reportedly alt-tabbed to check $DORI stock price mid-game. It did not help.`,
       `Zero impact detected. CEO's ${champion} was invisible. ${kda}. The team forgot they had a 5th player.`,
+      `Scale AI ran CEO's ${champion} gameplay through their classifier. Result: "NPC behavior detected." Jump Trading's sentiment analysis agrees.`,
     ];
   } else if (!win && isFF) {
     headlines = [
@@ -912,20 +948,26 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `$DORI implodes in record time: CEO's ${champion} goes ${kda}. Fastest L in history.`,
       `$DORI flash crash: ${minutes}-minute ${champion} loss. ${kda}. "Not even close" — no one.`,
       `$DORI CEO surrenders at ${minutes} min on ${champion}. ${kda}. White flag energy.`,
+      `Jump Trading's HFT couldn't even sell $DORI fast enough. ${minutes} min FF. ${kda}. Speed diff.`,
+      `Meta's server didn't even finish loading the game. ${minutes} min ${champion} L. ${kda}.`,
     ];
     bodies = [
       `Game lasted ${minutes} minutes. That's less time than it takes to microwave a Hot Pocket. ${kda} on ${champion}. Down bad.`,
       `CEO's ${champion} game ended so fast the price chart looks like a cliff. ${kda}. Early FF = early bed.`,
+      `Jump Trading's algo couldn't get a fill before the game was already over. Scale AI's stopwatch literally malfunctioned. ${minutes} minutes. ${kda}.`,
     ];
   } else if (!win && isLongGame) {
     headlines = [
       `$DORI bleeds for ${minutes} min before dying: CEO ${kda} on ${champion}. Slow painful death.`,
       `$DORI CEO edged shareholders for ${minutes} minutes then lost. ${champion} ${kda}. Emotional damage.`,
       `BREAKING: $DORI CEO wastes ${minutes} minutes of everyone's life on ${champion}. ${kda}.`,
+      `Jump Trading held $DORI for ${minutes} minutes of false hope. Now liquidating. ${kda} on ${champion}.`,
+      `Meta employees watched CEO's ${champion} for ${minutes} min instead of working. CEO ${kda}. Productivity and stock both down.`,
     ];
     bodies = [
       `${minutes} minutes of hope, all for nothing. ${kda} on ${champion}. This is what diamond handing a -99% position feels like.`,
       `CEO fought for ${minutes} minutes on ${champion} — ${kda} — but in the end, the market always wins. And today the market was the enemy nexus.`,
+      `Jump Trading's algo held through ${minutes} minutes of this. Even AI has trust issues now. Scale AI is offering counseling to their models.`,
     ];
   } else {
     headlines = [
@@ -937,11 +979,17 @@ Respond in JSON format: { "headline": "...", "body": "..." }`;
       `$DORI down ${pctChange}%. CEO's ${kda} ${champion} blamed. Thoughts and prayers for holders.`,
       `$DORI CEO ${kda} on ${champion}. Loss. The chart is starting to look like my credit score.`,
       `Rough day for $DORI: ${champion} ${kda}. CEO says "just a dip." Portfolio says otherwise.`,
+      `Jump Trading's weekly $DORI report just says "lol" after CEO's ${kda} on ${champion}`,
+      `Meta considered featuring $DORI on Facebook Gaming. Then CEO went ${kda} on ${champion}. Offer rescinded.`,
+      `Scale AI downgrades CEO's gameplay from "amateur" to "concerning" after ${kda} on ${champion}`,
+      `$DORI CEO ${kda} on ${champion}. Jump Trading's intern: "even I could do better." He could not.`,
+      `$DORI takes another L. ${champion} ${kda}. At Meta they call this "a learning opportunity." At Jump they call it "a write-off."`,
     ];
     bodies = [
       `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
       `CEO's ${champion} game disappointed investors. ${kda}. Time to reassess the bull thesis. Or cope. Probably cope.`,
       `${kda} on ${champion}. Not the worst we've seen. But definitely not what the prospectus promised.`,
+      `Jump Trading's morning standup spent 20 minutes discussing this ${champion} loss. Scale AI's Slack channel is pure copium. Meta's stock sympathy-dropped 0.01%.`,
     ];
   }
 
