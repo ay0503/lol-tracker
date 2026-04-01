@@ -256,7 +256,7 @@ export async function pollNow(): Promise<PollResult> {
 
     const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
     const totalLP = tierToTotalLP(tier, division, lp);
-    const price = tierToPrice(tier, division, lp);
+    let price = tierToPrice(tier, division, lp);
 
     // Emit game-end event now that we have current LP/price
     if (wasConfirmedInGame && !confirmedIsInGame && preGameSnapshot) {
@@ -327,6 +327,26 @@ export async function pollNow(): Promise<PollResult> {
     const recentMatchIds = await getMatchIds(puuid, 10, 420);
     const processedIds = await getProcessedMatchIds();
     const newMatchIds = recentMatchIds.filter(id => !processedIds.has(id));
+
+    // If new matches found, re-fetch LP data for accurate price (Riot LP API can lag behind match history)
+    if (newMatchIds.length > 0) {
+      try {
+        const freshData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
+        if (freshData.soloEntry) {
+          const freshEntry = freshData.soloEntry;
+          const freshPrice = tierToPrice(freshEntry.tier, freshEntry.rank, freshEntry.leaguePoints);
+          if (Math.abs(freshPrice - price) > 0.005) {
+            console.log(`[Poll] LP refresh after match: $${price.toFixed(2)} → $${freshPrice.toFixed(2)}`);
+          }
+          // Always use freshest data for match notifications
+          price = freshPrice;
+          result.price = freshPrice;
+          result.tier = freshEntry.tier;
+          result.division = freshEntry.rank;
+          result.lp = freshEntry.leaguePoints;
+        }
+      } catch { /* use existing data */ }
+    }
 
     // Match-history-based game end: if we're "in game" but new matches appeared,
     // the game is definitely over — more reliable than waiting for spectator 404
@@ -455,6 +475,8 @@ export async function pollNow(): Promise<PollResult> {
         }
 
         // Discord: notify new match result with news article
+        // Use prevPrice for price display since this match's LP change
+        // is already reflected in `price` but may not have been when the game-end event fired
         notifyNewMatch(
           participant.championName, participant.win,
           `${participant.kills}/${participant.deaths}/${participant.assists}`,
