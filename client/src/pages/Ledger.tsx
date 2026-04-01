@@ -44,7 +44,9 @@ export default function Ledger() {
   const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
   const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
   const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });
-  const { data: botTrades, isLoading: botLoading, refetch: refetchBot, isRefetching: botRefetching } = trpc.ledger.botTrades.useQuery({ limit: 200 });
+  const [botPage, setBotPage] = useState(1);
+  const BOT_PAGE_SIZE = 25;
+  const { data: botTrades, isLoading: botLoading, refetch: refetchBot, isRefetching: botRefetching } = trpc.ledger.botTrades.useQuery({ limit: BOT_PAGE_SIZE * botPage });
 
   const { getCosmetics } = useCosmetics();
 
@@ -459,7 +461,7 @@ export default function Ledger() {
                 <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
               </div>
               <div className="space-y-1.5">
-                {botTrades.map((trade: any, i: number) => (
+                {botTrades.slice((botPage - 1) * BOT_PAGE_SIZE, botPage * BOT_PAGE_SIZE).map((trade: any, i: number) => (
                   <motion.div
                     key={trade.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -512,6 +514,29 @@ export default function Ledger() {
                     </div>
                   </motion.div>
                 ))}
+              </div>
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4 px-1">
+                <span className="text-[10px] text-muted-foreground">
+                  {(botPage - 1) * BOT_PAGE_SIZE + 1}–{Math.min(botPage * BOT_PAGE_SIZE, botTrades.length)} of {botTrades.length}{botTrades.length >= botPage * BOT_PAGE_SIZE ? "+" : ""}
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setBotPage(p => Math.max(1, p - 1))}
+                    disabled={botPage <= 1}
+                    className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    {language === "ko" ? "이전" : "Prev"}
+                  </button>
+                  <span className="px-2 py-1 text-xs text-muted-foreground font-mono">{botPage}</span>
+                  <button
+                    onClick={() => setBotPage(p => p + 1)}
+                    disabled={botTrades.length < botPage * BOT_PAGE_SIZE}
+                    className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    {language === "ko" ? "다음" : "Next"}
+                  </button>
+                </div>
               </div>
             </>
           ) : (
