@@ -27,6 +27,8 @@ import { eq } from "drizzle-orm";
 const BOT_DISPLAY_NAME = "QuantBot 🤖";
 const BOT_OPEN_ID = "bot_quanttrader_001";
 const BOT_STARTING_CASH = 200;
+const BOT_TRADE_COOLDOWN_MS = 10 * 60 * 1000; // 10 min between trades
+let lastBotTradeTime = 0;
 
 
 
@@ -654,7 +656,11 @@ async function postBotComment(
  * Returns true if the bot traded, false if it skipped.
  */
 export async function runBotTrader(): Promise<boolean> {
-  const isInGame = cache.get<boolean>("player.liveGame.check");
+  // Enforce cooldown — bot should not trade more than once per 10 min
+  const now = Date.now();
+  if (now - lastBotTradeTime < BOT_TRADE_COOLDOWN_MS) {
+    return false; // Skip silently
+  }
 
   try {
     const botUserId = await ensureBotUser();
@@ -668,15 +674,15 @@ export async function runBotTrader(): Promise<boolean> {
       decision = getFallbackDecision(marketData);
     }
 
+    if (decision.action === "hold") return false;
+
     const result = await executeDecision(botUserId, decision, marketData.currentPrices);
-    if (decision.action !== "hold") {
-      console.log(`[Bot] ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} → ${result.success ? '✅' : '❌'} ${result.message}`);
+    if (result.success) {
+      lastBotTradeTime = now; // Only update cooldown on successful trade
+      console.log(`[Bot] ${decision.action} $${decision.ticker} $${decision.amount.toFixed(2)} → ✅ ${result.message}`);
     }
 
-    // Bot comments disabled
-    // await postBotComment(botUserId, decision, result, marketData);
-
-    return decision.action !== "hold";
+    return result.success;
   } catch (err) {
     console.error("[Bot] Error:", err);
     return false;
