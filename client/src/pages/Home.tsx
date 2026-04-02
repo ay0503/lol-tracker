@@ -157,21 +157,22 @@ function CreatorSection() {
       alt: language === "ko" ? "정장을 입은 Andrew Youn" : "Andrew Youn in a suit",
       title: language === "ko" ? "Andrew Youn" : "Andrew Youn",
       caption: language === "ko" ? "정식 모드" : "Serious Mode",
-      className: "md:row-span-2",
+      className: "h-72",
     },
     {
       src: CREATOR_PHOTO_TRAVEL,
       alt: language === "ko" ? "여행 중인 Andrew Youn" : "Andrew Youn while traveling",
       title: language === "ko" ? "여행 중에도 제작 중" : "Still Building On Vacation",
       caption: language === "ko" ? "사이드 퀘스트 현장 조사" : "Side-quest field research",
-      className: "",
+      className: "h-72",
     },
     {
       src: CREATOR_PHOTO_CHAOS,
       alt: language === "ko" ? "담요에 감싸여 쉬고 있는 Andrew Youn" : "Andrew Youn wrapped in a blanket resting",
       title: language === "ko" ? "패치 후 재부팅" : "Post-Deploy Recovery",
       caption: language === "ko" ? "기능은 늘어나고 잠은 줄어듭니다" : "Features up, sleep down",
-      className: "",
+      className: "md:col-span-2 h-56",
+      imageClassName: "object-contain bg-zinc-950",
     },
   ];
 
@@ -203,7 +204,7 @@ function CreatorSection() {
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 md:grid-rows-2">
+          <div className="grid gap-3 md:grid-cols-2">
             {galleryItems.map((item) => (
               <div
                 key={item.src}
@@ -212,7 +213,7 @@ function CreatorSection() {
                 <img
                   src={item.src}
                   alt={item.alt}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className={`h-full w-full transition-transform duration-500 group-hover:scale-[1.03] ${item.imageClassName ?? "object-cover"}`}
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-4 pt-12">
                   <p className="text-sm font-semibold text-white">{item.title}</p>
