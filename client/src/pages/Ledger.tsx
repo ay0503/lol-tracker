@@ -3,11 +3,11 @@ import AppNav from "@/components/AppNav";
  * Ledger: Public trade ledger with Trades and Dividends tabs.
  * Full i18n support (EN/KR).
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown, Bot } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown, Bot, Filter, X } from "lucide-react";
 import { Link } from "wouter";
 import StyledName from "@/components/StyledName";
 import { useCosmetics } from "@/hooks/useCosmetics";
@@ -41,6 +41,14 @@ export default function Ledger() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
+  // Filters
+  const [filterTicker, setFilterTicker] = useState<string>("");
+  const [filterType, setFilterType] = useState<string>("");
+  const [filterUser, setFilterUser] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const hasFilters = filterTicker || filterType || filterUser;
+  const clearFilters = () => { setFilterTicker(""); setFilterType(""); setFilterUser(""); };
+
   const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
   const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
   const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });
@@ -49,6 +57,50 @@ export default function Ledger() {
   const { data: botTrades, isLoading: botLoading, refetch: refetchBot, isRefetching: botRefetching } = trpc.ledger.botTrades.useQuery({ limit: BOT_PAGE_SIZE * botPage });
 
   const { getCosmetics } = useCosmetics();
+
+  // Apply filters
+  const filteredTrades = useMemo(() => {
+    if (!trades) return [];
+    return trades.filter((row: any) => {
+      if (filterTicker && row.ticker !== filterTicker) return false;
+      if (filterType && row.type !== filterType) return false;
+      if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) return false;
+      return true;
+    });
+  }, [trades, filterTicker, filterType, filterUser]);
+
+  const filteredDividends = useMemo(() => {
+    if (!dividends) return [];
+    return dividends.filter((row: any) => {
+      if (filterTicker && row.ticker !== filterTicker) return false;
+      if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) return false;
+      return true;
+    });
+  }, [dividends, filterTicker, filterUser]);
+
+  const filteredBets = useMemo(() => {
+    if (!allBets) return [];
+    return allBets.filter((row: any) => {
+      if (filterType) {
+        if (filterType === "win" && row.prediction !== "win") return false;
+        if (filterType === "loss" && row.prediction !== "loss") return false;
+        if (filterType === "won" && row.status !== "won") return false;
+        if (filterType === "lost" && row.status !== "lost") return false;
+        if (filterType === "pending" && row.status !== "pending") return false;
+      }
+      if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) return false;
+      return true;
+    });
+  }, [allBets, filterType, filterUser]);
+
+  const filteredBotTrades = useMemo(() => {
+    if (!botTrades) return [];
+    return botTrades.filter((row: any) => {
+      if (filterTicker && row.ticker !== filterTicker) return false;
+      if (filterType && row.type !== filterType) return false;
+      return true;
+    });
+  }, [botTrades, filterTicker, filterType]);
 
   const isLoading = tab === "trades" ? tradesLoading : tab === "dividends" ? dividendsLoading : tab === "bets" ? betsLoading : botLoading;
   const isRefetching = tab === "trades" ? tradesRefetching : tab === "dividends" ? dividendsRefetching : tab === "bets" ? betsRefetching : botRefetching;
@@ -136,6 +188,94 @@ export default function Ledger() {
           ))}
         </div>
 
+        {/* Filter Bar */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              showFilters || hasFilters ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            {language === "ko" ? "필터" : "Filters"}
+            {hasFilters && (
+              <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center">
+                {[filterTicker, filterType, filterUser].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-2 flex flex-wrap gap-2 items-center"
+            >
+              {/* Ticker filter — trades, dividends, bot tabs */}
+              {(tab === "trades" || tab === "dividends" || tab === "bot") && (
+                <select
+                  value={filterTicker}
+                  onChange={ev => setFilterTicker(ev.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
+                >
+                  <option value="">{language === "ko" ? "모든 종목" : "All Tickers"}</option>
+                  {TICKERS.map(tk => (
+                    <option key={tk.symbol} value={tk.symbol}>${tk.symbol}</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Type filter — trades/bot: buy/sell, bets: prediction/status */}
+              {(tab === "trades" || tab === "bot") && (
+                <select
+                  value={filterType}
+                  onChange={ev => setFilterType(ev.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
+                >
+                  <option value="">{language === "ko" ? "모든 유형" : "All Types"}</option>
+                  <option value="buy">{language === "ko" ? "매수" : "Buy"}</option>
+                  <option value="sell">{language === "ko" ? "매도" : "Sell"}</option>
+                </select>
+              )}
+              {tab === "bets" && (
+                <select
+                  value={filterType}
+                  onChange={ev => setFilterType(ev.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
+                >
+                  <option value="">{language === "ko" ? "모든 상태" : "All Status"}</option>
+                  <option value="win">{language === "ko" ? "승리 예측" : "Predicted Win"}</option>
+                  <option value="loss">{language === "ko" ? "패배 예측" : "Predicted Loss"}</option>
+                  <option value="won">{language === "ko" ? "적중" : "Won"}</option>
+                  <option value="lost">{language === "ko" ? "실패" : "Lost"}</option>
+                  <option value="pending">{language === "ko" ? "대기중" : "Pending"}</option>
+                </select>
+              )}
+
+              {/* User search — trades, dividends, bets (not bot) */}
+              {tab !== "bot" && (
+                <input
+                  type="text"
+                  value={filterUser}
+                  onChange={ev => setFilterUser(ev.target.value)}
+                  placeholder={language === "ko" ? "유저 검색..." : "Search user..."}
+                  className="px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs w-36 focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
+                />
+              )}
+
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  {language === "ko" ? "초기화" : "Clear"}
+                </button>
+              )}
+            </motion.div>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -149,7 +289,7 @@ export default function Ledger() {
           </div>
         ) : tab === "trades" ? (
           /* ─── Trades Tab ─── */
-          trades && trades.length > 0 ? (
+          filteredTrades && filteredTrades.length > 0 ? (
             <>
               <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
@@ -162,7 +302,7 @@ export default function Ledger() {
               </div>
 
               <div className="space-y-1.5">
-                {trades.map((trade, i) => (
+                {filteredTrades.map((trade, i) => (
                   <motion.div
                     key={trade.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -256,7 +396,7 @@ export default function Ledger() {
           )
         ) : tab === "dividends" ? (
           /* ─── Dividends Tab ─── */
-          dividends && dividends.length > 0 ? (
+          filteredDividends && filteredDividends.length > 0 ? (
             <>
               <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
@@ -267,7 +407,7 @@ export default function Ledger() {
               </div>
 
               <div className="space-y-1.5">
-                {dividends.map((div, i) => (
+                {filteredDividends.map((div, i) => (
                   <motion.div
                     key={div.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -340,7 +480,7 @@ export default function Ledger() {
           )
         ) : tab === "bets" ? (
           /* ─── Bets Tab ─── */
-          allBets && allBets.length > 0 ? (
+          filteredBets && filteredBets.length > 0 ? (
             <>
               <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
@@ -352,7 +492,7 @@ export default function Ledger() {
               </div>
 
               <div className="space-y-1.5">
-                {allBets.map((bet, i) => {
+                {filteredBets.map((bet, i) => {
                   const isPending = bet.status === "pending";
                   const isWon = bet.status === "won";
                   return (
@@ -450,7 +590,7 @@ export default function Ledger() {
           )
         ) : tab === "bot" ? (
           /* ─── Bot Tab ─── */
-          botTrades && botTrades.length > 0 ? (
+          filteredBotTrades && filteredBotTrades.length > 0 ? (
             <>
               <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.type}</div>
@@ -461,7 +601,7 @@ export default function Ledger() {
                 <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
               </div>
               <div className="space-y-1.5">
-                {botTrades.slice((botPage - 1) * BOT_PAGE_SIZE, botPage * BOT_PAGE_SIZE).map((trade: any, i: number) => (
+                {filteredBotTrades.slice((botPage - 1) * BOT_PAGE_SIZE, botPage * BOT_PAGE_SIZE).map((trade: any, i: number) => (
                   <motion.div
                     key={trade.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -518,7 +658,7 @@ export default function Ledger() {
               {/* Pagination */}
               <div className="flex items-center justify-between mt-4 px-1">
                 <span className="text-[10px] text-muted-foreground">
-                  {(botPage - 1) * BOT_PAGE_SIZE + 1}–{Math.min(botPage * BOT_PAGE_SIZE, botTrades.length)} of {botTrades.length}{botTrades.length >= botPage * BOT_PAGE_SIZE ? "+" : ""}
+                  {(botPage - 1) * BOT_PAGE_SIZE + 1}–{Math.min(botPage * BOT_PAGE_SIZE, filteredBotTrades.length)} of {filteredBotTrades.length}{filteredBotTrades.length >= botPage * BOT_PAGE_SIZE ? "+" : ""}
                 </span>
                 <div className="flex gap-1.5">
                   <button
@@ -531,7 +671,7 @@ export default function Ledger() {
                   <span className="px-2 py-1 text-xs text-muted-foreground font-mono">{botPage}</span>
                   <button
                     onClick={() => setBotPage(p => p + 1)}
-                    disabled={botTrades.length < botPage * BOT_PAGE_SIZE}
+                    disabled={filteredBotTrades.length < botPage * BOT_PAGE_SIZE}
                     className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
                   >
                     {language === "ko" ? "다음" : "Next"}
