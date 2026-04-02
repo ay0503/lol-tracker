@@ -64,7 +64,10 @@ export default function MatchRow({ match, index }: Props) {
             {resultShort}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p
+          className="text-xs text-muted-foreground mt-0.5"
+          title={match.gameCreation ? new Date(match.gameCreation).toLocaleString() : undefined}
+        >
           {match.duration} · {match.timeAgo}
         </p>
       </div>

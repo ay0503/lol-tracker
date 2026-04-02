@@ -86,6 +86,7 @@ export const SEASON_HISTORY: SeasonTier[] = [
 export interface MatchResult {
   id: number;
   timeAgo: string;
+  gameCreation?: number;
   result: "Victory" | "Defeat" | "Remake";
   duration: string;
   champion: string;

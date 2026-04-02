@@ -664,6 +664,7 @@ function MatchHistorySection() {
     return {
       id: m.id,
       timeAgo,
+      gameCreation: m.gameCreation,
       result: m.isRemake ? ("Remake" as const) : m.win ? ("Victory" as const) : ("Defeat" as const),
       duration,
       champion: m.champion,
