@@ -251,7 +251,7 @@ export function executeShort(
       const marginRequired = totalAmount * 0.5;
       if (marginRequired > currentCash) throw new Error("Insufficient margin. Need 50% collateral.");
 
-      const newCash = currentCash - marginRequired + totalAmount;
+      const newCash = currentCash - marginRequired;
       const now = new Date().toISOString();
       await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2), updatedAt: now }).where(eq(portfolios.userId, userId));
 
@@ -300,10 +300,15 @@ export function executeCover(
 
       if (shares > currentShortShares) throw new Error("Cannot cover more shares than shorted");
 
+      // Return margin (50%) + original sale proceeds, minus buy-back cost
+      // margin held = shortAvg * shares * 0.5
+      // sale proceeds held = shortAvg * shares
+      // buy-back cost = currentPrice * shares (= totalCost)
       const marginReturn = shares * currentShortAvg * 0.5;
-      const newCash = currentCash - totalCost + marginReturn;
+      const saleProceeds = shares * currentShortAvg;
+      const newCash = currentCash + marginReturn + saleProceeds - totalCost;
 
-      if (newCash < 0) throw new Error("Insufficient funds to cover (after margin return)");
+      if (newCash < 0) throw new Error("Insufficient funds to cover");
 
       const now = new Date().toISOString();
       await tx.update(portfolios).set({ cashBalance: newCash.toFixed(2), updatedAt: now }).where(eq(portfolios.userId, userId));
