@@ -27,7 +27,7 @@ import { eq } from "drizzle-orm";
 const BOT_DISPLAY_NAME = "QuantBot 🤖";
 const BOT_OPEN_ID = "bot_quanttrader_001";
 const BOT_STARTING_CASH = 200;
-const BOT_TRADE_COOLDOWN_MS = 20 * 60 * 1000; // 20 min between trades
+const BOT_TRADE_COOLDOWN_MS = 10 * 60 * 1000; // 10 min between trades
 let lastBotTradeTime = 0;
 
 /** Reset cooldown — used by tests */
