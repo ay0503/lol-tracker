@@ -278,8 +278,8 @@ export async function pollNow(): Promise<PollResult> {
       cache.invalidate("player.liveGame.details");
     }
 
-    const { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
-    const totalLP = tierToTotalLP(tier, division, lp);
+    let { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
+    let totalLP = tierToTotalLP(tier, division, lp);
     let price = tierToPrice(tier, division, lp);
 
     // Spectator detected game end — DON'T emit event yet.
@@ -326,23 +326,45 @@ export async function pollNow(): Promise<PollResult> {
     const newMatchIds = recentMatchIds.filter(id => !processedIds.has(id));
 
     // If new matches found, re-fetch LP data for accurate price (Riot LP API can lag behind match history)
+    // Retry with delay if LP appears unchanged — Riot API sometimes needs a few seconds to update
     if (newMatchIds.length > 0) {
-      try {
-        const freshData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
-        if (freshData.soloEntry) {
-          const freshEntry = freshData.soloEntry;
-          const freshPrice = tierToPrice(freshEntry.tier, freshEntry.rank, freshEntry.leaguePoints);
-          if (Math.abs(freshPrice - price) > 0.005) {
-            console.log(`[Poll] LP refresh after match: $${price.toFixed(2)} → $${freshPrice.toFixed(2)}`);
-          }
-          // Always use freshest data for match notifications
-          price = freshPrice;
-          result.price = freshPrice;
-          result.tier = freshEntry.tier;
-          result.division = freshEntry.rank;
-          result.lp = freshEntry.leaguePoints;
+      const priceBeforeRefresh = price;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+          console.log(`[Poll] LP unchanged after match — retry ${attempt}/2 in 5s...`);
+          await new Promise(r => setTimeout(r, 5000));
         }
-      } catch { /* use existing data */ }
+        try {
+          const freshData = await fetchFullPlayerData(GAME_NAME, TAG_LINE);
+          if (freshData.soloEntry) {
+            const freshEntry = freshData.soloEntry;
+            const freshPrice = tierToPrice(freshEntry.tier, freshEntry.rank, freshEntry.leaguePoints);
+            price = freshPrice;
+            result.price = freshPrice;
+            result.tier = freshEntry.tier;
+            result.division = freshEntry.rank;
+            result.lp = freshEntry.leaguePoints;
+            // If price changed from initial fetch, LP has updated — stop retrying
+            if (Math.abs(freshPrice - priceBeforeRefresh) > 0.005) {
+              console.log(`[Poll] LP refresh after match (attempt ${attempt}): $${priceBeforeRefresh.toFixed(2)} → $${freshPrice.toFixed(2)}`);
+              break;
+            }
+          }
+        } catch { /* use existing data */ }
+      }
+      // Update local variables with freshest data for game-end event
+      tier = result.tier;
+      division = result.division;
+      lp = result.lp;
+      totalLP = tierToTotalLP(tier, division, lp);
+
+      // Store updated price snapshot if it changed
+      if (Math.abs(price - (lastSnapshotPrice ?? 0)) >= 0.005) {
+        console.log(`[Poll] Storing refreshed price snapshot: $${price.toFixed(2)} (${tier} ${division} ${lp}LP)`);
+        await addPriceSnapshot({ timestamp: Date.now(), tier, division, lp, totalLP, price, wins, losses });
+        lastSnapshotPrice = price;
+        lastSnapshotTime = Date.now();
+      }
     }
 
     // Match-history-based game end: if we're "in game" but new matches appeared,
