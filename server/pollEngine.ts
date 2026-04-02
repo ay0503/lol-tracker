@@ -829,7 +829,7 @@ async function getNewsMode(): Promise<"ai" | "templates"> {
     const result = await client.execute(`SELECT value FROM app_config WHERE key = 'news_mode'`);
     if (result.rows.length > 0) return String(result.rows[0].value) as "ai" | "templates";
   } catch { /* table may not exist */ }
-  return "ai"; // default: try AI first, fall back to templates
+  return "templates"; // default: use templates (toggle via admin)
 }
 
 async function generateMemeNews(
