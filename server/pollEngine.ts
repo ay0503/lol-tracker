@@ -103,6 +103,13 @@ const PORTFOLIO_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
 // Daily summary: track last summary date to send once per day
 let lastDailySummaryDate: string | null = null;
 
+// Deferred game-end event: when Riot LP API is stale after match, defer until LP updates
+let pendingGameEnd: {
+  win: boolean | undefined;
+  snapshot: { lp: number; tier: string; division: string; totalLP: number; price: number };
+  timestamp: number;
+} | null = null;
+
 // Restore last daily summary date from DB to prevent duplicates across restarts
 async function loadLastDailySummaryDate(): Promise<void> {
   try {
@@ -281,6 +288,34 @@ export async function pollNow(): Promise<PollResult> {
     let { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
     let totalLP = tierToTotalLP(tier, division, lp);
     let price = tierToPrice(tier, division, lp);
+
+    // Resolve deferred game-end event: LP was stale last poll, check if it updated
+    if (pendingGameEnd) {
+      const snap = pendingGameEnd.snapshot;
+      const lpChanged = totalLP !== snap.totalLP;
+      const expired = Date.now() - pendingGameEnd.timestamp > 5 * 60 * 1000;
+
+      if (lpChanged || expired) {
+        const lpDelta = totalLP - snap.totalLP;
+        const priceChangeVal = price - snap.price;
+        const priceChangePctVal = snap.price > 0 ? (priceChangeVal / snap.price) * 100 : 0;
+        const winResult = pendingGameEnd.win !== undefined ? pendingGameEnd.win : lpDelta >= 0;
+
+        const gameEndEvent: GameEndEvent = {
+          lpBefore: snap.lp, lpAfter: lp, lpDelta,
+          tierBefore: snap.tier, divisionBefore: snap.division,
+          tierAfter: tier, divisionAfter: division,
+          priceBefore: snap.price, priceAfter: price,
+          priceChange: priceChangeVal, priceChangePct: priceChangePctVal,
+          timestamp: Date.now(), win: pendingGameEnd.win,
+        };
+
+        cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
+        console.log(`[Poll] Deferred game END resolved: ${winResult ? "WIN" : "LOSS"}, LP ${snap.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snap.price.toFixed(2)} → $${price.toFixed(2)}`);
+        notifyGameEnd(lpDelta, snap.price, price, pendingGameEnd.win).catch(() => {});
+        pendingGameEnd = null;
+      }
+    }
 
     // Spectator detected game end — DON'T emit event yet.
     // LP API often lags behind match history, causing wrong win/loss and stale prices.
@@ -542,33 +577,44 @@ export async function pollNow(): Promise<PollResult> {
       }
 
       const lpDelta = totalLP - snapTotalLP;
-      const priceChangeVal = price - snapPrice;
-      const priceChangePctVal = snapPrice > 0 ? (priceChangeVal / snapPrice) * 100 : 0;
 
-      // Use actual match result (authoritative), fall back to LP delta
-      const winResult = lastMatchWinResult !== undefined ? lastMatchWinResult : lpDelta >= 0;
+      // If LP hasn't changed after retries, Riot API is lagging — defer event
+      if (lpDelta === 0 && lastMatchWinResult !== undefined) {
+        console.log(`[Poll] LP unchanged after match (${snapLp}LP → ${lp}LP) — deferring game-end event until Riot LP API updates`);
+        pendingGameEnd = {
+          win: lastMatchWinResult,
+          snapshot: { lp: snapLp, tier: snapTier, division: snapDivision, totalLP: snapTotalLP, price: snapPrice },
+          timestamp: Date.now(),
+        };
+      } else {
+        const priceChangeVal = price - snapPrice;
+        const priceChangePctVal = snapPrice > 0 ? (priceChangeVal / snapPrice) * 100 : 0;
 
-      const gameEndEvent: GameEndEvent = {
-        lpBefore: snapLp,
-        lpAfter: lp,
-        lpDelta,
-        tierBefore: snapTier,
-        divisionBefore: snapDivision,
-        tierAfter: tier,
-        divisionAfter: division,
-        priceBefore: snapPrice,
-        priceAfter: price,
-        priceChange: priceChangeVal,
-        priceChangePct: priceChangePctVal,
-        timestamp: Date.now(),
-        win: lastMatchWinResult,
-      };
+        // Use actual match result (authoritative), fall back to LP delta
+        const winResult = lastMatchWinResult !== undefined ? lastMatchWinResult : lpDelta >= 0;
 
-      cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
-      console.log(`[Poll] Game END event: ${winResult ? "WIN" : "LOSS"}, LP ${snapLp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snapPrice.toFixed(2)} → $${price.toFixed(2)}`);
+        const gameEndEvent: GameEndEvent = {
+          lpBefore: snapLp,
+          lpAfter: lp,
+          lpDelta,
+          tierBefore: snapTier,
+          divisionBefore: snapDivision,
+          tierAfter: tier,
+          divisionAfter: division,
+          priceBefore: snapPrice,
+          priceAfter: price,
+          priceChange: priceChangeVal,
+          priceChangePct: priceChangePctVal,
+          timestamp: Date.now(),
+          win: lastMatchWinResult,
+        };
 
-      // Single Discord notification with LP/price info
-      notifyGameEnd(lpDelta, snapPrice, price, lastMatchWinResult).catch(() => {});
+        cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
+        console.log(`[Poll] Game END event: ${winResult ? "WIN" : "LOSS"}, LP ${snapLp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snapPrice.toFixed(2)} → $${price.toFixed(2)}`);
+
+        // Single Discord notification with LP/price info
+        notifyGameEnd(lpDelta, snapPrice, price, lastMatchWinResult).catch(() => {});
+      }
     }
 
     // Discord notifications — only fire when new matches are detected (not every poll)
