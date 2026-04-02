@@ -514,7 +514,7 @@ export async function pollNow(): Promise<PollResult> {
     // Emit game-end event AFTER match processing so we have authoritative win/loss
     // and fresh LP data. Uses preGameSnapshot if spectator detected game start,
     // otherwise falls back to price history.
-    if (result.newMatches > 0 && !cache.get<GameEndEvent>("player.gameEndEvent")) {
+    if (result.newMatches > 0) {
       let snapLp: number, snapTotalLP: number, snapTier: string, snapDivision: string, snapPrice: number;
 
       if (preGameSnapshot) {

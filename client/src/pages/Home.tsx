@@ -536,6 +536,7 @@ function PostGameBanner() {
     if (!visible || dismissed) return;
     const timer = setTimeout(() => {
       setDismissed(true);
+      dismissMutation.mutate();
     }, 60_000);
     return () => clearTimeout(timer);
   }, [visible, dismissed]);
