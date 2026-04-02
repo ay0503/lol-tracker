@@ -54,7 +54,7 @@ const CHAMPION_NAMES: Record<number, string> = {
   267:"Nami",268:"Azir",350:"Yuumi",360:"Samira",412:"Thresh",420:"Illaoi",421:"Rek'Sai",427:"Ivern",429:"Kalista",
   432:"Bard",497:"Rakan",498:"Xayah",516:"Ornn",517:"Sylas",518:"Neeko",523:"Aphelios",526:"Rell",555:"Pyke",
   711:"Vex",777:"Yone",875:"Sett",876:"Lillia",887:"Gwen",888:"Renata Glasc",895:"Nilah",897:"K'Sante",901:"Smolder",
-  902:"Milio",910:"Hwei",950:"Naafiri",233:"Briar",893:"Aurora",170:"Ambessa",
+  902:"Milio",910:"Hwei",950:"Naafiri",893:"Aurora",170:"Ambessa",
 };
 const PUUID_CACHE: { puuid?: string } = {};
 
