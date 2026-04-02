@@ -832,7 +832,7 @@ function StatsGrid() {
         label={`${t.stats.avgKda20}`}
         value={kdaRatio !== undefined ? kdaRatio.toFixed(2) : "--"}
         subValue={kdaStr ?? undefined}
-        color="#FFD54F"
+        color={kdaRatio !== undefined ? (kdaRatio >= 3 ? "#00C805" : kdaRatio >= 2 ? "#FFD54F" : "#FF5252") : "#FFD54F"}
         isLive={hasLiveKda}
       />
     </div>
