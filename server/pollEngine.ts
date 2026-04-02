@@ -779,16 +779,16 @@ export async function pollNow(): Promise<PollResult> {
       result.errors.push(`Portfolio snapshot error: ${err.message}`);
     }
 
-    // 8. Run AI bot trader (every cycle, only during live games)
-    try {
-      const botTraded = await runBotTrader();
-      if (botTraded) {
-        console.log("[Poll] Bot trader executed a trade");
-      }
-    } catch (err: any) {
-      result.errors.push(`Bot trader error: ${err.message}`);
-      console.error("[Poll] Bot trader error:", err);
-    }
+    // 8. AI bot trader — disabled
+    // try {
+    //   const botTraded = await runBotTrader();
+    //   if (botTraded) {
+    //     console.log("[Poll] Bot trader executed a trade");
+    //   }
+    // } catch (err: any) {
+    //   result.errors.push(`Bot trader error: ${err.message}`);
+    //   console.error("[Poll] Bot trader error:", err);
+    // }
 
     // 9. Update market status based on recent activity
     if (result.newMatches > 0 || confirmedIsInGame) {
