@@ -282,45 +282,18 @@ export async function pollNow(): Promise<PollResult> {
     const totalLP = tierToTotalLP(tier, division, lp);
     let price = tierToPrice(tier, division, lp);
 
-    // Emit game-end event now that we have current LP/price
+    // Spectator detected game end — DON'T emit event yet.
+    // LP API often lags behind match history, causing wrong win/loss and stale prices.
+    // Instead, keep preGameSnapshot alive and emit the event once match data arrives
+    // (in the match processing loop below) for accurate win/loss + fresh LP.
     if (wasConfirmedInGame && !confirmedIsInGame && preGameSnapshot) {
-      // Use totalLP (absolute LP across all tiers) for accurate delta calculation
-      const lpDelta = totalLP - preGameSnapshot.totalLP;
-      const priceChange = price - preGameSnapshot.price;
-      const priceChangePct = preGameSnapshot.price > 0
-        ? (priceChange / preGameSnapshot.price) * 100
-        : 0;
+      console.log(`[Poll] Spectator says game ended — waiting for match data before emitting event (pre-game: ${preGameSnapshot.tier} ${preGameSnapshot.division} ${preGameSnapshot.lp}LP, $${preGameSnapshot.price.toFixed(2)})`);
+    }
 
-      // Skip game-end event if LP didn't change (likely a false detection or non-Solo/Duo game)
-      if (lpDelta === 0 && priceChange === 0) {
-        console.log(`[Poll] Suppressing game-end event: 0 LP change, likely false detection`);
-        preGameSnapshot = null;
-      } else {
-      const gameEndEvent: GameEndEvent = {
-        lpBefore: preGameSnapshot.lp,
-        lpAfter: lp,
-        lpDelta,
-        tierBefore: preGameSnapshot.tier,
-        divisionBefore: preGameSnapshot.division,
-        tierAfter: tier,
-        divisionAfter: division,
-        priceBefore: preGameSnapshot.price,
-        priceAfter: price,
-        priceChange,
-        priceChangePct,
-        timestamp: Date.now(),
-      };
-
-      // Store in cache with 10-minute TTL so frontend can poll for it
-      cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
-      console.log(`[Poll] Game END event: LP ${preGameSnapshot.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${preGameSnapshot.price.toFixed(2)} → $${price.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${priceChange.toFixed(2)})`);
-
-      // Discord notification for game end
-      notifyGameEnd(lpDelta, preGameSnapshot.price, price).catch(() => {});
-
-      // Clear pre-game snapshot
+    // Expire stale preGameSnapshot if no match data arrived within 2 hours
+    if (preGameSnapshot && !confirmedIsInGame && Date.now() - preGameSnapshot.timestamp > 2 * 60 * 60 * 1000) {
+      console.log(`[Poll] Clearing stale preGameSnapshot (>2h old, no match data arrived)`);
       preGameSnapshot = null;
-      } // end else (lpDelta !== 0)
     }
 
     result.price = price;
@@ -395,6 +368,7 @@ export async function pollNow(): Promise<PollResult> {
 
 
     const prevPrice = previousPrice ? parseFloat(previousPrice.price) : price;
+    let lastMatchWinResult: boolean | undefined;
 
     for (const matchId of newMatchIds) {
       let match;
@@ -435,13 +409,9 @@ export async function pollNow(): Promise<PollResult> {
         });
         result.newMatches++;
 
-        // Update game-end event with actual match result (win/loss)
+        // Track the latest non-remake match result for game-end event
         if (!isRemake) {
-          const existingEndEvent = cache.get<GameEndEvent>("player.gameEndEvent");
-          if (existingEndEvent && existingEndEvent.win === undefined) {
-            existingEndEvent.win = participant.win;
-            cache.set("player.gameEndEvent", existingEndEvent, 10 * 60 * 1000);
-          }
+          lastMatchWinResult = participant.win;
         }
 
         // Skip news generation and dividends for remakes
@@ -498,9 +468,7 @@ export async function pollNow(): Promise<PollResult> {
           result.errors.push(`News gen error for ${matchId}: ${err.message}`);
         }
 
-        // Discord: notify new match result with news article
-        // Use prevPrice for price display since this match's LP change
-        // is already reflected in `price` but may not have been when the game-end event fired
+        // Discord: notify new match result with news article + game-end banner
         notifyNewMatch(
           participant.championName, participant.win,
           `${participant.kills}/${participant.deaths}/${participant.assists}`,
@@ -521,53 +489,64 @@ export async function pollNow(): Promise<PollResult> {
       }
     }
 
-    // Fallback game-end event: if new non-remake matches were found but no
-    // spectator-based event was emitted (e.g., spectator API missed the game
-    // start), generate the banner from price history instead.
-    const existingEvent = cache.get<GameEndEvent>("player.gameEndEvent");
-    if (result.newMatches > 0 && !existingEvent) {
-      // Get the second-to-last snapshot (the one before this poll added the current one)
-      const recentSnapshots = await getPriceHistory(Date.now() - 4 * 60 * 60 * 1000);
-      // Find the last snapshot that has different LP from current (i.e., the pre-game state)
-      const preGameSnap = [...recentSnapshots].reverse().find(s => s.totalLP !== totalLP);
+    // Emit game-end event AFTER match processing so we have authoritative win/loss
+    // and fresh LP data. Uses preGameSnapshot if spectator detected game start,
+    // otherwise falls back to price history.
+    if (result.newMatches > 0 && !cache.get<GameEndEvent>("player.gameEndEvent")) {
+      let snapLp: number, snapTotalLP: number, snapTier: string, snapDivision: string, snapPrice: number;
 
-      if (preGameSnap) {
-        const prevLp = preGameSnap.lp;
-        const prevTotalLP = preGameSnap.totalLP;
-        const prevTier = preGameSnap.tier;
-        const prevDivision = preGameSnap.division;
-        const prevPriceVal = parseFloat(preGameSnap.price);
-
-        const lpDelta = totalLP - prevTotalLP;
-        const priceChangeVal = price - prevPriceVal;
-        const priceChangePctVal = prevPriceVal > 0 ? (priceChangeVal / prevPriceVal) * 100 : 0;
-
-        // Get the actual match result from the most recently processed match
-        const recentDBMatches = await getRecentMatchesFromDB(1);
-        const lastMatchWin = recentDBMatches.length > 0 ? recentDBMatches[0].win : undefined;
-
-        const fallbackEvent: GameEndEvent = {
-          lpBefore: prevLp,
-          lpAfter: lp,
-          lpDelta,
-          tierBefore: prevTier,
-          divisionBefore: prevDivision,
-          tierAfter: tier,
-          divisionAfter: division,
-          priceBefore: prevPriceVal,
-          priceAfter: price,
-          priceChange: priceChangeVal,
-          priceChangePct: priceChangePctVal,
-          timestamp: Date.now(),
-          win: lastMatchWin !== undefined ? Boolean(lastMatchWin) : undefined,
-        };
-
-        cache.set("player.gameEndEvent", fallbackEvent, 10 * 60 * 1000);
-        console.log(`[Poll] Game END event (fallback from match): LP ${prevLp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${prevPriceVal.toFixed(2)} → $${price.toFixed(2)}`);
-
-        // Discord notification
-        notifyGameEnd(lpDelta, prevPriceVal, price).catch(() => {});
+      if (preGameSnapshot) {
+        // Spectator path: use the snapshot captured at game start
+        snapLp = preGameSnapshot.lp;
+        snapTotalLP = preGameSnapshot.totalLP;
+        snapTier = preGameSnapshot.tier;
+        snapDivision = preGameSnapshot.division;
+        snapPrice = preGameSnapshot.price;
+        preGameSnapshot = null;
+      } else {
+        // Fallback: spectator missed game start, reconstruct from price history
+        const recentSnapshots = await getPriceHistory(Date.now() - 4 * 60 * 60 * 1000);
+        const preGameSnap = [...recentSnapshots].reverse().find(s => s.totalLP !== totalLP);
+        if (!preGameSnap) {
+          // Can't determine pre-game state, skip event
+          snapLp = lp; snapTotalLP = totalLP; snapTier = tier; snapDivision = division; snapPrice = price;
+        } else {
+          snapLp = preGameSnap.lp;
+          snapTotalLP = preGameSnap.totalLP;
+          snapTier = preGameSnap.tier;
+          snapDivision = preGameSnap.division;
+          snapPrice = parseFloat(preGameSnap.price);
+        }
       }
+
+      const lpDelta = totalLP - snapTotalLP;
+      const priceChangeVal = price - snapPrice;
+      const priceChangePctVal = snapPrice > 0 ? (priceChangeVal / snapPrice) * 100 : 0;
+
+      // Use actual match result (authoritative), fall back to LP delta
+      const winResult = lastMatchWinResult !== undefined ? lastMatchWinResult : lpDelta >= 0;
+
+      const gameEndEvent: GameEndEvent = {
+        lpBefore: snapLp,
+        lpAfter: lp,
+        lpDelta,
+        tierBefore: snapTier,
+        divisionBefore: snapDivision,
+        tierAfter: tier,
+        divisionAfter: division,
+        priceBefore: snapPrice,
+        priceAfter: price,
+        priceChange: priceChangeVal,
+        priceChangePct: priceChangePctVal,
+        timestamp: Date.now(),
+        win: lastMatchWinResult,
+      };
+
+      cache.set("player.gameEndEvent", gameEndEvent, 10 * 60 * 1000);
+      console.log(`[Poll] Game END event: ${winResult ? "WIN" : "LOSS"}, LP ${snapLp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snapPrice.toFixed(2)} → $${price.toFixed(2)}`);
+
+      // Single Discord notification with LP/price info
+      notifyGameEnd(lpDelta, snapPrice, price, lastMatchWinResult).catch(() => {});
     }
 
     // Discord notifications — only fire when new matches are detected (not every poll)

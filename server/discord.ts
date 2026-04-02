@@ -46,8 +46,10 @@ export async function notifyGameEnd(
   lpDelta: number,
   priceBefore: number,
   priceAfter: number,
+  win?: boolean,
 ): Promise<void> {
-  const won = lpDelta >= 0;
+  // Use authoritative match result when available, fall back to LP delta
+  const won = win !== undefined ? win : lpDelta >= 0;
   const emoji = won ? "📈" : "📉";
   const sign = lpDelta >= 0 ? "+" : "";
   const priceChange = priceAfter - priceBefore;
