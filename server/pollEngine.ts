@@ -872,10 +872,10 @@ ${situationTags.length > 0 ? `- SITUATION: ${situationTags.join(". ")}` : ""}
 EXAMPLES OF THE ENERGY WE WANT:
 - "CIRCUIT BREAKER: $DORI halted after CEO speedruns 12 deaths on Yasuo. Bagholders in tears."
 - "$DORI CEO goes 0/8 on Vayne. NYSE considering permanent delisting."
-- "Jump Trading's algo briefly achieved consciousness to buy more $DORI."
+- "Citadel's algo briefly achieved consciousness to buy more $DORI."
 - "$DORI prints tendies after CEO's 15/2 Jinx carry. Wife's boyfriend impressed."
 - "SEC halts trading on $DORI after CEO's 11/0 Katarina is 'too good to be real'"
-- "Scale AI offers CEO a labeling job. 'Similar output, better pay.' 0/4/1 on Lux."
+- "Warren Buffett breaks silence on $DORI: 'I don't understand this instrument.' 0/4/1 on Lux."
 - "$DORI CEO 0/10 on Yasuo. DC갤: '이건 범죄다' 금감원 조사 착수."
 - "ㅋㅋㅋ CEO 15/2 역대급 캐리. 한국 갤: '존버는 승리한다' 인증 완료."
 - "$DORI 망했다 — CEO 2/9 on Vayne. 네이버 실검 1위: '도리 주식 환불'"
@@ -886,7 +886,7 @@ RULES:
 - Mix Wall Street jargon with League terms naturally
 - Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB.
 - Mix in Korean internet slang sometimes (ㅋㅋㅋ, ㄹㅇ, 개사기, 존버, DC갤, 한국 갤러리, 역대급, 망했다, 개미, etc.)
-- Reference real companies/people sometimes (Jump Trading, Citadel, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Goldman Sachs)
+- Reference real companies/people sometimes (Citadel, Renaissance Technologies, Goldman Sachs, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Warren Buffett, Michael Burry, Elon Musk, BlackRock, DFV)
 - If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
 - If kills are high: make it sound like the greatest investment thesis ever conceived
 - DO NOT be generic or boring. Every headline should make someone laugh out loud.
@@ -951,10 +951,10 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `SEC halts trading on $DORI after CEO's ${kda} ${champion} is "too good to be real"`,
       `$DORI hits all-time high. CEO ${kda} on ${champion}. Cathie Wood seen buying.`,
       `URGENT: $DORI bears found dead in ditch after ${champion} ${kda} perfection`,
-      `Jump Trading algos go HAYWIRE buying $DORI after CEO's flawless ${kda} ${champion}`,
-      `Meta announces $DORI integration into Instagram after CEO's ${kda} ${champion} perfection`,
-      `Scale AI trains new model exclusively on CEO's ${kda} ${champion} gameplay. "This is AGI."`,
-      `Jump Trading's quant desk found crying in bathroom after shorting $DORI pre-game. ${kda}.`,
+      `Citadel algos go HAYWIRE buying $DORI after CEO's flawless ${kda} ${champion}`,
+      `Elon tweets "$DORI to Mars 🚀" after CEO's flawless ${kda} ${champion}. Stock halted on volatility.`,
+      `Robinhood trains new model exclusively on CEO's ${kda} ${champion} gameplay. "This is AGI."`,
+      `Goldman Sachs quant desk found crying in bathroom after shorting $DORI pre-game. ${kda}.`,
       `$DORI CEO ${kda} on ${champion}. 역대급 캐리. Korean casters literally screaming. T1 scouting team on the phone.`,
       `$DORI 무적 — CEO ${kda} on ${champion}. 0 deaths. 한국 커뮤니티 난리남. Faker who?`,
     ];
@@ -962,8 +962,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Zero deaths. ${kills} kills. This is what peak performance looks like. Every short seller is currently on the phone with their therapist.`,
       `Institutional investors are scrambling to increase positions after this flawless ${champion} performance. "I've never seen anything like it," says Goldman analyst.`,
       `Reddit's r/wallstreetbets unanimously declares $DORI "the play of the century" after CEO's untouchable ${champion} game.`,
-      `Jump Trading's head of crypto just pivoted their entire fund to $DORI after this ${champion} ${kda}. "We've found true alpha," they said, tears streaming.`,
-      `Scale AI CEO Alexandr Wang personally labels this ${champion} game as "superhuman." Meta's Reality Labs department seen taking notes.`,
+      `Renaissance Technologies head of crypto just pivoted their entire fund to $DORI after this ${champion} ${kda}. "We've found true alpha," they said, tears streaming.`,
+      `Fidelity CEO Alexandr Wang personally labels this ${champion} game as "superhuman." Cathie Wood's Reality Labs department seen taking notes.`,
       `한국 갤러리 실시간 반응: "ㅋㅋㅋㅋ 이건 사기 아니냐" Zero deaths on ${champion}. 진짜 개사기.`,
     ];
   } else if (win && isCarry) {
@@ -975,10 +975,10 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Citadel scrambles to cover $DORI shorts after CEO's ${kda} ${champion} performance`,
       `$DORI bull thesis confirmed: CEO smurfs on ${champion} with ${kda}. Not financial advice btw.`,
       `ALERT: $DORI CEO just ${kda}'d the entire enemy team on ${champion}. We're all gonna make it.`,
-      `Jump Trading deploys emergency capital to long $DORI after CEO's ${kda} ${champion} carry`,
-      `Meta adds $DORI CEO's ${champion} ${kda} replay to Quest Pro demo reel. Zuck impressed.`,
-      `Scale AI pauses all labeling ops to watch CEO go ${kda} on ${champion}. Productivity: 0. Vibes: immaculate.`,
-      `$DORI CEO ${kda} on ${champion}. Jump Trading's algo just achieved consciousness to buy more.`,
+      `Two Sigma deploys emergency capital to long $DORI after CEO's ${kda} ${champion} carry`,
+      `Jim Cramer adds $DORI CEO's ${champion} ${kda} replay to Quest Pro demo reel. Zuck impressed.`,
+      `TD Ameritrade pauses all labeling ops to watch CEO go ${kda} on ${champion}. Productivity: 0. Vibes: immaculate.`,
+      `$DORI CEO ${kda} on ${champion}. Citadel's algo just achieved consciousness to buy more.`,
       `$DORI CEO 원딜 차이 ㅋㅋ. ${kda} on ${champion}. 갤에서 개추 500개 찍음.`,
       `ㄹㅇ 미쳤다 — CEO ${kda} on ${champion}. 한국 주식 커뮤 올타임 1위 게시글.`,
     ];
@@ -986,8 +986,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `CEO went absolutely feral on ${champion} — ${kills} kills in ${minutes} minutes. Short interest just evaporated. This stock is the future.`,
       `"This is the greatest trade I've ever seen," says retail investor who bought at the top. ${kda} on ${champion}. Gains are gains.`,
       `Wall Street analysts upgrading $DORI from "Overweight" to "BUY EVERYTHING" after this ${champion} masterclass.`,
-      `Jump Trading's market-making desk just went long-only on $DORI. Meta's Threads is flooded with $DORI memes. Scale AI is using this game as training data.`,
-      `Sources say Jump Trading's entire Chicago office erupted in applause. ${kda} on ${champion}. The future of finance is League of Legends.`,
+      `Two Sigma's quant models can't explain this ${champion} performance. Renaissance Technologies requesting CEO's op.gg. ${kda}.`,
+      `DFV just posted a screenshot of his $DORI position. Jim Cramer says sell. You know what that means. ${kda} on ${champion}. The future of finance is League of Legends.`,
       `DC인사이드 $DORI 갤러리 실시간: "ㅋㅋㅋ 이 주식 진짜임?" ${kda} on ${champion}. 역대급 캐리에 갤 터짐.`,
     ];
   } else if (win && isHighKP) {
@@ -995,13 +995,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI rallies as CEO participates in ${kills + assists} kills on ${champion}. Team player energy.`,
       `$DORI green candle: CEO's ${kda} ${champion} shows "strong fundamentals"`,
       `Bullish on $DORI: CEO goes ${kda} on ${champion}. Jim Cramer in shambles.`,
-      `Meta's Llama 4 rates CEO's ${kda} ${champion} as "optimal play." $DORI moons.`,
-      `Jump Trading quants confirm: ${kills + assists} kill participation is "statistically impossible to fade"`,
+      `Goldman raises $DORI target after CEO's ${kda} ${champion} . "Fundamentals are sound."`,
+      `Charles Schwab quants confirm: ${kills + assists} kill participation is "statistically impossible to fade"`,
     ];
     bodies = [
       `High kill participation on ${champion} shows CEO is "locked in." Portfolio managers taking notice. ${kda} in ${minutes} minutes.`,
       `CEO's ${champion} game made Jim Cramer cry on live TV. ${kda}. He's bullish now. (Inverse Cramer says sell.)`,
-      `Scale AI's data labelers unanimously tagged this game as "cracked." Meta's AI models can't replicate it.`,
+      `Michael Burry quietly closes his $DORI put options. This performance was not in his bear thesis.`,
     ];
   } else if (win) {
     headlines = [
@@ -1013,10 +1013,10 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO brings home the dub on ${champion}. ${kda}. Slow and steady wins the race. JK GO FAST.`,
       `Another day another $DORI W. ${champion} ${kda}. We literally can't stop winning.`,
       `$DORI CEO ${kda} on ${champion}. Portfolio looking thicker than a bowl of oatmeal. +${pctChange}%.`,
-      `Jump Trading maintains "accumulate" rating on $DORI after ${champion} ${kda} win`,
-      `Meta employees seen placing $DORI limit orders during all-hands. CEO ${kda} on ${champion}.`,
-      `Scale AI's Slack is 90% $DORI memes after CEO's ${kda} ${champion} dub. Productivity tanked. Morale ATH.`,
-      `$DORI CEO ${kda} on ${champion}. Jump Trading's head of research: "Our models predicted this."`,
+      `Citadel maintains "accumulate" rating on $DORI after ${champion} ${kda} win`,
+      `Robinhood users seen placing $DORI limit orders during all-hands. CEO ${kda} on ${champion}.`,
+      `r/wallstreetbets is 90% $DORI memes after CEO's ${kda} ${champion} dub. Productivity tanked. Morale ATH.`,
+      `$DORI CEO ${kda} on ${champion}. Goldman Sachs head of research: "Our models predicted this."`,
       `$DORI CEO ${kda} on ${champion}. 이겼다 ㅋㅋ. DC갤: "존버는 승리한다" 인증 완료.`,
       `오늘도 이김 ㅎㅎ — CEO ${kda} on ${champion}. $DORI 존버 개미들 오늘은 치킨 시킨다.`,
     ];
@@ -1024,7 +1024,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `CEO ${kda} on ${champion} in ${minutes} min. Not flashy but my portfolio doesn't care about flashy. It cares about WINNING. LFG.`,
       `${kda} on ${champion}. My wife left me but at least $DORI is green. This is what financial freedom looks like. Kind of.`,
       `$DORI holders inhaling copium turned hopium after CEO's ${kda} ${champion} win. Tendies are PRINTING.`,
-      `Jump Trading's prop desk quietly adding to their position. Meta interns building a $DORI tracker as a hackathon project. Scale AI offering equity swaps.`,
+      `Citadel's prop desk quietly adding to their position. Retail traders building $DORI trackers. Robinhood users going all-in.`,
       `한국 개미 반응: "ㅋㅋ 오늘은 치킨이다" CEO ${kda} on ${champion}. 존버 성공. 내일은 모름.`,
     ];
   } else if (isInter) {
@@ -1037,11 +1037,11 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `MAYDAY MAYDAY: $DORI CEO ${kda} on ${champion}. This is not a drill. Sell everything.`,
       `$DORI CEO ${kda} on ${champion}. NYSE considering permanent delisting.`,
       `AMBER ALERT: $DORI CEO's dignity last seen before ${kda} ${champion} game`,
-      `Jump Trading's risk management system auto-liquidates all $DORI after CEO goes ${kda}`,
-      `Meta revokes CEO's blue checkmark after ${kda} ${champion}. Zuckerberg: "We have standards."`,
-      `Scale AI relabels $DORI from "investment" to "charity" after CEO's ${kda} on ${champion}`,
-      `Jump Trading files restraining order against $DORI CEO. ${kda}. "Stay 500ft from our portfolio."`,
-      `$DORI CEO ${kda} on ${champion}. Meta's content moderation AI flags it as "graphic violence"`,
+      `Two Sigma risk management system auto-liquidates all $DORI after CEO goes ${kda}`,
+      `Jordan Belfort: "Even I wouldn't sell $DORI after this." CEO ${kda} ${champion}. Zuckerberg: "We have standards."`,
+      `TD Ameritrade relabels $DORI from "investment" to "charity" after CEO's ${kda} on ${champion}`,
+      `Bridgewater files restraining order against $DORI CEO. ${kda}. "Stay 500ft from our portfolio."`,
+      `$DORI CEO ${kda} on ${champion}. Robinhood sends holders a wellness check notification after this performance`,
       `$DORI CEO ${kda} on ${champion}. 한국 커뮤: "ㅋㅋㅋ 트롤 아니냐 이거" 금감원 조사 착수.`,
       `ㅎㄷㄷ — CEO ${kda} on ${champion}. DC갤 실시간 "이건 범죄다" 게시글 1000개 돌파.`,
       `$DORI CEO ${champion} ${kda}. 한국어로: 망했다. 영어로: we're cooked. 둘 다 맞음.`,
@@ -1050,8 +1050,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `${deaths} deaths in ${minutes} minutes on ${champion}. Congress is scheduling hearings. Nancy Pelosi seen panic selling. This is the worst day in $DORI history.`,
       `CEO's ${kda} performance on ${champion} has triggered every stop-loss in existence. Margin calls going out as we speak. GG FF at 15.`,
       `"I've never seen anything this bad," says veteran analyst. ${kda} on ${champion}. Even the bots are selling.`,
-      `Jump Trading's entire quant team just rage-quit. Scale AI is retraining models to exclude this game from reality. Meta considered shutting down the metaverse over this.`,
-      `Sources at Jump Trading confirm their HFT algo briefly achieved sentience just to sell $DORI faster. ${kda} on ${champion}. Unprecedented.`,
+      `Elon Musk tweets "RIP $DORI" with a skull emoji. Michael Burry adds to short position. Citadel's risk desk in shambles.`,
+      `Robinhood disables the buy button on $DORI "to protect investors." Citadel's algo achieved sentience just to sell faster. ${kda} on ${champion}. Unprecedented.`,
       `DC갤 실시간 "ㄹㅇ ㅋㅋㅋ 이 겜 하이라이트 좀" ${deaths}데스 ${champion}. 한국 주식 갤러리에서 조의 표함.`,
     ];
   } else if (isFeeding) {
@@ -1062,10 +1062,10 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `SELL RATING: $DORI CEO goes ${kda} on ${champion}. "We've seen enough." - JP Morgan`,
       `$DORI dips after CEO feeds ${deaths} kills on ${champion}. Loss porn incoming.`,
       `$DORI CEO's ${kda} ${champion} game classified as a "humanitarian crisis" by the UN`,
-      `Jump Trading downgrades $DORI to "Please God No" after CEO ${kda} on ${champion}`,
-      `Meta removes $DORI from suggested stocks after CEO's ${kda} ${champion}. "Brand safety concerns."`,
-      `Scale AI data labelers refuse to annotate CEO's ${kda} ${champion} game. "Inhumane working conditions."`,
-      `$DORI CEO ${kda} on ${champion}. Jump Trading's CEO personally calls to say "bro what"`,
+      `Charles Schwab downgrades $DORI to "Please God No" after CEO ${kda} on ${champion}`,
+      `Robinhood removes $DORI from "Popular Stocks" after CEO's ${kda} ${champion}. "Brand safety concerns."`,
+      `Fidelity analysts refuse to cover $DORI after CEO's ${kda} ${champion} game. "Inhumane working conditions."`,
+      `$DORI CEO ${kda} on ${champion}. Citadel CEO personally calls to say "bro what"`,
       `$DORI CEO ${kda} on ${champion}. 네이버 실검 1위: "도리 주식 환불". ㅋㅋㅋㅋ`,
       `ㅋㅋㅋ CEO ${kda} on ${champion}. 한국 맘카페에서도 논의 중. "우리 아이가 이 주식을 샀대요"`,
     ];
@@ -1073,7 +1073,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `${deaths} deaths on ${champion} in ${minutes} minutes. Analysts downgrading from "Buy" to "Have you considered index funds?"`,
       `CEO's ${champion} performance triggered 47 stop-losses. Short sellers sending thank you cards. ${kda}.`,
       `"I am once again asking for my money back," says every $DORI investor after ${kda} on ${champion}.`,
-      `Jump Trading's risk model now includes "${champion} ${kda}" as a new category of systemic risk. Meta adding $DORI warnings to Facebook Marketplace.`,
+      `Citadel's risk model now classifies "${champion} ${kda}" as a new category of systemic risk. Two Sigma agrees.`,
       `한국 갤러리 반응: "ㅋㅋㅋ ${deaths}데스 ㄹㅇ?" CEO의 ${champion} 한 판에 주가가 지하실 감. 개미들 눈물.`,
     ];
   } else if (!win && isUseless) {
@@ -1082,15 +1082,15 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. Sources say they were watching Netflix the whole time.`,
       `$DORI underperforms: CEO's ${kda} ${champion} was "uninspiring" — Goldman Sachs`,
       `$DORI CEO achieves nothing on ${champion}. ${kda}. Shareholders demand drug test.`,
-      `Meta's AI couldn't even detect CEO on the map. ${kda} on ${champion}. Invisible man.`,
-      `Scale AI offers $DORI CEO a labeling job. "Similar output, better pay." ${kda} on ${champion}.`,
-      `Jump Trading's algo literally forgot $DORI exists. CEO ${kda} on ${champion}. Same energy.`,
+      `BlackRock's Aladdin system can't even find CEO on the map. ${kda} on ${champion}. Invisible man.`,
+      `Wendy's offers $DORI CEO an application. "Similar output, better pay." ${kda} on ${champion}.`,
+      `Renaissance Technologies algo literally forgot $DORI exists. CEO ${kda} on ${champion}. Same energy.`,
       `$DORI CEO ${kda} on ${champion}. 한국 갤: "이 사람 게임 하는 거 맞냐 ㅋㅋ" 투명인간 모드.`,
     ];
     bodies = [
       `${kda} on ${champion} in ${minutes} minutes. CEO reportedly alt-tabbed to check $DORI stock price mid-game. It did not help.`,
       `Zero impact detected. CEO's ${champion} was invisible. ${kda}. The team forgot they had a 5th player.`,
-      `Scale AI ran CEO's ${champion} gameplay through their classifier. Result: "NPC behavior detected." Jump Trading's sentiment analysis agrees.`,
+      `Fidelity's research team watched the full replay. Report: "We have no findings." There was nothing to find.`,
       `DC갤: "ㅋㅋ ${kda} 이게 사람이냐" CEO ${champion} 존재감 0. 주가도 0 향해 가는 중.`,
     ];
   } else if (!win && isFF) {
@@ -1099,14 +1099,14 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI implodes in record time: CEO's ${champion} goes ${kda}. Fastest L in history.`,
       `$DORI flash crash: ${minutes}-minute ${champion} loss. ${kda}. "Not even close" — no one.`,
       `$DORI CEO surrenders at ${minutes} min on ${champion}. ${kda}. White flag energy.`,
-      `Jump Trading's HFT couldn't even sell $DORI fast enough. ${minutes} min FF. ${kda}. Speed diff.`,
-      `Meta's server didn't even finish loading the game. ${minutes} min ${champion} L. ${kda}.`,
+      `Citadel's HFT couldn't even sell $DORI fast enough. ${minutes} min FF. ${kda}. Speed diff.`,
+      `The game ended before Robinhood could even process a sell order. ${minutes} min ${champion} L. ${kda}.`,
       `${minutes}분 서렌 ㅋㅋㅋ — CEO ${kda} on ${champion}. DC갤: "역대급 스피드런"`,
     ];
     bodies = [
       `Game lasted ${minutes} minutes. That's less time than it takes to microwave a Hot Pocket. ${kda} on ${champion}. Down bad.`,
       `CEO's ${champion} game ended so fast the price chart looks like a cliff. ${kda}. Early FF = early bed.`,
-      `Jump Trading's algo couldn't get a fill before the game was already over. Scale AI's stopwatch literally malfunctioned. ${minutes} minutes. ${kda}.`,
+      `Citadel's algo couldn't get a fill before the game was already over. Fastest crash since Lehman Brothers. ${minutes} minutes. ${kda}.`,
       `${minutes}분만에 끝남 ㅋㅋ CEO ${kda} on ${champion}. 컵라면도 못 끓이는 시간에 주가 박살.`,
     ];
   } else if (!win && isLongGame) {
@@ -1114,14 +1114,14 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI bleeds for ${minutes} min before dying: CEO ${kda} on ${champion}. Slow painful death.`,
       `$DORI CEO edged shareholders for ${minutes} minutes then lost. ${champion} ${kda}. Emotional damage.`,
       `BREAKING: $DORI CEO wastes ${minutes} minutes of everyone's life on ${champion}. ${kda}.`,
-      `Jump Trading held $DORI for ${minutes} minutes of false hope. Now liquidating. ${kda} on ${champion}.`,
-      `Meta employees watched CEO's ${champion} for ${minutes} min instead of working. CEO ${kda}. Productivity and stock both down.`,
+      `Bagholders held $DORI for ${minutes} minutes of false hope. Now liquidating. ${kda} on ${champion}.`,
+      `Cathie Wood held through ${minutes} min of this. Even she sold at the end. CEO ${kda} on ${champion}.`,
       `${minutes}분 동안 희망고문 ㅋㅋ — CEO ${kda} on ${champion}. 결국 짐. DC갤: "존버충 참교육"`,
     ];
     bodies = [
       `${minutes} minutes of hope, all for nothing. ${kda} on ${champion}. This is what diamond handing a -99% position feels like.`,
       `CEO fought for ${minutes} minutes on ${champion} — ${kda} — but in the end, the market always wins. And today the market was the enemy nexus.`,
-      `Jump Trading's algo held through ${minutes} minutes of this. Even AI has trust issues now. Scale AI is offering counseling to their models.`,
+      `Charles Schwab algo held through ${minutes} minutes of this. Even AI has trust issues now. E*Trade is offering counseling to their models.`,
       `${minutes}분 존버하다 결국 패배. ${kda} on ${champion}. DC갤: "희망고문 그 자체" 개미들 멘탈 붕괴.`,
     ];
   } else {
@@ -1134,11 +1134,11 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI down ${pctChange}%. CEO's ${kda} ${champion} blamed. Thoughts and prayers for holders.`,
       `$DORI CEO ${kda} on ${champion}. Loss. The chart is starting to look like my credit score.`,
       `Rough day for $DORI: ${champion} ${kda}. CEO says "just a dip." Portfolio says otherwise.`,
-      `Jump Trading's weekly $DORI report just says "lol" after CEO's ${kda} on ${champion}`,
-      `Meta considered featuring $DORI on Facebook Gaming. Then CEO went ${kda} on ${champion}. Offer rescinded.`,
-      `Scale AI downgrades CEO's gameplay from "amateur" to "concerning" after ${kda} on ${champion}`,
-      `$DORI CEO ${kda} on ${champion}. Jump Trading's intern: "even I could do better." He could not.`,
-      `$DORI takes another L. ${champion} ${kda}. At Meta they call this "a learning opportunity." At Jump they call it "a write-off."`,
+      `Citadel weekly $DORI report just says "lol" after CEO's ${kda} on ${champion}`,
+      `Jim Cramer considered featuring $DORI on Facebook Gaming. Then CEO went ${kda} on ${champion}. Offer rescinded.`,
+      `Schwab downgrades CEO's gameplay from "amateur" to "concerning" after ${kda} on ${champion}`,
+      `$DORI CEO ${kda} on ${champion}. Goldman Sachs intern: "even I could do better." He could not.`,
+      `$DORI takes another L. ${champion} ${kda}. Cathie Wood: "This is a 5-year play." Shareholders: "We don't have 5 years."`,
       `$DORI CEO ${kda} on ${champion}. 한국 갤: "ㅋㅋ 또?" 맞음. 또.`,
       `ㅋㅋㅋ 또 졌네 — CEO ${kda} on ${champion}. DC갤 실시간: "존버 그만해라 제발"`,
       `$DORI 하락 — CEO ${kda} on ${champion}. 네이버 증권 댓글: "이 주식 사면 안 되는 이유.txt"`,
@@ -1147,7 +1147,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
       `CEO's ${champion} game has me questioning every life decision that led to buying $DORI. ${kda}. I deserve this.`,
       `${kda} on ${champion}. I showed my portfolio to my therapist. She started crying too. We're both holding though.`,
-      `Jump Trading's morning standup spent 20 minutes discussing this ${champion} loss. Scale AI's Slack channel is pure copium. Meta's stock sympathy-dropped 0.01%.`,
+      `Renaissance Technologies morning standup spent 20 minutes discussing this ${champion} loss. Robinhood Slack channel is pure copium. Warren Buffett's stock sympathy-dropped 0.01%.`,
       `DC갤 실시간: "${champion} ${kda} ㅋㅋ 이거 존버 맞냐?" 한국 개미들 멘탈 터짐. 치킨은 내일로 미룸.`,
     ];
   }
