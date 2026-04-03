@@ -465,6 +465,10 @@ function LeaderboardCharts() {
                       }}
                       connectNulls
                       activeDot={false}
+                      isAnimationActive
+                      animationDuration={1200}
+                      animationBegin={idx * 80}
+                      animationEasing="ease-out"
                     />
                   );
                 })}
@@ -524,6 +528,10 @@ function LeaderboardCharts() {
                     activeDot={{ r: 5 }}
                     connectNulls
                     hide={hiddenUsers.has(name)}
+                    isAnimationActive
+                    animationDuration={1400}
+                    animationBegin={idx * 60}
+                    animationEasing="ease-out"
                   />
                 ))}
               </LineChart>
