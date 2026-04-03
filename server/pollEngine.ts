@@ -238,8 +238,8 @@ export async function pollNow(): Promise<PollResult> {
       }
     }
 
-    // Track game-start: capture pre-game LP/price snapshot
-    if (!wasConfirmedInGame && confirmedIsInGame) {
+    // Track game-start: capture pre-game LP/price snapshot (only once per game)
+    if (!wasConfirmedInGame && confirmedIsInGame && !preGameSnapshot) {
       try {
         const snapEntry = playerData.soloEntry;
         const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
