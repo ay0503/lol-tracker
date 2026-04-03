@@ -316,7 +316,7 @@ function LeaderboardCharts() {
   const { language } = useTranslation();
   const [range, setRange] = useState<ChartRange>("1W");
   const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set());
-  const { pnlData, rankData, userNames, isLoading, formatDate } = useLeaderboardChartData(range);
+  const { valueData, rankData, userNames, isLoading, formatDate } = useLeaderboardChartData(range);
 
   const toggleUser = (name: string) => {
     setHiddenUsers(prev => {
@@ -359,27 +359,27 @@ function LeaderboardCharts() {
 
   const visibleUsers = userNames.filter(n => !hiddenUsers.has(n));
 
-  const hasData = !isLoading && pnlData.length >= 2;
+  const hasData = !isLoading && valueData.length >= 2;
 
   // Smart Y-axis: use 5th/95th percentile of visible users to clip outliers
-  const pnlDomain = useMemo(() => {
-    if (!hasData) return [-50, 50];
+  const valueDomain = useMemo(() => {
+    if (!hasData) return [0, 400];
     const allVals: number[] = [];
-    for (const row of pnlData) {
+    for (const row of valueData) {
       for (const name of userNames) {
         if (!hiddenUsers.has(name) && row[name] !== undefined) {
           allVals.push(row[name]);
         }
       }
     }
-    if (allVals.length === 0) return [-50, 50];
+    if (allVals.length === 0) return [0, 400];
     allVals.sort((a, b) => a - b);
     const p5 = allVals[Math.floor(allVals.length * 0.05)];
     const p95 = allVals[Math.floor(allVals.length * 0.95)];
-    const range = p95 - p5 || 20;
+    const range = p95 - p5 || 50;
     const pad = range * 0.25;
-    return [Math.floor(p5 - pad), Math.ceil(p95 + pad)];
-  }, [pnlData, userNames, hiddenUsers, hasData]);
+    return [Math.max(0, Math.floor(p5 - pad)), Math.ceil(p95 + pad)];
+  }, [valueData, userNames, hiddenUsers, hasData]);
 
   return (
     <div className="space-y-4 mb-6">
@@ -457,19 +457,18 @@ function LeaderboardCharts() {
         )}
       </div>
 
-      {/* ─── Portfolio P&L Chart ─── */}
+      {/* ─── Portfolio Value Chart ─── */}
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-foreground">
-            {language === "ko" ? "수익률 추이" : "P&L %"}
+            {language === "ko" ? "포트폴리오 추이" : "Portfolio Value"}
           </h3>
-          <span className="text-[10px] text-muted-foreground">{language === "ko" ? "$200 기준" : "from $200 start"}</span>
         </div>
 
         {isLoading ? loading : !hasData ? noData : (
           <>
             <ResponsiveContainer width="100%" height={360}>
-              <LineChart data={pnlData}>
+              <LineChart data={valueData}>
                 <XAxis
                   dataKey="timestamp"
                   type="number"
@@ -480,19 +479,19 @@ function LeaderboardCharts() {
                   tickLine={false}
                 />
                 <YAxis
-                  domain={pnlDomain}
+                  domain={valueDomain}
                   allowDataOverflow
                   tick={{ fontSize: 10, fill: "#888" }}
-                  tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
+                  tickFormatter={(v: number) => `$${v}`}
                   axisLine={false}
                   tickLine={false}
                   width={48}
                 />
-                <ReferenceLine y={0} stroke="#555" strokeDasharray="3 3" />
+                <ReferenceLine y={200} stroke="#555" strokeDasharray="3 3" label={{ value: "Start", position: "right", fill: "#666", fontSize: 9 }} />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
                   labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
-                  formatter={(value: number, name: string) => [`${value > 0 ? "+" : ""}${value.toFixed(1)}%`, name]}
+                  formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
                   itemSorter={(item: any) => -(item.value as number)}
                 />
                 {userNames.map((name, idx) => (
