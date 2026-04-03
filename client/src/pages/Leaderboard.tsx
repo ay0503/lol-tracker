@@ -394,8 +394,8 @@ function LeaderboardCharts() {
 
         {isLoading ? loading : !hasData ? noData : (
           <>
-            <ResponsiveContainer width="100%" height={360}>
-              <LineChart data={rankData}>
+            <ResponsiveContainer width="100%" height={Math.max(400, userNames.length * 36)}>
+              <LineChart data={rankData} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
                 <XAxis
                   dataKey="timestamp"
                   type="number"
@@ -407,12 +407,13 @@ function LeaderboardCharts() {
                 />
                 <YAxis
                   reversed
-                  domain={[1, userNames.length]}
-                  tick={{ fontSize: 10, fill: "#888" }}
+                  domain={[0.5, userNames.length + 0.5]}
+                  ticks={Array.from({ length: userNames.length }, (_, i) => i + 1)}
+                  tick={{ fontSize: 9, fill: "#666" }}
                   tickFormatter={(v: number) => `#${v}`}
                   axisLine={false}
                   tickLine={false}
-                  width={32}
+                  width={28}
                   allowDecimals={false}
                 />
                 <Tooltip
@@ -421,18 +422,34 @@ function LeaderboardCharts() {
                   formatter={(value: number, name: string) => [`#${value}`, name]}
                   itemSorter={(item: any) => (item.value as number)}
                 />
-                {userNames.map((name, idx) => (
-                  <Line
-                    key={name}
-                    type="linear"
-                    dataKey={name}
-                    stroke={USER_COLORS[idx % USER_COLORS.length]}
-                    strokeWidth={2}
-                    strokeOpacity={hiddenUsers.has(name) ? 0 : 1}
-                    dot={false}
-                    connectNulls
-                  />
-                ))}
+                {userNames.map((name, idx) => {
+                  const color = USER_COLORS[idx % USER_COLORS.length];
+                  const isHidden = hiddenUsers.has(name);
+                  return (
+                    <Line
+                      key={name}
+                      type="linear"
+                      dataKey={name}
+                      stroke={color}
+                      strokeWidth={isHidden ? 0 : 2.5}
+                      strokeOpacity={isHidden ? 0 : 0.85}
+                      dot={isHidden ? false : (props: any) => {
+                        const { cx, cy, value } = props;
+                        if (!cx || !cy || value == null) return <g />;
+                        return (
+                          <g>
+                            <circle cx={cx} cy={cy} r={11} fill={color} stroke="#18181b" strokeWidth={2} />
+                            <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize={8} fontWeight="bold">
+                              {value}
+                            </text>
+                          </g>
+                        );
+                      }}
+                      connectNulls
+                      activeDot={false}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
             <ChartLegend userNames={userNames} hidden={hiddenUsers} onToggle={toggleUser} />
