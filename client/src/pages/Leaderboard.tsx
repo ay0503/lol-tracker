@@ -405,6 +405,7 @@ function LeaderboardCharts() {
                   tickLine={false}
                 />
                 <YAxis
+                  domain={[0, "auto"]}
                   tick={{ fontSize: 10, fill: "#888" }}
                   tickFormatter={(v: number) => `$${v}`}
                   axisLine={false}
