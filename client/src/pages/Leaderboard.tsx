@@ -288,6 +288,24 @@ function useLeaderboardChartData(range: ChartRange) {
       rankRows.push(rankRow);
     }
 
+    // Build daily value data: one point per day (end-of-day value) for cleaner chart
+    const dailyValueRows: Record<string, number>[] = [];
+    let curDay = "";
+    let lastRow: Record<string, number> = {};
+    for (const valRow of valRows) {
+      const day = dayKey(valRow.timestamp);
+      if (day !== curDay) {
+        if (curDay !== "" && Object.keys(lastRow).length > 1) {
+          dailyValueRows.push(lastRow);
+        }
+        curDay = day;
+      }
+      lastRow = valRow;
+    }
+    if (Object.keys(lastRow).length > 1) {
+      dailyValueRows.push(lastRow);
+    }
+
     // Build P&L % data: ((value - 200) / 200) * 100
     const STARTING_CASH = 200;
     const pnlData = valRows.map(row => {
@@ -300,7 +318,7 @@ function useLeaderboardChartData(range: ChartRange) {
       return pnlRow;
     });
 
-    return { valueData: valRows, pnlData, rankData: rankRows, userNames: names };
+    return { valueData: dailyValueRows, pnlData, rankData: rankRows, userNames: names };
   }, [chartData]);
 
   const formatDate = (ts: number) => {
@@ -497,13 +515,15 @@ function LeaderboardCharts() {
                 {userNames.map((name, idx) => (
                   <Line
                     key={name}
-                    type="monotone"
+                    type="natural"
                     dataKey={name}
                     stroke={USER_COLORS[idx % USER_COLORS.length]}
-                    strokeWidth={1.5}
-                    strokeOpacity={hiddenUsers.has(name) ? 0 : 1}
-                    dot={false}
+                    strokeWidth={2}
+                    strokeOpacity={hiddenUsers.has(name) ? 0 : 0.8}
+                    dot={{ r: 3, fill: USER_COLORS[idx % USER_COLORS.length], stroke: "#18181b", strokeWidth: 1.5 }}
+                    activeDot={{ r: 5 }}
                     connectNulls
+                    hide={hiddenUsers.has(name)}
                   />
                 ))}
               </LineChart>
