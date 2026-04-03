@@ -251,12 +251,37 @@ function useLeaderboardChartData(range: ChartRange) {
         }
       }
       valRows.push(valRow);
+    }
 
-      // Compute ranks: sort users by value descending, assign rank 1,2,3...
+    // Compute daily ranks: use end-of-day values, one rank point per day
+    const dayKey = (ts: number) => new Date(ts).toDateString();
+    let currentDay = "";
+    let lastDayRow: Record<string, number> = {};
+
+    for (const valRow of valRows) {
+      const day = dayKey(valRow.timestamp);
+      if (day !== currentDay) {
+        // New day: emit rank row for the previous day
+        if (currentDay !== "" && Object.keys(lastDayRow).length > 1) {
+          const sorted = names
+            .filter(n => lastDayRow[n] !== undefined)
+            .sort((a, b) => (lastDayRow[b] ?? 0) - (lastDayRow[a] ?? 0));
+          const rankRow: Record<string, number> = { timestamp: lastDayRow.timestamp };
+          for (let i = 0; i < sorted.length; i++) {
+            rankRow[sorted[i]] = i + 1;
+          }
+          rankRows.push(rankRow);
+        }
+        currentDay = day;
+      }
+      lastDayRow = valRow;
+    }
+    // Emit final day
+    if (Object.keys(lastDayRow).length > 1) {
       const sorted = names
-        .filter(n => valRow[n] !== undefined)
-        .sort((a, b) => (valRow[b] ?? 0) - (valRow[a] ?? 0));
-      const rankRow: Record<string, number> = { timestamp: ts };
+        .filter(n => lastDayRow[n] !== undefined)
+        .sort((a, b) => (lastDayRow[b] ?? 0) - (lastDayRow[a] ?? 0));
+      const rankRow: Record<string, number> = { timestamp: lastDayRow.timestamp };
       for (let i = 0; i < sorted.length; i++) {
         rankRow[sorted[i]] = i + 1;
       }
