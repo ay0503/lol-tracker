@@ -951,6 +951,15 @@ export async function getPortfolioHistory(userId: number, since?: number) {
     .orderBy(portfolioSnapshots.timestamp);
 }
 
+export async function getLeaderboardSnapshots(since: number) {
+  const client = getRawClient();
+  const result = await client.execute({
+    sql: `SELECT userId, totalValue, timestamp FROM portfolioSnapshots WHERE timestamp >= ? ORDER BY timestamp`,
+    args: [since],
+  });
+  return result.rows as unknown as { userId: number; totalValue: string; timestamp: number }[];
+}
+
 // ─── Notifications ───
 
 export async function createNotification(data: {

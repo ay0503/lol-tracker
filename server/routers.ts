@@ -968,6 +968,53 @@ export const appRouter = router({
         }
       }, TEN_MIN);
     }),
+    /** Leaderboard chart: portfolio value history for all users */
+    chart: publicProcedure
+      .input(z.object({
+        since: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const { getLeaderboardSnapshots } = await import("./db");
+        const since = input?.since ?? Date.now() - 7 * 24 * 60 * 60 * 1000; // default 7 days
+        return cache.getOrSet(`leaderboard.chart.${since}`, async () => {
+          const snapshots = await getLeaderboardSnapshots(since);
+
+          // Group by userId
+          const byUser = new Map<number, { totalValue: number; timestamp: number }[]>();
+          for (const snap of snapshots) {
+            const uid = Number(snap.userId);
+            if (!byUser.has(uid)) byUser.set(uid, []);
+            byUser.get(uid)!.push({
+              totalValue: parseFloat(snap.totalValue),
+              timestamp: Number(snap.timestamp),
+            });
+          }
+
+          // Get user names
+          const db = await getDb();
+          const allUsers = await db.select({ id: users.id, name: users.name, displayName: users.displayName }).from(users);
+          const nameMap = new Map(allUsers.map(u => [u.id, u.displayName || u.name || `User ${u.id}`]));
+
+          // Build result: only include users with data
+          const result: { userId: number; userName: string; data: { value: number; timestamp: number }[] }[] = [];
+          for (const [userId, data] of Array.from(byUser.entries())) {
+            result.push({
+              userId,
+              userName: nameMap.get(userId) ?? `User ${userId}`,
+              data: data.map(d => ({ value: d.totalValue, timestamp: d.timestamp })),
+            });
+          }
+
+          // Sort by latest value descending
+          result.sort((a, b) => {
+            const aLast = a.data[a.data.length - 1]?.value ?? 0;
+            const bLast = b.data[b.data.length - 1]?.value ?? 0;
+            return bLast - aLast;
+          });
+
+          return result;
+        }, FIVE_MIN);
+      }),
     /** Public user profile: trades + holdings for any user */
     userProfile: publicProcedure
       .input(z.object({ userId: z.number() }))

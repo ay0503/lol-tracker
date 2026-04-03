@@ -1,11 +1,12 @@
 import AppNav from "@/components/AppNav";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award, ChevronDown, ChevronUp, Loader2, Dice5, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StyledName from "@/components/StyledName";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 function getRankIcon(rank: number) {
   if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
@@ -151,6 +152,168 @@ function UserProfile({ userId }: { userId: number }) {
   );
 }
 
+// ─── Leaderboard Chart ───
+
+const USER_COLORS = [
+  "#00C805", "#FF5252", "#4A9EFF", "#FFD54F", "#E040FB",
+  "#00BCD4", "#FF9800", "#8BC34A", "#F44336", "#9C27B0",
+  "#009688", "#CDDC39",
+];
+
+type ChartRange = "1D" | "1W" | "1M" | "ALL";
+
+function LeaderboardChart() {
+  const { language } = useTranslation();
+  const [range, setRange] = useState<ChartRange>("1W");
+
+  const since = useMemo(() => {
+    const now = Date.now();
+    if (range === "1D") return now - 24 * 60 * 60 * 1000;
+    if (range === "1W") return now - 7 * 24 * 60 * 60 * 1000;
+    if (range === "1M") return now - 30 * 24 * 60 * 60 * 1000;
+    return 0; // ALL
+  }, [range]);
+
+  const { data: chartData, isLoading } = trpc.leaderboard.chart.useQuery(
+    { since },
+    { staleTime: 5 * 60 * 1000 }
+  );
+
+  // Build recharts-compatible data: array of { timestamp, [userName]: value }
+  const { mergedData, userNames } = useMemo(() => {
+    if (!chartData || chartData.length === 0) return { mergedData: [], userNames: [] };
+
+    // Collect all unique timestamps and bucket them (round to nearest 10 min)
+    const bucket = (ts: number) => Math.round(ts / (10 * 60 * 1000)) * (10 * 60 * 1000);
+    const tsSet = new Set<number>();
+    const userMap = new Map<string, Map<number, number>>();
+
+    for (const user of chartData) {
+      const map = new Map<number, number>();
+      for (const pt of user.data) {
+        const bts = bucket(pt.timestamp);
+        tsSet.add(bts);
+        map.set(bts, pt.value);
+      }
+      userMap.set(user.userName, map);
+    }
+
+    const timestamps = Array.from(tsSet).sort((a, b) => a - b);
+    const names = chartData.map(u => u.userName);
+
+    // Forward-fill: for each timestamp, use last known value per user
+    const lastValues = new Map<string, number>();
+    const merged = timestamps.map(ts => {
+      const row: Record<string, number> = { timestamp: ts };
+      for (const name of names) {
+        const val = userMap.get(name)?.get(ts);
+        if (val !== undefined) {
+          lastValues.set(name, val);
+          row[name] = val;
+        } else if (lastValues.has(name)) {
+          row[name] = lastValues.get(name)!;
+        }
+      }
+      return row;
+    });
+
+    return { mergedData: merged, userNames: names };
+  }, [chartData]);
+
+  const formatDate = (ts: number) => {
+    const d = new Date(ts);
+    if (range === "1D") return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-foreground">
+          {language === "ko" ? "포트폴리오 추이" : "Portfolio History"}
+        </h3>
+        <div className="flex gap-1">
+          {(["1D", "1W", "1M", "ALL"] as ChartRange[]).map(r => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
+                range === r
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="h-[280px] flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : mergedData.length < 2 ? (
+        <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
+          {language === "ko" ? "데이터 부족" : "Not enough data"}
+        </div>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={mergedData}>
+              <XAxis
+                dataKey="timestamp"
+                type="number"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={formatDate}
+                tick={{ fontSize: 10, fill: "#888" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#888" }}
+                tickFormatter={(v: number) => `$${v.toFixed(0)}`}
+                axisLine={false}
+                tickLine={false}
+                width={48}
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
+                labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
+                formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+              />
+              {userNames.map((name, idx) => (
+                <Line
+                  key={name}
+                  type="monotone"
+                  dataKey={name}
+                  stroke={USER_COLORS[idx % USER_COLORS.length]}
+                  strokeWidth={1.5}
+                  dot={false}
+                  connectNulls
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 px-1">
+            {userNames.map((name, idx) => (
+              <div key={name} className="flex items-center gap-1.5">
+                <div
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
+                />
+                <span className="text-[10px] text-muted-foreground">{name}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 type LeaderboardTab = "trading" | "casino";
 
 export default function Leaderboard() {
@@ -210,7 +373,9 @@ export default function Leaderboard() {
 
         {tab === "trading" ? (
         /* ─── Trading Leaderboard ─── */
-        isLoading ? (
+        <>
+        <LeaderboardChart />
+        {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="h-20 bg-card border border-border rounded-xl animate-pulse" />
@@ -356,7 +521,8 @@ export default function Leaderboard() {
               );
             })}
           </div>
-        )
+        )}
+        </>
         ) : (
         /* ─── Casino Leaderboard ─── */
         casinoLoading ? (
