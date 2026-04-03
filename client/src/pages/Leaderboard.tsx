@@ -152,7 +152,7 @@ function UserProfile({ userId }: { userId: number }) {
   );
 }
 
-// ─── Leaderboard Chart ───
+// ─── Leaderboard Charts ───
 
 const USER_COLORS = [
   "#00C805", "#FF5252", "#4A9EFF", "#FFD54F", "#E040FB",
@@ -162,16 +162,31 @@ const USER_COLORS = [
 
 type ChartRange = "1D" | "1W" | "1M" | "ALL";
 
-function LeaderboardChart() {
-  const { language } = useTranslation();
-  const [range, setRange] = useState<ChartRange>("1W");
+/** Shared legend for both charts */
+function ChartLegend({ userNames }: { userNames: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 px-1">
+      {userNames.map((name, idx) => (
+        <div key={name} className="flex items-center gap-1.5">
+          <div
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
+          />
+          <span className="text-[10px] text-muted-foreground">{name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
+/** Shared hook for chart data */
+function useLeaderboardChartData(range: ChartRange) {
   const since = useMemo(() => {
     const now = Date.now();
     if (range === "1D") return now - 24 * 60 * 60 * 1000;
     if (range === "1W") return now - 7 * 24 * 60 * 60 * 1000;
     if (range === "1M") return now - 30 * 24 * 60 * 60 * 1000;
-    return 0; // ALL
+    return 0;
   }, [range]);
 
   const { data: chartData, isLoading } = trpc.leaderboard.chart.useQuery(
@@ -179,11 +194,10 @@ function LeaderboardChart() {
     { staleTime: 5 * 60 * 1000 }
   );
 
-  // Build recharts-compatible data: array of { timestamp, [userName]: value }
-  const { mergedData, userNames } = useMemo(() => {
-    if (!chartData || chartData.length === 0) return { mergedData: [], userNames: [] };
+  const { valueData, rankData, userNames } = useMemo(() => {
+    if (!chartData || chartData.length === 0)
+      return { valueData: [], rankData: [], userNames: [] };
 
-    // Collect all unique timestamps and bucket them (round to nearest 10 min)
     const bucket = (ts: number) => Math.round(ts / (10 * 60 * 1000)) * (10 * 60 * 1000);
     const tsSet = new Set<number>();
     const userMap = new Map<string, Map<number, number>>();
@@ -201,23 +215,36 @@ function LeaderboardChart() {
     const timestamps = Array.from(tsSet).sort((a, b) => a - b);
     const names = chartData.map(u => u.userName);
 
-    // Forward-fill: for each timestamp, use last known value per user
+    // Forward-fill values
     const lastValues = new Map<string, number>();
-    const merged = timestamps.map(ts => {
-      const row: Record<string, number> = { timestamp: ts };
+    const valRows: Record<string, number>[] = [];
+    const rankRows: Record<string, number>[] = [];
+
+    for (const ts of timestamps) {
+      const valRow: Record<string, number> = { timestamp: ts };
       for (const name of names) {
         const val = userMap.get(name)?.get(ts);
         if (val !== undefined) {
           lastValues.set(name, val);
-          row[name] = val;
+          valRow[name] = val;
         } else if (lastValues.has(name)) {
-          row[name] = lastValues.get(name)!;
+          valRow[name] = lastValues.get(name)!;
         }
       }
-      return row;
-    });
+      valRows.push(valRow);
 
-    return { mergedData: merged, userNames: names };
+      // Compute ranks: sort users by value descending, assign rank 1,2,3...
+      const sorted = names
+        .filter(n => valRow[n] !== undefined)
+        .sort((a, b) => (valRow[b] ?? 0) - (valRow[a] ?? 0));
+      const rankRow: Record<string, number> = { timestamp: ts };
+      for (let i = 0; i < sorted.length; i++) {
+        rankRow[sorted[i]] = i + 1;
+      }
+      rankRows.push(rankRow);
+    }
+
+    return { valueData: valRows, rankData: rankRows, userNames: names };
   }, [chartData]);
 
   const formatDate = (ts: number) => {
@@ -226,90 +253,156 @@ function LeaderboardChart() {
     return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
+  return { valueData, rankData, userNames, isLoading, formatDate };
+}
+
+function LeaderboardCharts() {
+  const { language } = useTranslation();
+  const [range, setRange] = useState<ChartRange>("1W");
+  const { valueData, rankData, userNames, isLoading, formatDate } = useLeaderboardChartData(range);
+
+  const rangeButtons = (
+    <div className="flex gap-1">
+      {(["1D", "1W", "1M", "ALL"] as ChartRange[]).map(r => (
+        <button
+          key={r}
+          onClick={() => setRange(r)}
+          className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
+            range === r
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+          }`}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  );
+
+  const loading = (
+    <div className="h-[240px] flex items-center justify-center">
+      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+    </div>
+  );
+
+  const noData = (
+    <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+      {language === "ko" ? "데이터 부족" : "Not enough data"}
+    </div>
+  );
+
+  const hasData = !isLoading && valueData.length >= 2;
+
   return (
-    <div className="bg-card border border-border rounded-xl p-4 mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-foreground">
-          {language === "ko" ? "포트폴리오 추이" : "Portfolio History"}
-        </h3>
-        <div className="flex gap-1">
-          {(["1D", "1W", "1M", "ALL"] as ChartRange[]).map(r => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
-                range === r
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+    <div className="space-y-4 mb-6">
+      {/* ─── Standings Chart (Rank) ─── */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-foreground">
+            {language === "ko" ? "순위 변동" : "Standings"}
+          </h3>
+          {rangeButtons}
         </div>
+
+        {isLoading ? loading : !hasData ? noData : (
+          <>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={rankData}>
+                <XAxis
+                  dataKey="timestamp"
+                  type="number"
+                  domain={["dataMin", "dataMax"]}
+                  tickFormatter={formatDate}
+                  tick={{ fontSize: 10, fill: "#888" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  reversed
+                  domain={[1, userNames.length]}
+                  tick={{ fontSize: 10, fill: "#888" }}
+                  tickFormatter={(v: number) => `#${v}`}
+                  axisLine={false}
+                  tickLine={false}
+                  width={32}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
+                  labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
+                  formatter={(value: number, name: string) => [`#${value}`, name]}
+                  itemSorter={(item: any) => (item.value as number)}
+                />
+                {userNames.map((name, idx) => (
+                  <Line
+                    key={name}
+                    type="stepAfter"
+                    dataKey={name}
+                    stroke={USER_COLORS[idx % USER_COLORS.length]}
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+            <ChartLegend userNames={userNames} />
+          </>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="h-[280px] flex items-center justify-center">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      {/* ─── Portfolio Value Chart ─── */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-foreground">
+            {language === "ko" ? "포트폴리오 추이" : "Portfolio Value"}
+          </h3>
         </div>
-      ) : mergedData.length < 2 ? (
-        <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
-          {language === "ko" ? "데이터 부족" : "Not enough data"}
-        </div>
-      ) : (
-        <>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={mergedData}>
-              <XAxis
-                dataKey="timestamp"
-                type="number"
-                domain={["dataMin", "dataMax"]}
-                tickFormatter={formatDate}
-                tick={{ fontSize: 10, fill: "#888" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "#888" }}
-                tickFormatter={(v: number) => `$${v.toFixed(0)}`}
-                axisLine={false}
-                tickLine={false}
-                width={48}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
-                labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
-                formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
-              />
-              {userNames.map((name, idx) => (
-                <Line
-                  key={name}
-                  type="monotone"
-                  dataKey={name}
-                  stroke={USER_COLORS[idx % USER_COLORS.length]}
-                  strokeWidth={1.5}
-                  dot={false}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
 
-          {/* Legend */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 px-1">
-            {userNames.map((name, idx) => (
-              <div key={name} className="flex items-center gap-1.5">
-                <div
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
+        {isLoading ? loading : !hasData ? noData : (
+          <>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={valueData}>
+                <XAxis
+                  dataKey="timestamp"
+                  type="number"
+                  domain={["dataMin", "dataMax"]}
+                  tickFormatter={formatDate}
+                  tick={{ fontSize: 10, fill: "#888" }}
+                  axisLine={false}
+                  tickLine={false}
                 />
-                <span className="text-[10px] text-muted-foreground">{name}</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+                <YAxis
+                  domain={[0, 500]}
+                  tick={{ fontSize: 10, fill: "#888" }}
+                  tickFormatter={(v: number) => `$${v}`}
+                  axisLine={false}
+                  tickLine={false}
+                  width={40}
+                />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
+                  labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
+                  formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+                  itemSorter={(item: any) => -(item.value as number)}
+                />
+                {userNames.map((name, idx) => (
+                  <Line
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stroke={USER_COLORS[idx % USER_COLORS.length]}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+            <ChartLegend userNames={userNames} />
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -374,7 +467,7 @@ export default function Leaderboard() {
         {tab === "trading" ? (
         /* ─── Trading Leaderboard ─── */
         <>
-        <LeaderboardChart />
+        <LeaderboardCharts />
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
