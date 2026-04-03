@@ -156,25 +156,36 @@ function UserProfile({ userId }: { userId: number }) {
 
 const USER_COLORS = [
   "#00C805", "#FF5252", "#4A9EFF", "#FFD54F", "#E040FB",
-  "#00BCD4", "#FF9800", "#8BC34A", "#F44336", "#9C27B0",
-  "#009688", "#CDDC39",
+  "#00BCD4", "#FF9800", "#F44336", "#9C27B0",
+  "#009688", "#CDDC39", "#8BC34A",
 ];
 
 type ChartRange = "1D" | "1W" | "1M" | "ALL";
 
-/** Shared legend for both charts */
-function ChartLegend({ userNames }: { userNames: string[] }) {
+/** Clickable legend — click to toggle user visibility */
+function ChartLegend({ userNames, hidden, onToggle }: {
+  userNames: string[];
+  hidden: Set<string>;
+  onToggle: (name: string) => void;
+}) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 px-1">
-      {userNames.map((name, idx) => (
-        <div key={name} className="flex items-center gap-1.5">
-          <div
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
-          />
-          <span className="text-[10px] text-muted-foreground">{name}</span>
-        </div>
-      ))}
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 px-1">
+      {userNames.map((name, idx) => {
+        const isHidden = hidden.has(name);
+        return (
+          <button
+            key={name}
+            onClick={() => onToggle(name)}
+            className={`flex items-center gap-1.5 transition-opacity ${isHidden ? "opacity-30" : "opacity-100"}`}
+          >
+            <div
+              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
+            />
+            <span className="text-[10px] text-muted-foreground">{name}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -202,7 +213,15 @@ function useLeaderboardChartData(range: ChartRange) {
     const tsSet = new Set<number>();
     const userMap = new Map<string, Map<number, number>>();
 
-    for (const user of chartData) {
+    // Filter out inactive users (stayed within $10 of starting $200)
+    const activeUsers = chartData.filter(user => {
+      const values = user.data.map(d => d.value);
+      const minVal = Math.min(...values);
+      const maxVal = Math.max(...values);
+      return maxVal - minVal > 10 || Math.abs(values[values.length - 1] - 200) > 10;
+    });
+
+    for (const user of activeUsers) {
       const map = new Map<number, number>();
       for (const pt of user.data) {
         const bts = bucket(pt.timestamp);
@@ -213,7 +232,7 @@ function useLeaderboardChartData(range: ChartRange) {
     }
 
     const timestamps = Array.from(tsSet).sort((a, b) => a - b);
-    const names = chartData.map(u => u.userName);
+    const names = activeUsers.map(u => u.userName);
 
     // Forward-fill values
     const lastValues = new Map<string, number>();
@@ -259,7 +278,17 @@ function useLeaderboardChartData(range: ChartRange) {
 function LeaderboardCharts() {
   const { language } = useTranslation();
   const [range, setRange] = useState<ChartRange>("1W");
+  const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set());
   const { valueData, rankData, userNames, isLoading, formatDate } = useLeaderboardChartData(range);
+
+  const toggleUser = (name: string) => {
+    setHiddenUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const rangeButtons = (
     <div className="flex gap-1">
@@ -280,16 +309,18 @@ function LeaderboardCharts() {
   );
 
   const loading = (
-    <div className="h-[240px] flex items-center justify-center">
+    <div className="h-[360px] flex items-center justify-center">
       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
     </div>
   );
 
   const noData = (
-    <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">
+    <div className="h-[360px] flex items-center justify-center text-sm text-muted-foreground">
       {language === "ko" ? "데이터 부족" : "Not enough data"}
     </div>
   );
+
+  const visibleUsers = userNames.filter(n => !hiddenUsers.has(n));
 
   const hasData = !isLoading && valueData.length >= 2;
 
@@ -306,7 +337,7 @@ function LeaderboardCharts() {
 
         {isLoading ? loading : !hasData ? noData : (
           <>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={360}>
               <LineChart data={rankData}>
                 <XAxis
                   dataKey="timestamp"
@@ -336,17 +367,18 @@ function LeaderboardCharts() {
                 {userNames.map((name, idx) => (
                   <Line
                     key={name}
-                    type="monotone"
+                    type="linear"
                     dataKey={name}
                     stroke={USER_COLORS[idx % USER_COLORS.length]}
                     strokeWidth={2}
+                    strokeOpacity={hiddenUsers.has(name) ? 0 : 1}
                     dot={false}
                     connectNulls
                   />
                 ))}
               </LineChart>
             </ResponsiveContainer>
-            <ChartLegend userNames={userNames} />
+            <ChartLegend userNames={userNames} hidden={hiddenUsers} onToggle={toggleUser} />
           </>
         )}
       </div>
@@ -361,7 +393,7 @@ function LeaderboardCharts() {
 
         {isLoading ? loading : !hasData ? noData : (
           <>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={360}>
               <LineChart data={valueData}>
                 <XAxis
                   dataKey="timestamp"
@@ -377,7 +409,7 @@ function LeaderboardCharts() {
                   tickFormatter={(v: number) => `$${v}`}
                   axisLine={false}
                   tickLine={false}
-                  width={40}
+                  width={48}
                 />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
@@ -392,13 +424,14 @@ function LeaderboardCharts() {
                     dataKey={name}
                     stroke={USER_COLORS[idx % USER_COLORS.length]}
                     strokeWidth={1.5}
+                    strokeOpacity={hiddenUsers.has(name) ? 0 : 1}
                     dot={false}
                     connectNulls
                   />
                 ))}
               </LineChart>
             </ResponsiveContainer>
-            <ChartLegend userNames={userNames} />
+            <ChartLegend userNames={userNames} hidden={hiddenUsers} onToggle={toggleUser} />
           </>
         )}
       </div>
