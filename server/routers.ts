@@ -990,14 +990,16 @@ export const appRouter = router({
             });
           }
 
-          // Get user names
+          // Get user names, exclude bot
           const db = await getDb();
           const allUsers = await db.select({ id: users.id, name: users.name, displayName: users.displayName }).from(users);
+          const botUserIds = new Set(allUsers.filter(u => u.name === "QuantBot 🤖").map(u => u.id));
           const nameMap = new Map(allUsers.map(u => [u.id, u.displayName || u.name || `User ${u.id}`]));
 
-          // Build result: only include users with data
+          // Build result: only include users with data, exclude bot
           const result: { userId: number; userName: string; data: { value: number; timestamp: number }[] }[] = [];
           for (const [userId, data] of Array.from(byUser.entries())) {
+            if (botUserIds.has(userId)) continue;
             result.push({
               userId,
               userName: nameMap.get(userId) ?? `User ${userId}`,

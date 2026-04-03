@@ -373,8 +373,6 @@ function LeaderboardCharts() {
                   tickLine={false}
                 />
                 <YAxis
-                  domain={[0, 500]}
-                  allowDataOverflow
                   tick={{ fontSize: 10, fill: "#888" }}
                   tickFormatter={(v: number) => `$${v}`}
                   axisLine={false}
