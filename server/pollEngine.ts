@@ -403,14 +403,17 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // Match-history-based game end: if we're "in game" but new matches appeared,
-    // the game is definitely over — more reliable than waiting for spectator 404
-    if (confirmedIsInGame && newMatchIds.length > 0) {
-      console.log(`[Poll] New match detected while in-game → forcing game END`);
+    // the game is probably over. BUT if spectator API still shows in-game (rawIsInGame),
+    // these matches are from a PREVIOUS game — don't end the current game.
+    if (confirmedIsInGame && newMatchIds.length > 0 && !rawIsInGame) {
+      console.log(`[Poll] New match detected while in-game + spectator says game over → forcing game END`);
       confirmedIsInGame = false;
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
       cache.set("player.liveGame.check", false, 45_000);
       cache.invalidate("player.liveGame.details");
+    } else if (confirmedIsInGame && newMatchIds.length > 0 && rawIsInGame) {
+      console.log(`[Poll] New match detected but spectator shows STILL IN GAME — previous game's delayed match data, not ending current game`);
     }
 
     // Max game duration safety valve: no LoL game lasts >90 min
@@ -552,8 +555,8 @@ export async function pollNow(): Promise<PollResult> {
     if (result.newMatches > 0) {
       let snapLp: number, snapTotalLP: number, snapTier: string, snapDivision: string, snapPrice: number;
 
-      if (preGameSnapshot) {
-        // Spectator path: use the snapshot captured at game start
+      if (preGameSnapshot && !confirmedIsInGame) {
+        // Spectator path: use the snapshot captured at game start (only if game is over)
         snapLp = preGameSnapshot.lp;
         snapTotalLP = preGameSnapshot.totalLP;
         snapTier = preGameSnapshot.tier;
