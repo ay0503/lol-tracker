@@ -336,7 +336,7 @@ function LeaderboardCharts() {
                 {userNames.map((name, idx) => (
                   <Line
                     key={name}
-                    type="stepAfter"
+                    type="monotone"
                     dataKey={name}
                     stroke={USER_COLORS[idx % USER_COLORS.length]}
                     strokeWidth={2}
