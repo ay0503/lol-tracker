@@ -885,7 +885,7 @@ RULES:
 - Body: 1-2 sentences, under 220 chars, add extra detail/joke
 - Mix Wall Street jargon with League terms naturally
 - Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB.
-- Mix in Korean internet slang sometimes (ㅋㅋㅋ, ㄹㅇ, 개사기, 존버, 디씨, 디씨 갤러리, 역대급, 망했다, 개미, etc.)
+- Mix in Korean 디씨 internet slang aggressively (~40% of headlines). Use: ㅋㅋㅋ, ㄹㅇ, ㅇㅈ, ㅎㄷㄷ, ㅈㅈ, ㅂㅂ, 개사기, 존버/존버충, 디씨 주갤, __특 format, 떡상/떡락, 손절각, 물타기, 뇌동매매, 풀매수, 정신승리, 현타, 개이득/개손해, 킹받는다, 가즈아, 찐, 갓, 쩐다, 현실부정, 상한가/하한가, 개미, 빡침, 참교육, 무지성
 - Reference real companies/people sometimes (Citadel, Renaissance Technologies, Goldman Sachs, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Warren Buffett, Michael Burry, Elon Musk, BlackRock, DFV)
 - If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
 - If kills are high: make it sound like the greatest investment thesis ever conceived
@@ -957,6 +957,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Goldman Sachs quant desk found crying in bathroom after shorting $DORI pre-game. ${kda}.`,
       `$DORI CEO ${kda} on ${champion}. 디씨 반응: "ㅋㅋㅋ 이거 실화냐 사람이 이렇게 칠 수 있음?" 풀매수 간다`,
       `$DORI CEO ${kda} on ${champion}. 0데스. 디씨 주갤 특: 이길 때만 "내가 말했잖아" ㅋㅋㅋ 떡상 가자`,
+      `CEO ${kda} on ${champion}. 디씨: "ㅇㅈ? ㅇ ㅇㅈ" "갓CEO 찐임" "풀매수 가즈아 🚀" 상한가 간다`,
+      `${kda} on ${champion}. 디씨 주갤 현재 분위기: 개이득 인증글 러시 ㅋㅋ "쩐다 ㄹㅇ" 존버충 승리의 날`,
     ];
     bodies = [
       `Zero deaths. ${kills} kills. This is what peak performance looks like. Every short seller is currently on the phone with their therapist.`,
@@ -965,6 +967,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Renaissance Technologies head of crypto just pivoted their entire fund to $DORI after this ${champion} ${kda}. "We've found true alpha," they said, tears streaming.`,
       `Fidelity CEO Alexandr Wang personally labels this ${champion} game as "superhuman." Cathie Wood's Reality Labs department seen taking notes.`,
       `디씨 주갤 실시간: "ㄹㅇ 이건 개사기" "${kills}킬 0데스 말이 되냐" "풀매수 안 한 놈 손들어" ㅋㅋ 갤 터짐.`,
+      `디씨: "이거 실화냐 ㅋㅋ 쩐다" "갓CEO 킹정" "존버한 보람이 있다" 무지성 풀매수 러시 시작됨.`,
     ];
   } else if (win && isCarry) {
     headlines = [
@@ -981,6 +984,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. Citadel's algo just achieved consciousness to buy more.`,
       `$DORI CEO ${kda} on ${champion}. 디씨 실시간: "ㅋㅋㅋ 이거 실화냐 떡상 간다" 개추 폭격 중`,
       `ㄹㅇ 미쳤다 — CEO ${kda} on ${champion}. 디씨 주갤 특: 캐리하면 "역시 우리 CEO" 지면 "사퇴해라" ㅋㅋ`,
+      `CEO ${kda} on ${champion}. 디씨: "쩐다 ㄹㅇ" "개이득 가즈아" "이 주식 찐이다" 떡상 확정`,
+      `${kills}킬 캐리 ㅋㅋ CEO ${kda} on ${champion}. 디씨: "킹받게 잘하네" "무지성 풀매수각" 갤 터짐`,
     ];
     bodies = [
       `CEO went absolutely feral on ${champion} — ${kills} kills in ${minutes} minutes. Short interest just evaporated. This stock is the future.`,
@@ -989,6 +994,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Two Sigma's quant models can't explain this ${champion} performance. Renaissance Technologies requesting CEO's op.gg. ${kda}.`,
       `DFV just posted a screenshot of his $DORI position. Jim Cramer says sell. You know what that means. ${kda} on ${champion}. The future of finance is League of Legends.`,
       `디씨 반응: "존버충 참교육 완료 ㅋㅋ" "${kills}킬 ㄹㅇ 레전드" 물타기 한 놈들 오늘은 치킨 간다. ${kda} on ${champion}.`,
+      `디씨: "현타 올 뻔했는데 CEO가 살렸다 ㅋㅋ" "개이득 인증 간다" "${kills}킬 갓캐리 킹정" 떡상 가즈아.`,
     ];
   } else if (win && isHighKP) {
     headlines = [
@@ -1019,6 +1025,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. Goldman Sachs head of research: "Our models predicted this."`,
       `$DORI CEO ${kda} on ${champion}. 디씨 반응: "존버는 승리한다" 인증 완료 ㅋㅋ 정신승리 아니고 진짜 승리`,
       `오늘도 이김 — CEO ${kda} on ${champion}. 디씨 주갤 특: 이길 때만 나타나서 "ㅇㅈ 내가 말했잖아" ㅋㅋㅋ`,
+      `CEO ${kda} on ${champion}. 디씨: "개이득 ㅋㅋ" "존버는 빛을 본다" "떡상 가즈아" 현실: +${pctChange}%`,
+      `${kda} on ${champion}. 디씨 분위기: 찐 존버러들 "ㅇㅈ? ㅇ ㅇㅈ" ㅋㅋ 치킨 시키는 소리 들림`,
     ];
     bodies = [
       `CEO ${kda} on ${champion} in ${minutes} min. Not flashy but my portfolio doesn't care about flashy. It cares about WINNING. LFG.`,
@@ -1045,6 +1053,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. 디씨 반응: "ㅋㅋ 이거 트롤 아니냐" "아님 이게 실력임" "ㅎㄷㄷ" 금감원 조사 착수.`,
       `CEO ${kda} on ${champion}. 디씨 주갤 특: ${deaths}데스 뜨면 "ㅈㅈ" "손절각" "뇌동매매 한 내 잘못" 3연타 ㅋㅋ`,
       `$DORI CEO ${champion} ${kda}. 디씨 갤 분위기: "ㄹㅇ 망했다" "이게 CEO냐 알바냐" "손절 안 하면 거기가 바닥 아님" ㅋㅋ`,
+      `CEO ${kda} on ${champion}. 디씨: "하한가 간다 ㅋㅋ" "개손해 인증 올린다" "현타 쩔어" 극혐 퍼포먼스`,
+      `${deaths}데스 ㅋㅋ CEO ${kda} on ${champion}. 디씨 주갤 특: ${deaths}데스 이상이면 "이게 나라냐" 나옴 ㅎㄷㄷ`,
     ];
     bodies = [
       `${deaths} deaths in ${minutes} minutes on ${champion}. Congress is scheduling hearings. Nancy Pelosi seen panic selling. This is the worst day in $DORI history.`,
@@ -1068,6 +1078,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. Citadel CEO personally calls to say "bro what"`,
       `$DORI CEO ${kda} on ${champion}. 디씨: "ㅋㅋ ${deaths}데스 말이 되냐" "이거 뇌동매매로 산 내 잘못 ㅇㅈ"`,
       `CEO ${kda} on ${champion}. 디씨 주갤 특: 떡락하면 "CEO 트롤" 떡상하면 "역시 내 분석력" ㅋㅋ 오늘은 전자`,
+      `CEO ${kda} on ${champion}. 디씨: "킹받는다 ㄹㅇ" "개손해 인증 간다" "현타 와서 손절할까" ㅋㅋ 떡락`,
+      `${kda} on ${champion}. 디씨: "CEO 빡침 유발러 ㅋㅋ" "하한가 가즈아 (반어법)" "무지성으로 산 내 잘못"`,
     ];
     bodies = [
       `${deaths} deaths on ${champion} in ${minutes} minutes. Analysts downgrading from "Buy" to "Have you considered index funds?"`,
@@ -1142,6 +1154,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO ${kda} on ${champion}. 디씨: "ㅋㅋ 또?" "또 졌냐 ㄹㅇ" "매일 같은 시나리오 ㅎㄷㄷ" 맞음. 또.`,
       `또 졌네 ㅋㅋ — CEO ${kda} on ${champion}. 디씨 주갤 특: 지면 "손절각" 이기면 "존버 승리" 오늘은 전자`,
       `$DORI 떡락 — CEO ${kda} on ${champion}. 디씨: "하한가 간다 ㅋㅋ" "뇌동매매 한 내 잘못 ㅇㅈ" 손절각`,
+      `CEO ${kda} on ${champion}. 디씨: "킹받는다 ㄹㅇ" "개손해 ㅋㅋ 현타 쩔어" "무지성 존버 한 내 잘못"`,
+      `${kda} on ${champion}. 디씨 현재 분위기: "현실부정 단계 지남" "손절각인데 이미 늦음" ㅎㄷㄷ 떡락`,
     ];
     bodies = [
       `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
