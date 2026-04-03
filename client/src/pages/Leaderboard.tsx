@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Crown, Medal, Award, ChevronDown, ChevronUp, Loader2, Dice5, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import StyledName from "@/components/StyledName";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 function getRankIcon(rank: number) {
   if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
@@ -288,7 +288,19 @@ function useLeaderboardChartData(range: ChartRange) {
       rankRows.push(rankRow);
     }
 
-    return { valueData: valRows, rankData: rankRows, userNames: names };
+    // Build P&L % data: ((value - 200) / 200) * 100
+    const STARTING_CASH = 200;
+    const pnlData = valRows.map(row => {
+      const pnlRow: Record<string, number> = { timestamp: row.timestamp };
+      for (const name of names) {
+        if (row[name] !== undefined) {
+          pnlRow[name] = ((row[name] - STARTING_CASH) / STARTING_CASH) * 100;
+        }
+      }
+      return pnlRow;
+    });
+
+    return { valueData: valRows, pnlData, rankData: rankRows, userNames: names };
   }, [chartData]);
 
   const formatDate = (ts: number) => {
@@ -297,14 +309,14 @@ function useLeaderboardChartData(range: ChartRange) {
     return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
-  return { valueData, rankData, userNames, isLoading, formatDate };
+  return { valueData, pnlData, rankData, userNames, isLoading, formatDate };
 }
 
 function LeaderboardCharts() {
   const { language } = useTranslation();
   const [range, setRange] = useState<ChartRange>("1W");
   const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set());
-  const { valueData, rankData, userNames, isLoading, formatDate } = useLeaderboardChartData(range);
+  const { pnlData, rankData, userNames, isLoading, formatDate } = useLeaderboardChartData(range);
 
   const toggleUser = (name: string) => {
     setHiddenUsers(prev => {
@@ -347,7 +359,7 @@ function LeaderboardCharts() {
 
   const visibleUsers = userNames.filter(n => !hiddenUsers.has(n));
 
-  const hasData = !isLoading && valueData.length >= 2;
+  const hasData = !isLoading && pnlData.length >= 2;
 
   return (
     <div className="space-y-4 mb-6">
@@ -408,18 +420,19 @@ function LeaderboardCharts() {
         )}
       </div>
 
-      {/* ─── Portfolio Value Chart ─── */}
+      {/* ─── Portfolio P&L Chart ─── */}
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-foreground">
-            {language === "ko" ? "포트폴리오 추이" : "Portfolio Value"}
+            {language === "ko" ? "수익률 추이" : "P&L %"}
           </h3>
+          <span className="text-[10px] text-muted-foreground">{language === "ko" ? "$200 기준" : "from $200 start"}</span>
         </div>
 
         {isLoading ? loading : !hasData ? noData : (
           <>
             <ResponsiveContainer width="100%" height={360}>
-              <LineChart data={valueData}>
+              <LineChart data={pnlData}>
                 <XAxis
                   dataKey="timestamp"
                   type="number"
@@ -430,17 +443,17 @@ function LeaderboardCharts() {
                   tickLine={false}
                 />
                 <YAxis
-                  domain={[0, "auto"]}
                   tick={{ fontSize: 10, fill: "#888" }}
-                  tickFormatter={(v: number) => `$${v}`}
+                  tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
                   axisLine={false}
                   tickLine={false}
                   width={48}
                 />
+                <ReferenceLine y={0} stroke="#555" strokeDasharray="3 3" />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
                   labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
-                  formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+                  formatter={(value: number, name: string) => [`${value > 0 ? "+" : ""}${value.toFixed(1)}%`, name]}
                   itemSorter={(item: any) => -(item.value as number)}
                 />
                 {userNames.map((name, idx) => (
