@@ -824,12 +824,8 @@ export async function pollNow(): Promise<PollResult> {
  * Generate a meme news headline using LLM
  */
 async function getNewsMode(): Promise<"ai" | "templates"> {
-  try {
-    const client = getRawClient();
-    const result = await client.execute(`SELECT value FROM app_config WHERE key = 'news_mode'`);
-    if (result.rows.length > 0) return String(result.rows[0].value) as "ai" | "templates";
-  } catch { /* table may not exist */ }
-  return "templates"; // default: use templates (toggle via admin)
+  // Forced to templates — re-enable DB lookup to allow admin toggle
+  return "templates";
 }
 
 async function generateMemeNews(
