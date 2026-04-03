@@ -466,8 +466,8 @@ function LeaderboardCharts() {
                       connectNulls
                       activeDot={false}
                       isAnimationActive
-                      animationDuration={1200}
-                      animationBegin={idx * 80}
+                      animationDuration={2000}
+                      animationBegin={0}
                       animationEasing="ease-out"
                     />
                   );
@@ -529,8 +529,8 @@ function LeaderboardCharts() {
                     connectNulls
                     hide={hiddenUsers.has(name)}
                     isAnimationActive
-                    animationDuration={1400}
-                    animationBegin={idx * 60}
+                    animationDuration={2000}
+                    animationBegin={0}
                     animationEasing="ease-out"
                   />
                 ))}
