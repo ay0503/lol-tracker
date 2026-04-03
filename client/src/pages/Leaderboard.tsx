@@ -205,9 +205,9 @@ function useLeaderboardChartData(range: ChartRange) {
     { staleTime: 5 * 60 * 1000 }
   );
 
-  const { valueData, rankData, userNames } = useMemo(() => {
+  const { valueData, pnlData, rankData, userNames } = useMemo(() => {
     if (!chartData || chartData.length === 0)
-      return { valueData: [], rankData: [], userNames: [] };
+      return { valueData: [], pnlData: [], rankData: [], userNames: [] };
 
     const bucket = (ts: number) => Math.round(ts / (10 * 60 * 1000)) * (10 * 60 * 1000);
     const tsSet = new Set<number>();
