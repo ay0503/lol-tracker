@@ -876,8 +876,8 @@ EXAMPLES OF THE ENERGY WE WANT:
 - "$DORI prints tendies after CEO's 15/2 Jinx carry. Wife's boyfriend impressed."
 - "SEC halts trading on $DORI after CEO's 11/0 Katarina is 'too good to be real'"
 - "Warren Buffett breaks silence on $DORI: 'I don't understand this instrument.' 0/4/1 on Lux."
-- "$DORI CEO 0/10 on Yasuo. DC갤: '이건 범죄다' 금감원 조사 착수."
-- "ㅋㅋㅋ CEO 15/2 역대급 캐리. 한국 갤: '존버는 승리한다' 인증 완료."
+- "$DORI CEO 0/10 on Yasuo. 디씨: '이건 범죄다' 금감원 조사 착수."
+- "ㅋㅋㅋ CEO 15/2 역대급 캐리. 디씨: '존버는 승리한다' 인증 완료."
 - "$DORI 망했다 — CEO 2/9 on Vayne. 네이버 실검 1위: '도리 주식 환불'"
 
 RULES:
@@ -885,12 +885,12 @@ RULES:
 - Body: 1-2 sentences, under 220 chars, add extra detail/joke
 - Mix Wall Street jargon with League terms naturally
 - Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB.
-- Mix in Korean internet slang sometimes (ㅋㅋㅋ, ㄹㅇ, 개사기, 존버, DC갤, 한국 갤러리, 역대급, 망했다, 개미, etc.)
+- Mix in Korean internet slang sometimes (ㅋㅋㅋ, ㄹㅇ, 개사기, 존버, 디씨, 디씨 갤러리, 역대급, 망했다, 개미, etc.)
 - Reference real companies/people sometimes (Citadel, Renaissance Technologies, Goldman Sachs, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Warren Buffett, Michael Burry, Elon Musk, BlackRock, DFV)
 - If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
 - If kills are high: make it sound like the greatest investment thesis ever conceived
 - DO NOT be generic or boring. Every headline should make someone laugh out loud.
-- About 30% of the time, include Korean slang or DC갤 references for extra flavor.
+- About 30% of the time, include Korean slang or 디씨 references for extra flavor.
 
 Respond in JSON: { "headline": "...", "body": "..." }`;
 
@@ -955,8 +955,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Elon tweets "$DORI to Mars 🚀" after CEO's flawless ${kda} ${champion}. Stock halted on volatility.`,
       `Robinhood trains new model exclusively on CEO's ${kda} ${champion} gameplay. "This is AGI."`,
       `Goldman Sachs quant desk found crying in bathroom after shorting $DORI pre-game. ${kda}.`,
-      `$DORI CEO ${kda} on ${champion}. 역대급 캐리. Korean casters literally screaming. T1 scouting team on the phone.`,
-      `$DORI 무적 — CEO ${kda} on ${champion}. 0 deaths. 한국 커뮤니티 난리남. Faker who?`,
+      `$DORI CEO ${kda} on ${champion}. 디씨 반응: "ㅋㅋㅋ 이거 실화냐 사람이 이렇게 칠 수 있음?" 풀매수 간다`,
+      `$DORI CEO ${kda} on ${champion}. 0데스. 디씨 주갤 특: 이길 때만 "내가 말했잖아" ㅋㅋㅋ 떡상 가자`,
     ];
     bodies = [
       `Zero deaths. ${kills} kills. This is what peak performance looks like. Every short seller is currently on the phone with their therapist.`,
@@ -964,7 +964,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Reddit's r/wallstreetbets unanimously declares $DORI "the play of the century" after CEO's untouchable ${champion} game.`,
       `Renaissance Technologies head of crypto just pivoted their entire fund to $DORI after this ${champion} ${kda}. "We've found true alpha," they said, tears streaming.`,
       `Fidelity CEO Alexandr Wang personally labels this ${champion} game as "superhuman." Cathie Wood's Reality Labs department seen taking notes.`,
-      `한국 갤러리 실시간 반응: "ㅋㅋㅋㅋ 이건 사기 아니냐" Zero deaths on ${champion}. 진짜 개사기.`,
+      `디씨 주갤 실시간: "ㄹㅇ 이건 개사기" "${kills}킬 0데스 말이 되냐" "풀매수 안 한 놈 손들어" ㅋㅋ 갤 터짐.`,
     ];
   } else if (win && isCarry) {
     headlines = [
@@ -979,8 +979,8 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Jim Cramer adds $DORI CEO's ${champion} ${kda} replay to Quest Pro demo reel. Zuck impressed.`,
       `TD Ameritrade pauses all labeling ops to watch CEO go ${kda} on ${champion}. Productivity: 0. Vibes: immaculate.`,
       `$DORI CEO ${kda} on ${champion}. Citadel's algo just achieved consciousness to buy more.`,
-      `$DORI CEO 원딜 차이 ㅋㅋ. ${kda} on ${champion}. 갤에서 개추 500개 찍음.`,
-      `ㄹㅇ 미쳤다 — CEO ${kda} on ${champion}. 한국 주식 커뮤 올타임 1위 게시글.`,
+      `$DORI CEO ${kda} on ${champion}. 디씨 실시간: "ㅋㅋㅋ 이거 실화냐 떡상 간다" 개추 폭격 중`,
+      `ㄹㅇ 미쳤다 — CEO ${kda} on ${champion}. 디씨 주갤 특: 캐리하면 "역시 우리 CEO" 지면 "사퇴해라" ㅋㅋ`,
     ];
     bodies = [
       `CEO went absolutely feral on ${champion} — ${kills} kills in ${minutes} minutes. Short interest just evaporated. This stock is the future.`,
@@ -988,7 +988,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Wall Street analysts upgrading $DORI from "Overweight" to "BUY EVERYTHING" after this ${champion} masterclass.`,
       `Two Sigma's quant models can't explain this ${champion} performance. Renaissance Technologies requesting CEO's op.gg. ${kda}.`,
       `DFV just posted a screenshot of his $DORI position. Jim Cramer says sell. You know what that means. ${kda} on ${champion}. The future of finance is League of Legends.`,
-      `DC인사이드 $DORI 갤러리 실시간: "ㅋㅋㅋ 이 주식 진짜임?" ${kda} on ${champion}. 역대급 캐리에 갤 터짐.`,
+      `디씨 반응: "존버충 참교육 완료 ㅋㅋ" "${kills}킬 ㄹㅇ 레전드" 물타기 한 놈들 오늘은 치킨 간다. ${kda} on ${champion}.`,
     ];
   } else if (win && isHighKP) {
     headlines = [
@@ -1017,15 +1017,15 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Robinhood users seen placing $DORI limit orders during all-hands. CEO ${kda} on ${champion}.`,
       `r/wallstreetbets is 90% $DORI memes after CEO's ${kda} ${champion} dub. Productivity tanked. Morale ATH.`,
       `$DORI CEO ${kda} on ${champion}. Goldman Sachs head of research: "Our models predicted this."`,
-      `$DORI CEO ${kda} on ${champion}. 이겼다 ㅋㅋ. DC갤: "존버는 승리한다" 인증 완료.`,
-      `오늘도 이김 ㅎㅎ — CEO ${kda} on ${champion}. $DORI 존버 개미들 오늘은 치킨 시킨다.`,
+      `$DORI CEO ${kda} on ${champion}. 디씨 반응: "존버는 승리한다" 인증 완료 ㅋㅋ 정신승리 아니고 진짜 승리`,
+      `오늘도 이김 — CEO ${kda} on ${champion}. 디씨 주갤 특: 이길 때만 나타나서 "ㅇㅈ 내가 말했잖아" ㅋㅋㅋ`,
     ];
     bodies = [
       `CEO ${kda} on ${champion} in ${minutes} min. Not flashy but my portfolio doesn't care about flashy. It cares about WINNING. LFG.`,
       `${kda} on ${champion}. My wife left me but at least $DORI is green. This is what financial freedom looks like. Kind of.`,
       `$DORI holders inhaling copium turned hopium after CEO's ${kda} ${champion} win. Tendies are PRINTING.`,
       `Citadel's prop desk quietly adding to their position. Retail traders building $DORI trackers. Robinhood users going all-in.`,
-      `한국 개미 반응: "ㅋㅋ 오늘은 치킨이다" CEO ${kda} on ${champion}. 존버 성공. 내일은 모름.`,
+      `디씨 실시간: "오늘은 치킨이다 ㅋㅋ" "풀매수 간 사람 손들어 🙋" CEO ${kda} on ${champion}. 존버 성공. 내일은 모름.`,
     ];
   } else if (isInter) {
     headlines = [
@@ -1042,9 +1042,9 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `TD Ameritrade relabels $DORI from "investment" to "charity" after CEO's ${kda} on ${champion}`,
       `Bridgewater files restraining order against $DORI CEO. ${kda}. "Stay 500ft from our portfolio."`,
       `$DORI CEO ${kda} on ${champion}. Robinhood sends holders a wellness check notification after this performance`,
-      `$DORI CEO ${kda} on ${champion}. 한국 커뮤: "ㅋㅋㅋ 트롤 아니냐 이거" 금감원 조사 착수.`,
-      `ㅎㄷㄷ — CEO ${kda} on ${champion}. DC갤 실시간 "이건 범죄다" 게시글 1000개 돌파.`,
-      `$DORI CEO ${champion} ${kda}. 한국어로: 망했다. 영어로: we're cooked. 둘 다 맞음.`,
+      `$DORI CEO ${kda} on ${champion}. 디씨 반응: "ㅋㅋ 이거 트롤 아니냐" "아님 이게 실력임" "ㅎㄷㄷ" 금감원 조사 착수.`,
+      `CEO ${kda} on ${champion}. 디씨 주갤 특: ${deaths}데스 뜨면 "ㅈㅈ" "손절각" "뇌동매매 한 내 잘못" 3연타 ㅋㅋ`,
+      `$DORI CEO ${champion} ${kda}. 디씨 갤 분위기: "ㄹㅇ 망했다" "이게 CEO냐 알바냐" "손절 안 하면 거기가 바닥 아님" ㅋㅋ`,
     ];
     bodies = [
       `${deaths} deaths in ${minutes} minutes on ${champion}. Congress is scheduling hearings. Nancy Pelosi seen panic selling. This is the worst day in $DORI history.`,
@@ -1052,7 +1052,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `"I've never seen anything this bad," says veteran analyst. ${kda} on ${champion}. Even the bots are selling.`,
       `Elon Musk tweets "RIP $DORI" with a skull emoji. Michael Burry adds to short position. Citadel's risk desk in shambles.`,
       `Robinhood disables the buy button on $DORI "to protect investors." Citadel's algo achieved sentience just to sell faster. ${kda} on ${champion}. Unprecedented.`,
-      `DC갤 실시간 "ㄹㅇ ㅋㅋㅋ 이 겜 하이라이트 좀" ${deaths}데스 ${champion}. 한국 주식 갤러리에서 조의 표함.`,
+      `디씨 실시간: "${deaths}데스 실화냐 ㅋㅋ" "물린 사람 특: 아직도 존버 중" "CEO 출근정지 시켜라" ${champion}. 갤 터짐.`,
     ];
   } else if (isFeeding) {
     headlines = [
@@ -1066,15 +1066,15 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Robinhood removes $DORI from "Popular Stocks" after CEO's ${kda} ${champion}. "Brand safety concerns."`,
       `Fidelity analysts refuse to cover $DORI after CEO's ${kda} ${champion} game. "Inhumane working conditions."`,
       `$DORI CEO ${kda} on ${champion}. Citadel CEO personally calls to say "bro what"`,
-      `$DORI CEO ${kda} on ${champion}. 네이버 실검 1위: "도리 주식 환불". ㅋㅋㅋㅋ`,
-      `ㅋㅋㅋ CEO ${kda} on ${champion}. 한국 맘카페에서도 논의 중. "우리 아이가 이 주식을 샀대요"`,
+      `$DORI CEO ${kda} on ${champion}. 디씨: "ㅋㅋ ${deaths}데스 말이 되냐" "이거 뇌동매매로 산 내 잘못 ㅇㅈ"`,
+      `CEO ${kda} on ${champion}. 디씨 주갤 특: 떡락하면 "CEO 트롤" 떡상하면 "역시 내 분석력" ㅋㅋ 오늘은 전자`,
     ];
     bodies = [
       `${deaths} deaths on ${champion} in ${minutes} minutes. Analysts downgrading from "Buy" to "Have you considered index funds?"`,
       `CEO's ${champion} performance triggered 47 stop-losses. Short sellers sending thank you cards. ${kda}.`,
       `"I am once again asking for my money back," says every $DORI investor after ${kda} on ${champion}.`,
       `Citadel's risk model now classifies "${champion} ${kda}" as a new category of systemic risk. Two Sigma agrees.`,
-      `한국 갤러리 반응: "ㅋㅋㅋ ${deaths}데스 ㄹㅇ?" CEO의 ${champion} 한 판에 주가가 지하실 감. 개미들 눈물.`,
+      `디씨 반응: "${deaths}데스 ㄹㅇ? ㅋㅋ" "손절각이다 제발" "물타기 하지마 더 깊어진다" CEO의 ${champion}에 갤 분위기 장례식.`,
     ];
   } else if (!win && isUseless) {
     headlines = [
@@ -1085,13 +1085,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `BlackRock's Aladdin system can't even find CEO on the map. ${kda} on ${champion}. Invisible man.`,
       `Wendy's offers $DORI CEO an application. "Similar output, better pay." ${kda} on ${champion}.`,
       `Renaissance Technologies algo literally forgot $DORI exists. CEO ${kda} on ${champion}. Same energy.`,
-      `$DORI CEO ${kda} on ${champion}. 한국 갤: "이 사람 게임 하는 거 맞냐 ㅋㅋ" 투명인간 모드.`,
+      `$DORI CEO ${kda} on ${champion}. 디씨: "이 사람 게임 하는 거 맞냐 ㅋㅋ" "존재감 0 ㅂㅂ" 투명인간 특 제대로`,
     ];
     bodies = [
       `${kda} on ${champion} in ${minutes} minutes. CEO reportedly alt-tabbed to check $DORI stock price mid-game. It did not help.`,
       `Zero impact detected. CEO's ${champion} was invisible. ${kda}. The team forgot they had a 5th player.`,
       `Fidelity's research team watched the full replay. Report: "We have no findings." There was nothing to find.`,
-      `DC갤: "ㅋㅋ ${kda} 이게 사람이냐" CEO ${champion} 존재감 0. 주가도 0 향해 가는 중.`,
+      `디씨 반응: "${kda} 이게 사람이냐 ㅋㅋ" "CEO 특: 게임 안 하고 주가만 확인함" ${champion} 존재감 0. 주가도 0 향해 가는 중.`,
     ];
   } else if (!win && isFF) {
     headlines = [
@@ -1101,13 +1101,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `$DORI CEO surrenders at ${minutes} min on ${champion}. ${kda}. White flag energy.`,
       `Citadel's HFT couldn't even sell $DORI fast enough. ${minutes} min FF. ${kda}. Speed diff.`,
       `The game ended before Robinhood could even process a sell order. ${minutes} min ${champion} L. ${kda}.`,
-      `${minutes}분 서렌 ㅋㅋㅋ — CEO ${kda} on ${champion}. DC갤: "역대급 스피드런"`,
+      `${minutes}분 서렌 ㅋㅋ — CEO ${kda} on ${champion}. 디씨: "역대급 스피드런" "컵라면도 못 끓임" 개추 500`,
     ];
     bodies = [
       `Game lasted ${minutes} minutes. That's less time than it takes to microwave a Hot Pocket. ${kda} on ${champion}. Down bad.`,
       `CEO's ${champion} game ended so fast the price chart looks like a cliff. ${kda}. Early FF = early bed.`,
       `Citadel's algo couldn't get a fill before the game was already over. Fastest crash since Lehman Brothers. ${minutes} minutes. ${kda}.`,
-      `${minutes}분만에 끝남 ㅋㅋ CEO ${kda} on ${champion}. 컵라면도 못 끓이는 시간에 주가 박살.`,
+      `디씨 반응: "${minutes}분만에 끝남 ㅋㅋ 이게 말이 되냐" "손절 타이밍도 안 줌" CEO ${kda} on ${champion}. 주가 박살.`,
     ];
   } else if (!win && isLongGame) {
     headlines = [
@@ -1116,13 +1116,13 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `BREAKING: $DORI CEO wastes ${minutes} minutes of everyone's life on ${champion}. ${kda}.`,
       `Bagholders held $DORI for ${minutes} minutes of false hope. Now liquidating. ${kda} on ${champion}.`,
       `Cathie Wood held through ${minutes} min of this. Even she sold at the end. CEO ${kda} on ${champion}.`,
-      `${minutes}분 동안 희망고문 ㅋㅋ — CEO ${kda} on ${champion}. 결국 짐. DC갤: "존버충 참교육"`,
+      `${minutes}분 희망고문 ㅋㅋ — CEO ${kda} on ${champion}. 디씨 주갤: "존버충 참교육" "정신승리 끝" ㅈㅈ`,
     ];
     bodies = [
       `${minutes} minutes of hope, all for nothing. ${kda} on ${champion}. This is what diamond handing a -99% position feels like.`,
       `CEO fought for ${minutes} minutes on ${champion} — ${kda} — but in the end, the market always wins. And today the market was the enemy nexus.`,
       `Charles Schwab algo held through ${minutes} minutes of this. Even AI has trust issues now. E*Trade is offering counseling to their models.`,
-      `${minutes}분 존버하다 결국 패배. ${kda} on ${champion}. DC갤: "희망고문 그 자체" 개미들 멘탈 붕괴.`,
+      `디씨: "${minutes}분 존버하다 결국 ㅈㅈ ㅋㅋ" "물린 사람 특: 아직도 희망 있다고 함" ${kda} on ${champion}. 멘탈 붕괴.`,
     ];
   } else {
     headlines = [
@@ -1139,16 +1139,16 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
       `Schwab downgrades CEO's gameplay from "amateur" to "concerning" after ${kda} on ${champion}`,
       `$DORI CEO ${kda} on ${champion}. Goldman Sachs intern: "even I could do better." He could not.`,
       `$DORI takes another L. ${champion} ${kda}. Cathie Wood: "This is a 5-year play." Shareholders: "We don't have 5 years."`,
-      `$DORI CEO ${kda} on ${champion}. 한국 갤: "ㅋㅋ 또?" 맞음. 또.`,
-      `ㅋㅋㅋ 또 졌네 — CEO ${kda} on ${champion}. DC갤 실시간: "존버 그만해라 제발"`,
-      `$DORI 하락 — CEO ${kda} on ${champion}. 네이버 증권 댓글: "이 주식 사면 안 되는 이유.txt"`,
+      `$DORI CEO ${kda} on ${champion}. 디씨: "ㅋㅋ 또?" "또 졌냐 ㄹㅇ" "매일 같은 시나리오 ㅎㄷㄷ" 맞음. 또.`,
+      `또 졌네 ㅋㅋ — CEO ${kda} on ${champion}. 디씨 주갤 특: 지면 "손절각" 이기면 "존버 승리" 오늘은 전자`,
+      `$DORI 떡락 — CEO ${kda} on ${champion}. 디씨: "하한가 간다 ㅋㅋ" "뇌동매매 한 내 잘못 ㅇㅈ" 손절각`,
     ];
     bodies = [
       `Another loss on ${champion}. ${kda} in ${minutes} minutes. $DORI holders switching to crypto. Wait, that's worse.`,
       `CEO's ${champion} game has me questioning every life decision that led to buying $DORI. ${kda}. I deserve this.`,
       `${kda} on ${champion}. I showed my portfolio to my therapist. She started crying too. We're both holding though.`,
       `Renaissance Technologies morning standup spent 20 minutes discussing this ${champion} loss. Robinhood Slack channel is pure copium. Warren Buffett's stock sympathy-dropped 0.01%.`,
-      `DC갤 실시간: "${champion} ${kda} ㅋㅋ 이거 존버 맞냐?" 한국 개미들 멘탈 터짐. 치킨은 내일로 미룸.`,
+      `디씨 실시간: "${champion} ${kda} ㅋㅋ 이거 존버 맞냐?" 한국 개미들 멘탈 터짐. 치킨은 내일로 미룸.`,
     ];
   }
 
