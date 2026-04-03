@@ -361,6 +361,26 @@ function LeaderboardCharts() {
 
   const hasData = !isLoading && pnlData.length >= 2;
 
+  // Smart Y-axis: use 5th/95th percentile of visible users to clip outliers
+  const pnlDomain = useMemo(() => {
+    if (!hasData) return [-50, 50];
+    const allVals: number[] = [];
+    for (const row of pnlData) {
+      for (const name of userNames) {
+        if (!hiddenUsers.has(name) && row[name] !== undefined) {
+          allVals.push(row[name]);
+        }
+      }
+    }
+    if (allVals.length === 0) return [-50, 50];
+    allVals.sort((a, b) => a - b);
+    const p5 = allVals[Math.floor(allVals.length * 0.05)];
+    const p95 = allVals[Math.floor(allVals.length * 0.95)];
+    const range = p95 - p5 || 20;
+    const pad = range * 0.25;
+    return [Math.floor(p5 - pad), Math.ceil(p95 + pad)];
+  }, [pnlData, userNames, hiddenUsers, hasData]);
+
   return (
     <div className="space-y-4 mb-6">
       {/* ─── Standings Chart (Rank) ─── */}
@@ -443,6 +463,8 @@ function LeaderboardCharts() {
                   tickLine={false}
                 />
                 <YAxis
+                  domain={pnlDomain}
+                  allowDataOverflow
                   tick={{ fontSize: 10, fill: "#888" }}
                   tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}%`}
                   axisLine={false}
