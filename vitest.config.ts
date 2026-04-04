@@ -14,6 +14,15 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "client/src/**/*.test.ts"],
+    environmentMatchGlobs: [
+      ["client/src/**/*.test.ts", "jsdom"],
+    ],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary"],
+      include: ["server/**/*.ts", "client/src/lib/**/*.ts", "client/src/i18n/**/*.ts"],
+      exclude: ["**/*.test.ts", "server/_core/**", "server/test/**", "drizzle/**"],
+    },
   },
 });
