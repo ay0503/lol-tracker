@@ -9,6 +9,8 @@ export function createAuthContext(overrides?: Partial<AuthenticatedUser>): TrpcC
     openId: "test-user",
     email: "test@example.com",
     name: "Test Trader",
+    displayName: null,
+    passwordHash: null,
     loginMethod: "email",
     role: "user",
     createdAt: new Date().toISOString(),
