@@ -28,6 +28,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShoppingBag,
+  FlaskConical,
+  ExternalLink,
 } from "lucide-react";
 import {
   Dialog,
@@ -552,6 +554,129 @@ function TableBrowser() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ─── CI Dashboard Component ───
+function CIDashboard() {
+  const { data, isLoading } = trpc.admin.ciStatus.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const statusColor = (conclusion: string | null, status: string) => {
+    if (status === "in_progress" || status === "queued") return "text-yellow-400";
+    if (conclusion === "success") return "text-green-400";
+    if (conclusion === "failure") return "text-red-400";
+    return "text-muted-foreground";
+  };
+
+  const statusBadge = (conclusion: string | null, status: string) => {
+    if (status === "in_progress") return { label: "Running", bg: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" };
+    if (status === "queued") return { label: "Queued", bg: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" };
+    if (conclusion === "success") return { label: "Passing", bg: "bg-green-500/10 text-green-400 border-green-500/30" };
+    if (conclusion === "failure") return { label: "Failing", bg: "bg-red-500/10 text-red-400 border-red-500/30" };
+    return { label: "Unknown", bg: "bg-zinc-500/10 text-zinc-400 border-zinc-500/30" };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const latestBadge = statusBadge(data?.runs?.[0]?.conclusion ?? null, data?.runs?.[0]?.status ?? "unknown");
+
+  return (
+    <div className="space-y-4">
+      {/* Status Badge */}
+      <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${latestBadge.bg}`}>
+          {data?.status === "success" ? <CheckCircle2 className="w-3.5 h-3.5" /> : data?.status === "failure" ? <AlertCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
+          CI: {latestBadge.label}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          ay0503/lol-tracker
+        </span>
+      </div>
+
+      {/* Runs Table */}
+      <div className="bg-secondary/30 rounded-lg border border-border overflow-hidden">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border bg-secondary/50">
+              <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Status</th>
+              <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Commit</th>
+              <th className="text-left px-3 py-2 font-semibold text-muted-foreground hidden sm:table-cell">Duration</th>
+              <th className="text-left px-3 py-2 font-semibold text-muted-foreground">When</th>
+              <th className="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.runs ?? []).map((run: any, idx: number) => {
+              const badge = statusBadge(run.conclusion, run.status);
+              const ago = run.createdAt ? new Date(run.createdAt).toLocaleString() : "";
+              return (
+                <tr key={run.id} className={`border-b border-border/50 ${idx === 0 ? "bg-card/50" : ""}`}>
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${statusColor(run.conclusion, run.status)}`}>
+                      {run.conclusion === "success" ? <CheckCircle2 className="w-3 h-3" /> : run.conclusion === "failure" ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                      {(run.conclusion ?? run.status ?? "").toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div>
+                      <span className="text-foreground font-mono text-[10px] bg-secondary px-1 py-0.5 rounded mr-1.5">{run.commitSha}</span>
+                      <span className="text-muted-foreground">{run.commitMessage}</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-muted-foreground hidden sm:table-cell">
+                    {run.duration ? `${run.duration}s` : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
+                    {ago}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <a href={run.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </td>
+                </tr>
+              );
+            })}
+            {(!data?.runs || data.runs.length === 0) && (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">No CI runs found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Test Suite Info */}
+      <div className="bg-secondary/30 rounded-lg border border-border p-4">
+        <h4 className="text-xs font-bold text-foreground mb-2">Test Suite</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <div className="text-lg font-bold font-mono text-foreground">19</div>
+            <div className="text-[10px] text-muted-foreground">Test Files</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold font-mono text-green-400">~290</div>
+            <div className="text-[10px] text-muted-foreground">Test Cases</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold font-mono text-foreground">Server</div>
+            <div className="text-[10px] text-muted-foreground">ETF, Trading, Casino, Discord, Poll Engine</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold font-mono text-foreground">Client</div>
+            <div className="text-[10px] text-muted-foreground">Formatters, PlayerData, i18n</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1131,6 +1256,10 @@ export default function AdminDB() {
               <Play className="w-3.5 h-3.5 mr-1.5" />
               Quick Actions
             </TabsTrigger>
+            <TabsTrigger value="ci" className="text-xs">
+              <FlaskConical className="w-3.5 h-3.5 mr-1.5" />
+              CI / Tests
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="tables">
@@ -1143,6 +1272,10 @@ export default function AdminDB() {
 
           <TabsContent value="actions">
             <QuickActions />
+          </TabsContent>
+
+          <TabsContent value="ci">
+            <CIDashboard />
           </TabsContent>
         </Tabs>
       </div>

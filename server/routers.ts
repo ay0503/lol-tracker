@@ -1799,6 +1799,42 @@ export const appRouter = router({
         return [];
       }
     }),
+
+    /** Fetch latest CI test results from GitHub Actions */
+    ciStatus: adminProcedure.query(async () => {
+      return cache.getOrSet("admin.ciStatus", async () => {
+        try {
+          const repo = "ay0503/lol-tracker";
+          const runsRes = await fetch(
+            `https://api.github.com/repos/${repo}/actions/runs?branch=main&per_page=5`,
+            { headers: { Accept: "application/vnd.github.v3+json" } }
+          );
+          if (!runsRes.ok) return { status: "unknown", runs: [] };
+          const runsData = await runsRes.json() as any;
+
+          const runs = (runsData.workflow_runs ?? []).slice(0, 5).map((run: any) => ({
+            id: run.id,
+            status: run.status as string,
+            conclusion: run.conclusion as string | null,
+            createdAt: run.created_at as string,
+            commitMessage: (run.head_commit?.message ?? "").split("\n")[0].slice(0, 80),
+            commitSha: (run.head_sha ?? "").slice(0, 7),
+            url: run.html_url as string,
+            duration: run.status === "completed" && run.run_started_at
+              ? Math.round((new Date(run.updated_at).getTime() - new Date(run.run_started_at).getTime()) / 1000)
+              : null,
+          }));
+
+          const latest = runs[0];
+          return {
+            status: latest?.conclusion ?? latest?.status ?? "unknown",
+            runs,
+          };
+        } catch {
+          return { status: "unknown", runs: [] };
+        }
+      }, FIVE_MIN);
+    }),
   }),
 });
 
