@@ -131,7 +131,7 @@ describe("trading.trade route validations", () => {
     cache.set("player.liveGame.check", true, 60_000);
     const caller = appRouter.createCaller(createAuthContext());
     await expect(
-      caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, price: 50 })
+      caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, pricePerShare: 50 })
     ).rejects.toThrow(/live game/i);
   });
 
@@ -139,32 +139,32 @@ describe("trading.trade route validations", () => {
     (getMarketStatus as any).mockResolvedValue({ isOpen: true, adminHalt: true });
     const caller = appRouter.createCaller(createAuthContext());
     await expect(
-      caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, price: 50 })
+      caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, pricePerShare: 50 })
     ).rejects.toThrow();
   });
 
   it("rejects trade when price changed > 0.5%", async () => {
     // Cache server price at $50, submit $50.30 (0.6% diff)
-    cache.set("prices.etfPrices", { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 }, 60_000);
+    cache.set("prices.etfPrices", [{ ticker: "DORI", price: 50 }, { ticker: "DDRI", price: 50 }, { ticker: "TDRI", price: 50 }, { ticker: "SDRI", price: 50 }, { ticker: "XDRI", price: 50 }], 60_000);
     const caller = appRouter.createCaller(createAuthContext());
     await expect(
-      caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, price: 50.30 })
+      caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, pricePerShare: 50.30 })
     ).rejects.toThrow(/price/i);
   });
 
   it("accepts trade when price within 0.5%", async () => {
-    cache.set("prices.etfPrices", { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 }, 60_000);
+    cache.set("prices.etfPrices", [{ ticker: "DORI", price: 50 }, { ticker: "DDRI", price: 50 }, { ticker: "TDRI", price: 50 }, { ticker: "SDRI", price: 50 }, { ticker: "XDRI", price: 50 }], 60_000);
     (getPriceHistory as any).mockResolvedValue([{ price: "50.00", timestamp: Date.now() }]);
     const caller = appRouter.createCaller(createAuthContext());
-    const result = await caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, price: 50.20 });
+    const result = await caller.trading.trade({ ticker: "DORI", type: "buy", shares: 1, pricePerShare: 50.20 });
     expect(result).toBeDefined();
   });
 
   it("allows sell during open market", async () => {
-    cache.set("prices.etfPrices", { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 }, 60_000);
+    cache.set("prices.etfPrices", [{ ticker: "DORI", price: 50 }, { ticker: "DDRI", price: 50 }, { ticker: "TDRI", price: 50 }, { ticker: "SDRI", price: 50 }, { ticker: "XDRI", price: 50 }], 60_000);
     (getPriceHistory as any).mockResolvedValue([{ price: "50.00", timestamp: Date.now() }]);
     const caller = appRouter.createCaller(createAuthContext());
-    const result = await caller.trading.trade({ ticker: "DORI", type: "sell", shares: 1, price: 50 });
+    const result = await caller.trading.trade({ ticker: "DORI", type: "sell", shares: 1, pricePerShare: 50 });
     expect(executeTrade).toHaveBeenCalled();
   });
 });
@@ -188,15 +188,15 @@ describe("trading.short route", () => {
     cache.set("player.liveGame.check", true, 60_000);
     const caller = appRouter.createCaller(createAuthContext());
     await expect(
-      caller.trading.short({ ticker: "DORI", shares: 1, price: 50 })
+      caller.trading.short({ ticker: "DORI", shares: 1, pricePerShare: 50 })
     ).rejects.toThrow(/live game/i);
   });
 
   it("allows short when market is open", async () => {
-    cache.set("prices.etfPrices", { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 }, 60_000);
+    cache.set("prices.etfPrices", [{ ticker: "DORI", price: 50 }, { ticker: "DDRI", price: 50 }, { ticker: "TDRI", price: 50 }, { ticker: "SDRI", price: 50 }, { ticker: "XDRI", price: 50 }], 60_000);
     (getPriceHistory as any).mockResolvedValue([{ price: "50.00", timestamp: Date.now() }]);
     const caller = appRouter.createCaller(createAuthContext());
-    const result = await caller.trading.short({ ticker: "DORI", shares: 1, price: 50 });
+    const result = await caller.trading.short({ ticker: "DORI", shares: 1, pricePerShare: 50 });
     expect(executeShort).toHaveBeenCalled();
   });
 });
@@ -218,15 +218,15 @@ describe("trading.cover route", () => {
     cache.set("player.liveGame.check", true, 60_000);
     const caller = appRouter.createCaller(createAuthContext());
     await expect(
-      caller.trading.cover({ ticker: "DORI", shares: 1, price: 50 })
+      caller.trading.cover({ ticker: "DORI", shares: 1, pricePerShare: 50 })
     ).rejects.toThrow(/live game/i);
   });
 
   it("allows cover when market is open", async () => {
-    cache.set("prices.etfPrices", { DORI: 50, DDRI: 50, TDRI: 50, SDRI: 50, XDRI: 50 }, 60_000);
+    cache.set("prices.etfPrices", [{ ticker: "DORI", price: 50 }, { ticker: "DDRI", price: 50 }, { ticker: "TDRI", price: 50 }, { ticker: "SDRI", price: 50 }, { ticker: "XDRI", price: 50 }], 60_000);
     (getPriceHistory as any).mockResolvedValue([{ price: "50.00", timestamp: Date.now() }]);
     const caller = appRouter.createCaller(createAuthContext());
-    const result = await caller.trading.cover({ ticker: "DORI", shares: 1, price: 50 });
+    const result = await caller.trading.cover({ ticker: "DORI", shares: 1, pricePerShare: 50 });
     expect(executeCover).toHaveBeenCalled();
   });
 });
@@ -252,8 +252,8 @@ describe("betting.place route", () => {
     cache.set("player.liveGame.check", true, 60_000);
     cache.set("player.liveGame.details", {
       inGame: true,
-      gameStartTime: Date.now() / 1000 - 60, // started 1 min ago
-      gameLengthSeconds: 60,
+      gameStartTime: Date.now() - 60_000, // started 1 min ago (ms)
+      gameLengthSeconds: 0,
     }, 60_000);
     const caller = appRouter.createCaller(createAuthContext());
     const result = await caller.betting.place({ prediction: "win", amount: 10 });

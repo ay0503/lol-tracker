@@ -109,8 +109,8 @@ describe("priceToTierLabel", () => {
     expect(priceToTierLabel(10)).toBe("Platinum IV 0LP");
   });
 
-  it("$100 → Diamond I 100LP", () => {
-    expect(priceToTierLabel(100)).toBe("Diamond I 100LP");
+  it("$100 → Master IV 0LP (1200 LP overflows Diamond into Master)", () => {
+    expect(priceToTierLabel(100)).toBe("Master IV 0LP");
   });
 
   it("$55 → midpoint is Emerald II", () => {
