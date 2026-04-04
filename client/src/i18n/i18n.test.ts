@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import en from "./en";
-import ko from "./ko";
+import { en } from "./en";
+import { ko } from "./ko";
 
 /** Recursively collect all leaf keys from a nested object */
 function getLeafKeys(obj: Record<string, any>, prefix = ""): string[] {
