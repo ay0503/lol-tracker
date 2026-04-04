@@ -456,7 +456,7 @@ const DIVIDEND_CAP = 3.00;
 const WIN_RATES: Record<string, number> = { DORI: 0.002, DDRI: 0.003, TDRI: 0.004 };
 const LOSS_RATES: Record<string, number> = { SDRI: 0.003, XDRI: 0.004 };
 
-function getRubberBandMultiplier(portfolioValue: number): number {
+export function getRubberBandMultiplier(portfolioValue: number): number {
   if (portfolioValue < 50) return 3;
   if (portfolioValue < 100) return 2;
   if (portfolioValue < 150) return 1.5;
