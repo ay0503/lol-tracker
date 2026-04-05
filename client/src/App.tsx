@@ -18,8 +18,7 @@ const Register = lazy(() => import("./pages/Register"));
 const Ledger = lazy(() => import("./pages/Ledger"));
 const Portfolio = lazy(() => import("./pages/Portfolio"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const NewsFeed = lazy(() => import("./pages/NewsFeed"));
-const Sentiment = lazy(() => import("./pages/Sentiment"));
+const Feed = lazy(() => import("./pages/Feed"));
 const AdminSQL = lazy(() => import("./pages/AdminSQL"));
 const AdminDB = lazy(() => import("./pages/AdminDB"));
 const Casino = lazy(() => import("./pages/Casino"));
@@ -57,8 +56,8 @@ function Router() {
         <Route path={"/portfolio"} component={Portfolio} />
         <Route path={"/leaderboard"} component={Leaderboard} />
         <Route path={"/profile/:userId"} component={UserProfile} />
-        <Route path={"/news"} component={NewsFeed} />
-        <Route path={"/sentiment"} component={Sentiment} />
+        <Route path={"/feed"} component={Feed} />
+        <Route path={"/news"} component={Feed} />
         <Route path={"/casino/blackjack"} component={Blackjack} />
         <Route path={"/casino/mines"} component={Mines} />
         <Route path={"/casino/crash"} component={Crash} />
