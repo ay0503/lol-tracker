@@ -32,7 +32,6 @@ const Dice = lazy(() => import("./pages/Dice"));
 const Hilo = lazy(() => import("./pages/Hilo"));
 const Plinko = lazy(() => import("./pages/Plinko"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
-const Valorant = lazy(() => import("./pages/Valorant"));
 
 function LoadingFallback() {
   return (
@@ -65,7 +64,7 @@ function Router() {
         <Route path={"/casino/hilo"} component={Hilo} />
         <Route path={"/casino/plinko"} component={Plinko} />
         <Route path={"/casino"} component={Casino} />
-        <Route path={"/valorant"} component={Valorant} />
+
         <Route path={"/admin/sql"} component={AdminSQL} />
         <Route path={"/admin"} component={AdminDB} />
         <Route path={"/404"} component={NotFound} />
