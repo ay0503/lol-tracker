@@ -172,7 +172,7 @@ function CreatorSection() {
       title: language === "ko" ? "패치 후 재부팅" : "Post-Deploy Recovery",
       caption: language === "ko" ? "기능은 늘어나고 잠은 줄어듭니다" : "Features up, sleep down",
       className: "md:col-span-2 h-56",
-      imageClassName: "object-contain bg-zinc-950",
+      imageClassName: "object-contain bg-background",
     },
   ];
 
@@ -182,7 +182,7 @@ function CreatorSection() {
         initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
+        transition={{ type: "spring", damping: 26, stiffness: 260 }}
         className="relative overflow-hidden rounded-2xl border border-border bg-card"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.14),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_34%)]" />
@@ -198,7 +198,7 @@ function CreatorSection() {
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
               {creatorSubtitle}
             </p>
-            <div className="mt-5 space-y-3 text-sm leading-7 text-zinc-300 sm:text-[15px]">
+            <div className="mt-5 space-y-3 text-sm leading-7 text-foreground/80 sm:text-[15px]">
               <p>{creatorBody}</p>
               <p>{creatorBodyTwo}</p>
             </div>
@@ -208,7 +208,7 @@ function CreatorSection() {
             {galleryItems.map((item) => (
               <div
                 key={item.src}
-                className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/60 ${item.className}`}
+                className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-card ${item.className}`}
               >
                 <img
                   src={item.src}
@@ -216,8 +216,8 @@ function CreatorSection() {
                   className={`h-full w-full transition-transform duration-500 group-hover:scale-[1.03] ${item.imageClassName ?? "object-cover"}`}
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-4 pt-12">
-                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                  <p className="mt-1 text-[11px] text-zinc-300">{item.caption}</p>
+                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="mt-1 text-[11px] text-foreground/80">{item.caption}</p>
                 </div>
               </div>
             ))}
@@ -262,8 +262,8 @@ function LiveSentimentFeed() {
                 sentiment === sm
                   ? sm === "bullish" ? "bg-green-500/20 text-green-400"
                   : sm === "bearish" ? "bg-red-500/20 text-red-400"
-                  : "bg-zinc-500/20 text-zinc-300"
-                  : "text-zinc-600 hover:text-zinc-400"
+                  : "bg-muted text-foreground/80"
+                  : "text-muted-foreground/60 hover:text-muted-foreground"
               }`}
             >
               {sm === "bullish" ? "📈" : sm === "bearish" ? "📉" : "😐"}
@@ -275,16 +275,16 @@ function LiveSentimentFeed() {
       {/* Comment list */}
       <div className="space-y-1 max-h-[120px] overflow-y-auto scrollbar-hide mb-2">
         {comments.length === 0 ? (
-          <p className="text-[11px] text-zinc-600 text-center py-2">No comments yet — be the first!</p>
+          <p className="text-[11px] text-muted-foreground/60 text-center py-2">No comments yet — be the first!</p>
         ) : comments.map(cm => (
           <div key={cm.id} className="flex items-start gap-1.5 text-[11px]">
             <span className={`flex-shrink-0 ${
-              cm.sentiment === "bullish" ? "text-green-400" : cm.sentiment === "bearish" ? "text-red-400" : "text-zinc-500"
+              cm.sentiment === "bullish" ? "text-green-400" : cm.sentiment === "bearish" ? "text-red-400" : "text-muted-foreground"
             }`}>
               {cm.sentiment === "bullish" ? "📈" : cm.sentiment === "bearish" ? "📉" : "💬"}
             </span>
-            <span className="font-bold text-zinc-300 flex-shrink-0">{cm.userName}</span>
-            <span className="text-zinc-400 break-all">{cm.content}</span>
+            <span className="font-bold text-foreground/80 flex-shrink-0">{cm.userName}</span>
+            <span className="text-muted-foreground break-all">{cm.content}</span>
           </div>
         ))}
       </div>
@@ -305,7 +305,7 @@ function LiveSentimentFeed() {
             onChange={ev => setMessage(ev.target.value)}
             placeholder="Say something..."
             maxLength={200}
-            className="flex-1 px-2.5 py-1.5 rounded-lg bg-zinc-800/60 border border-zinc-700/40 text-[11px] text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-primary/40"
+            className="flex-1 px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-[11px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
           <button
             type="submit"
@@ -353,7 +353,7 @@ function LiveBettingPanel() {
             <span className="text-[11px] text-muted-foreground">{status.totalBets} bet{status.totalBets !== 1 ? "s" : ""} · ${status.totalPool.toFixed(0)} pool</span>
             <span className="text-red-400">{status.lossPct}% LOSS</span>
           </div>
-          <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden flex">
+          <div className="h-1.5 rounded-full bg-secondary overflow-hidden flex">
             <div className="bg-green-500 transition-all duration-500" style={{ width: `${status.winPct}%` }} />
             <div className="bg-red-500 transition-all duration-500" style={{ width: `${status.lossPct}%` }} />
           </div>
@@ -371,7 +371,7 @@ function LiveBettingPanel() {
                 className={`px-2 py-1 rounded text-[11px] font-bold transition-all ${
                   betAmount === amt
                     ? "bg-primary/20 text-primary border border-primary/40"
-                    : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                    : "bg-secondary text-muted-foreground hover:text-foreground/80"
                 }`}
               >
                 ${amt}
@@ -383,14 +383,14 @@ function LiveBettingPanel() {
           <button
             onClick={() => isAuthenticated && placeBetMutation.mutate({ prediction: "win", amount: betAmount })}
             disabled={!isAuthenticated || placeBetMutation.isPending}
-            className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-30 text-white text-[11px] font-bold transition-colors"
+            className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-30 text-foreground text-[11px] font-bold transition-colors"
           >
             WIN
           </button>
           <button
             onClick={() => isAuthenticated && placeBetMutation.mutate({ prediction: "loss", amount: betAmount })}
             disabled={!isAuthenticated || placeBetMutation.isPending}
-            className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-30 text-white text-[11px] font-bold transition-colors"
+            className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-30 text-foreground text-[11px] font-bold transition-colors"
           >
             LOSS
           </button>
@@ -401,8 +401,8 @@ function LiveBettingPanel() {
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2 py-1.5">
-          <Lock className="w-3 h-3 text-zinc-500" />
-          <span className="text-[11px] text-zinc-500 font-bold">BETTING LOCKED</span>
+          <Lock className="w-3 h-3 text-muted-foreground" />
+          <span className="text-[11px] text-muted-foreground font-bold">BETTING LOCKED</span>
         </div>
       )}
     </div>
@@ -442,7 +442,7 @@ function LiveGameBanner() {
       className="mt-8"
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ type: "spring", damping: 26, stiffness: 260 }}
     >
       <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10" />
@@ -574,7 +574,7 @@ function PostGameBanner() {
       initial={{ opacity: 0, y: -16, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
+      transition={{ type: "spring", damping: 26, stiffness: 260 }}
     >
       <div className={`relative overflow-hidden rounded-xl border ${borderColor} ${bgColor} backdrop-blur-sm`}>
         {/* Animated pulse background */}
@@ -584,7 +584,7 @@ function PostGameBanner() {
           {/* Header row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className={`px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider ${isPositive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+              <div className={`px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider ${isPositive ? 'bg-green-500 text-foreground' : 'bg-red-500 text-foreground'}`}>
                 {t.common.gameEnded}
               </div>
               <span className={`text-sm font-semibold ${accentColor}`}>
@@ -1055,7 +1055,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+            transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.2 }}
             className="bg-card border border-border rounded-xl p-3 sm:p-5"
           >
             <SectionHeader
@@ -1070,7 +1070,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+            transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.3 }}
             className="bg-card border border-border rounded-xl p-3 sm:p-5"
           >
             <SectionHeader
@@ -1091,7 +1091,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.4, duration: 0.5 }}
+            transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.4 }}
             className="bg-card border border-border rounded-xl p-3 sm:p-5"
           >
             <SectionHeader

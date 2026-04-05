@@ -48,9 +48,9 @@ const PokerCard = memo(function PokerCard({
       animate={{ rotateY: 0, opacity: 1, y: held ? -8 : 0 }}
       transition={{ delay: index * 0.12, duration: 0.4, type: "spring", stiffness: 200, damping: 18 }}
       onClick={canHold ? onClick : undefined}
-      className={`relative w-[4rem] h-[5.5rem] sm:w-[5rem] sm:h-[7rem] rounded-lg border bg-white dark:bg-zinc-900 shadow-lg select-none flex-shrink-0 transition-all ${
+      className={`relative w-[4rem] h-[5.5rem] sm:w-[5rem] sm:h-[7rem] rounded-lg border bg-white dark:bg-card shadow-lg select-none flex-shrink-0 transition-all ${
         canHold ? "cursor-pointer hover:shadow-xl" : ""
-      } ${held ? "ring-2 ring-yellow-400 shadow-yellow-400/20" : "border-zinc-200 dark:border-zinc-700"}`}
+      } ${held ? "ring-2 ring-yellow-400 shadow-yellow-400/20" : "border-zinc-200 dark:border-border"}`}
     >
       {/* Top-left */}
       <div className={`absolute top-1 left-1.5 leading-tight ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
@@ -124,7 +124,7 @@ export default function VideoPoker() {
   }, [isHolding]);
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-2xl mx-auto">
@@ -136,8 +136,8 @@ export default function VideoPoker() {
               <span className="text-lg">🃑</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Video Poker</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+              <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Video Poker</h1>
+              <p className="text-xs text-muted-foreground font-mono">${cash.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function VideoPoker() {
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-4">
           {/* Game Area */}
           <div className="relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)]">
-            <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/40 to-zinc-900" />
+            <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/40 to-card" />
             <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
             <div className="relative p-4 sm:p-6">
@@ -159,7 +159,7 @@ export default function VideoPoker() {
                         <p className="text-sm font-mono text-[#00C805]">+${game.payout.toFixed(2)} ({game.multiplier}x)</p>
                       </div>
                     ) : (
-                      <p className="text-sm text-zinc-500">{language === "ko" ? "당첨 없음" : "No winning hand"}</p>
+                      <p className="text-sm text-muted-foreground">{language === "ko" ? "당첨 없음" : "No winning hand"}</p>
                     )}
                   </motion.div>
                 )}
@@ -179,13 +179,13 @@ export default function VideoPoker() {
                   />
                 )) : (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="w-[4rem] h-[5.5rem] sm:w-[5rem] sm:h-[7rem] rounded-lg border-2 border-dashed border-zinc-700/30 opacity-25" />
+                    <div key={i} className="w-[4rem] h-[5.5rem] sm:w-[5rem] sm:h-[7rem] rounded-lg border-2 border-dashed border-border/30 opacity-25" />
                   ))
                 )}
               </div>
 
               {isHolding && (
-                <p className="text-center text-[11px] text-zinc-500 mb-4">
+                <p className="text-center text-[11px] text-muted-foreground mb-4">
                   {language === "ko" ? "카드를 클릭하여 홀드/취소" : "Click cards to hold, then draw"}
                 </p>
               )}
@@ -216,7 +216,7 @@ export default function VideoPoker() {
                         parsedBetAmount > MAX_CASINO_BET ||
                         cash < parsedBetAmount
                       }
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg shadow-indigo-500/15">
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-foreground font-bold text-sm disabled:opacity-30 transition-colors shadow-lg shadow-indigo-500/15">
                       {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
                         `${language === "ko" ? "딜" : "DEAL"} $${parsedBetAmount.toFixed(2)}`}
                     </motion.button>
@@ -236,8 +236,8 @@ export default function VideoPoker() {
           </div>
 
           {/* Pay Table */}
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 h-fit">
-            <h3 className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+          <div className="bg-card border border-border rounded-xl p-3 h-fit">
+            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
               {language === "ko" ? "페이 테이블" : "Pay Table"}
             </h3>
             <div className="space-y-1">
@@ -245,7 +245,7 @@ export default function VideoPoker() {
                 const isWin = isComplete && game?.result === row.hand;
                 return (
                   <div key={row.hand} className={`flex items-center justify-between py-1 px-2 rounded text-[11px] font-mono transition-colors ${
-                    isWin ? "bg-[#00C805]/20 text-[#00C805] font-bold" : "text-zinc-500"
+                    isWin ? "bg-[#00C805]/20 text-[#00C805] font-bold" : "text-muted-foreground"
                   }`}>
                     <span className="truncate">{row.hand}</span>
                     <span className="font-bold ml-2">{row.payout}</span>

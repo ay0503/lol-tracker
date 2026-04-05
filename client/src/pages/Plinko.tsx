@@ -67,9 +67,9 @@ interface BallState {
 
 function getBucketColor(multiplier: number): string {
   if (multiplier >= 10) return "bg-yellow-500 text-black";
-  if (multiplier >= 3) return "bg-orange-500 text-white";
-  if (multiplier >= 1) return "bg-emerald-600 text-white";
-  return "bg-red-600 text-white";
+  if (multiplier >= 3) return "bg-orange-500 text-foreground";
+  if (multiplier >= 1) return "bg-emerald-600 text-foreground";
+  return "bg-red-600 text-foreground";
 }
 
 function getPegRowY(rowIndex: number, boardHeight: number): number {
@@ -248,13 +248,13 @@ export default function Plinko() {
     return (
       <>
       <div className="flex gap-1.5 justify-center lg:justify-start mb-3">
-        <span className="text-[11px] text-zinc-500 self-center mr-1">Balls:</span>
+        <span className="text-[11px] text-muted-foreground self-center mr-1">Balls:</span>
         {([1, 3, 5] as const).map((countOption) => (
           <button
             key={countOption}
             onClick={() => !dropping && setBallCount(countOption)}
             disabled={dropping}
-            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}
+            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-secondary text-muted-foreground border border-border/30 hover:text-foreground/80"}`}
           >
             {countOption}
           </button>
@@ -274,7 +274,7 @@ export default function Plinko() {
                   : riskOption === "medium"
                     ? "bg-yellow-500/30 text-yellow-300 border border-yellow-500/40"
                     : "bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
-                : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
+                : "bg-secondary text-muted-foreground border border-border/30 hover:text-foreground/80"
             }`}
           >
             {riskOption}
@@ -282,7 +282,7 @@ export default function Plinko() {
         ))}
       </div>
 
-      <p className="mb-3 text-center lg:text-left text-[11px] text-zinc-500">
+      <p className="mb-3 text-center lg:text-left text-[11px] text-muted-foreground">
         {language === "ko" ? RISK_DESCRIPTIONS[risk].ko : RISK_DESCRIPTIONS[risk].en}
       </p>
 
@@ -296,7 +296,7 @@ export default function Plinko() {
         />
       </div>
 
-      <p className="mb-3 text-center lg:text-left text-[11px] font-mono text-zinc-500">
+      <p className="mb-3 text-center lg:text-left text-[11px] font-mono text-muted-foreground">
         {language === "ko"
           ? `공당 $${parsedBetAmount.toFixed(2)} · 총 $${totalBetAmount.toFixed(2)}`
           : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
@@ -313,7 +313,7 @@ export default function Plinko() {
           parsedBetAmount > MAX_CASINO_BET ||
           cash < totalBetAmount
         }
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-foreground font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
       >
         {dropping ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
           ballCount > 1
@@ -565,7 +565,7 @@ export default function Plinko() {
   }, [ballCount, boardWidth, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runResolvedAnimation, totalBetAmount]);
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-6xl mx-auto px-4">
@@ -575,8 +575,8 @@ export default function Plinko() {
               <span className="text-lg">📌</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Plinko</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+              <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Plinko</h1>
+              <p className="text-xs text-muted-foreground font-mono">${cash.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -593,7 +593,7 @@ export default function Plinko() {
               transform: scale(1.35);
             }
           `}</style>
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/80 to-zinc-900" />
+          <div className="absolute inset-0 bg-gradient-to-b from-secondary/80 to-card" />
           <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
           <div className="relative p-3 sm:p-5">
@@ -717,8 +717,8 @@ export default function Plinko() {
           </div>
           </div>
 
-          <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+          <div className="hidden lg:block rounded-2xl border border-border/80 bg-card p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
               {language === "ko" ? "드롭 패널" : "Drop Panel"}
             </p>
             {renderControlPanel()}

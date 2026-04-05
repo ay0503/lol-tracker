@@ -36,7 +36,7 @@ function getMultColorClass(m: number): string {
   if (m >= 10) return "text-orange-400";
   if (m >= 5) return "text-yellow-400";
   if (m >= 2) return "text-[#00C805]";
-  return "text-white";
+  return "text-foreground";
 }
 
 function CrashPill({ point, won }: { point: number; won?: boolean }) {
@@ -347,7 +347,7 @@ export default function Crash() {
   const parsedBetAmount = parseCasinoBetAmount(betAmount);
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <AppNav />
       <CasinoSubNav />
       {/* Full-screen flash */}
@@ -370,8 +370,8 @@ export default function Crash() {
               <span className="text-lg">🚀</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Crash</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+              <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Crash</h1>
+              <p className="text-xs text-muted-foreground font-mono">${cash.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -386,7 +386,7 @@ export default function Crash() {
         )}
 
         {/* ======== GRAPH AREA ======== */}
-        <div className={`relative rounded-2xl overflow-hidden border border-white/[0.06] bg-zinc-900/90 shadow-[0_0_80px_rgba(0,0,0,0.6)] transition-shadow duration-300 ${
+        <div className={`relative rounded-2xl overflow-hidden border border-white/[0.06] bg-card/90 shadow-[0_0_80px_rgba(0,0,0,0.6)] transition-shadow duration-300 ${
           phase === "crashed" ? "shadow-[0_0_60px_rgba(255,82,82,0.15)]" :
           phase === "cashed_out" ? "shadow-[0_0_60px_rgba(0,200,5,0.15)]" : ""
         }`}>
@@ -412,7 +412,7 @@ export default function Crash() {
                     >
                       {displayMult.toFixed(2)}x
                     </motion.p>
-                    <p className="text-xs text-zinc-400/70 font-mono mt-1">
+                    <p className="text-xs text-muted-foreground/70 font-mono mt-1">
                       ${(parsedBetAmount * displayMult).toFixed(2)}
                     </p>
                   </motion.div>
@@ -456,7 +456,7 @@ export default function Crash() {
                 ) : (
                   <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
                     <p className="text-6xl sm:text-7xl font-black text-zinc-700/80 font-mono">1.00x</p>
-                    <p className="text-xs text-zinc-600 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       {language === "ko" ? "베팅하고 시작하세요" : "Place your bet"}
                     </p>
                   </motion.div>
@@ -479,7 +479,7 @@ export default function Crash() {
                 whileTap={{ scale: 0.97 }}
                 onClick={() => cashoutMutation.mutate()}
                 disabled={isPending}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-white font-bold text-lg disabled:opacity-40 shadow-lg shadow-[#00C805]/30 animate-pulse"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-foreground font-bold text-lg disabled:opacity-40 shadow-lg shadow-[#00C805]/30 animate-pulse"
               >
                 {cashoutMutation.isPending ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -506,10 +506,10 @@ export default function Crash() {
                     placeholder={language === "ko" ? "자동 캐시아웃 배율 (선택)" : "Auto cashout multiplier (optional)"}
                     min={1.01}
                     step={0.1}
-                    className="w-full px-3 py-2.5 rounded-xl bg-zinc-800/80 border border-zinc-700/50 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                    className="w-full px-3 py-2.5 rounded-xl bg-secondary/80 border border-border text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-orange-500/50"
                   />
                   {autoCashout && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 font-mono">x</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">x</span>
                   )}
                 </div>
 
@@ -525,7 +525,7 @@ export default function Crash() {
                     parsedBetAmount > MAX_CASINO_BET ||
                     cash < parsedBetAmount
                   }
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-400 hover:to-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-500/20"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-foreground font-bold text-sm hover:from-orange-400 hover:to-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-lg shadow-orange-500/20"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin mx-auto" />

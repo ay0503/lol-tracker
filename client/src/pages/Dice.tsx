@@ -80,7 +80,7 @@ export default function Dice() {
   const isWinZoneLeft = direction === "under";
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-lg mx-auto px-4">
@@ -90,14 +90,14 @@ export default function Dice() {
               <span className="text-lg">🎲</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Dice</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+              <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Dice</h1>
+              <p className="text-xs text-muted-foreground font-mono">${cash.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         <div className="relative rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)]">
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/80 to-zinc-900" />
+          <div className="absolute inset-0 bg-gradient-to-b from-secondary/80 to-card" />
           <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
 
           <div className="relative p-4 sm:p-6">
@@ -105,7 +105,7 @@ export default function Dice() {
             {history && history.length > 0 && (
               <div className="flex gap-1 overflow-x-auto mb-3 pb-0.5 scrollbar-hide">
                 {history.slice(0, 15).map((rr: any, idx: number) => (
-                  <div key={idx} className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-mono font-bold ${rr.won ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+                  <div key={idx} className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-mono font-bold ${rr.won ? "bg-emerald-600 text-foreground" : "bg-red-600 text-foreground"}`}>
                     {rr.roll.toFixed(0)}
                   </div>
                 ))}
@@ -120,7 +120,7 @@ export default function Dice() {
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className={`text-4xl font-bold font-mono ${
-                    lastResult ? (lastResult.won ? "text-[#00C805]" : "text-[#FF5252]") : "text-white/30"
+                    lastResult ? (lastResult.won ? "text-[#00C805]" : "text-[#FF5252]") : "text-foreground/30"
                   }`}
                 >
                   {displayRoll !== null ? displayRoll.toFixed(2) : "—"}
@@ -134,10 +134,10 @@ export default function Dice() {
             </div>
 
             {/* ─── Animated Result Bar ─── */}
-            <div className={`relative w-full h-12 rounded-xl overflow-hidden bg-zinc-800 border transition-all duration-300 mb-4 ${
+            <div className={`relative w-full h-12 rounded-xl overflow-hidden bg-secondary border transition-all duration-300 mb-4 ${
               barFlash === "win" ? "border-[#00C805] shadow-lg shadow-[#00C805]/30" :
               barFlash === "lose" ? "border-[#FF5252] shadow-lg shadow-[#FF5252]/30" :
-              "border-zinc-700/50"
+              "border-border"
             }`}>
               {/* Win zone (green) */}
               <div
@@ -195,9 +195,9 @@ export default function Dice() {
 
             {/* Target Slider */}
             <div className="mb-4">
-              <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
+              <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
                 <span>1</span>
-                <span className="font-bold text-white text-xs">{target}</span>
+                <span className="font-bold text-foreground text-xs">{target}</span>
                 <span>99</span>
               </div>
               <input
@@ -211,13 +211,13 @@ export default function Dice() {
             <div className="grid grid-cols-2 gap-2 mb-4">
               <button onClick={() => setDirection("over")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  direction === "over" ? "bg-[#00C805] text-white shadow-lg shadow-[#00C805]/20" : "bg-zinc-800 text-zinc-400 hover:text-white"
+                  direction === "over" ? "bg-[#00C805] text-foreground shadow-lg shadow-[#00C805]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}>
                 Roll Over {target}
               </button>
               <button onClick={() => setDirection("under")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  direction === "under" ? "bg-[#FF5252] text-white shadow-lg shadow-[#FF5252]/20" : "bg-zinc-800 text-zinc-400 hover:text-white"
+                  direction === "under" ? "bg-[#FF5252] text-foreground shadow-lg shadow-[#FF5252]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}>
                 Roll Under {target}
               </button>
@@ -225,17 +225,17 @@ export default function Dice() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className={`bg-zinc-800/50 rounded-lg p-2.5 text-center transition-all ${
+              <div className={`bg-secondary/50 rounded-lg p-2.5 text-center transition-all ${
                 multiplier > 5 ? "ring-1 ring-yellow-500/30 shadow-md shadow-yellow-500/10" : ""
               }`}>
-                <p className="text-[11px] text-zinc-500 uppercase">Multiplier</p>
+                <p className="text-[11px] text-muted-foreground uppercase">Multiplier</p>
                 <p className="text-lg font-bold text-yellow-400 font-mono">{multiplier}x</p>
               </div>
-              <div className={`bg-zinc-800/50 rounded-lg p-2.5 text-center transition-all ${
+              <div className={`bg-secondary/50 rounded-lg p-2.5 text-center transition-all ${
                 winChance < 20 ? "ring-1 ring-red-500/30 shadow-md shadow-red-500/10" : ""
               }`}>
-                <p className="text-[11px] text-zinc-500 uppercase">Win Chance</p>
-                <p className="text-lg font-bold text-white font-mono">{winChance}%</p>
+                <p className="text-[11px] text-muted-foreground uppercase">Win Chance</p>
+                <p className="text-lg font-bold text-foreground font-mono">{winChance}%</p>
               </div>
             </div>
 
@@ -261,7 +261,7 @@ export default function Dice() {
                 parsedBetAmount > MAX_CASINO_BET ||
                 cash < parsedBetAmount
               }
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-foreground font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
             >
               {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `ROLL · $${parsedBetAmount.toFixed(2)}`}
             </motion.button>

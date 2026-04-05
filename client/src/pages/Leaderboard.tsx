@@ -628,7 +628,7 @@ export default function Leaderboard() {
                   key={trader.userId}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ type: "spring", damping: 26, stiffness: 260, delay: idx * 0.05 }}
                   className={`border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${getRankBg(rank)} ${isExpanded ? "ring-1 ring-primary/30" : ""}`}
                   onClick={() => setExpandedUserId(isExpanded ? null : trader.userId)}
                 >
@@ -776,7 +776,7 @@ export default function Leaderboard() {
                   key={player.userId}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ type: "spring", damping: 26, stiffness: 260, delay: idx * 0.05 }}
                   className={`border rounded-xl p-4 ${getRankBg(rank)}`}
                 >
                   <div className="flex items-center justify-between">

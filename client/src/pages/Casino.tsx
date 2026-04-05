@@ -93,7 +93,7 @@ function RankIcon({ rank }: { rank: number }) {
   if (rank === 1) return <Crown className="w-4 h-4 text-yellow-400" />;
   if (rank === 2) return <Medal className="w-4 h-4 text-gray-300" />;
   if (rank === 3) return <Award className="w-4 h-4 text-amber-600" />;
-  return <span className="text-[11px] text-zinc-500 font-mono w-4 text-center">#{rank}</span>;
+  return <span className="text-[11px] text-muted-foreground font-mono w-4 text-center">#{rank}</span>;
 }
 
 export default function Casino() {
@@ -147,7 +147,7 @@ export default function Casino() {
     : "Every casino game is now tuned to be neutral or slightly player-favored, so this is a bonus playground for cosmetics instead of a long-run sink.";
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="min-h-screen bg-background">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-5xl mx-auto px-4">
@@ -160,11 +160,11 @@ export default function Casino() {
               <div>
                 <div className="flex items-center gap-4 mb-1">
                   <span className="text-2xl">🎰</span>
-                  <h1 className="text-xl sm:text-2xl font-bold text-white font-[var(--font-heading)]">
+                  <h1 className="text-xl sm:text-2xl font-bold text-foreground font-[var(--font-heading)]">
                     {language === "ko" ? "$DORI 카지노" : "$DORI Casino"}
                   </h1>
                 </div>
-                <p className="text-xs text-zinc-400 mb-3">
+                <p className="text-xs text-muted-foreground mb-3">
                   {language === "ko" ? "가상 캐시로 카지노 게임을 즐기세요" : "Play casino games with your virtual cash"}
                 </p>
                 {/* Daily Bonus + Shop */}
@@ -178,7 +178,7 @@ export default function Casino() {
                       className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                         canClaim
                           ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black shadow-lg shadow-yellow-500/20 hover:from-yellow-400 hover:to-amber-400"
-                          : "bg-zinc-800 text-zinc-500 cursor-default"
+                          : "bg-muted text-muted-foreground cursor-default"
                       }`}
                     >
                       {claimBonus.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gift className="w-3.5 h-3.5" />}
@@ -190,10 +190,10 @@ export default function Casino() {
                 )}
               </div>
               <div className="text-left sm:text-right">
-                <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mb-0.5">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold mb-0.5">
                   {language === "ko" ? "잔고" : "Balance"}
                 </p>
-                <motion.p key={cash} initial={{ scale: 1.05 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl font-bold text-white font-mono leading-none">
+                <motion.p key={cash} initial={{ scale: 1.05 }} animate={{ scale: 1 }} className="text-3xl sm:text-4xl font-bold text-foreground font-mono leading-none">
                   ${cash.toFixed(2)}
                 </motion.p>
                 {isAuthenticated && (
@@ -216,12 +216,12 @@ export default function Casino() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-4 mb-8 overflow-hidden"
+            className="bg-card border border-border rounded-xl p-4 mb-8 overflow-hidden"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <ArrowRightLeft className="w-4 h-4 text-yellow-400" />
-                <h3 className="text-xs font-bold text-white">
+                <h3 className="text-xs font-bold text-foreground">
                   {language === "ko" ? `트레이딩 → 카지노 입금 (${mult}배)` : `Trading → Casino (${mult}x)`}
                 </h3>
               </div>
@@ -229,7 +229,7 @@ export default function Casino() {
                 {language === "ko" ? "트레이딩" : "Trading"}: ${tradingCash.toFixed(2)}
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400 mb-3">
+            <p className="text-[11px] text-muted-foreground mb-3">
               {language === "ko"
                 ? `$1 트레이딩 캐시 = $${mult} 카지노 캐시`
                 : `$1 trading cash = $${mult} casino cash`}
@@ -244,8 +244,8 @@ export default function Casino() {
                     parseFloat(depositAmount) === amt
                       ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
                       : tradingCash < amt
-                        ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed"
-                        : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-secondary text-secondary-foreground border border-border hover:text-foreground"
                   }`}
                 >
                   ${amt}→${amt * mult}
@@ -255,7 +255,7 @@ export default function Casino() {
                 onClick={() => setDepositAmount(Math.floor(tradingCash).toString())}
                 disabled={tradingCash < 0.5}
                 className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  tradingCash < 0.5 ? "bg-zinc-800/50 text-zinc-600 cursor-not-allowed" : "bg-zinc-800 text-zinc-300 border border-zinc-700/50 hover:text-white"
+                  tradingCash < 0.5 ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-secondary text-secondary-foreground border border-border hover:text-foreground"
                 }`}
               >
                 ALL
@@ -263,7 +263,7 @@ export default function Casino() {
             </div>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
                 <input
                   type="number"
                   value={depositAmount}
@@ -271,10 +271,10 @@ export default function Casino() {
                   placeholder="Amount"
                   min={0.5}
                   step={0.5}
-                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700/50 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/50"
+                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-secondary border border-border text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-yellow-500/50"
                 />
               </div>
-              <div className="flex items-center text-xs text-zinc-500 font-mono px-2">→</div>
+              <div className="flex items-center text-xs text-muted-foreground font-mono px-2">→</div>
               <div className="flex items-center text-sm font-mono font-bold text-yellow-400 min-w-[4rem]">
                 ${((parseFloat(depositAmount) || 0) * mult).toFixed(0)}
               </div>
@@ -295,41 +295,41 @@ export default function Casino() {
           </motion.div>
         )}
 
-        <div className="relative mb-8 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/70">
+        <div className="relative mb-8 overflow-hidden rounded-2xl border border-border bg-card">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.10),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_32%)]" />
           <div className="relative grid gap-4 px-5 py-5 sm:grid-cols-[1.4fr_0.9fr] sm:px-6">
             <div>
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-yellow-300">
                 <span>INFO</span>
               </div>
-              <h2 className="mb-2 text-lg font-bold text-white font-[var(--font-heading)]">
+              <h2 className="mb-2 text-lg font-bold text-foreground font-[var(--font-heading)]">
                 {language === "ko" ? "카지노 머니는 가볍게, 규칙은 분명하게" : "Casino cash stays playful. The rules do not."}
               </h2>
-              <p className="mb-3 max-w-2xl text-sm text-zinc-300">
+              <p className="mb-3 max-w-2xl text-sm text-foreground/80">
                 {casinoIntro}
               </p>
-              <p className="max-w-2xl text-xs leading-6 text-zinc-400 sm:text-sm">
+              <p className="max-w-2xl text-xs leading-6 text-muted-foreground sm:text-sm">
                 {casinoRules}
               </p>
-              <p className="mt-3 max-w-2xl text-xs leading-6 text-zinc-400 sm:text-sm">
+              <p className="mt-3 max-w-2xl text-xs leading-6 text-muted-foreground sm:text-sm">
                 {casinoEdge}
               </p>
             </div>
 
             <div className="grid gap-2 self-start">
-              <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+              <div className="rounded-xl border border-border bg-black/20 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
                   {language === "ko" ? "핵심 규칙" : "Key Rules"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-300">
+                <p className="mt-1 text-xs text-foreground/80">
                   {language === "ko" ? "트레이딩 → 카지노는 가능, 카지노 → 트레이딩은 불가" : "Trading -> casino is allowed. Casino -> trading is locked."}
                 </p>
               </div>
-              <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+              <div className="rounded-xl border border-border bg-black/20 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
                   {language === "ko" ? "충전 비율" : "Transfer Rate"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-300">
+                <p className="mt-1 text-xs text-foreground/80">
                   {language === "ko" ? `$1 트레이딩 캐시 = $${mult} 카지노 캐시` : `$1 trading cash = $${mult} casino cash`}
                 </p>
               </div>
@@ -347,7 +347,7 @@ export default function Casino() {
                     <Info className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-zinc-300">
+                <p className="mt-1 text-xs text-foreground/80">
                   {language === "ko" ? "모든 테이블은 중립 또는 소폭 플레이어 우위입니다." : "Every table is neutral or slightly in the player's favor."}
                 </p>
               </div>
@@ -371,35 +371,35 @@ export default function Casino() {
         </div>
 
         {/* ─── Games ─── */}
-        <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
           {language === "ko" ? "게임" : "Games"}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {GAMES.map((game, i) => (
-            <motion.div key={game.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+            <motion.div key={game.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.08 }}>
               {game.active ? (
                 <Link href={game.href}>
                   <div className={`group relative rounded-xl border ${game.border} bg-gradient-to-br ${game.bg} p-4 cursor-pointer hover:border-emerald-600/60 transition-all hover:shadow-lg hover:shadow-emerald-900/20 h-full`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">{game.emoji}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r ${game.badge} text-white`}>LIVE</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-gradient-to-r ${game.badge} text-foreground`}>LIVE</span>
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-0.5">{language === "ko" ? game.titleKo : game.title}</h3>
-                    <p className="text-[11px] text-zinc-400 mb-2">{language === "ko" ? game.descKo : game.desc}</p>
-                    <p className="text-[11px] text-zinc-500 font-mono">{game.bet}</p>
+                    <h3 className="text-sm font-bold text-foreground mb-0.5">{language === "ko" ? game.titleKo : game.title}</h3>
+                    <p className="text-[11px] text-muted-foreground mb-2">{language === "ko" ? game.descKo : game.desc}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">{game.bet}</p>
                   </div>
                 </Link>
               ) : (
                 <div className={`rounded-xl border ${game.border} bg-gradient-to-br ${game.bg} p-4 opacity-40 h-full`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-2xl grayscale">{game.emoji}</span>
-                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold uppercase bg-zinc-800 text-zinc-500">
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold uppercase bg-secondary text-muted-foreground">
                       <Lock className="w-2 h-2" /> SOON
                     </span>
                   </div>
-                  <h3 className="text-sm font-bold text-zinc-500 mb-0.5">{language === "ko" ? game.titleKo : game.title}</h3>
-                  <p className="text-[11px] text-zinc-600 mb-2">{language === "ko" ? game.descKo : game.desc}</p>
-                  <p className="text-[11px] text-zinc-700 font-mono">{game.bet}</p>
+                  <h3 className="text-sm font-bold text-muted-foreground mb-0.5">{language === "ko" ? game.titleKo : game.title}</h3>
+                  <p className="text-[11px] text-muted-foreground mb-2">{language === "ko" ? game.descKo : game.desc}</p>
+                  <p className="text-[11px] text-muted-foreground/60 font-mono">{game.bet}</p>
                 </div>
               )}
             </motion.div>
@@ -407,13 +407,13 @@ export default function Casino() {
         </div>
 
         {/* ─── Leaderboard ─── */}
-        <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <Trophy className="w-3.5 h-3.5 text-yellow-400" />
           {language === "ko" ? "카지노 랭킹" : "Casino Rankings"}
         </h2>
-        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl overflow-hidden mb-8">
+        <div className="bg-card border border-border rounded-xl overflow-hidden mb-8">
           {leaderboard && leaderboard.length > 0 ? (
-            <div className="divide-y divide-zinc-800/40">
+            <div className="divide-y divide-border">
               {leaderboard.slice(0, 10).map((player, i) => {
                 const isProfit = player.profit >= 0;
                 return (
@@ -421,8 +421,8 @@ export default function Casino() {
                     key={player.userId}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-800/20 transition-colors"
+                    transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.03 }}
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-secondary/20 transition-colors"
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <RankIcon rank={i + 1} />
@@ -439,7 +439,7 @@ export default function Casino() {
                         {isProfit ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                         {isProfit ? "+" : ""}{player.profit.toFixed(2)}
                       </span>
-                      <span className="text-xs font-mono font-bold text-white w-14 text-right">${player.casinoBalance.toFixed(2)}</span>
+                      <span className="text-xs font-mono font-bold text-foreground w-14 text-right">${player.casinoBalance.toFixed(2)}</span>
                     </div>
                   </motion.div>
                 );
@@ -447,13 +447,13 @@ export default function Casino() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Trophy className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
-              <p className="text-xs text-zinc-600">{language === "ko" ? "플레이하여 랭킹에 올라보세요" : "Play to appear on the rankings"}</p>
+              <Trophy className="w-8 h-8 text-muted-foreground/60 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">{language === "ko" ? "플레이하여 랭킹에 올라보세요" : "Play to appear on the rankings"}</p>
             </div>
           )}
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 font-mono">
+        <p className="text-center text-[11px] text-muted-foreground/60 font-mono">
           {language === "ko" ? "가상 캐시 · 실제 돈 아님" : "Virtual cash · Not real money"}
         </p>
 
@@ -461,12 +461,12 @@ export default function Casino() {
         <GamblingDisclaimer />
 
         <Dialog open={showEdgeDialog} onOpenChange={setShowEdgeDialog}>
-          <DialogContent className="border-zinc-800 bg-zinc-950 text-white sm:max-w-2xl">
+          <DialogContent className="border-border bg-background text-foreground sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="font-[var(--font-heading)] text-white">
+              <DialogTitle className="font-[var(--font-heading)] text-foreground">
                 {language === "ko" ? "카지노 플레이어 우위 안내" : "Casino Player Edge Details"}
               </DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogDescription className="text-muted-foreground">
                 {language === "ko"
                   ? "각 게임이 왜 중립 또는 플레이어 우위인지 한눈에 볼 수 있습니다."
                   : "A quick breakdown of how each game was tuned to be neutral or player-favored."}
@@ -475,11 +475,11 @@ export default function Casino() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               {EDGE_DETAILS.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-3">
-                  <p className="text-sm font-semibold text-white">
+                <div key={entry.id} className="rounded-xl border border-border bg-card p-3">
+                  <p className="text-sm font-semibold text-foreground">
                     {language === "ko" ? entry.titleKo : entry.title}
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-zinc-400">
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {language === "ko" ? entry.detailKo : entry.detail}
                   </p>
                 </div>

@@ -55,23 +55,23 @@ function getColorLabel(color: RouletteColor, language: string): string {
 
 function getColorClasses(color: RouletteColor): string {
   if (color === "red") return "border-red-500/40 bg-red-500/15 text-red-200";
-  if (color === "black") return "border-zinc-600 bg-zinc-800/80 text-zinc-100";
+  if (color === "black") return "border-border bg-secondary/80 text-zinc-100";
   return "border-emerald-500/40 bg-emerald-500/15 text-emerald-100";
 }
 
 function getColorButtonClasses(color: RouletteColor, selected: boolean): string {
   if (color === "red") {
     return selected
-      ? "border-red-400 bg-red-500 text-white shadow-lg shadow-red-500/20"
+      ? "border-red-400 bg-red-500 text-foreground shadow-lg shadow-red-500/20"
       : "border-red-500/30 bg-red-500/10 text-red-200 hover:border-red-400/60";
   }
   if (color === "black") {
     return selected
       ? "border-zinc-400 bg-zinc-100 text-black shadow-lg shadow-zinc-100/20"
-      : "border-zinc-700 bg-zinc-900/70 text-zinc-200 hover:border-zinc-500";
+      : "border-border bg-card text-foreground hover:border-zinc-500";
   }
   return selected
-    ? "border-emerald-400 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+    ? "border-emerald-400 bg-emerald-500 text-foreground shadow-lg shadow-emerald-500/20"
     : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400/60";
 }
 
@@ -91,7 +91,7 @@ function ColorStrip({
   return (
     <div
       ref={frameRef}
-      className="relative mb-4 h-14 overflow-hidden rounded-xl border border-zinc-800/60 bg-zinc-950/70"
+      className="relative mb-4 h-14 overflow-hidden rounded-xl border border-border/60 bg-background/70"
     >
       <div className="absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-zinc-950 to-transparent" />
       <div className="absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-zinc-950 to-transparent" />
@@ -119,7 +119,7 @@ function ColorStrip({
                   segment.color === "red"
                     ? "bg-red-600"
                     : segment.color === "black"
-                      ? "bg-zinc-800"
+                      ? "bg-secondary"
                       : "bg-emerald-600"
                 } ${isWinner ? "scale-105 ring-2 ring-inset ring-yellow-400 transition-transform" : ""}`}
                 style={{ width: STRIP_CELL_WIDTH }}
@@ -128,7 +128,7 @@ function ColorStrip({
           })}
         </motion.div>
       ) : (
-        <div className="flex h-full items-center justify-center text-xs text-zinc-500">
+        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
           {emptyLabel}
         </div>
       )}
@@ -255,7 +255,7 @@ export default function Roulette() {
   }, [language, refetchBalance, refetchHistory, stripLanded]);
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-lg mx-auto px-4">
@@ -265,8 +265,8 @@ export default function Roulette() {
               <span className="text-lg">🎡</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Roulette</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+              <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Roulette</h1>
+              <p className="text-xs text-muted-foreground font-mono">${cash.toFixed(2)}</p>
             </div>
           </div>
           <div className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/25">
@@ -295,7 +295,7 @@ export default function Roulette() {
                       entry.color === "red"
                         ? "bg-red-600"
                         : entry.color === "black"
-                          ? "bg-zinc-800 border border-zinc-600"
+                          ? "bg-secondary border border-border"
                           : "bg-emerald-600"
                     }`}
                   />
@@ -342,7 +342,7 @@ export default function Roulette() {
               )}
             </AnimatePresence>
 
-            <p className="mb-4 text-center text-xs text-zinc-300">
+            <p className="mb-4 text-center text-xs text-foreground/80">
               {language === "ko" ? "빨강, 검정, 초록 중 하나를 고르세요. 초록이 뜨면 컬러 베팅은 환불됩니다." : "Pick red, black, or green. If green hits, red and black bets are refunded."}
             </p>
 

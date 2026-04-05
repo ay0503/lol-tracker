@@ -172,7 +172,7 @@ function PortfolioPnlChart() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
+        transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.05 }}
         className="bg-card border border-border rounded-xl p-6 mb-8"
       >
         <div className="flex items-center gap-2 mb-4">
@@ -198,7 +198,7 @@ function PortfolioPnlChart() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 }}
+      transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.05 }}
       className="bg-card border border-border rounded-xl p-6 mb-8"
     >
       <div className="flex items-center justify-between mb-4">
@@ -481,7 +481,7 @@ export default function Portfolio() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.1 }}
               className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-8"
             >
               <div className="flex items-center gap-2 mb-4">
@@ -571,7 +571,7 @@ export default function Portfolio() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
+                transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.15 }}
                 className="bg-card border border-purple-500/30 rounded-xl p-6 mb-8"
               >
                 <div className="flex items-center gap-2 mb-4">
@@ -653,7 +653,7 @@ export default function Portfolio() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.2 }}
               className="bg-card border border-border rounded-xl p-4 sm:p-6"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">

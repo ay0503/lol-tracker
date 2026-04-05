@@ -90,7 +90,7 @@ export default function Hilo() {
   }, [language, parsedBetAmount, startMutation]);
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
+    <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-lg mx-auto px-4">
@@ -100,8 +100,8 @@ export default function Hilo() {
               <span className="text-lg">🃏</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white font-[var(--font-heading)]">Hi-Lo</h1>
-              <p className="text-xs text-zinc-400 font-mono">${cash.toFixed(2)}</p>
+              <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Hi-Lo</h1>
+              <p className="text-xs text-muted-foreground font-mono">${cash.toFixed(2)}</p>
             </div>
           </div>
           {isPlaying && game && (
@@ -122,7 +122,7 @@ export default function Hilo() {
               <div className="flex gap-1.5 overflow-x-auto mb-4 pb-1 scrollbar-hide">
                 {game.history.map((card: any, idx: number) => (
                   <div key={idx} className="flex-shrink-0 w-8 h-11 rounded bg-white/10 border border-white/20 flex items-center justify-center">
-                    <span className={`text-[11px] font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-white"}`}>
+                    <span className={`text-[11px] font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-foreground"}`}>
                       {card.label}
                     </span>
                   </div>
@@ -176,7 +176,7 @@ export default function Hilo() {
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
                     onClick={() => guessMutation.mutate({ direction: "higher" })}
                     disabled={isPending}
-                    className="py-4 rounded-xl bg-[#00C805] text-white font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
+                    className="py-4 rounded-xl bg-[#00C805] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
                   >
                     <ArrowUp className="w-5 h-5" />
                     <span>Higher ({game.nextHigherMult.toFixed(2)}x)</span>
@@ -185,7 +185,7 @@ export default function Hilo() {
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
                     onClick={() => guessMutation.mutate({ direction: "lower" })}
                     disabled={isPending}
-                    className="py-4 rounded-xl bg-[#FF5252] text-white font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
+                    className="py-4 rounded-xl bg-[#FF5252] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
                   >
                     <ArrowDown className="w-5 h-5" />
                     <span>Lower ({game.nextLowerMult.toFixed(2)}x)</span>
@@ -206,7 +206,7 @@ export default function Hilo() {
                   </motion.button>
                 )}
 
-                <p className="text-center text-[11px] text-white/20 font-mono">
+                <p className="text-center text-[11px] text-foreground/20 font-mono">
                   {game.cardsRemaining} cards remaining
                 </p>
               </div>
@@ -231,7 +231,7 @@ export default function Hilo() {
                     parsedBetAmount > MAX_CASINO_BET ||
                     cash < parsedBetAmount
                   }
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-foreground font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
                     `${language === "ko" ? "딜" : "DEAL"} · $${parsedBetAmount.toFixed(2)}`}
