@@ -13,20 +13,20 @@ beforeEach(() => {
 });
 
 describe("saveGameState", () => {
-  it("creates table then upserts state as JSON", async () => {
+  it("upserts state as JSON", async () => {
     await saveGameState(1, "blackjack", { hand: [10, 5], bet: 25 });
-    // First call: CREATE TABLE, second call: INSERT/upsert
-    expect(mockExecute).toHaveBeenCalledTimes(2);
-    const upsertCall = mockExecute.mock.calls[1][0];
-    expect(upsertCall.sql).toContain("INSERT INTO casino_active_games");
-    expect(upsertCall.args[0]).toBe(1); // userId
-    expect(upsertCall.args[1]).toBe("blackjack"); // gameType
-    expect(JSON.parse(upsertCall.args[2])).toEqual({ hand: [10, 5], bet: 25 });
+    // Find the INSERT call (may or may not have CREATE TABLE before it)
+    const insertCall = mockExecute.mock.calls.find(
+      (call: any[]) => typeof call[0] === "object" && call[0].sql?.includes("INSERT INTO casino_active_games")
+    );
+    expect(insertCall).toBeDefined();
+    expect(insertCall![0].args[0]).toBe(1);
+    expect(insertCall![0].args[1]).toBe("blackjack");
+    expect(JSON.parse(insertCall![0].args[2])).toEqual({ hand: [10, 5], bet: 25 });
   });
 
   it("does not throw on DB error (logs instead)", async () => {
-    mockExecute.mockRejectedValueOnce(new Error("DB down"));
-    mockExecute.mockRejectedValueOnce(new Error("DB down"));
+    mockExecute.mockRejectedValue(new Error("DB down"));
     await expect(saveGameState(1, "mines", {})).resolves.toBeUndefined();
   });
 });
@@ -34,9 +34,11 @@ describe("saveGameState", () => {
 describe("clearGameState", () => {
   it("deletes by userId + gameType", async () => {
     await clearGameState(42, "crash");
-    const deleteCall = mockExecute.mock.calls[1][0]; // after CREATE TABLE
-    expect(deleteCall.sql).toContain("DELETE FROM casino_active_games");
-    expect(deleteCall.args).toEqual([42, "crash"]);
+    const deleteCall = mockExecute.mock.calls.find(
+      (call: any[]) => typeof call[0] === "object" && call[0].sql?.includes("DELETE FROM casino_active_games")
+    );
+    expect(deleteCall).toBeDefined();
+    expect(deleteCall![0].args).toEqual([42, "crash"]);
   });
 
   it("does not throw on DB error", async () => {
@@ -54,16 +56,19 @@ describe("loadGameStates", () => {
   });
 
   it("parses JSON state and returns Map keyed by userId", async () => {
-    // CREATE TABLE call succeeds, then SELECT returns rows, then DELETE for cleanup
-    mockExecute
-      .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE
-      .mockResolvedValueOnce({
-        rows: [
-          { userId: 1, state: JSON.stringify({ bet: 10, hand: [7, 8] }) },
-          { userId: 2, state: JSON.stringify({ bet: 25, hand: [10, 5] }) },
-        ],
-      })
-      .mockResolvedValueOnce({ rows: [] }); // DELETE expired
+    // Mock: SELECT returns rows (ensureTable may or may not call CREATE TABLE)
+    mockExecute.mockImplementation((arg: any) => {
+      if (typeof arg === "string" && arg.includes("CREATE TABLE")) return Promise.resolve({ rows: [] });
+      if (typeof arg === "object" && arg.sql?.includes("SELECT")) {
+        return Promise.resolve({
+          rows: [
+            { userId: 1, state: JSON.stringify({ bet: 10, hand: [7, 8] }) },
+            { userId: 2, state: JSON.stringify({ bet: 25, hand: [10, 5] }) },
+          ],
+        });
+      }
+      return Promise.resolve({ rows: [] }); // DELETE cleanup
+    });
 
     const result = await loadGameStates<{ bet: number; hand: number[] }>("blackjack");
     expect(result.size).toBe(2);
@@ -72,15 +77,17 @@ describe("loadGameStates", () => {
   });
 
   it("skips corrupt JSON entries without crashing", async () => {
-    mockExecute
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({
-        rows: [
-          { userId: 1, state: "not valid json {{{" },
-          { userId: 2, state: JSON.stringify({ ok: true }) },
-        ],
-      })
-      .mockResolvedValueOnce({ rows: [] });
+    mockExecute.mockImplementation((arg: any) => {
+      if (typeof arg === "object" && arg.sql?.includes("SELECT")) {
+        return Promise.resolve({
+          rows: [
+            { userId: 1, state: "not valid json {{{" },
+            { userId: 2, state: JSON.stringify({ ok: true }) },
+          ],
+        });
+      }
+      return Promise.resolve({ rows: [] });
+    });
 
     const result = await loadGameStates("mines");
     expect(result.size).toBe(1);
@@ -88,16 +95,13 @@ describe("loadGameStates", () => {
   });
 
   it("cleans up expired entries after loading", async () => {
-    mockExecute
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
-
+    mockExecute.mockResolvedValue({ rows: [] });
     await loadGameStates("crash");
-    // 3rd call should be the DELETE for expired
-    const deleteCall = mockExecute.mock.calls[2][0];
-    expect(deleteCall.sql).toContain("DELETE FROM casino_active_games");
-    expect(deleteCall.args[0]).toBe("crash");
+    const deleteCall = mockExecute.mock.calls.find(
+      (call: any[]) => typeof call[0] === "object" && call[0].sql?.includes("DELETE FROM casino_active_games WHERE gameType")
+    );
+    expect(deleteCall).toBeDefined();
+    expect(deleteCall![0].args[0]).toBe("crash");
   });
 
   it("returns empty map on DB error", async () => {
