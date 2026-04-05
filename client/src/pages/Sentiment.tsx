@@ -232,17 +232,17 @@ export default function Sentiment() {
                       <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                         <StyledName name={comment.userName} nameEffectCss={getCosmetics(comment.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(comment.userId).isCloseFriend} showTitle={false} className="text-xs" />
                         {comment.ticker && (
-                          <span className="text-[10px] sm:text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
+                          <span className="text-[11px] sm:text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
                             ${comment.ticker}
                           </span>
                         )}
                         <span
-                          className="text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded"
+                          className="text-[11px] sm:text-xs font-bold px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: config.color + "15", color: config.color }}
                         >
                           {config.emoji} {config.label}
                         </span>
-                        <span className="text-[10px] sm:text-xs text-muted-foreground sm:ml-auto">
+                        <span className="text-[11px] sm:text-xs text-muted-foreground sm:ml-auto">
                           {formatTimeAgoFromDate(comment.createdAt, language)}
                         </span>
                       </div>

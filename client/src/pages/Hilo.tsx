@@ -122,7 +122,7 @@ export default function Hilo() {
               <div className="flex gap-1.5 overflow-x-auto mb-4 pb-1 scrollbar-hide">
                 {game.history.map((card: any, idx: number) => (
                   <div key={idx} className="flex-shrink-0 w-8 h-11 rounded bg-white/10 border border-white/20 flex items-center justify-center">
-                    <span className={`text-[10px] font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-white"}`}>
+                    <span className={`text-[11px] font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-white"}`}>
                       {card.label}
                     </span>
                   </div>
@@ -206,7 +206,7 @@ export default function Hilo() {
                   </motion.button>
                 )}
 
-                <p className="text-center text-[9px] text-white/20 font-mono">
+                <p className="text-center text-[11px] text-white/20 font-mono">
                   {game.cardsRemaining} cards remaining
                 </p>
               </div>
@@ -241,7 +241,7 @@ export default function Hilo() {
           </div>
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
         <CasinoGameLog />

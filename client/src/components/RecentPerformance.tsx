@@ -47,11 +47,11 @@ export default function RecentPerformance() {
     <div>
       {isLive && (
         <div className="flex items-center gap-1 mb-3">
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary">
             <Activity className="w-2.5 h-2.5" />
             {t.common.live}
           </span>
-          <span className="text-[10px] text-muted-foreground">{t.common.autoUpdated}</span>
+          <span className="text-[11px] text-muted-foreground">{t.common.autoUpdated}</span>
         </div>
       )}
       <div className="space-y-2">
@@ -104,10 +104,10 @@ export default function RecentPerformance() {
                   />
                 </div>
                 <div className="flex justify-between mt-0.5">
-                  <span className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
+                  <span className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
                     {champ.wins}{t.stats.wins} {champ.losses}{t.stats.losses}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     {total} {t.performance.games}
                   </span>
                 </div>

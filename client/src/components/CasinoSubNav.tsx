@@ -32,13 +32,13 @@ export default function CasinoSubNav() {
               <Link
                 key={game.href}
                 href={game.href}
-                className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] sm:text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] sm:text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                   isActive
                     ? "bg-yellow-500/15 text-yellow-400"
                     : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
                 }`}
               >
-                <span className="text-[10px] sm:text-xs">{game.emoji}</span>
+                <span className="text-[11px] sm:text-xs">{game.emoji}</span>
                 <span className="hidden sm:inline">{language === "ko" ? game.labelKo : game.label}</span>
                 <span className="sm:hidden">{language === "ko" ? game.labelKo : game.label}</span>
               </Link>

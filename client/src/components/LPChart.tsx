@@ -496,7 +496,7 @@ export default function LPChart() {
                 style={{ backgroundColor: tk.color }}
               />
               <span className="font-[var(--font-mono)]">${tk.symbol}</span>
-              <span className="text-[10px] opacity-60 hidden sm:inline">
+              <span className="text-[11px] opacity-60 hidden sm:inline">
                 {translateTickerDescription(tk.symbol, tk.description, language)}
               </span>
             </button>

@@ -46,7 +46,7 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
         </div>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-            <span className="text-blue-300/50 text-[10px] font-bold">D</span>
+            <span className="text-blue-300/50 text-[11px] font-bold">D</span>
           </div>
         </div>
       </motion.div>
@@ -65,14 +65,14 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
     >
       <div className={`absolute top-1 left-1.5 leading-tight ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <div className="text-[11px] sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
-        <div className="text-[10px] sm:text-xs leading-none">{card.suit}</div>
+        <div className="text-[11px] sm:text-xs leading-none">{card.suit}</div>
       </div>
       <div className={`absolute inset-0 flex items-center justify-center ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <span className="text-2xl sm:text-3xl drop-shadow-sm">{card.suit}</span>
       </div>
       <div className={`absolute bottom-1 right-1.5 leading-tight rotate-180 ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <div className="text-[11px] sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
-        <div className="text-[10px] sm:text-xs leading-none">{card.suit}</div>
+        <div className="text-[11px] sm:text-xs leading-none">{card.suit}</div>
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-white/15 via-white/5 to-transparent pointer-events-none rounded-lg" />
     </motion.div>
@@ -560,11 +560,11 @@ export default function Casino() {
                     {/* Main hand */}
                     <div className={`rounded-xl p-2 transition-all ${activeHand === "main" ? "ring-2 ring-yellow-400/60 bg-white/[0.03]" : "opacity-70"}`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
+                        <span className="text-[11px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
                           {language === "ko" ? "핸드 1" : "Hand 1"}
                         </span>
                         <HandValue value={handValue(game.playerHand)} bust={handValue(game.playerHand) > 21} soft={isSoftHand(game.playerHand)} />
-                        {activeHand === "main" && <span className="text-[8px] text-yellow-400 animate-pulse">ACTIVE</span>}
+                        {activeHand === "main" && <span className="text-[11px] text-yellow-400 animate-pulse">ACTIVE</span>}
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>
@@ -577,13 +577,13 @@ export default function Casino() {
                     {/* Split hand */}
                     <div className={`rounded-xl p-2 transition-all ${activeHand === "split" ? "ring-2 ring-yellow-400/60 bg-white/[0.03]" : "opacity-70"}`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
+                        <span className="text-[11px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
                           {language === "ko" ? "핸드 2" : "Hand 2"}
                         </span>
                         {(game as any).splitHand && (
                           <HandValue value={handValue((game as any).splitHand)} bust={handValue((game as any).splitHand) > 21} soft={isSoftHand((game as any).splitHand)} />
                         )}
-                        {activeHand === "split" && <span className="text-[8px] text-yellow-400 animate-pulse">ACTIVE</span>}
+                        {activeHand === "split" && <span className="text-[11px] text-yellow-400 animate-pulse">ACTIVE</span>}
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>
@@ -646,7 +646,7 @@ export default function Casino() {
                           className="py-3.5 rounded-xl bg-[#00C805] text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
                         >
                           {hitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                            <span>{language === "ko" ? "히트" : "HIT"} <span className="text-white/40 text-[9px]">H</span></span>}
+                            <span>{language === "ko" ? "히트" : "HIT"} <span className="text-white/40 text-[11px]">H</span></span>}
                         </motion.button>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
@@ -656,7 +656,7 @@ export default function Casino() {
                           className="py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
                         >
                           {standMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                            <span>{language === "ko" ? "스탠드" : "STAND"} <span className="text-white/40 text-[9px]">S</span></span>}
+                            <span>{language === "ko" ? "스탠드" : "STAND"} <span className="text-white/40 text-[11px]">S</span></span>}
                         </motion.button>
                         <motion.button
                           whileHover={canDouble ? { scale: 1.02 } : {}}
@@ -681,11 +681,11 @@ export default function Casino() {
                             className="py-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-violet-500 text-white font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
                           >
                             {splitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                              <span>{language === "ko" ? "스플릿" : "SPLIT"} <span className="text-white/40 text-[9px]">P</span></span>}
+                              <span>{language === "ko" ? "스플릿" : "SPLIT"} <span className="text-white/40 text-[11px]">P</span></span>}
                           </motion.button>
                         )}
                       </div>
-                      <p className="text-center text-[9px] text-white/15 mt-2 font-mono">{canSplitHand ? "H / S / D / P" : "H / S / D"}</p>
+                      <p className="text-center text-[11px] text-white/15 mt-2 font-mono">{canSplitHand ? "H / S / D / P" : "H / S / D"}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -695,14 +695,14 @@ export default function Casino() {
 
           {!game || isOver ? (
             <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
                 {language === "ko" ? "베팅 패널" : "Bet Panel"}
               </p>
               {pregameControls}
             </div>
           ) : (
             <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
                 {language === "ko" ? "현재 핸드" : "Current Hand"}
               </p>
               <div className="space-y-2 text-xs text-zinc-300">
@@ -725,12 +725,12 @@ export default function Casino() {
           )}
         </div>
 
-        <p className="text-center text-[10px] text-zinc-600 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-600 mt-4 font-mono">
           {language === "ko"
             ? "딜러 17 스탠드 · 블랙잭 2:1 · 더블다운 · 스플릿 페어"
             : "Dealer stands 17 · BJ pays 2:1 · Double · Split pairs"}
         </p>
-        <p className="text-center text-[9px] text-zinc-700 mt-2 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-2 font-mono">
           {language === "ko" ? "플레이어 우위 블랙잭 지급표" : "Player-favored blackjack payouts"}
         </p>
 

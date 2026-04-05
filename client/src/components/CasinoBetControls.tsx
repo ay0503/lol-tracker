@@ -34,7 +34,7 @@ export default function CasinoBetControls({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-wider">
         <span className="font-semibold text-zinc-400">
           {language === "ko" ? "베팅 금액" : "Bet Amount"}
         </span>

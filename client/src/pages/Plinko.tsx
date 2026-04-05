@@ -248,13 +248,13 @@ export default function Plinko() {
     return (
       <>
       <div className="flex gap-1.5 justify-center lg:justify-start mb-3">
-        <span className="text-[10px] text-zinc-500 self-center mr-1">Balls:</span>
+        <span className="text-[11px] text-zinc-500 self-center mr-1">Balls:</span>
         {([1, 3, 5] as const).map((countOption) => (
           <button
             key={countOption}
             onClick={() => !dropping && setBallCount(countOption)}
             disabled={dropping}
-            className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}
+            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-zinc-800 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"}`}
           >
             {countOption}
           </button>
@@ -267,7 +267,7 @@ export default function Plinko() {
             key={riskOption}
             onClick={() => !dropping && setRisk(riskOption)}
             disabled={dropping}
-            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all ${
               risk === riskOption
                 ? riskOption === "high"
                   ? "bg-red-500/30 text-red-300 border border-red-500/40"
@@ -282,7 +282,7 @@ export default function Plinko() {
         ))}
       </div>
 
-      <p className="mb-3 text-center lg:text-left text-[10px] text-zinc-500">
+      <p className="mb-3 text-center lg:text-left text-[11px] text-zinc-500">
         {language === "ko" ? RISK_DESCRIPTIONS[risk].ko : RISK_DESCRIPTIONS[risk].en}
       </p>
 
@@ -296,7 +296,7 @@ export default function Plinko() {
         />
       </div>
 
-      <p className="mb-3 text-center lg:text-left text-[10px] font-mono text-zinc-500">
+      <p className="mb-3 text-center lg:text-left text-[11px] font-mono text-zinc-500">
         {language === "ko"
           ? `공당 $${parsedBetAmount.toFixed(2)} · 총 $${totalBetAmount.toFixed(2)}`
           : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
@@ -687,7 +687,7 @@ export default function Plinko() {
                 {multipliers.map((multiplier, index) => (
                   <div
                     key={index}
-                    className={`flex-1 py-1.5 rounded text-center text-[7px] sm:text-[8px] font-mono font-bold transition-all duration-300 ${getBucketColor(multiplier)} ${landedBuckets.includes(index) ? "ring-2 ring-yellow-400 scale-110 z-10" : ""}`}
+                    className={`flex-1 py-1.5 rounded text-center text-[7px] sm:text-[11px] font-mono font-bold transition-all duration-300 ${getBucketColor(multiplier)} ${landedBuckets.includes(index) ? "ring-2 ring-yellow-400 scale-110 z-10" : ""}`}
                   >
                     {multiplier}x
                   </div>
@@ -718,14 +718,14 @@ export default function Plinko() {
           </div>
 
           <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
               {language === "ko" ? "드롭 패널" : "Drop Panel"}
             </p>
             {renderControlPanel()}
           </div>
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "약 1% 플레이어 우위 · 최대 $500 지급" : "~1% player edge · $500 max payout"}
         </p>
         <CasinoGameLog />

@@ -83,7 +83,7 @@ export default function StreakBar() {
           {t.streak.lastGames.replace("{n}", String(sequence.length))}
         </span>
         {isLive && (
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary">
             <Activity className="w-2.5 h-2.5" />
             {t.common.live}
           </span>

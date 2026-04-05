@@ -125,7 +125,7 @@ export default function Mines() {
   const setupControls = (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
       <div>
-        <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">
+        <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">
           {language === "ko" ? "지뢰 수" : "Mines"}: {mineCount}
         </p>
         <div className="flex gap-1.5 flex-wrap">
@@ -174,7 +174,7 @@ export default function Mines() {
   const activePanel = isPlaying && game ? (
     <div className="space-y-3">
       <div className="rounded-xl border border-zinc-800 bg-black/20 p-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-500">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">
           {language === "ko" ? "현재 배율" : "Current Multiplier"}
         </p>
         <p className="mt-2 text-3xl font-bold font-mono text-white">{game.multiplier}x</p>
@@ -238,7 +238,7 @@ export default function Mines() {
                         className="text-2xl font-bold text-white font-mono">
                         {game.multiplier}x
                       </motion.p>
-                      <p className="text-[10px] text-zinc-500 font-mono">
+                      <p className="text-[11px] text-zinc-500 font-mono">
                         ${(game.bet * game.multiplier).toFixed(2)} · {language === "ko" ? "다음" : "next"}: {game.nextMultiplier}x
                       </p>
                     </div>
@@ -314,7 +314,7 @@ export default function Mines() {
 
           {(!game || isOver) && (
             <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
                 {language === "ko" ? "베팅 패널" : "Bet Panel"}
               </p>
               {setupControls}
@@ -322,7 +322,7 @@ export default function Mines() {
           )}
           {activePanel && (
             <div className="hidden lg:block rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
                 {language === "ko" ? "현재 라운드" : "Live Round"}
               </p>
               {activePanel}
@@ -330,7 +330,7 @@ export default function Mines() {
           )}
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
 

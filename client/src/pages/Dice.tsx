@@ -173,7 +173,7 @@ export default function Dice() {
                 transition={{ duration: 2, repeat: Infinity }}
               >
                 <div className="w-full h-full bg-yellow-400" />
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold text-yellow-400">
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[11px] font-mono font-bold text-yellow-400">
                   {target}
                 </div>
               </motion.div>
@@ -195,7 +195,7 @@ export default function Dice() {
 
             {/* Target Slider */}
             <div className="mb-4">
-              <div className="flex justify-between text-[10px] text-zinc-500 mb-1">
+              <div className="flex justify-between text-[11px] text-zinc-500 mb-1">
                 <span>1</span>
                 <span className="font-bold text-white text-xs">{target}</span>
                 <span>99</span>
@@ -228,13 +228,13 @@ export default function Dice() {
               <div className={`bg-zinc-800/50 rounded-lg p-2.5 text-center transition-all ${
                 multiplier > 5 ? "ring-1 ring-yellow-500/30 shadow-md shadow-yellow-500/10" : ""
               }`}>
-                <p className="text-[9px] text-zinc-500 uppercase">Multiplier</p>
+                <p className="text-[11px] text-zinc-500 uppercase">Multiplier</p>
                 <p className="text-lg font-bold text-yellow-400 font-mono">{multiplier}x</p>
               </div>
               <div className={`bg-zinc-800/50 rounded-lg p-2.5 text-center transition-all ${
                 winChance < 20 ? "ring-1 ring-red-500/30 shadow-md shadow-red-500/10" : ""
               }`}>
-                <p className="text-[9px] text-zinc-500 uppercase">Win Chance</p>
+                <p className="text-[11px] text-zinc-500 uppercase">Win Chance</p>
                 <p className="text-lg font-bold text-white font-mono">{winChance}%</p>
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Dice() {
           </div>
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
         <CasinoGameLog />

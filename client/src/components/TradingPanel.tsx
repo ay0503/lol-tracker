@@ -361,7 +361,7 @@ export default function TradingPanel() {
         {/* Market status indicator */}
         <div className="flex items-center gap-1.5 mb-2 sm:mb-0">
           <div className={`w-2 h-2 rounded-full ${isTradingHalted ? (isAdminHalted ? "bg-red-500 animate-pulse" : "bg-yellow-500 animate-pulse") : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
-           <span className={`text-[10px] font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+           <span className={`text-[11px] font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
              {isAdminHalted ? "ADMIN HALT" : isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
            </span>
         </div>
@@ -412,7 +412,7 @@ export default function TradingPanel() {
             <button
               key={tab.id}
               onClick={() => setOrderTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 sm:py-2.5 text-[10px] sm:text-xs font-bold transition-all border-b-2 whitespace-nowrap px-1 sm:px-2 ${
+              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 sm:py-2.5 text-[11px] sm:text-xs font-bold transition-all border-b-2 whitespace-nowrap px-1 sm:px-2 ${
                 orderTab === tab.id
                   ? "text-foreground border-primary bg-secondary/20"
                   : "text-muted-foreground border-transparent hover:text-foreground hover:bg-secondary/10"
@@ -485,7 +485,7 @@ export default function TradingPanel() {
                           <div className="flex items-center gap-2.5">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tk.color }} />
                             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">${tk.symbol}</span>
-                            <span className="text-[10px] text-muted-foreground">{t.tickers[tkKey] || tk.symbol}</span>
+                            <span className="text-[11px] text-muted-foreground">{t.tickers[tkKey] || tk.symbol}</span>
                           </div>
                           <span className="text-xs text-foreground font-[var(--font-mono)]">
                             {tPrice > 0 ? `$${tPrice.toFixed(2)}` : "..."}
@@ -504,7 +504,7 @@ export default function TradingPanel() {
 
             {/* Current Price Display */}
             <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t.trading.currentPrice}</p>
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.trading.currentPrice}</p>
               <p className="text-2xl font-bold text-foreground font-[var(--font-mono)]">
                 {tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : t.common.loading}
               </p>
@@ -634,7 +634,7 @@ export default function TradingPanel() {
               <>
                 <div className="bg-[#FF5252]/10 border border-[#FF5252]/20 rounded-lg p-3 mb-4">
                   <p className="text-xs text-[#FF5252] font-bold mb-1">{t.trading.stopLossTitle}</p>
-                  <p className="text-[10px] text-muted-foreground">{t.trading.stopLossDesc}</p>
+                  <p className="text-[11px] text-muted-foreground">{t.trading.stopLossDesc}</p>
                 </div>
                 <div className="relative mb-3">
                   <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF5252]" />
@@ -658,7 +658,7 @@ export default function TradingPanel() {
               <>
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 mb-4">
                   <p className="text-xs text-purple-400 font-bold mb-1">{t.trading.shortSellingTitle}</p>
-                  <p className="text-[10px] text-muted-foreground">{t.trading.shortSellingDesc}</p>
+                  <p className="text-[11px] text-muted-foreground">{t.trading.shortSellingDesc}</p>
                 </div>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
                   <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.shortSell}</button>
@@ -801,7 +801,7 @@ export default function TradingPanel() {
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
-                          <p className="text-[10px] text-muted-foreground">${trade.totalAmount.toFixed(2)}</p>
+                          <p className="text-[11px] text-muted-foreground">${trade.totalAmount.toFixed(2)}</p>
                         </div>
                       </div>
                     );

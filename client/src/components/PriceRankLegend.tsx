@@ -187,7 +187,7 @@ export default function PriceRankLegend() {
               }}
             >
               <span
-                className="text-[10px] font-bold font-[var(--font-mono)] px-1.5 py-0.5 rounded"
+                className="text-[11px] font-bold font-[var(--font-mono)] px-1.5 py-0.5 rounded"
                 style={{
                   color: currentTier.color,
                   backgroundColor: currentTier.bgColor,
@@ -201,22 +201,22 @@ export default function PriceRankLegend() {
 
         {/* Price labels below */}
         <div className="flex justify-between mt-1.5">
-          <span className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
+          <span className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
             $10
           </span>
           <span
-            className="text-[10px] font-[var(--font-mono)]"
+            className="text-[11px] font-[var(--font-mono)]"
             style={{ color: TIERS[0].color, opacity: 0.7 }}
           >
             $40
           </span>
           <span
-            className="text-[10px] font-[var(--font-mono)]"
+            className="text-[11px] font-[var(--font-mono)]"
             style={{ color: TIERS[1].color, opacity: 0.7 }}
           >
             $70
           </span>
-          <span className="text-[10px] text-muted-foreground font-[var(--font-mono)]">
+          <span className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
             $100
           </span>
         </div>
@@ -274,7 +274,7 @@ export default function PriceRankLegend() {
                   return (
                     <div
                       key={div}
-                      className={`flex items-center justify-between text-[10px] font-[var(--font-mono)] px-1.5 py-0.5 rounded ${
+                      className={`flex items-center justify-between text-[11px] font-[var(--font-mono)] px-1.5 py-0.5 rounded ${
                         isCurrentDiv
                           ? "bg-background/50 font-bold"
                           : "opacity-60"
@@ -307,7 +307,7 @@ export default function PriceRankLegend() {
         </div>
 
         {/* Formula note */}
-        <p className="text-[10px] text-muted-foreground mt-3 text-center font-[var(--font-mono)]">
+        <p className="text-[11px] text-muted-foreground mt-3 text-center font-[var(--font-mono)]">
           {t.legend.formula}
         </p>
       </div>

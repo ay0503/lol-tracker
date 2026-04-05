@@ -355,7 +355,7 @@ export default function Roulette() {
                   className={`rounded-xl border px-3 py-3 text-sm font-bold transition-all ${getColorButtonClasses(color, selectedColor === color)}`}
                 >
                   <div>{getColorLabel(color, language)}</div>
-                  <div className="mt-1 text-[10px] font-mono opacity-80">
+                  <div className="mt-1 text-[11px] font-mono opacity-80">
                     {color === "green" ? "37x" : "2x"}
                   </div>
                 </button>
@@ -386,7 +386,7 @@ export default function Roulette() {
           </div>
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "초록은 컬러 베팅 환불 · 깔끔한 중립 룰렛" : "Green refunds color bets · clean neutral roulette"}
         </p>
 

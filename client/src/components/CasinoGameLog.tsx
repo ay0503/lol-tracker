@@ -49,7 +49,7 @@ export default function CasinoGameLog() {
 
   return (
     <div className="bg-zinc-900/70 border border-zinc-800/60 rounded-xl p-3 mt-4">
-      <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
+      <h3 className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
         {language === "ko" ? "실시간 플레이" : "Live Plays"}
       </h3>
       <div className="space-y-0.5 max-h-[300px] overflow-y-auto scrollbar-hide">
@@ -79,31 +79,31 @@ export default function CasinoGameLog() {
                 />
               </span>
 
-              <span className="text-zinc-500 text-[10px] flex-shrink-0">
+              <span className="text-zinc-500 text-[11px] flex-shrink-0">
                 {GAME_LABELS[entry.game] || entry.game}
               </span>
 
-              <span className="text-zinc-400 font-mono text-[10px] flex-shrink-0">
+              <span className="text-zinc-400 font-mono text-[11px] flex-shrink-0">
                 ${entry.bet.toFixed(2)}
               </span>
 
               <span className="text-zinc-600 flex-shrink-0">&rarr;</span>
 
               {entry.multiplier !== null && (
-                <span className={`font-mono text-[10px] font-bold flex-shrink-0 ${
+                <span className={`font-mono text-[11px] font-bold flex-shrink-0 ${
                   isBigWin ? "text-yellow-400" : won ? "text-emerald-400" : "text-zinc-500"
                 }`}>
                   {entry.multiplier.toFixed(2)}x
                 </span>
               )}
 
-              <span className={`font-mono text-[10px] font-bold ml-auto flex-shrink-0 ${
+              <span className={`font-mono text-[11px] font-bold ml-auto flex-shrink-0 ${
                 won ? "text-[#00C805]" : "text-[#FF5252]"
               }`}>
                 {won ? `+$${(entry.payout - entry.bet).toFixed(2)}` : `-$${entry.bet.toFixed(2)}`}
               </span>
 
-              <span className="text-[9px] text-zinc-600 flex-shrink-0 w-6 text-right">
+              <span className="text-[11px] text-zinc-600 flex-shrink-0 w-6 text-right">
                 {timeAgo(entry.createdAt)}
               </span>
             </div>

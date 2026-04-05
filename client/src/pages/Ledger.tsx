@@ -183,7 +183,7 @@ export default function Ledger() {
               <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: tk.color }}>
                 ${tk.symbol}
               </span>
-              <span className="text-[10px] text-muted-foreground hidden sm:inline">{translateTickerDescription(tk.symbol, tk.description, language)}</span>
+              <span className="text-[11px] text-muted-foreground hidden sm:inline">{translateTickerDescription(tk.symbol, tk.description, language)}</span>
             </div>
           ))}
         </div>
@@ -199,7 +199,7 @@ export default function Ledger() {
             <Filter className="w-3.5 h-3.5" />
             {language === "ko" ? "필터" : "Filters"}
             {hasFilters && (
-              <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center">
+              <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[11px] flex items-center justify-center">
                 {[filterTicker, filterType, filterUser].filter(Boolean).length}
               </span>
             )}
@@ -266,7 +266,7 @@ export default function Ledger() {
               {hasFilters && (
                 <button
                   onClick={clearFilters}
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <X className="w-3 h-3" />
                   {language === "ko" ? "초기화" : "Clear"}
@@ -291,7 +291,7 @@ export default function Ledger() {
           /* ─── Trades Tab ─── */
           filteredTrades && filteredTrades.length > 0 ? (
             <>
-              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
                 <div className="col-span-1">{t.ledger.type}</div>
                 <div className="col-span-2">{t.ledger.ticker}</div>
@@ -313,7 +313,7 @@ export default function Ledger() {
                     <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
                       <div className="col-span-2 flex items-center gap-2 min-w-0">
                         <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                          <span className="text-[10px] font-bold text-foreground">
+                          <span className="text-[11px] font-bold text-foreground">
                             {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -325,7 +325,7 @@ export default function Ledger() {
                         />
                       </div>
                       <div className="col-span-1">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded ${
                           trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                         }`}>
                           {trade.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -347,7 +347,7 @@ export default function Ledger() {
                         <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
                       </div>
                       <div className="col-span-2 text-right">
-                        <span className="text-[10px] text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                        <span className="text-[11px] text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
                       </div>
                     </div>
 
@@ -356,7 +356,7 @@ export default function Ledger() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-bold text-foreground">
+                            <span className="text-[11px] font-bold text-foreground">
                               {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -366,7 +366,7 @@ export default function Ledger() {
                             showTitle={false}
                             className="text-xs truncate max-w-[80px]"
                           />
-                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                          <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold uppercase px-1.5 py-0.5 rounded ${
                             trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                           }`}>
                             {trade.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
@@ -375,7 +375,7 @@ export default function Ledger() {
                         </div>
                         <span className="text-xs text-foreground font-bold font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
                       </div>
-                      <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-2">
                           <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>${trade.ticker}</span>
                           <span className="text-muted-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
@@ -398,7 +398,7 @@ export default function Ledger() {
           /* ─── Dividends Tab ─── */
           filteredDividends && filteredDividends.length > 0 ? (
             <>
-              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
                 <div className="col-span-2">{t.ledger.ticker}</div>
                 <div className="col-span-4">{language === "ko" ? "사유" : "Reason"}</div>
@@ -428,7 +428,7 @@ export default function Ledger() {
                         </span>
                       </div>
                       <div className="col-span-4">
-                        <span className="text-[10px] text-muted-foreground truncate block">
+                        <span className="text-[11px] text-muted-foreground truncate block">
                           {div.reason}
                         </span>
                       </div>
@@ -438,7 +438,7 @@ export default function Ledger() {
                         </span>
                       </div>
                       <div className="col-span-2 text-right">
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground">
                           {formatTimeAgoFromDate(div.createdAt, language)}
                         </span>
                       </div>
@@ -455,7 +455,7 @@ export default function Ledger() {
                         </div>
                         <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">+${div.totalPayout.toFixed(2)}</span>
                       </div>
-                      <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-2">
                           <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>${div.ticker}</span>
                           <span className="text-muted-foreground truncate max-w-[150px]">{div.reason}</span>
@@ -482,7 +482,7 @@ export default function Ledger() {
           /* ─── Bets Tab ─── */
           filteredBets && filteredBets.length > 0 ? (
             <>
-              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
                 <div className="col-span-2">{language === "ko" ? "예측" : "Prediction"}</div>
                 <div className="col-span-2 text-right">{language === "ko" ? "금액" : "Amount"}</div>
@@ -511,7 +511,7 @@ export default function Ledger() {
                           <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(bet.userId).isCloseFriend} showTitle={false} className="text-xs truncate" />
                         </div>
                         <div className="col-span-2">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded ${
                             bet.prediction === "win" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                           }`}>
                             {bet.prediction === "win" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -522,7 +522,7 @@ export default function Ledger() {
                           <span className="text-xs text-foreground font-[var(--font-mono)]">${bet.amount.toFixed(2)}</span>
                         </div>
                         <div className="col-span-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
                             isPending ? "bg-yellow-500/15 text-yellow-400" :
                             isWon ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                           }`}>
@@ -539,7 +539,7 @@ export default function Ledger() {
                           )}
                         </div>
                         <div className="col-span-2 text-right">
-                          <span className="text-[10px] text-muted-foreground">{formatTimeAgoFromDate(bet.createdAt, language)}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatTimeAgoFromDate(bet.createdAt, language)}</span>
                         </div>
                       </div>
 
@@ -551,7 +551,7 @@ export default function Ledger() {
                               <Dice5 className="w-3 h-3 text-yellow-400" />
                             </div>
                             <StyledName name={bet.userName} nameEffectCss={getCosmetics(bet.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(bet.userId).isCloseFriend} showTitle={false} className="text-xs truncate max-w-[80px]" />
-                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold uppercase px-1.5 py-0.5 rounded ${
                               bet.prediction === "win" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                             }`}>
                               {bet.prediction === "win" ? "WIN" : "LOSS"}
@@ -565,7 +565,7 @@ export default function Ledger() {
                             <span className="text-xs text-yellow-400 font-[var(--font-mono)]">${bet.amount.toFixed(2)}</span>
                           )}
                         </div>
-                        <div className="flex items-center justify-between text-[10px]">
+                        <div className="flex items-center justify-between text-[11px]">
                           <span className={`font-bold ${isPending ? "text-yellow-400" : isWon ? "text-[#00C805]" : "text-[#FF5252]"}`}>
                             {isPending ? "⏳ PENDING" : isWon ? "✅ WON" : "❌ LOST"}
                           </span>
@@ -592,7 +592,7 @@ export default function Ledger() {
           /* ─── Bot Tab ─── */
           filteredBotTrades && filteredBotTrades.length > 0 ? (
             <>
-              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.type}</div>
                 <div className="col-span-2">{t.ledger.ticker}</div>
                 <div className="col-span-2 text-right">{t.ledger.shares}</div>
@@ -610,7 +610,7 @@ export default function Ledger() {
                   >
                     <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
                       <div className="col-span-2">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded ${
                           trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                         }`}>
                           {trade.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -630,14 +630,14 @@ export default function Ledger() {
                         <span className="text-xs text-foreground font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
                       </div>
                       <div className="col-span-2 text-right">
-                        <span className="text-[10px] text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                        <span className="text-[11px] text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
                       </div>
                     </div>
                     {/* Mobile */}
                     <div className="sm:hidden bg-card border border-border rounded-lg p-3">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                          <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold uppercase px-1.5 py-0.5 rounded ${
                             trade.type === "buy" ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
                           }`}>
                             {trade.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
@@ -647,7 +647,7 @@ export default function Ledger() {
                         </div>
                         <span className="text-xs font-[var(--font-mono)] text-foreground">${trade.totalAmount.toFixed(2)}</span>
                       </div>
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                         <span>{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
                         <span>{formatTimeAgoFromDate(trade.createdAt, language)}</span>
                       </div>
@@ -657,7 +657,7 @@ export default function Ledger() {
               </div>
               {/* Pagination */}
               <div className="flex items-center justify-between mt-4 px-1">
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   {(botPage - 1) * BOT_PAGE_SIZE + 1}–{Math.min(botPage * BOT_PAGE_SIZE, filteredBotTrades.length)} of {filteredBotTrades.length}{filteredBotTrades.length >= botPage * BOT_PAGE_SIZE ? "+" : ""}
                 </span>
                 <div className="flex gap-1.5">

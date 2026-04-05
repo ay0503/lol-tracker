@@ -24,7 +24,7 @@ function getRankBg(rank: number) {
 
 /** Mini sparkline SVG from portfolio history */
 function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[] }) {
-  if (data.length < 2) return <span className="text-[10px] text-muted-foreground">—</span>;
+  if (data.length < 2) return <span className="text-[11px] text-muted-foreground">—</span>;
 
   const values = data.map(d => d.totalValue);
   const min = Math.min(...values);
@@ -74,7 +74,7 @@ function UserProfile({ userId }: { userId: number }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/50 mt-3">
       {/* Holdings */}
       <div>
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Holdings</p>
+        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Holdings</p>
         {data.holdings.length === 0 ? (
           <p className="text-xs text-muted-foreground">No positions</p>
         ) : (
@@ -98,7 +98,7 @@ function UserProfile({ userId }: { userId: number }) {
 
       {/* Recent trades */}
       <div>
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Recent Trades</p>
+        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Recent Trades</p>
         {data.trades.length === 0 ? (
           <p className="text-xs text-muted-foreground">No trades yet</p>
         ) : (
@@ -108,7 +108,7 @@ function UserProfile({ userId }: { userId: number }) {
               return (
                 <div key={i} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className={`font-bold uppercase text-[10px] ${isBuy ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                    <span className={`font-bold uppercase text-[11px] ${isBuy ? "text-[#00C805]" : "text-[#FF5252]"}`}>
                       {trade.type}
                     </span>
                     <span className="font-mono">${trade.ticker}</span>
@@ -126,7 +126,7 @@ function UserProfile({ userId }: { userId: number }) {
       {/* Bet stats */}
       {data.betStats && data.betStats.total > 0 && (
         <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
             <Dice5 className="w-3 h-3 inline mr-1" />Bets
           </p>
           <div className="flex items-center gap-3 text-xs">
@@ -144,7 +144,7 @@ function UserProfile({ userId }: { userId: number }) {
       {/* Portfolio sparkline */}
       {data.portfolioHistory.length >= 2 && (
         <div className="sm:col-span-2">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">7-Day Portfolio</p>
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">7-Day Portfolio</p>
           <Sparkline data={data.portfolioHistory} />
         </div>
       )}
@@ -182,7 +182,7 @@ function ChartLegend({ userNames, hidden, onToggle }: {
               className="w-2.5 h-2.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
             />
-            <span className="text-[10px] text-muted-foreground">{name}</span>
+            <span className="text-[11px] text-muted-foreground">{name}</span>
           </button>
         );
       })}
@@ -351,7 +351,7 @@ function LeaderboardCharts() {
         <button
           key={r}
           onClick={() => setRange(r)}
-          className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
+          className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
             range === r
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -705,14 +705,14 @@ export default function Leaderboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground">
                           {t.leaderboard.cash}: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(0)}</span>
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground">
                           {t.leaderboard.holdings}: <span className="text-foreground font-mono">${trader.holdingsValue.toFixed(0)}</span>
                         </span>
                         {trader.shortExposure !== 0 && (
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground">
                             {t.leaderboard.shorts}: <span className="text-foreground font-mono">${trader.shortExposure.toFixed(0)}</span>
                           </span>
                         )}
@@ -724,7 +724,7 @@ export default function Leaderboard() {
                           <TrendingDown className="w-3 h-3 text-[#FF5252]" />
                         )}
                         <span
-                          className="text-[10px] font-mono font-bold"
+                          className="text-[11px] font-mono font-bold"
                           style={{ color: isPositive ? "#00C805" : "#FF5252" }}
                         >
                           {isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%
@@ -790,7 +790,7 @@ export default function Leaderboard() {
                           titleCss={(player as any).title?.cssClass}
                           className="text-sm"
                         />
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[11px] text-muted-foreground">
                           {language === "ko" ? "시작" : "Started"}: $20.00
                         </span>
                       </div>

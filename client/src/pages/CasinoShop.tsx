@@ -108,7 +108,7 @@ export default function CasinoShop() {
         {/* Equipped Preview */}
         {isAuthenticated && (equipped?.title || equipped?.nameEffect) && (
           <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-xl p-3 mb-4">
-            <p className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold mb-1.5">
+            <p className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mb-1.5">
               {language === "ko" ? "내 프로필" : "Equipped"}
             </p>
             <StyledName
@@ -121,11 +121,11 @@ export default function CasinoShop() {
             <div className="flex gap-2 mt-1.5">
               {equipped?.title && (
                 <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
-                  className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">Unequip title</button>
+                  className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">Unequip title</button>
               )}
               {equipped?.nameEffect && (
                 <button onClick={() => equipMutation.mutate({ type: "name_effect", cosmeticId: null })}
-                  className="text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors">Unequip effect</button>
+                  className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">Unequip effect</button>
               )}
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function CasinoShop() {
         <div className="flex gap-1.5 mb-4">
           {([["all", "All", "전체"], ["title", "Titles", "칭호"], ["name_effect", "Effects", "효과"]] as const).map(([key, en, ko]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all ${
                 tab === key
                   ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
                   : "bg-zinc-800/50 text-zinc-500 border border-zinc-700/30 hover:text-zinc-300"
@@ -180,7 +180,7 @@ export default function CasinoShop() {
                 <div className="bg-zinc-950 px-3 py-4 flex items-center justify-center min-h-[80px]">
                   {item.type === "title" ? (
                     <div className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] text-zinc-500 font-medium">{myName}</span>
+                      <span className="text-[11px] text-zinc-500 font-medium">{myName}</span>
                       <TitleBadge name={item.name} cssClass={item.cssClass} />
                     </div>
                   ) : (
@@ -191,9 +191,9 @@ export default function CasinoShop() {
                 {/* Info Bar */}
                 <div className="bg-zinc-900/80 px-2.5 py-2 space-y-1.5">
                   <div>
-                    <p className="text-[10px] text-zinc-300 font-semibold truncate">{item.name}</p>
+                    <p className="text-[11px] text-zinc-300 font-semibold truncate">{item.name}</p>
                     {item.description && (
-                      <p className="text-[8px] text-zinc-600 truncate">{item.description}</p>
+                      <p className="text-[11px] text-zinc-600 truncate">{item.description}</p>
                     )}
                   </div>
 
@@ -201,14 +201,14 @@ export default function CasinoShop() {
                     <span className="text-[11px] font-mono font-bold text-white">${item.price.toFixed(0)}</span>
                     {isOwned ? (
                       isEquipped ? (
-                        <span className="flex items-center gap-0.5 text-[8px] text-emerald-400 font-bold">
+                        <span className="flex items-center gap-0.5 text-[11px] text-emerald-400 font-bold">
                           <Check className="w-2.5 h-2.5" /> On
                         </span>
                       ) : (
                         <button
                           onClick={() => equipMutation.mutate({ type: item.type as "title" | "name_effect", cosmeticId: item.id })}
                           disabled={equipMutation.isPending}
-                          className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 text-[8px] font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40">
+                          className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 text-[11px] font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40">
                           Equip
                         </button>
                       )
@@ -216,7 +216,7 @@ export default function CasinoShop() {
                       <button
                         onClick={() => purchaseMutation.mutate({ cosmeticId: item.id })}
                         disabled={purchaseMutation.isPending || !canAfford || !isAuthenticated}
-                        className={`px-2 py-0.5 rounded text-[8px] font-bold transition-colors disabled:opacity-30 ${
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors disabled:opacity-30 ${
                           canAfford ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-zinc-800 text-zinc-600"
                         }`}>
                         Buy
@@ -236,7 +236,7 @@ export default function CasinoShop() {
           </div>
         )}
 
-        <p className="text-center text-[9px] text-zinc-700 mt-6 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-6 font-mono">
           {language === "ko" ? "카지노 캐시로 구매 · 리더보드에 표시" : "Buy with casino cash · Shows on leaderboard"}
         </p>
 

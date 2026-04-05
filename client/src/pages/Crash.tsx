@@ -538,7 +538,7 @@ export default function Crash() {
           </AnimatePresence>
         </div>
 
-        <p className="text-center text-[9px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
           {language === "ko" ? "더 부드러운 크래시 곡선 | 플레이어 우위 | 최대 $500 지급" : "Softer crash curve | player edge | $500 max payout"}
         </p>
 

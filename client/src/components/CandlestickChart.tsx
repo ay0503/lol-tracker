@@ -785,13 +785,13 @@ export default function CandlestickChart({
         )}
 
         {annotations.length > 0 && (
-          <span className="text-[10px] text-muted-foreground ml-2 font-[var(--font-mono)]">
+          <span className="text-[11px] text-muted-foreground ml-2 font-[var(--font-mono)]">
             {annotations.length} {t.chart.annotationCount}
           </span>
         )}
 
         <div className="flex-1" />
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-[var(--font-mono)]">
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-[var(--font-mono)]">
           <Pencil className="w-3 h-3" />
           {t.chart.drawOnChart}
         </div>
