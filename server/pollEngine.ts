@@ -827,8 +827,12 @@ export async function pollNow(): Promise<PollResult> {
  * Generate a meme news headline using LLM
  */
 async function getNewsMode(): Promise<"ai" | "templates"> {
-  // Forced to templates — re-enable DB lookup to allow admin toggle
-  return "templates";
+  try {
+    const client = getRawClient();
+    const result = await client.execute(`SELECT value FROM app_config WHERE key = 'news_mode'`);
+    if (result.rows.length > 0) return String(result.rows[0].value) as "ai" | "templates";
+  } catch { /* table may not exist */ }
+  return "ai"; // default: AI news
 }
 
 async function generateMemeNews(
@@ -844,19 +848,77 @@ async function generateMemeNews(
   // Check admin setting for news generation mode
   const newsMode = await getNewsMode();
 
+  // Build match history context for smarter headlines
+  let historyContext = "";
+  try {
+    const recentGames = await getRecentMatchesFromDB(10);
+    if (recentGames.length > 1) {
+      // Skip the current match (first in list) and build context from prior games
+      const priorGames = recentGames.slice(1);
+      const recentRecord = priorGames.reduce((acc, m) => {
+        if (!m.isRemake) m.win ? acc.wins++ : acc.losses++;
+        return acc;
+      }, { wins: 0, losses: 0 });
+
+      // Current streak
+      let streakCount = 0;
+      let streakType = "";
+      for (const m of priorGames) {
+        if (m.isRemake) continue;
+        const mResult = m.win ? "win" : "loss";
+        if (!streakType) streakType = mResult;
+        if (mResult === streakType) streakCount++;
+        else break;
+      }
+
+      // Most played champion recently
+      const champCounts = new Map<string, number>();
+      for (const m of priorGames) {
+        champCounts.set(m.champion, (champCounts.get(m.champion) || 0) + 1);
+      }
+      const mostPlayed = Array.from(champCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+
+      // Same champion repeat?
+      const sameChampGames = priorGames.filter(m => m.champion === champion);
+      const sameChampRecord = sameChampGames.reduce((acc, m) => {
+        m.win ? acc.w++ : acc.l++;
+        return acc;
+      }, { w: 0, l: 0 });
+
+      historyContext = `
+RECENT SESSION CONTEXT (use this to write smarter, situation-aware headlines):
+- Recent record: ${recentRecord.wins}W ${recentRecord.losses}L
+- Current streak before this game: ${streakCount} ${streakType}${streakCount >= 1 ? (streakCount >= 3 ? " (TILTED/ON FIRE)" : "") : ""}
+- Most played recently: ${mostPlayed ? `${mostPlayed[0]} (${mostPlayed[1]} games)` : "varied"}
+${sameChampGames.length > 0 ? `- ${champion} record today: ${sameChampRecord.w}W ${sameChampRecord.l}L (${sameChampGames.length} games — ${sameChampGames.length >= 3 ? "ONE-TRICK ALERT" : "repeat pick"})` : ""}
+- Prior games: ${priorGames.slice(0, 5).map(m => `${m.win ? "W" : "L"} ${m.champion} ${m.kills}/${m.deaths}/${m.assists}`).join(" | ")}`;
+    }
+  } catch { /* history fetch failed, continue without context */ }
+
   // Situation tags for the LLM
   const situationTags: string[] = [];
   if (deaths === 0 && kills >= 5) situationTags.push("FLAWLESS GAME — zero deaths, absolute perfection");
+  if (deaths === 0 && kills < 5 && win) situationTags.push("DEATHLESS — survived the whole game without dying");
   if (kills >= 10 && deaths <= 3) situationTags.push("HARD CARRY — CEO 1v9'd this lobby");
+  if (kills >= 15) situationTags.push("KILL RECORD TERRITORY — CEO went absolutely nuclear");
   if (deaths >= 10) situationTags.push("FULL INT — CEO literally ran it down, this is a disaster of epic proportions");
-  if (deaths >= 8) situationTags.push("FEEDING — CEO was a walking bag of gold for the enemy team");
+  if (deaths >= 8 && deaths < 10) situationTags.push("FEEDING — CEO was a walking bag of gold for the enemy team");
+  if (kills === 0 && deaths >= 5) situationTags.push("ZERO KILLS — CEO contributed nothing and died a lot");
   if (kills === 0 && assists <= 2) situationTags.push("AFK ENERGY — CEO may have been alt-tabbed the entire game");
   if (minutes <= 20) situationTags.push("SPEEDRUN FF — game ended embarrassingly fast");
-  if (minutes >= 35) situationTags.push("MARATHON — CEO held everyone hostage for way too long");
+  if (minutes >= 40) situationTags.push("HOSTAGE SITUATION — 40+ minutes of suffering for everyone involved");
+  if (minutes >= 35 && minutes < 40) situationTags.push("MARATHON — CEO held everyone hostage for way too long");
+  if (cs >= 250 && minutes <= 30) situationTags.push("FARM GOD — CEO was a CS machine this game");
+  if (cs <= 100 && minutes >= 25) situationTags.push("CS DIFF — CEO forgot to farm");
+  if ((kills + assists) >= 20) situationTags.push("TEAM FIGHT MONSTER — involved in 20+ kills");
+  if (deaths === 0 && kills === 0 && assists === 0) situationTags.push("LITERALLY AFK — 0/0/0 is not a KDA, it's a cry for help");
+  const kdRatio = deaths > 0 ? (kills + assists) / deaths : kills + assists;
+  if (kdRatio >= 5 && kills >= 3) situationTags.push(`PERFECT KDA RATIO — ${kdRatio.toFixed(1)} KDA is institutional-grade`);
+  if (Math.abs(parseFloat(pctChange)) >= 5) situationTags.push(`BIG PRICE MOVE — $DORI moved ${pctChange}% in one game`);
 
   const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "목도리 도마뱀" (dori). This is a fake trading platform and you are the news desk.
 
-YOUR VIBE: You write like a deranged r/wallstreetbets poster who also works at Bloomberg. Think loss porn captions, gain screenshots titles, Michael Reeves energy, maximum brainrot. You ARE the shitpost. Financial jargon meets League of Legends meets pure unhinged internet humor.
+YOUR VIBE: You write like a deranged r/wallstreetbets poster mixed with 디씨인사이드 주갤 energy. Think loss porn captions, gain screenshots, 디씨 __특 meme format, maximum brainrot. Financial jargon meets League of Legends meets Korean internet culture meets pure unhinged humor.
 
 MATCH DATA:
 - Champion: ${champion}
@@ -867,29 +929,34 @@ MATCH DATA:
 - Game Duration: ${minutes} minutes
 - $DORI Price: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${pctChange}%)
 ${situationTags.length > 0 ? `- SITUATION: ${situationTags.join(". ")}` : ""}
+${historyContext}
 
 EXAMPLES OF THE ENERGY WE WANT:
 - "CIRCUIT BREAKER: $DORI halted after CEO speedruns 12 deaths on Yasuo. Bagholders in tears."
 - "$DORI CEO goes 0/8 on Vayne. NYSE considering permanent delisting."
 - "Citadel's algo briefly achieved consciousness to buy more $DORI."
 - "$DORI prints tendies after CEO's 15/2 Jinx carry. Wife's boyfriend impressed."
-- "SEC halts trading on $DORI after CEO's 11/0 Katarina is 'too good to be real'"
+- "CEO 3판 연속 Naafiri 고집 ㅋㅋ 디씨 주갤 특: 지면 '챔프 탓' 이기면 '실력' 오늘은 전자"
 - "Warren Buffett breaks silence on $DORI: 'I don't understand this instrument.' 0/4/1 on Lux."
-- "$DORI CEO 0/10 on Yasuo. 디씨: '이건 범죄다' 금감원 조사 착수."
-- "ㅋㅋㅋ CEO 15/2 역대급 캐리. 디씨: '존버는 승리한다' 인증 완료."
-- "$DORI 망했다 — CEO 2/9 on Vayne. 네이버 실검 1위: '도리 주식 환불'"
+- "$DORI CEO ${champion} 또 픽함 ㅋㅋ 디씨: '킹받는다 ㄹㅇ' '현타 쩔어' 손절각"
+- "ㅋㅋㅋ CEO 15/2 역대급 캐리. 디씨: '존버는 승리한다' 인증 완료. 가즈아"
+- "$DORI 떡락 — CEO 2/9 on Vayne. 디씨 반응: '뇌동매매 한 내 잘못 ㅇㅈ' 하한가 간다"
+- "3연패 후 CEO 갑자기 8/2 캐리 ㅋㅋ 디씨: '실화냐' '개이득 가즈아' '풀매수각'"
 
 RULES:
 - Headline: under 140 chars, ALL CAPS energy but not literally all caps, must reference ${champion} and the KDA
-- Body: 1-2 sentences, under 220 chars, add extra detail/joke
+- Body: 1-2 sentences, under 220 chars, add extra detail/joke/디씨 reaction
 - Mix Wall Street jargon with League terms naturally
-- Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB.
-- Mix in Korean 디씨 internet slang aggressively (~40% of headlines). Use: ㅋㅋㅋ, ㄹㅇ, ㅇㅈ, ㅎㄷㄷ, ㅈㅈ, ㅂㅂ, 개사기, 존버/존버충, 디씨 주갤, __특 format, 떡상/떡락, 손절각, 물타기, 뇌동매매, 풀매수, 정신승리, 현타, 개이득/개손해, 킹받는다, 가즈아, 찐, 갓, 쩐다, 현실부정, 상한가/하한가, 개미, 빡침, 참교육, 무지성
-- Reference real companies/people sometimes (Citadel, Renaissance Technologies, Goldman Sachs, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Warren Buffett, Michael Burry, Elon Musk, BlackRock, DFV)
+- Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB or 개추 on 디씨.
+- USE THE SESSION CONTEXT: if there's a streak, a repeat champion pick, or a losing day — reference it! "3연패 후" "또 Naafiri ㅋㅋ" "오늘만 5판째" makes headlines way funnier
+- ~50% of headlines should use Korean 디씨 style. Use: ㅋㅋㅋ, ㄹㅇ, ㅇㅈ, ㅎㄷㄷ, ㅈㅈ, 개사기, 존버/존버충, 디씨 주갤, __특 format, 떡상/떡락, 손절각, 물타기, 뇌동매매, 풀매수, 정신승리, 현타, 개이득/개손해, 킹받는다, 가즈아, 찐, 갓, 쩐다, 현실부정, 상한가/하한가, 개미, 빡침, 참교육, 무지성
+- Reference real companies/people sometimes (Citadel, Goldman Sachs, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Warren Buffett, Michael Burry, Elon Musk, BlackRock, DFV)
 - If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
 - If kills are high: make it sound like the greatest investment thesis ever conceived
+- If repeat champion: roast the one-trick behavior or celebrate the dedication
+- If on a streak: make the headline about the streak, not just this game
 - DO NOT be generic or boring. Every headline should make someone laugh out loud.
-- About 30% of the time, include Korean slang or 디씨 references for extra flavor.
+- The best headlines reference the SESSION CONTEXT, not just raw KDA numbers.
 
 Respond in JSON: { "headline": "...", "body": "..." }`;
 
@@ -898,7 +965,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
     try {
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who just discovered League of Legends. Pure comedy. Always valid JSON." },
+          { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who's also a 디씨 주갤 고인물. Mix English WSB energy with Korean 디씨 말투 naturally. Reference the session context (streaks, repeat picks, daily record) to write situation-aware headlines, not generic ones. Pure comedy. Always valid JSON." },
           { role: "user", content: prompt },
         ],
         response_format: {
