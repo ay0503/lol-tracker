@@ -354,34 +354,40 @@ export default function CandlestickChart({
     setAnnotations([]);
     markersRef.current = [];
 
+    // Read computed theme colors for chart styling
+    const rootStyle = getComputedStyle(document.documentElement);
+    const chartBg = rootStyle.getPropertyValue("--background").trim() ? "transparent" : "transparent";
+    const mutedColor = "rgba(128, 128, 128, 0.25)";
+    const labelBg = "rgba(30, 30, 30, 0.85)";
+
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#6b7280",
+        background: { type: ColorType.Solid, color: chartBg },
+        textColor: "rgba(160, 160, 160, 0.8)",
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "rgba(42, 45, 56, 0.5)" },
-        horzLines: { color: "rgba(42, 45, 56, 0.5)" },
+        vertLines: { color: mutedColor },
+        horzLines: { color: mutedColor },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: "rgba(255, 255, 255, 0.2)",
-          labelBackgroundColor: "#2a2d38",
+          color: "rgba(255, 255, 255, 0.15)",
+          labelBackgroundColor: labelBg,
         },
         horzLine: {
-          color: "rgba(255, 255, 255, 0.2)",
-          labelBackgroundColor: "#2a2d38",
+          color: "rgba(255, 255, 255, 0.15)",
+          labelBackgroundColor: labelBg,
         },
       },
       rightPriceScale: {
-        borderColor: "rgba(42, 45, 56, 0.8)",
+        borderColor: mutedColor,
         scaleMargins: { top: 0.1, bottom: 0.2 },
       },
       timeScale: {
-        borderColor: "rgba(42, 45, 56, 0.8)",
+        borderColor: mutedColor,
         timeVisible: isIntraday,
         secondsVisible: false,
         rightOffset: 2,
