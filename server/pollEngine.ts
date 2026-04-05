@@ -91,6 +91,9 @@ let previousDivision: string | null = null;
 let lastNotifiedStreakCount = 0;
 let lastNotifiedMatchId: string | null = null;
 
+// Prevent duplicate game-start Discord notifications during spectator flicker
+let gameStartNotified = false;
+
 // Snapshot throttling: only store if price changed or 5 min elapsed
 let lastSnapshotPrice: number | null = null;
 let lastSnapshotTime = 0;
@@ -224,6 +227,7 @@ export async function pollNow(): Promise<PollResult> {
     if (spectatorApiOk) {
       if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
         confirmedIsInGame = rawIsInGame;
+        if (!confirmedIsInGame) gameStartNotified = false; // game ended via spectator → allow next game notification
         console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
       }
       previousRawIsInGame = rawIsInGame;
@@ -239,7 +243,7 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // Track game-start: capture pre-game LP/price snapshot (only once per game)
-    if (!wasConfirmedInGame && confirmedIsInGame && !preGameSnapshot) {
+    if (!wasConfirmedInGame && confirmedIsInGame && !preGameSnapshot && !gameStartNotified) {
       try {
         const snapEntry = playerData.soloEntry;
         const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
@@ -260,6 +264,7 @@ export async function pollNow(): Promise<PollResult> {
         const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
         const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
         notifyGameStart(champName, gameMode).catch(() => {});
+        gameStartNotified = true;
       } catch (err: any) {
         console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
       }
@@ -410,6 +415,7 @@ export async function pollNow(): Promise<PollResult> {
       confirmedIsInGame = false;
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
+      gameStartNotified = false;
       cache.set("player.liveGame.check", false, 45_000);
       cache.invalidate("player.liveGame.details");
     } else if (confirmedIsInGame && newMatchIds.length > 0 && rawIsInGame) {
@@ -422,6 +428,7 @@ export async function pollNow(): Promise<PollResult> {
       confirmedIsInGame = false;
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
+      gameStartNotified = false;
       cache.set("player.liveGame.check", false, 45_000);
       cache.invalidate("player.liveGame.details");
     }

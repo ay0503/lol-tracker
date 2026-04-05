@@ -50,9 +50,10 @@ export function evaluateGameConfirmation(
 export function shouldCaptureSnapshot(
   wasConfirmed: boolean,
   isConfirmed: boolean,
-  hasExistingSnapshot: boolean
+  hasExistingSnapshot: boolean,
+  gameStartNotified: boolean = false
 ): boolean {
-  return !wasConfirmed && isConfirmed && !hasExistingSnapshot;
+  return !wasConfirmed && isConfirmed && !hasExistingSnapshot && !gameStartNotified;
 }
 
 // ─── Remake Detection ───
