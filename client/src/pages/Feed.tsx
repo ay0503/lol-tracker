@@ -91,9 +91,9 @@ export default function Feed() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container py-8 max-w-3xl">
+      <main className="container py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">
             {language === "ko" ? "피드" : "Feed"}
           </h1>
@@ -102,12 +102,14 @@ export default function Feed() {
           </p>
         </div>
 
-        {/* ─── News Articles ─── */}
-        <div className="mb-4">
-          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
-            {language === "ko" ? "뉴스" : "News"}
-          </h2>
-        </div>
+        {/* ─── Side-by-side: News (left) + Discussion (right) ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+
+        {/* ─── Left: News Articles ─── */}
+        <div>
+        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          {language === "ko" ? "뉴스" : "News"}
+        </h2>
 
         {newsItems && newsItems.length > 0 && (
           <div className="mb-6 bg-card border border-border rounded-xl p-3 overflow-hidden">
@@ -120,13 +122,13 @@ export default function Feed() {
         )}
 
         {newsLoading ? (
-          <div className="space-y-3 mb-8">
+          <div className="space-y-3 mb-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="h-20 bg-card border border-border rounded-xl animate-pulse" />
             ))}
           </div>
         ) : newsItems && newsItems.length > 0 ? (
-          <div className="space-y-2.5 mb-8">
+          <div className="space-y-2.5 mb-4">
             {newsItems.slice(0, showAllNews ? undefined : 5).map((item: any, idx: number) => (
               <motion.div
                 key={item.id}
@@ -175,20 +177,19 @@ export default function Feed() {
             )}
           </div>
         ) : (
-          <div className="text-center py-12 mb-8">
+          <div className="text-center py-12 mb-4">
             <Newspaper className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
             <p className="text-sm text-muted-foreground">{t.news.noNews}</p>
           </div>
         )}
 
-        {/* ─── Discussion ─── */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-8" />
-
-        <div className="mb-4">
-          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
-            {language === "ko" ? "토론" : "Discussion"}
-          </h2>
         </div>
+
+        {/* ─── Right: Discussion ─── */}
+        <div className="lg:sticky lg:top-[80px] lg:self-start">
+        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">
+          {language === "ko" ? "토론" : "Discussion"}
+        </h2>
 
         {/* Comment Form */}
         {isAuthenticated ? (
@@ -320,6 +321,8 @@ export default function Feed() {
             })}
           </div>
         )}
+        </div>
+        </div>
       </main>
     </div>
   );
