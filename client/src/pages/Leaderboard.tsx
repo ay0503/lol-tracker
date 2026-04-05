@@ -24,7 +24,7 @@ function getRankBg(rank: number) {
 
 /** Mini sparkline SVG from portfolio history */
 function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[] }) {
-  if (data.length < 2) return <span className="text-[11px] text-muted-foreground">—</span>;
+  if (data.length < 2) return <span className="text-xs text-muted-foreground">—</span>;
 
   const values = data.map(d => d.totalValue);
   const min = Math.min(...values);
@@ -39,7 +39,7 @@ function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[]
   }).join(" ");
 
   const isUp = values[values.length - 1] >= values[0];
-  const color = isUp ? "#00C805" : "#FF5252";
+  const color = isUp ? "var(--color-win)" : "var(--color-loss)";
 
   return (
     <svg width={w} height={h} className="inline-block">
@@ -74,7 +74,7 @@ function UserProfile({ userId }: { userId: number }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/50 mt-3">
       {/* Holdings */}
       <div>
-        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Holdings</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Holdings</p>
         {data.holdings.length === 0 ? (
           <p className="text-xs text-muted-foreground">No positions</p>
         ) : (
@@ -98,7 +98,7 @@ function UserProfile({ userId }: { userId: number }) {
 
       {/* Recent trades */}
       <div>
-        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Recent Trades</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Recent Trades</p>
         {data.trades.length === 0 ? (
           <p className="text-xs text-muted-foreground">No trades yet</p>
         ) : (
@@ -108,7 +108,7 @@ function UserProfile({ userId }: { userId: number }) {
               return (
                 <div key={i} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className={`font-bold uppercase text-[11px] ${isBuy ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                    <span className={`font-bold uppercase text-xs ${isBuy ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
                       {trade.type}
                     </span>
                     <span className="font-mono">${trade.ticker}</span>
@@ -126,15 +126,15 @@ function UserProfile({ userId }: { userId: number }) {
       {/* Bet stats */}
       {data.betStats && data.betStats.total > 0 && (
         <div>
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
             <Dice5 className="w-3 h-3 inline mr-1" />Bets
           </p>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-[#00C805] font-mono font-bold">{data.betStats.won}W</span>
-            <span className="text-[#FF5252] font-mono font-bold">{data.betStats.lost}L</span>
+            <span className="text-[color:var(--color-win)] font-mono font-bold">{data.betStats.won}W</span>
+            <span className="text-[color:var(--color-loss)] font-mono font-bold">{data.betStats.lost}L</span>
             {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} pending</span>}
             <span className="text-muted-foreground">|</span>
-            <span className={`font-mono font-bold ${data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+            <span className={`font-mono font-bold ${data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
               {data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "+" : ""}${(data.betStats.totalWinnings - data.betStats.totalLost).toFixed(2)}
             </span>
           </div>
@@ -144,7 +144,7 @@ function UserProfile({ userId }: { userId: number }) {
       {/* Portfolio sparkline */}
       {data.portfolioHistory.length >= 2 && (
         <div className="sm:col-span-2">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">7-Day Portfolio</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">7-Day Portfolio</p>
           <Sparkline data={data.portfolioHistory} />
         </div>
       )}
@@ -155,7 +155,7 @@ function UserProfile({ userId }: { userId: number }) {
 // ─── Leaderboard Charts ───
 
 const USER_COLORS = [
-  "#00C805", "#FF5252", "#4A9EFF", "#FFD54F", "#E040FB",
+  "var(--color-win)", "var(--color-loss)", "#4A9EFF", "#FFD54F", "#E040FB",
   "#00BCD4", "#FF9800", "#F44336", "#9C27B0",
   "#009688", "#CDDC39", "#8BC34A",
 ];
@@ -182,7 +182,7 @@ function ChartLegend({ userNames, hidden, onToggle }: {
               className="w-2.5 h-2.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: USER_COLORS[idx % USER_COLORS.length] }}
             />
-            <span className="text-[11px] text-muted-foreground">{name}</span>
+            <span className="text-xs text-muted-foreground">{name}</span>
           </button>
         );
       })}
@@ -351,7 +351,7 @@ function LeaderboardCharts() {
         <button
           key={r}
           onClick={() => setRange(r)}
-          className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+          className={`px-2.5 py-1 rounded text-xs font-bold transition-all ${
             range === r
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -665,13 +665,13 @@ export default function Leaderboard() {
                         <p className="text-lg font-bold text-foreground font-mono">${trader.totalValue.toFixed(2)}</p>
                         <div className="flex items-center gap-1 justify-end">
                           {isPositive ? (
-                            <TrendingUp className="w-3 h-3 text-[#00C805]" />
+                            <TrendingUp className="w-3 h-3 text-[color:var(--color-win)]" />
                           ) : (
-                            <TrendingDown className="w-3 h-3 text-[#FF5252]" />
+                            <TrendingDown className="w-3 h-3 text-[color:var(--color-loss)]" />
                           )}
                           <span
                             className="text-xs font-mono font-bold"
-                            style={{ color: isPositive ? "#00C805" : "#FF5252" }}
+                            style={{ color: isPositive ? "var(--color-win)" : "var(--color-loss)" }}
                           >
                             {isPositive ? "+" : ""}${trader.pnl.toFixed(2)} ({isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%)
                           </span>
@@ -705,27 +705,27 @@ export default function Leaderboard() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {t.leaderboard.cash}: <span className="text-foreground font-mono">${trader.cashBalance.toFixed(0)}</span>
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {t.leaderboard.holdings}: <span className="text-foreground font-mono">${trader.holdingsValue.toFixed(0)}</span>
                         </span>
                         {trader.shortExposure !== 0 && (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {t.leaderboard.shorts}: <span className="text-foreground font-mono">${trader.shortExposure.toFixed(0)}</span>
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {isPositive ? (
-                          <TrendingUp className="w-3 h-3 text-[#00C805]" />
+                          <TrendingUp className="w-3 h-3 text-[color:var(--color-win)]" />
                         ) : (
-                          <TrendingDown className="w-3 h-3 text-[#FF5252]" />
+                          <TrendingDown className="w-3 h-3 text-[color:var(--color-loss)]" />
                         )}
                         <span
-                          className="text-[11px] font-mono font-bold"
-                          style={{ color: isPositive ? "#00C805" : "#FF5252" }}
+                          className="text-xs font-mono font-bold"
+                          style={{ color: isPositive ? "var(--color-win)" : "var(--color-loss)" }}
                         >
                           {isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%
                         </span>
@@ -740,7 +740,7 @@ export default function Leaderboard() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ type: "spring", damping: 26, stiffness: 260 }}
                         className="overflow-hidden"
                       >
                         <UserProfile userId={trader.userId} />
@@ -790,7 +790,7 @@ export default function Leaderboard() {
                           titleCss={(player as any).title?.cssClass}
                           className="text-sm"
                         />
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {language === "ko" ? "시작" : "Started"}: $20.00
                         </span>
                       </div>
@@ -799,13 +799,13 @@ export default function Leaderboard() {
                       <p className="text-lg font-bold text-foreground font-mono">${player.casinoBalance.toFixed(2)}</p>
                       <div className="flex items-center gap-1 justify-end">
                         {isProfit ? (
-                          <TrendingUp className="w-3 h-3 text-[#00C805]" />
+                          <TrendingUp className="w-3 h-3 text-[color:var(--color-win)]" />
                         ) : (
-                          <TrendingDown className="w-3 h-3 text-[#FF5252]" />
+                          <TrendingDown className="w-3 h-3 text-[color:var(--color-loss)]" />
                         )}
                         <span
                           className="text-xs font-mono font-bold"
-                          style={{ color: isProfit ? "#00C805" : "#FF5252" }}
+                          style={{ color: isProfit ? "var(--color-win)" : "var(--color-loss)" }}
                         >
                           {isProfit ? "+" : ""}${player.profit.toFixed(2)}
                         </span>

@@ -34,17 +34,17 @@ export default function CasinoBetControls({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[11px] uppercase tracking-wider">
-        <span className="font-semibold text-zinc-400">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wider">
+        <span className="font-semibold text-muted-foreground">
           {language === "ko" ? "베팅 금액" : "Bet Amount"}
         </span>
-        <span className="font-mono text-zinc-500">
+        <span className="font-mono text-muted-foreground">
           {language === "ko" ? `베팅 금액: ${CASINO_BET_RANGE_LABEL}` : `Bet amount: ${CASINO_BET_RANGE_LABEL}`}
         </span>
       </div>
 
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">$</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
         <input
           type="number"
           inputMode="decimal"
@@ -54,7 +54,7 @@ export default function CasinoBetControls({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
-          className="w-full rounded-xl border border-zinc-700/50 bg-zinc-800/80 py-3 pl-7 pr-3 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-yellow-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-border bg-secondary/80 py-3 pl-7 pr-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-yellow-500/50 disabled:cursor-not-allowed disabled:opacity-60"
           placeholder={language === "ko" ? "베팅 금액 입력" : "Enter bet amount"}
         />
       </div>
@@ -71,12 +71,12 @@ export default function CasinoBetControls({
               whileTap={isUnavailable ? {} : { scale: 0.98 }}
               onClick={() => onChange(amount.toFixed(2))}
               disabled={isUnavailable}
-              className={`min-w-0 rounded-lg border px-2 py-2 text-[11px] font-mono font-bold whitespace-nowrap transition-all sm:text-xs ${
+              className={`min-w-0 rounded-lg border px-2 py-2 text-xs font-mono font-bold whitespace-nowrap transition-all sm:text-xs ${
                 isUnavailable
-                  ? "cursor-not-allowed border-zinc-800 bg-zinc-900/70 text-zinc-600"
+                  ? "cursor-not-allowed border-border bg-card text-muted-foreground/60"
                   : isSelected
                     ? "border-yellow-500/50 bg-yellow-500/15 text-yellow-400 shadow-lg shadow-yellow-500/10"
-                    : "border-zinc-700/50 bg-zinc-800 text-zinc-300 hover:border-zinc-500/60 hover:text-white"
+                    : "border-border bg-secondary text-foreground/80 hover:border-border hover:text-foreground"
               }`}
             >
               {formatShortcutAmount(amount)}

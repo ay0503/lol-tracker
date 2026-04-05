@@ -21,7 +21,7 @@ const TRPC_URL = "/api/trpc";
       const data = await res.json();
       console.log(
         `%c$DORI%c Backend ✓ ${ms}ms | ${window.location.origin} → ${data.timestamp ?? "ok"}`,
-        "color:#00C805;font-weight:bold", "color:inherit"
+        "color:var(--color-win);font-weight:bold", "color:inherit"
       );
     } else {
       console.error(`$DORI Backend ✗ ${res.status} (${ms}ms)`);

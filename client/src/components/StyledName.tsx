@@ -230,7 +230,7 @@ export default function StyledName({
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
       {isCloseFriend && (
         <span className="flex-shrink-0 w-3.5 h-3.5 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center" title="Close Friend">
-          <span className="text-[11px] text-green-400">★</span>
+          <span className="text-xs text-green-400">★</span>
         </span>
       )}
       <span
@@ -248,9 +248,9 @@ export default function StyledName({
 
 export function TitleBadge({ name, cssClass }: { name: string; cssClass?: string | null }) {
   // Title badges use simple bg/text classes that Tailwind JIT handles fine
-  // since they're common patterns (bg-zinc-800, bg-blue-950, bg-gradient-to-r, etc.)
+  // since they're common patterns (bg-secondary, bg-blue-950, bg-gradient-to-r, etc.)
   return (
-    <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold leading-none whitespace-nowrap ${cssClass || "bg-zinc-800 text-zinc-400 border border-zinc-700"}`}>
+    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-bold leading-none whitespace-nowrap ${cssClass || "bg-secondary text-muted-foreground border border-border"}`}>
       {name}
     </span>
   );
@@ -263,7 +263,7 @@ export function EffectPreview({ name, cssClass }: { name: string; cssClass?: str
 
   return (
     <span
-      className={`text-lg sm:text-xl font-bold ${effect?.className || "text-zinc-300"}`}
+      className={`text-lg sm:text-xl font-bold ${effect?.className || "text-foreground/80"}`}
       style={effect?.style}
     >
       {name}

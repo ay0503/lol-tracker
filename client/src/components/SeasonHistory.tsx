@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
 function getTierColor(tier: string): string {
-  if (tier.includes("Emerald") || tier.includes("EMERALD") || tier.includes("\uc5d0\uba54\ub784\ub4dc")) return "#00C805";
+  if (tier.includes("Emerald") || tier.includes("EMERALD") || tier.includes("\uc5d0\uba54\ub784\ub4dc")) return "var(--color-win)";
   if (tier.includes("Diamond") || tier.includes("DIAMOND") || tier.includes("\ub2e4\uc774\uc544\ubaac\ub4dc")) return "#B9F2FF";
   if (tier.includes("Platinum") || tier.includes("PLATINUM") || tier.includes("\ud50c\ub798\ud2f0\ub118")) return "#4EE1C0";
   if (tier.includes("Gold") || tier.includes("GOLD") || tier.includes("\uace8\ub4dc")) return "#FFD700";
@@ -66,7 +66,7 @@ export default function SeasonHistory() {
             <span className="text-sm text-muted-foreground">--</span>
           )}
           {isLive && (
-            <span className="flex items-center gap-1 px-1 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary">
+            <span className="flex items-center gap-1 px-1 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">
               <Activity className="w-2 h-2" />
               {t.common.live}
             </span>
@@ -87,7 +87,7 @@ export default function SeasonHistory() {
           key={season.season}
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.05, duration: 0.3 }}
+          transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.05, duration: 0.3 }}
           className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/50 transition-colors"
         >
           <div className="flex items-center gap-2">

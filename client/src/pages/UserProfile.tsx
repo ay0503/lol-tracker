@@ -21,7 +21,7 @@ function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[]
   }).join(" ");
 
   const isUp = values[values.length - 1] >= values[0];
-  const color = isUp ? "#00C805" : "#FF5252";
+  const color = isUp ? "var(--color-win)" : "var(--color-loss)";
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
@@ -101,8 +101,8 @@ export default function UserProfilePage() {
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-lg font-bold text-foreground font-mono">${last.toFixed(2)}</span>
                     <div className="flex items-center gap-1">
-                      {isUp ? <TrendingUp className="w-4 h-4 text-[#00C805]" /> : <TrendingDown className="w-4 h-4 text-[#FF5252]" />}
-                      <span className="text-sm font-mono font-bold" style={{ color: isUp ? "#00C805" : "#FF5252" }}>
+                      {isUp ? <TrendingUp className="w-4 h-4 text-[color:var(--color-win)]" /> : <TrendingDown className="w-4 h-4 text-[color:var(--color-loss)]" />}
+                      <span className="text-sm font-mono font-bold" style={{ color: isUp ? "var(--color-win)" : "var(--color-loss)" }}>
                         {isUp ? "+" : ""}${pnl.toFixed(2)} ({isUp ? "+" : ""}{pnlPct.toFixed(1)}%)
                       </span>
                     </div>
@@ -149,7 +149,7 @@ export default function UserProfilePage() {
                               <td className="py-2 text-right font-mono">{h.shares.toFixed(2)}</td>
                               <td className="py-2 text-right font-mono">${h.avgCostBasis.toFixed(2)}</td>
                               <td className="py-2 text-right font-mono">{currentVal !== null ? `$${currentVal.toFixed(2)}` : "—"}</td>
-                              <td className="py-2 text-right font-mono font-bold" style={{ color: pnl === null ? undefined : pnl >= 0 ? "#00C805" : "#FF5252" }}>
+                              <td className="py-2 text-right font-mono font-bold" style={{ color: pnl === null ? undefined : pnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                                 {pnl !== null ? `${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}` : "—"}
                               </td>
                             </tr>
@@ -165,7 +165,7 @@ export default function UserProfilePage() {
                               <td className="py-2 text-right font-mono">{h.shortShares.toFixed(2)}</td>
                               <td className="py-2 text-right font-mono">${h.shortAvgPrice.toFixed(2)}</td>
                               <td className="py-2 text-right font-mono">{currentVal !== null ? `$${currentVal.toFixed(2)}` : "—"}</td>
-                              <td className="py-2 text-right font-mono font-bold" style={{ color: pnl === null ? undefined : pnl >= 0 ? "#00C805" : "#FF5252" }}>
+                              <td className="py-2 text-right font-mono font-bold" style={{ color: pnl === null ? undefined : pnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                                 {pnl !== null ? `${pnl >= 0 ? "+" : ""}$${pnl.toFixed(2)}` : "—"}
                               </td>
                             </tr>
@@ -191,7 +191,7 @@ export default function UserProfilePage() {
                     return (
                       <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-border/30 last:border-0">
                         <div className="flex items-center gap-2">
-                          <span className={`font-bold uppercase text-xs px-1.5 py-0.5 rounded ${isBuy ? "bg-[#00C805]/10 text-[#00C805]" : "bg-[#FF5252]/10 text-[#FF5252]"}`}>
+                          <span className={`font-bold uppercase text-xs px-1.5 py-0.5 rounded ${isBuy ? "bg-[color:var(--color-win)]/10 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/10 text-[color:var(--color-loss)]"}`}>
                             {trade.type}
                           </span>
                           <span className="font-mono font-bold">${trade.ticker}</span>
@@ -214,11 +214,11 @@ export default function UserProfilePage() {
                   <Dice5 className="w-3.5 h-3.5" /> Bets
                 </h2>
                 <div className="flex items-center gap-4 text-sm mb-4">
-                  <span className="text-[#00C805] font-mono font-bold">{data.betStats.won}W</span>
-                  <span className="text-[#FF5252] font-mono font-bold">{data.betStats.lost}L</span>
+                  <span className="text-[color:var(--color-win)] font-mono font-bold">{data.betStats.won}W</span>
+                  <span className="text-[color:var(--color-loss)] font-mono font-bold">{data.betStats.lost}L</span>
                   {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} pending</span>}
                   <span className="text-muted-foreground">|</span>
-                  <span className="font-mono font-bold" style={{ color: data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "#00C805" : "#FF5252" }}>
+                  <span className="font-mono font-bold" style={{ color: data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                     Net: {data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "+" : ""}${(data.betStats.totalWinnings - data.betStats.totalLost).toFixed(2)}
                   </span>
                 </div>
@@ -230,8 +230,8 @@ export default function UserProfilePage() {
                         <div className="flex items-center gap-3">
                           <span className="font-mono text-muted-foreground">${bet.amount.toFixed(2)}</span>
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                            bet.status === "won" ? "bg-[#00C805]/10 text-[#00C805]" :
-                            bet.status === "lost" ? "bg-[#FF5252]/10 text-[#FF5252]" :
+                            bet.status === "won" ? "bg-[color:var(--color-win)]/10 text-[color:var(--color-win)]" :
+                            bet.status === "lost" ? "bg-[color:var(--color-loss)]/10 text-[color:var(--color-loss)]" :
                             "bg-yellow-400/10 text-yellow-400"
                           }`}>
                             {bet.status}{bet.payout !== null ? ` ($${bet.payout.toFixed(2)})` : ""}

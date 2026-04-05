@@ -30,10 +30,10 @@ type TimeRange = "3H" | "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
 const TIME_RANGES: TimeRange[] = ["3H", "6H", "1D", "1W", "1M", "3M", "6M", "YTD", "ALL"];
 
 const TICKERS = [
-  { symbol: "DORI", name: "DORI", description: "1x LP Tracker", color: "#00C805" },
+  { symbol: "DORI", name: "DORI", description: "1x LP Tracker", color: "var(--color-win)" },
   { symbol: "DDRI", name: "DDRI", description: "2x Leveraged LP", color: "#4CAF50" },
   { symbol: "TDRI", name: "TDRI", description: "3x Leveraged LP", color: "#8BC34A" },
-  { symbol: "SDRI", name: "SDRI", description: "2x Inverse LP", color: "#FF5252" },
+  { symbol: "SDRI", name: "SDRI", description: "2x Inverse LP", color: "var(--color-loss)" },
   { symbol: "XDRI", name: "XDRI", description: "3x Inverse LP", color: "#FF1744" },
 ] as const;
 
@@ -445,7 +445,7 @@ export default function LPChart() {
   const lastPrice = livePrice ?? zoomedData[zoomedData.length - 1]?.price ?? 0;
   const priceChange = lastPrice - firstPrice;
   const isPositive = priceChange >= 0;
-  const chartColor = isPositive ? tickerColor : "#FF5252";
+  const chartColor = isPositive ? tickerColor : "var(--color-loss)";
 
   const minPrice = zoomedData.length > 0 ? Math.min(...zoomedData.map((d) => d.price)) : 0;
   const maxPrice = zoomedData.length > 0 ? Math.max(...zoomedData.map((d) => d.price)) : 100;
@@ -496,7 +496,7 @@ export default function LPChart() {
                 style={{ backgroundColor: tk.color }}
               />
               <span className="font-[var(--font-mono)]">${tk.symbol}</span>
-              <span className="text-[11px] opacity-60 hidden sm:inline">
+              <span className="text-xs opacity-60 hidden sm:inline">
                 {translateTickerDescription(tk.symbol, tk.description, language)}
               </span>
             </button>
@@ -506,10 +506,10 @@ export default function LPChart() {
 
       {/* Chart view toggle + time ranges */}
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-secondary/50 rounded-xl p-1">
           <button
             onClick={() => setChartView("area")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               chartView === "area"
                 ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -525,7 +525,7 @@ export default function LPChart() {
           </button>
           <button
             onClick={() => setChartView("candlestick")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               chartView === "candlestick"
                 ? "text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -546,7 +546,7 @@ export default function LPChart() {
             <button
               key={range}
               onClick={() => setActiveRange(range)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
                 activeRange === range
                   ? "text-foreground"
                   : "bg-transparent text-muted-foreground hover:text-foreground"
@@ -554,7 +554,7 @@ export default function LPChart() {
               style={{
                 fontFamily: "var(--font-mono)",
                 ...(activeRange === range
-                  ? { backgroundColor: isPositive ? tickerColor : "#FF5252" }
+                  ? { backgroundColor: isPositive ? tickerColor : "var(--color-loss)" }
                   : {}),
               }}
             >
@@ -575,7 +575,7 @@ export default function LPChart() {
           </span>
           <span
             className="text-sm font-semibold font-[var(--font-mono)]"
-            style={{ color: isPositive ? tickerColor : "#FF5252" }}
+            style={{ color: isPositive ? tickerColor : "var(--color-loss)" }}
           >
             {isPositive ? "+" : ""}${priceChange.toFixed(2)} (
             {firstPrice > 0

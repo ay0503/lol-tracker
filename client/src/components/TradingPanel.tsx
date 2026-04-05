@@ -33,10 +33,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const TICKERS = [
-  { symbol: "DORI", color: "#00C805", leverage: 1 },
+  { symbol: "DORI", color: "var(--color-win)", leverage: 1 },
   { symbol: "DDRI", color: "#FFD54F", leverage: 2 },
   { symbol: "TDRI", color: "#FF6D00", leverage: 3 },
-  { symbol: "SDRI", color: "#FF5252", leverage: -2 },
+  { symbol: "SDRI", color: "var(--color-loss)", leverage: -2 },
   { symbol: "XDRI", color: "#E040FB", leverage: -3 },
 ];
 
@@ -57,13 +57,13 @@ interface PendingConfirmation {
 function getTradeTypeStyle(type: string, tr: any) {
   switch (type) {
     case "buy":
-      return { icon: ArrowUpCircle, color: "#00C805", label: tr.trading.bought };
+      return { icon: ArrowUpCircle, color: "var(--color-win)", label: tr.trading.bought };
     case "sell":
-      return { icon: ArrowDownCircle, color: "#FF5252", label: tr.trading.sold };
+      return { icon: ArrowDownCircle, color: "var(--color-loss)", label: tr.trading.sold };
     case "short":
       return { icon: TrendingDown, color: "#E040FB", label: tr.trading.shorted };
     case "cover":
-      return { icon: Repeat, color: "#00C805", label: tr.trading.covered };
+      return { icon: Repeat, color: "var(--color-win)", label: tr.trading.covered };
     case "dividend":
       return { icon: Gift, color: "#FFD54F", label: tr.trading.dividends };
     default:
@@ -353,15 +353,15 @@ export default function TradingPanel() {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15, duration: 0.5 }}
+      transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.15, duration: 0.5 }}
       className="bg-card border border-border rounded-xl overflow-hidden"
     >
       {/* Market Status + Portfolio Summary Bar */}
       <div className="px-3 sm:px-5 py-3 border-b border-border bg-secondary/30">
         {/* Market status indicator */}
         <div className="flex items-center gap-1.5 mb-2 sm:mb-0">
-          <div className={`w-2 h-2 rounded-full ${isTradingHalted ? (isAdminHalted ? "bg-red-500 animate-pulse" : "bg-yellow-500 animate-pulse") : isMarketOpen ? "bg-[#00C805] animate-pulse" : "bg-[#FF5252]"}`} />
-           <span className={`text-[11px] font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+          <div className={`w-2 h-2 rounded-full ${isTradingHalted ? (isAdminHalted ? "bg-red-500 animate-pulse" : "bg-yellow-500 animate-pulse") : isMarketOpen ? "bg-[color:var(--color-win)] animate-pulse" : "bg-[color:var(--color-loss)]"}`} />
+           <span className={`text-xs font-bold uppercase tracking-wider ${isTradingHalted ? (isAdminHalted ? "text-red-500" : "text-yellow-500") : isMarketOpen ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
              {isAdminHalted ? "ADMIN HALT" : isTradingHalted ? t.trading.halted : isMarketOpen ? t.trading.marketOpen : t.trading.marketClosedLabel}
            </span>
         </div>
@@ -384,9 +384,9 @@ export default function TradingPanel() {
           </div>
           <div className="hidden sm:block w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
-            {pnl >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-[#00C805] shrink-0" /> : <TrendingDown className="w-3.5 h-3.5 text-[#FF5252] shrink-0" />}
+            {pnl >= 0 ? <TrendingUp className="w-3.5 h-3.5 text-[color:var(--color-win)] shrink-0" /> : <TrendingDown className="w-3.5 h-3.5 text-[color:var(--color-loss)] shrink-0" />}
             <span className="text-xs text-muted-foreground">{t.trading.pnl}</span>
-            <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: pnl >= 0 ? "#00C805" : "#FF5252" }}>
+            <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: pnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
               {pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
             </span>
           </div>
@@ -395,7 +395,7 @@ export default function TradingPanel() {
               <div className="hidden sm:block w-px h-4 bg-border" />
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">{t.trading.dividends}</span>
-                <span className="text-xs font-bold text-[#00C805] font-[var(--font-mono)]">
+                <span className="text-xs font-bold text-[color:var(--color-win)] font-[var(--font-mono)]">
                   +${portfolio.totalDividends.toFixed(2)}
                 </span>
               </div>
@@ -412,7 +412,7 @@ export default function TradingPanel() {
             <button
               key={tab.id}
               onClick={() => setOrderTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 sm:py-2.5 text-[11px] sm:text-xs font-bold transition-all border-b-2 whitespace-nowrap px-1 sm:px-2 ${
+              className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-2.5 sm:py-2.5 text-xs sm:text-xs font-bold transition-all border-b-2 whitespace-nowrap px-1 sm:px-2 ${
                 orderTab === tab.id
                   ? "text-foreground border-primary bg-secondary/20"
                   : "text-muted-foreground border-transparent hover:text-foreground hover:bg-secondary/10"
@@ -435,9 +435,9 @@ export default function TradingPanel() {
            </div>
          )}
          {!isMarketOpen && !isTradingHalted && orderTab === "market" && (
-           <div className="flex items-center gap-2 bg-[#FF5252]/10 border border-[#FF5252]/30 rounded-lg px-3 py-2 mb-4">
-             <AlertTriangle className="w-4 h-4 text-[#FF5252]" />
-             <p className="text-xs text-[#FF5252]">{t.trading.marketClosed}. {marketStatus?.reason || ""}</p>
+           <div className="flex items-center gap-2 bg-[color:var(--color-loss)]/10 border border-[color:var(--color-loss)]/30 rounded-lg px-3 py-2 mb-4">
+             <AlertTriangle className="w-4 h-4 text-[color:var(--color-loss)]" />
+             <p className="text-xs text-[color:var(--color-loss)]">{t.trading.marketClosed}. {marketStatus?.reason || ""}</p>
            </div>
          )}
 
@@ -485,7 +485,7 @@ export default function TradingPanel() {
                           <div className="flex items-center gap-4">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tk.color }} />
                             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">${tk.symbol}</span>
-                            <span className="text-[11px] text-muted-foreground">{t.tickers[tkKey] || tk.symbol}</span>
+                            <span className="text-xs text-muted-foreground">{t.tickers[tkKey] || tk.symbol}</span>
                           </div>
                           <span className="text-xs text-foreground font-[var(--font-mono)]">
                             {tPrice > 0 ? `$${tPrice.toFixed(2)}` : "..."}
@@ -504,7 +504,7 @@ export default function TradingPanel() {
 
             {/* Current Price Display */}
             <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.trading.currentPrice}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t.trading.currentPrice}</p>
               <p className="text-2xl font-bold text-foreground font-[var(--font-mono)]">
                 {tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : t.common.loading}
               </p>
@@ -515,7 +515,7 @@ export default function TradingPanel() {
                   </p>
                 )}
                 {currentHolding.shortShares > 0 && (
-                  <p className="text-xs text-[#FF5252]">
+                  <p className="text-xs text-[color:var(--color-loss)]">
                     {t.trading.short}: <span className="font-semibold">{currentHolding.shortShares.toFixed(2)}</span> {t.trading.sharesLabel} ({t.trading.avg} ${currentHolding.shortAvgPrice.toFixed(2)})
                   </p>
                 )}
@@ -529,8 +529,8 @@ export default function TradingPanel() {
             {orderTab === "market" && (
               <>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.buy}</button>
-                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.sell}</button>
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.buy}</button>
+                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[color:var(--color-loss)] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.sell}</button>
                 </div>
                 {/* Dollar / Shares toggle */}
                 <div className="flex items-center gap-2 mb-3">
@@ -572,7 +572,7 @@ export default function TradingPanel() {
                       ))
                   }
                 </div>
-                <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
+                <button onClick={handleMarketTrade} disabled={tradeMutation.isPending || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground hover:bg-[#00b004]" : "bg-[color:var(--color-loss)] text-white hover:bg-[#e04848]"}`}>
                   {tradeMutation.isPending ? t.trading.processing : `${tradeType === "buy" ? t.trading.buyTicker : t.trading.sellTicker} $${selectedTicker}`}
                 </button>
                 {/* Sell All button — only show when user holds shares of selected ticker in sell mode */}
@@ -596,7 +596,7 @@ export default function TradingPanel() {
                       }
                     }}
                     disabled={tradeMutation.isPending || tradingLocked || !isMarketOpen || priceLoading || isTradingHalted}
-                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[#FF5252]/20 text-[#FF5252] border border-[#FF5252]/30 hover:bg-[#FF5252]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[color:var(--color-loss)]/20 text-[color:var(--color-loss)] border border-[color:var(--color-loss)]/30 hover:bg-[color:var(--color-loss)]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t.trading.sellAllShares} {currentHolding.shares.toFixed(2)} {t.trading.sharesApprox} (≈${(currentHolding.shares * tickerPrice).toFixed(2)})
                   </button>
@@ -608,8 +608,8 @@ export default function TradingPanel() {
             {orderTab === "limit" && (
               <>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.limitBuy}</button>
-                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[#FF5252] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.limitSell}</button>
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.limitBuy}</button>
+                  <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[color:var(--color-loss)] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.limitSell}</button>
                 </div>
                 <div className="relative mb-3">
                   <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -623,7 +623,7 @@ export default function TradingPanel() {
                   {tradeType === "buy" ? t.trading.limitBuyExec : t.trading.limitSellExec}
                   <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
                 </p>
-                <button onClick={handleLimitOrder}disabled={createOrderMutation.isPending || !amount || !targetPrice || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]" : "bg-[#FF5252] text-white hover:bg-[#e04848]"}`}>
+                <button onClick={handleLimitOrder}disabled={createOrderMutation.isPending || !amount || !targetPrice || isTradingHalted} className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground hover:bg-[#00b004]" : "bg-[color:var(--color-loss)] text-white hover:bg-[#e04848]"}`}>
                    {createOrderMutation.isPending ? t.trading.placing : `${tradeType === "buy" ? t.trading.placeLimitBuy : t.trading.placeLimitSell}`}
                 </button>
               </>
@@ -632,13 +632,13 @@ export default function TradingPanel() {
             {/* Stop-Loss Tab */}
             {orderTab === "stop_loss" && (
               <>
-                <div className="bg-[#FF5252]/10 border border-[#FF5252]/20 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-[#FF5252] font-bold mb-1">{t.trading.stopLossTitle}</p>
-                  <p className="text-[11px] text-muted-foreground">{t.trading.stopLossDesc}</p>
+                <div className="bg-[color:var(--color-loss)]/10 border border-[color:var(--color-loss)]/20 rounded-lg p-3 mb-4">
+                  <p className="text-xs text-[color:var(--color-loss)] font-bold mb-1">{t.trading.stopLossTitle}</p>
+                  <p className="text-xs text-muted-foreground">{t.trading.stopLossDesc}</p>
                 </div>
                 <div className="relative mb-3">
-                  <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF5252]" />
-                  <input type="number" min="0" step="0.01" value={targetPrice} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setTargetPrice(val); }} placeholder={t.trading.stopPrice} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-[#FF5252]/30 text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-[#FF5252] placeholder:text-muted-foreground/50" />
+                  <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--color-loss)]" />
+                  <input type="number" min="0" step="0.01" value={targetPrice} onChange={(e) => { const val = e.target.value; if (val === "" || parseFloat(val) >= 0) setTargetPrice(val); }} placeholder={t.trading.stopPrice} className="w-full pl-9 pr-4 py-3 rounded-lg bg-secondary border border-[color:var(--color-loss)]/30 text-foreground text-sm font-[var(--font-mono)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-loss)] placeholder:text-muted-foreground/50" />
                 </div>
                 <div className="relative mb-3">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -648,7 +648,7 @@ export default function TradingPanel() {
                   {t.trading.currentPrice}: <span className="text-foreground font-mono">{tickerPrice > 0 ? `$${tickerPrice.toFixed(2)}` : "..."}</span>
                   {currentHolding.shares > 0 && <> · {t.trading.youHold} <span className="text-foreground">{currentHolding.shares.toFixed(2)}</span> {t.trading.sharesLabel}</>}
                 </p>
-                <button onClick={handleStopLoss} disabled={createOrderMutation.isPending || !amount || !targetPrice || isTradingHalted} className="w-full py-3 rounded-lg text-sm font-bold bg-[#FF5252] text-white hover:bg-[#e04848] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={handleStopLoss} disabled={createOrderMutation.isPending || !amount || !targetPrice || isTradingHalted} className="w-full py-3 rounded-lg text-sm font-bold bg-[color:var(--color-loss)] text-white hover:bg-[#e04848] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                    {createOrderMutation.isPending ? t.trading.placing : t.trading.setStopLoss}                </button>
               </>
             )}
@@ -658,11 +658,11 @@ export default function TradingPanel() {
               <>
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 mb-4">
                   <p className="text-xs text-purple-400 font-bold mb-1">{t.trading.shortSellingTitle}</p>
-                  <p className="text-[11px] text-muted-foreground">{t.trading.shortSellingDesc}</p>
+                  <p className="text-xs text-muted-foreground">{t.trading.shortSellingDesc}</p>
                 </div>
                 <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
                   <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-purple-500 text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.shortSell}</button>
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[#00C805] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.coverBuyBack}</button>
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.coverBuyBack}</button>
                 </div>
                 {/* Dollar / Shares toggle */}
                 <div className="flex items-center gap-2 mb-3">
@@ -707,7 +707,7 @@ export default function TradingPanel() {
                 <button
                   onClick={tradeType === "sell" ? handleShort : handleCover}
                   disabled={(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) || tradingLocked || shares <= 0 || !isMarketOpen || priceLoading || isTradingHalted}
-                  className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "sell" ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-[#00C805] text-primary-foreground hover:bg-[#00b004]"}`}
+                  className={`w-full py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${tradeType === "sell" ? "bg-purple-500 text-white hover:bg-purple-600" : "bg-[color:var(--color-win)] text-primary-foreground hover:bg-[#00b004]"}`}
                 >
                   {(tradeType === "sell" ? shortMutation.isPending : coverMutation.isPending) ? t.trading.processing : tradeType === "sell" ? `${t.trading.shortTicker} $${selectedTicker}` : `${t.trading.coverTicker} $${selectedTicker}`}
                 </button>
@@ -732,7 +732,7 @@ export default function TradingPanel() {
                       }
                     }}
                     disabled={coverMutation.isPending || tradingLocked || !isMarketOpen || priceLoading || isTradingHalted}
-                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[#00C805]/20 text-[#00C805] border border-[#00C805]/30 hover:bg-[#00C805]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold bg-[color:var(--color-win)]/20 text-[color:var(--color-win)] border border-[color:var(--color-win)]/30 hover:bg-[color:var(--color-win)]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t.trading.coverAllShares} {currentHolding.shortShares.toFixed(2)} {t.trading.sharesApprox} (≈${(currentHolding.shortShares * tickerPrice).toFixed(2)})
                   </button>
@@ -757,7 +757,7 @@ export default function TradingPanel() {
                     {pendingOrdersList.map((order: any) => (
                       <div key={order.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/20">
                         <div className="flex items-center gap-2">
-                          {order.orderType === "stop_loss" ? <ShieldAlert className="w-3.5 h-3.5 text-[#FF5252]" /> : <Target className="w-3.5 h-3.5 text-yellow-400" />}
+                          {order.orderType === "stop_loss" ? <ShieldAlert className="w-3.5 h-3.5 text-[color:var(--color-loss)]" /> : <Target className="w-3.5 h-3.5 text-yellow-400" />}
                           <span className="text-xs text-foreground capitalize font-semibold">{order.orderType === "stop_loss" ? t.trading.stopLoss : t.trading.limit}</span>
                           <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKERS.find((tk) => tk.symbol === order.ticker)?.color ?? "#fff" }}>${order.ticker}</span>
                         </div>
@@ -765,7 +765,7 @@ export default function TradingPanel() {
                           <div className="text-right">
                             <span className="text-xs text-foreground font-[var(--font-mono)]">{order.shares.toFixed(2)} @ ${order.targetPrice.toFixed(2)}</span>
                           </div>
-                          <button onClick={() => cancelOrderMutation.mutate({ orderId: order.id })} className="p-1 text-muted-foreground hover:text-[#FF5252] transition-colors" title={t.trading.cancelOrder}>
+                          <button onClick={() => cancelOrderMutation.mutate({ orderId: order.id })} className="p-1 text-muted-foreground hover:text-[color:var(--color-loss)] transition-colors" title={t.trading.cancelOrder}>
                             <XCircle className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -801,7 +801,7 @@ export default function TradingPanel() {
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
-                          <p className="text-[11px] text-muted-foreground">${trade.totalAmount.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">${trade.totalAmount.toFixed(2)}</p>
                         </div>
                       </div>
                     );

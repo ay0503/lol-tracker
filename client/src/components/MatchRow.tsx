@@ -16,7 +16,7 @@ export default function MatchRow({ match, index }: Props) {
   const { t, language } = useTranslation();
   const isWin = match.result === "Victory";
   const isRemake = match.result === "Remake";
-  const borderColor = isRemake ? "#6B7280" : isWin ? "#00C805" : "#FF5252";
+  const borderColor = isRemake ? "var(--muted-foreground)" : isWin ? "var(--color-win)" : "var(--color-loss)";
   const bgColor = isRemake
     ? "rgba(107, 114, 128, 0.04)"
     : isWin
@@ -29,7 +29,7 @@ export default function MatchRow({ match, index }: Props) {
     <motion.div
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.3, ease: "easeOut" }}
+      transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.03, duration: 0.3, ease: "easeOut" }}
       className="flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 rounded-lg hover:bg-accent/50 transition-colors duration-150 group"
       style={{
         borderLeft: `3px solid ${borderColor}`,
@@ -75,9 +75,9 @@ export default function MatchRow({ match, index }: Props) {
       {/* KDA */}
       <div className="text-right flex-shrink-0">
         <p className="text-sm font-bold font-[var(--font-mono)] text-foreground">
-          <span style={{ color: "#00C805" }}>{match.kills}</span>
+          <span style={{ color: "var(--color-win)" }}>{match.kills}</span>
           <span className="text-muted-foreground"> / </span>
-          <span style={{ color: "#FF5252" }}>{match.deaths}</span>
+          <span style={{ color: "var(--color-loss)" }}>{match.deaths}</span>
           <span className="text-muted-foreground"> / </span>
           <span className="text-foreground">{match.assists}</span>
         </p>

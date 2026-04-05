@@ -29,7 +29,7 @@ export default function ChampionCard({ champion, index }: Props) {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.08, duration: 0.4, ease: "easeOut" }}
+      transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.08, duration: 0.4, ease: "easeOut" }}
       className="bg-card border border-border rounded-xl p-4 min-w-[200px] hover:border-[#3a3d48] transition-colors duration-200"
     >
       <div className="flex items-center gap-3 mb-3">
@@ -57,9 +57,9 @@ export default function ChampionCard({ champion, index }: Props) {
             className="text-sm font-bold font-[var(--font-mono)]"
             style={{
               color: isGoodWinRate
-                ? "#00C805"
+                ? "var(--color-win)"
                 : isBadWinRate
-                ? "#FF5252"
+                ? "var(--color-loss)"
                 : "#9CA3AF",
             }}
           >
@@ -70,14 +70,14 @@ export default function ChampionCard({ champion, index }: Props) {
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${champion.winRate}%` }}
-            transition={{ delay: index * 0.08 + 0.3, duration: 0.6, ease: "easeOut" }}
+            transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.08 + 0.3, duration: 0.6, ease: "easeOut" }}
             className="h-full rounded-full"
             style={{
               backgroundColor: isGoodWinRate
-                ? "#00C805"
+                ? "var(--color-win)"
                 : isBadWinRate
-                ? "#FF5252"
-                : "#6B7280",
+                ? "var(--color-loss)"
+                : "var(--muted-foreground)",
             }}
           />
         </div>

@@ -24,10 +24,10 @@ function timeAtMultiplier(m: number): number {
 }
 
 function getMultColor(m: number): string {
-  if (m >= 50) return "#FF5252";
+  if (m >= 50) return "var(--color-loss)";
   if (m >= 10) return "#FF9800";
   if (m >= 5) return "#FFD600";
-  if (m >= 2) return "#00C805";
+  if (m >= 2) return "var(--color-win)";
   return "#FFFFFF";
 }
 
@@ -35,7 +35,7 @@ function getMultColorClass(m: number): string {
   if (m >= 50) return "text-red-400";
   if (m >= 10) return "text-orange-400";
   if (m >= 5) return "text-yellow-400";
-  if (m >= 2) return "text-[#00C805]";
+  if (m >= 2) return "text-[color:var(--color-win)]";
   return "text-foreground";
 }
 
@@ -43,9 +43,9 @@ function CrashPill({ point, won }: { point: number; won?: boolean }) {
   const color =
     point < 2 ? "bg-red-500/25 text-red-400 border-red-500/20" :
     point <= 10 ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/20" :
-    "bg-[#00C805]/20 text-[#00C805] border-[#00C805]/20";
+    "bg-[color:var(--color-win)]/20 text-[color:var(--color-win)] border-[color:var(--color-win)]/20";
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border ${color} ${won ? "ring-1 ring-white/30" : ""}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono font-bold border ${color} ${won ? "ring-1 ring-white/30" : ""}`}>
       {point.toFixed(2)}x
     </span>
   );
@@ -129,7 +129,7 @@ function CrashCanvas({
     if (phase === "idle") return;
 
     // ---- Build curve points ----
-    const lineColor = isCrashed ? "#FF5252" : getMultColor(curveMult);
+    const lineColor = isCrashed ? "var(--color-loss)" : getMultColor(curveMult);
     const STEPS = 180;
     const pts: [number, number][] = [];
     for (let i = 0; i <= STEPS; i++) {
@@ -178,14 +178,14 @@ function CrashCanvas({
       const ct = timeAtMultiplier(cashoutMult);
       const cx = toX(ct), cy = toY(cashoutMult);
       // Outer ring
-      ctx.strokeStyle = "#00C805";
+      ctx.strokeStyle = "var(--color-win)";
       ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.stroke();
       // Inner dot
-      ctx.fillStyle = "#00C805";
+      ctx.fillStyle = "var(--color-win)";
       ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
       // Label
-      ctx.fillStyle = "#00C805";
+      ctx.fillStyle = "var(--color-win)";
       ctx.font = "bold 12px monospace";
       ctx.textAlign = "center";
       ctx.fillText(`${cashoutMult.toFixed(2)}x`, cx, cy - 16);
@@ -195,7 +195,7 @@ function CrashCanvas({
     if (isCrashed && crashPoint && crashPoint > 1) {
       const ct = timeAtMultiplier(crashPoint);
       const cx = toX(ct), cy = toY(crashPoint);
-      ctx.strokeStyle = "#FF5252";
+      ctx.strokeStyle = "var(--color-loss)";
       ctx.lineWidth = 3;
       const s = 7;
       ctx.beginPath(); ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s); ctx.stroke();
@@ -357,7 +357,7 @@ export default function Crash() {
             initial={{ opacity: 0.5 }}
             animate={{ opacity: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ type: "spring", damping: 26, stiffness: 260 }}
             className={`fixed inset-0 z-50 pointer-events-none ${flash === "red" ? "bg-red-600" : "bg-green-500"}`}
           />
         )}
@@ -421,18 +421,18 @@ export default function Crash() {
                     key="crash"
                     initial={{ scale: 1.4, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1, x: [0, -8, 8, -5, 5, 0] }}
-                    transition={{ duration: 0.4 }}
+                    transition={{ type: "spring", damping: 26, stiffness: 260 }}
                     className="text-center"
                   >
-                    <p className="text-6xl sm:text-7xl font-black font-mono text-[#FF5252]"
+                    <p className="text-6xl sm:text-7xl font-black font-mono text-[color:var(--color-loss)]"
                       style={{ textShadow: "0 0 50px rgba(255,82,82,0.5)" }}>
                       {(crashPoint ?? 1).toFixed(2)}x
                     </p>
                     <motion.p
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.15 }}
-                      className="text-lg font-black text-[#FF5252] tracking-[0.2em] mt-1"
+                      transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.15 }}
+                      className="text-lg font-black text-[color:var(--color-loss)] tracking-[0.2em] mt-1"
                     >
                       CRASHED
                     </motion.p>
@@ -445,17 +445,17 @@ export default function Crash() {
                     transition={{ type: "spring", stiffness: 300 }}
                     className="text-center"
                   >
-                    <p className="text-6xl sm:text-7xl font-black font-mono text-[#00C805]"
+                    <p className="text-6xl sm:text-7xl font-black font-mono text-[color:var(--color-win)]"
                       style={{ textShadow: "0 0 50px rgba(0,200,5,0.5)" }}>
                       {(cashoutMult ?? 1).toFixed(2)}x
                     </p>
-                    <p className="text-lg font-black text-[#00C805] mt-1">
+                    <p className="text-lg font-black text-[color:var(--color-win)] mt-1">
                       +${(payout ?? 0).toFixed(2)}
                     </p>
                   </motion.div>
                 ) : (
                   <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
-                    <p className="text-6xl sm:text-7xl font-black text-zinc-700/80 font-mono">1.00x</p>
+                    <p className="text-6xl sm:text-7xl font-black text-muted-foreground/60 font-mono">1.00x</p>
                     <p className="text-xs text-muted-foreground mt-2">
                       {language === "ko" ? "베팅하고 시작하세요" : "Place your bet"}
                     </p>
@@ -479,7 +479,7 @@ export default function Crash() {
                 whileTap={{ scale: 0.97 }}
                 onClick={() => cashoutMutation.mutate()}
                 disabled={isPending}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-foreground font-bold text-lg disabled:opacity-40 shadow-lg shadow-[#00C805]/30 animate-pulse"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-[color:var(--color-win)] to-emerald-600 text-foreground font-bold text-lg disabled:opacity-40 shadow-lg shadow-[color:var(--color-win)]/30 animate-pulse"
               >
                 {cashoutMutation.isPending ? (
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -538,7 +538,7 @@ export default function Crash() {
           </AnimatePresence>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "더 부드러운 크래시 곡선 | 플레이어 우위 | 최대 $500 지급" : "Softer crash curve | player edge | $500 max payout"}
         </p>
 

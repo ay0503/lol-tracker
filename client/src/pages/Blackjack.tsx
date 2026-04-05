@@ -30,7 +30,7 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
         initial={{ rotateY: 180, opacity: 0, x: 60, scale: 0.7 }}
         animate={{ rotateY: 0, opacity: 1, x: 0, scale: 1 }}
         exit={{ rotateY: 90, opacity: 0, scale: 0.8 }}
-        transition={{ delay: index * 0.2, duration: 0.5, type: "spring", stiffness: 150, damping: 15 }}
+        transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.2, duration: 0.5, type: "spring", stiffness: 150, damping: 15 }}
         className="w-[3.75rem] h-[5.25rem] sm:w-[4.75rem] sm:h-[6.75rem] rounded-lg border border-blue-500/40 shadow-lg relative overflow-hidden select-none flex-shrink-0"
         style={{ zIndex: index }}
       >
@@ -46,7 +46,7 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
         </div>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-            <span className="text-blue-300/50 text-[11px] font-bold">D</span>
+            <span className="text-blue-300/50 text-xs font-bold">D</span>
           </div>
         </div>
       </motion.div>
@@ -58,21 +58,21 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
       initial={isNew ? { rotateY: -180, opacity: 0, x: 60, scale: 0.7 } : { rotateY: -90, opacity: 0, x: 20 }}
       animate={{ rotateY: 0, opacity: 1, x: 0, scale: 1 }}
       exit={{ rotateY: 90, opacity: 0, x: -20, scale: 0.8 }}
-      transition={{ delay: index * 0.2, duration: 0.5, type: "spring", stiffness: 150, damping: 15 }}
+      transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.2, duration: 0.5, type: "spring", stiffness: 150, damping: 15 }}
       whileHover={{ y: -3, transition: { duration: 0.15 } }}
-      className="w-[3.75rem] h-[5.25rem] sm:w-[4.75rem] sm:h-[6.75rem] rounded-lg border border-zinc-200 dark:border-border bg-white dark:bg-card shadow-[0_2px_8px_rgba(0,0,0,0.15)] relative overflow-hidden select-none flex-shrink-0"
+      className="w-[3.75rem] h-[5.25rem] sm:w-[4.75rem] sm:h-[6.75rem] rounded-lg border border-border dark:border-border bg-white dark:bg-card shadow-[0_2px_8px_rgba(0,0,0,0.15)] relative overflow-hidden select-none flex-shrink-0"
       style={{ zIndex: index }}
     >
       <div className={`absolute top-1 left-1.5 leading-tight ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
-        <div className="text-[11px] sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
-        <div className="text-[11px] sm:text-xs leading-none">{card.suit}</div>
+        <div className="text-xs sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
+        <div className="text-xs sm:text-xs leading-none">{card.suit}</div>
       </div>
       <div className={`absolute inset-0 flex items-center justify-center ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
         <span className="text-2xl sm:text-3xl drop-shadow-sm">{card.suit}</span>
       </div>
       <div className={`absolute bottom-1 right-1.5 leading-tight rotate-180 ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
-        <div className="text-[11px] sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
-        <div className="text-[11px] sm:text-xs leading-none">{card.suit}</div>
+        <div className="text-xs sm:text-sm font-extrabold font-[var(--font-heading)] leading-none">{card.rank}</div>
+        <div className="text-xs sm:text-xs leading-none">{card.suit}</div>
       </div>
       <div className="absolute inset-0 bg-gradient-to-b from-white/15 via-white/5 to-transparent pointer-events-none rounded-lg" />
     </motion.div>
@@ -86,8 +86,8 @@ function HandValue({ value, bust, blackjack, soft }: { value: number; bust?: boo
       initial={{ scale: 1.5, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={`inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 rounded-full text-[11px] font-mono font-bold ${
-        bust ? "bg-[#FF5252]/20 text-[#FF5252] ring-1 ring-[#FF5252]/30" :
+      className={`inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1.5 rounded-full text-xs font-mono font-bold ${
+        bust ? "bg-[color:var(--color-loss)]/20 text-[color:var(--color-loss)] ring-1 ring-[color:var(--color-loss)]/30" :
         blackjack ? "bg-yellow-500/25 text-yellow-400 ring-1 ring-yellow-500/40" :
         value === 21 ? "bg-yellow-500/25 text-yellow-400 ring-1 ring-yellow-500/40" :
         value >= 17 ? "bg-orange-500/15 text-orange-400" :
@@ -397,10 +397,10 @@ export default function Casino() {
 
   const statusConfig = !showResult ? null :
     visibleStatus === "blackjack" ? { text: "BLACKJACK!", emoji: "🃏", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
-    visibleStatus === "player_win" ? { text: language === "ko" ? "승리!" : "You Win!", emoji: "🎉", color: "text-[#00C805]", glow: "shadow-[#00C805]/30" } :
-    visibleStatus === "dealer_bust" ? { text: language === "ko" ? "딜러 버스트!" : "Dealer Bust!", emoji: "💥", color: "text-[#00C805]", glow: "shadow-[#00C805]/30" } :
-    visibleStatus === "player_bust" ? { text: language === "ko" ? "버스트!" : "Bust!", emoji: "💀", color: "text-[#FF5252]", glow: "shadow-[#FF5252]/30" } :
-    visibleStatus === "dealer_win" ? { text: language === "ko" ? "딜러 승리" : "Dealer Wins", emoji: "😞", color: "text-[#FF5252]", glow: "shadow-[#FF5252]/30" } :
+    visibleStatus === "player_win" ? { text: language === "ko" ? "승리!" : "You Win!", emoji: "🎉", color: "text-[color:var(--color-win)]", glow: "shadow-[color:var(--color-win)]/30" } :
+    visibleStatus === "dealer_bust" ? { text: language === "ko" ? "딜러 버스트!" : "Dealer Bust!", emoji: "💥", color: "text-[color:var(--color-win)]", glow: "shadow-[color:var(--color-win)]/30" } :
+    visibleStatus === "player_bust" ? { text: language === "ko" ? "버스트!" : "Bust!", emoji: "💀", color: "text-[color:var(--color-loss)]", glow: "shadow-[color:var(--color-loss)]/30" } :
+    visibleStatus === "dealer_win" ? { text: language === "ko" ? "딜러 승리" : "Dealer Wins", emoji: "😞", color: "text-[color:var(--color-loss)]", glow: "shadow-[color:var(--color-loss)]/30" } :
     visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
     null;
 
@@ -410,7 +410,7 @@ export default function Casino() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
+      transition={{ type: "spring", damping: 26, stiffness: 260 }}
       className="space-y-3"
     >
       {isOver && lastBet && (
@@ -474,7 +474,7 @@ export default function Casino() {
               animate={{ scale: 1 }}
               className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/25"
             >
-              <span className="text-[11px] font-mono font-bold text-yellow-400">${game.bet.toFixed(2)}</span>
+              <span className="text-xs font-mono font-bold text-yellow-400">${game.bet.toFixed(2)}</span>
             </motion.div>
           )}
         </div>
@@ -531,8 +531,8 @@ export default function Casino() {
                           <motion.p
                             initial={{ y: 5, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            className={`text-xs font-mono font-bold mt-0.5 ${isWin ? "text-[#00C805]" : isLoss ? "text-[#FF5252]" : "text-yellow-400"}`}
+                            transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.2 }}
+                            className={`text-xs font-mono font-bold mt-0.5 ${isWin ? "text-[color:var(--color-win)]" : isLoss ? "text-[color:var(--color-loss)]" : "text-yellow-400"}`}
                           >
                             {isWin ? `+$${game.payout.toFixed(2)}` : isLoss ? `-$${game.bet.toFixed(2)}` : `$${game.payout.toFixed(2)} returned`}
                           </motion.p>
@@ -560,11 +560,11 @@ export default function Casino() {
                     {/* Main hand */}
                     <div className={`rounded-xl p-2 transition-all ${activeHand === "main" ? "ring-2 ring-yellow-400/60 bg-white/[0.03]" : "opacity-70"}`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[11px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
+                        <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.12em]">
                           {language === "ko" ? "핸드 1" : "Hand 1"}
                         </span>
                         <HandValue value={handValue(game.playerHand)} bust={handValue(game.playerHand) > 21} soft={isSoftHand(game.playerHand)} />
-                        {activeHand === "main" && <span className="text-[11px] text-yellow-400 animate-pulse">ACTIVE</span>}
+                        {activeHand === "main" && <span className="text-xs text-yellow-400 animate-pulse">ACTIVE</span>}
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>
@@ -577,13 +577,13 @@ export default function Casino() {
                     {/* Split hand */}
                     <div className={`rounded-xl p-2 transition-all ${activeHand === "split" ? "ring-2 ring-yellow-400/60 bg-white/[0.03]" : "opacity-70"}`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[11px] font-semibold text-green-300/50 uppercase tracking-[0.12em]">
+                        <span className="text-xs font-semibold text-green-300/50 uppercase tracking-[0.12em]">
                           {language === "ko" ? "핸드 2" : "Hand 2"}
                         </span>
                         {(game as any).splitHand && (
                           <HandValue value={handValue((game as any).splitHand)} bust={handValue((game as any).splitHand) > 21} soft={isSoftHand((game as any).splitHand)} />
                         )}
-                        {activeHand === "split" && <span className="text-[11px] text-yellow-400 animate-pulse">ACTIVE</span>}
+                        {activeHand === "split" && <span className="text-xs text-yellow-400 animate-pulse">ACTIVE</span>}
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>
@@ -624,7 +624,7 @@ export default function Casino() {
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ type: "spring", damping: 26, stiffness: 260 }}
                       className="space-y-3 lg:hidden"
                     >
                       {pregameControls}
@@ -635,7 +635,7 @@ export default function Casino() {
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
+                      transition={{ type: "spring", damping: 26, stiffness: 260 }}
                     >
                       <div className={`grid gap-4 ${canSplitHand ? "grid-cols-4" : "grid-cols-3"}`}>
                         <motion.button
@@ -643,10 +643,10 @@ export default function Casino() {
                           whileTap={{ scale: 0.96 }}
                           onClick={() => hitMutation.mutate()}
                           disabled={isPending}
-                          className="py-3.5 rounded-xl bg-[#00C805] text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
+                          className="py-3.5 rounded-xl bg-[color:var(--color-win)] text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
                         >
                           {hitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                            <span>{language === "ko" ? "히트" : "HIT"} <span className="text-foreground/40 text-[11px]">H</span></span>}
+                            <span>{language === "ko" ? "히트" : "HIT"} <span className="text-foreground/40 text-xs">H</span></span>}
                         </motion.button>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
@@ -656,7 +656,7 @@ export default function Casino() {
                           className="py-3.5 rounded-xl bg-blue-600 text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
                         >
                           {standMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                            <span>{language === "ko" ? "스탠드" : "STAND"} <span className="text-foreground/40 text-[11px]">S</span></span>}
+                            <span>{language === "ko" ? "스탠드" : "STAND"} <span className="text-foreground/40 text-xs">S</span></span>}
                         </motion.button>
                         <motion.button
                           whileHover={canDouble ? { scale: 1.02 } : {}}
@@ -666,11 +666,11 @@ export default function Casino() {
                           className={`py-3.5 rounded-xl font-bold text-sm transition-colors shadow-md ${
                             canDouble
                               ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-black disabled:opacity-40"
-                              : "bg-zinc-700 text-muted-foreground cursor-not-allowed"
+                              : "bg-muted text-muted-foreground cursor-not-allowed"
                           }`}
                         >
                           {doubleMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                            <span>{language === "ko" ? "더블" : "DBL"} <span className={canDouble ? "text-black/30" : "text-muted-foreground"} style={{ fontSize: 9 }}>D</span></span>}
+                            <span>{language === "ko" ? "더블" : "DBL"} <span className={canDouble ? "text-black/30" : "text-muted-foreground"} style={{ fontSize: 11 }}>D</span></span>}
                         </motion.button>
                         {canSplitHand && (
                           <motion.button
@@ -681,11 +681,11 @@ export default function Casino() {
                             className="py-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-violet-500 text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-md"
                           >
                             {splitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                              <span>{language === "ko" ? "스플릿" : "SPLIT"} <span className="text-foreground/40 text-[11px]">P</span></span>}
+                              <span>{language === "ko" ? "스플릿" : "SPLIT"} <span className="text-foreground/40 text-xs">P</span></span>}
                           </motion.button>
                         )}
                       </div>
-                      <p className="text-center text-[11px] text-foreground/15 mt-2 font-mono">{canSplitHand ? "H / S / D / P" : "H / S / D"}</p>
+                      <p className="text-center text-xs text-foreground/15 mt-2 font-mono">{canSplitHand ? "H / S / D / P" : "H / S / D"}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -695,14 +695,14 @@ export default function Casino() {
 
           {!game || isOver ? (
             <div className="hidden lg:block rounded-2xl border border-border/80 bg-card p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 {language === "ko" ? "베팅 패널" : "Bet Panel"}
               </p>
               {pregameControls}
             </div>
           ) : (
             <div className="hidden lg:block rounded-2xl border border-border/80 bg-card p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 {language === "ko" ? "현재 핸드" : "Current Hand"}
               </p>
               <div className="space-y-2 text-xs text-foreground/80">
@@ -725,12 +725,12 @@ export default function Casino() {
           )}
         </div>
 
-        <p className="text-center text-[11px] text-muted-foreground mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground mt-4 font-mono">
           {language === "ko"
             ? "딜러 17 스탠드 · 블랙잭 2:1 · 더블다운 · 스플릿 페어"
             : "Dealer stands 17 · BJ pays 2:1 · Double · Split pairs"}
         </p>
-        <p className="text-center text-[11px] text-zinc-700 mt-2 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-2 font-mono">
           {language === "ko" ? "플레이어 우위 블랙잭 지급표" : "Player-favored blackjack payouts"}
         </p>
 

@@ -41,9 +41,9 @@ type TradeFilter = "all" | "buy" | "sell" | "short" | "cover" | "dividend" | "be
 function getTradeTypeStyle(type: string, tr: any) {
   switch (type) {
     case "buy":
-      return { icon: ArrowUpRight, color: "#00C805", bg: "bg-[#00C805]/15", label: tr.trading.buy, sign: "-" };
+      return { icon: ArrowUpRight, color: "var(--color-win)", bg: "bg-[color:var(--color-win)]/15", label: tr.trading.buy, sign: "-" };
     case "sell":
-      return { icon: ArrowDownRight, color: "#FF5252", bg: "bg-[#FF5252]/15", label: tr.trading.sell, sign: "+" };
+      return { icon: ArrowDownRight, color: "var(--color-loss)", bg: "bg-[color:var(--color-loss)]/15", label: tr.trading.sell, sign: "+" };
     case "short":
       return { icon: ArrowDownUp, color: "#a855f7", bg: "bg-purple-500/15", label: tr.trading.short, sign: "+" };
     case "cover":
@@ -115,7 +115,7 @@ function PortfolioPnlChart() {
 
     const finalVal = values[values.length - 1];
     const isProfit = finalVal >= 200;
-    const lineColor = isProfit ? "#00C805" : "#FF5252";
+    const lineColor = isProfit ? "var(--color-win)" : "var(--color-loss)";
     const gradientColor = isProfit ? "rgba(0, 200, 5, 0.15)" : "rgba(255, 82, 82, 0.15)";
 
     const gradient = ctx.createLinearGradient(0, 0, 0, H);
@@ -210,7 +210,7 @@ function PortfolioPnlChart() {
           <span
             className="text-xs font-semibold font-[var(--font-mono)] px-2 py-0.5 rounded"
             style={{
-              color: change >= 0 ? "#00C805" : "#FF5252",
+              color: change >= 0 ? "var(--color-win)" : "var(--color-loss)",
               backgroundColor: change >= 0 ? "rgba(0,200,5,0.12)" : "rgba(255,82,82,0.12)",
             }}
           >
@@ -222,7 +222,7 @@ function PortfolioPnlChart() {
             <button
               key={r.id}
               onClick={() => setRange(r.id)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 range === r.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -432,7 +432,7 @@ export default function Portfolio() {
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-semibold font-[var(--font-mono)]"
                   style={{
                     backgroundColor: metrics.totalPnl >= 0 ? "rgba(0, 200, 5, 0.12)" : "rgba(255, 82, 82, 0.12)",
-                    color: metrics.totalPnl >= 0 ? "#00C805" : "#FF5252",
+                    color: metrics.totalPnl >= 0 ? "var(--color-win)" : "var(--color-loss)",
                   }}
                 >
                   {metrics.totalPnl >= 0 ? (
@@ -446,28 +446,28 @@ export default function Portfolio() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.cashBalance}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.cashBalance}</p>
                   <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
                     ${metrics.cashBalance.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.holdingsValue}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.holdingsValue}</p>
                   <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
                     ${metrics.totalHoldingsValue.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.shortPnl}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.shortPnl}</p>
                   <p
                     className="text-lg font-bold font-[var(--font-mono)]"
-                    style={{ color: metrics.totalShortPnl >= 0 ? "#00C805" : "#FF5252" }}
+                    style={{ color: metrics.totalShortPnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}
                   >
                     {metrics.totalShortPnl >= 0 ? "+" : ""}${metrics.totalShortPnl.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-secondary/50 rounded-lg p-3">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.dividends}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.dividends}</p>
                   <p className="text-lg font-bold text-[#facc15] font-[var(--font-mono)]">
                     +${metrics.totalDividends.toFixed(2)}
                   </p>
@@ -494,7 +494,7 @@ export default function Portfolio() {
               {metrics.holdings.filter(h => h.shares > 0).length > 0 ? (
                 <div className="space-y-2">
                   {/* Desktop table header */}
-                  <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                     <div className="col-span-2">{t.portfolio.ticker}</div>
                     <div className="col-span-2 text-right">{t.portfolio.shares}</div>
                     <div className="col-span-2 text-right">{t.portfolio.avgPrice}</div>
@@ -528,10 +528,10 @@ export default function Portfolio() {
                           </div>
                           <div className="col-span-2 text-right">
                             <div>
-                              <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}>
+                              <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                                 {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}
                               </span>
-                              <p className="text-[11px] font-[var(--font-mono)]" style={{ color: h.pnlPct >= 0 ? "#00C805" : "#FF5252" }}>
+                              <p className="text-xs font-[var(--font-mono)]" style={{ color: h.pnlPct >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                                 {h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(1)}%
                               </p>
                             </div>
@@ -545,11 +545,11 @@ export default function Portfolio() {
                             </span>
                             <span className="text-sm font-semibold text-foreground font-[var(--font-mono)]">${h.currentValue.toFixed(2)}</span>
                           </div>
-                          <div className="flex items-center justify-between text-[11px]">
+                          <div className="flex items-center justify-between text-xs">
                             <span className="text-muted-foreground font-[var(--font-mono)]">
                               {h.shares.toFixed(2)} @ ${h.avgCostBasis.toFixed(2)} → ${h.currentPrice.toFixed(2)}
                             </span>
-                            <span className="font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "#00C805" : "#FF5252" }}>
+                            <span className="font-semibold font-[var(--font-mono)]" style={{ color: h.pnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                               {h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)} ({h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(1)}%)
                             </span>
                           </div>
@@ -583,7 +583,7 @@ export default function Portfolio() {
 
                 <div className="space-y-2">
                   {/* Desktop table header */}
-                  <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                     <div className="col-span-2">{t.portfolio.ticker}</div>
                     <div className="col-span-2 text-right">{t.portfolio.shares}</div>
                     <div className="col-span-2 text-right">{t.portfolio.avgPrice}</div>
@@ -617,10 +617,10 @@ export default function Portfolio() {
                           </div>
                           <div className="col-span-2 text-right">
                             <div>
-                              <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}>
+                              <span className="text-sm font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                                 {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)}
                               </span>
-                              <p className="text-[11px] font-[var(--font-mono)]" style={{ color: h.shortPnlPct >= 0 ? "#00C805" : "#FF5252" }}>
+                              <p className="text-xs font-[var(--font-mono)]" style={{ color: h.shortPnlPct >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                                 {h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%
                               </p>
                             </div>
@@ -634,11 +634,11 @@ export default function Portfolio() {
                             </span>
                             <span className="text-sm font-semibold text-foreground font-[var(--font-mono)]">${h.shortValue.toFixed(2)}</span>
                           </div>
-                          <div className="flex items-center justify-between text-[11px]">
+                          <div className="flex items-center justify-between text-xs">
                             <span className="text-purple-300 font-[var(--font-mono)]">
                               {h.shortShares.toFixed(2)} @ ${h.shortAvgPrice.toFixed(2)} → ${h.currentPrice.toFixed(2)}
                             </span>
-                            <span className="font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "#00C805" : "#FF5252" }}>
+                            <span className="font-semibold font-[var(--font-mono)]" style={{ color: h.shortPnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
                               {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)} ({h.shortPnlPct >= 0 ? "+" : ""}{h.shortPnlPct.toFixed(1)}%)
                             </span>
                           </div>
@@ -663,7 +663,7 @@ export default function Portfolio() {
                     {t.portfolio.transactionHistory}
                   </h3>
                   {tradeHistory && (
-                    <span className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
+                    <span className="text-xs text-muted-foreground font-[var(--font-mono)]">
                       ({tradeHistory.length})
                     </span>
                   )}
@@ -676,7 +676,7 @@ export default function Portfolio() {
                       <button
                         key={f.id}
                         onClick={() => setFilter(f.id)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all capitalize ${
+                        className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all capitalize ${
                           filter === f.id
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:text-foreground"
@@ -709,38 +709,38 @@ export default function Portfolio() {
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              isPending ? "bg-yellow-500/20" : isWon ? "bg-[#00C805]/20" : "bg-[#FF5252]/20"
+                              isPending ? "bg-yellow-500/20" : isWon ? "bg-[color:var(--color-win)]/20" : "bg-[color:var(--color-loss)]/20"
                             }`}>
-                              <Dice5 className="w-4 h-4" style={{ color: isPending ? "#eab308" : isWon ? "#00C805" : "#FF5252" }} />
+                              <Dice5 className="w-4 h-4" style={{ color: isPending ? "#eab308" : isWon ? "var(--color-win)" : "var(--color-loss)" }} />
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-bold uppercase ${
-                                  bet.prediction === "win" ? "text-[#00C805]" : "text-[#FF5252]"
+                                  bet.prediction === "win" ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"
                                 }`}>
                                   {bet.prediction}
                                 </span>
-                                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                                   isPending ? "bg-yellow-500/15 text-yellow-400" :
-                                  isWon ? "bg-[#00C805]/15 text-[#00C805]" : "bg-[#FF5252]/15 text-[#FF5252]"
+                                  isWon ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
                                 }`}>
                                   {isPending ? "PENDING" : isWon ? "WON" : "LOST"}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
+                              <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
                                 ${bet.amount.toFixed(2)} {language === "ko" ? "베팅" : "bet"}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-semibold font-[var(--font-mono)] ${
-                              isPending ? "text-yellow-400" : isWon ? "text-[#00C805]" : "text-[#FF5252]"
+                              isPending ? "text-yellow-400" : isWon ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"
                             }`}>
                               {isPending ? `$${bet.amount.toFixed(2)}` :
                                isWon ? `+$${(bet.payout ?? 0).toFixed(2)}` :
                                `-$${bet.amount.toFixed(2)}`}
                             </p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {formatDateTime(bet.createdAt, language)}
                             </p>
                           </div>
@@ -782,7 +782,7 @@ export default function Portfolio() {
                                 ${trade.ticker}
                               </span>
                             </div>
-                            <p className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
+                            <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
                               {trade.shares.toFixed(2)} {t.trading.shares} @ ${trade.pricePerShare.toFixed(2)}
                             </p>
                           </div>
@@ -791,7 +791,7 @@ export default function Portfolio() {
                           <p className="text-sm font-semibold text-foreground font-[var(--font-mono)]">
                             {style.sign}${trade.totalAmount.toFixed(2)}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {formatDateTime(trade.createdAt, language)}
                           </p>
                         </div>

@@ -10,14 +10,14 @@ import { motion } from "framer-motion";
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 function getNewsIcon(isWin: boolean | null) {
-  if (isWin === true) return <Rocket className="w-5 h-5 text-[#00C805]" />;
-  if (isWin === false) return <Skull className="w-5 h-5 text-[#FF5252]" />;
+  if (isWin === true) return <Rocket className="w-5 h-5 text-[color:var(--color-win)]" />;
+  if (isWin === false) return <Skull className="w-5 h-5 text-[color:var(--color-loss)]" />;
   return <Zap className="w-5 h-5 text-yellow-400" />;
 }
 
 function getNewsBorderColor(isWin: boolean | null) {
-  if (isWin === true) return "border-l-[#00C805]";
-  if (isWin === false) return "border-l-[#FF5252]";
+  if (isWin === true) return "border-l-[color:var(--color-win)]";
+  if (isWin === false) return "border-l-[color:var(--color-loss)]";
   return "border-l-yellow-400";
 }
 
@@ -69,7 +69,7 @@ export default function NewsFeed() {
                 key={item.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.03 }}
+                transition={{ type: "spring", damping: 26, stiffness: 260, delay: idx * 0.03 }}
                 className={`bg-card border border-border border-l-4 ${getNewsBorderColor(item.isWin)} rounded-xl p-4`}
               >
                 <div className="flex items-start gap-3">
@@ -91,7 +91,7 @@ export default function NewsFeed() {
                       {item.priceChange && (
                         <span
                           className="text-xs font-mono font-bold"
-                          style={{ color: parseFloat(item.priceChange) >= 0 ? "#00C805" : "#FF5252" }}
+                          style={{ color: parseFloat(item.priceChange) >= 0 ? "var(--color-win)" : "var(--color-loss)" }}
                         >
                           {parseFloat(item.priceChange) >= 0 ? "+" : ""}${parseFloat(item.priceChange).toFixed(2)}
                         </span>

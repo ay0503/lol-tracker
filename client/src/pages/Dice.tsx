@@ -105,7 +105,7 @@ export default function Dice() {
             {history && history.length > 0 && (
               <div className="flex gap-1 overflow-x-auto mb-3 pb-0.5 scrollbar-hide">
                 {history.slice(0, 15).map((rr: any, idx: number) => (
-                  <div key={idx} className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-mono font-bold ${rr.won ? "bg-emerald-600 text-foreground" : "bg-red-600 text-foreground"}`}>
+                  <div key={idx} className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold ${rr.won ? "bg-emerald-600 text-foreground" : "bg-red-600 text-foreground"}`}>
                     {rr.roll.toFixed(0)}
                   </div>
                 ))}
@@ -120,14 +120,14 @@ export default function Dice() {
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className={`text-4xl font-bold font-mono ${
-                    lastResult ? (lastResult.won ? "text-[#00C805]" : "text-[#FF5252]") : "text-foreground/30"
+                    lastResult ? (lastResult.won ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]") : "text-foreground/30"
                   }`}
                 >
                   {displayRoll !== null ? displayRoll.toFixed(2) : "—"}
                 </motion.div>
               </AnimatePresence>
               {lastResult && (
-                <p className={`text-sm font-mono mt-0.5 ${lastResult.won ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                <p className={`text-sm font-mono mt-0.5 ${lastResult.won ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
                   {lastResult.won ? `+$${lastResult.payout.toFixed(2)}` : `-$${(lastBetAmount ?? parsedBetAmount).toFixed(2)}`}
                 </p>
               )}
@@ -135,8 +135,8 @@ export default function Dice() {
 
             {/* ─── Animated Result Bar ─── */}
             <div className={`relative w-full h-12 rounded-xl overflow-hidden bg-secondary border transition-all duration-300 mb-4 ${
-              barFlash === "win" ? "border-[#00C805] shadow-lg shadow-[#00C805]/30" :
-              barFlash === "lose" ? "border-[#FF5252] shadow-lg shadow-[#FF5252]/30" :
+              barFlash === "win" ? "border-[color:var(--color-win)] shadow-lg shadow-[color:var(--color-win)]/30" :
+              barFlash === "lose" ? "border-[color:var(--color-loss)] shadow-lg shadow-[color:var(--color-loss)]/30" :
               "border-border"
             }`}>
               {/* Win zone (green) */}
@@ -173,7 +173,7 @@ export default function Dice() {
                 transition={{ duration: 2, repeat: Infinity }}
               >
                 <div className="w-full h-full bg-yellow-400" />
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[11px] font-mono font-bold text-yellow-400">
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-mono font-bold text-yellow-400">
                   {target}
                 </div>
               </motion.div>
@@ -195,7 +195,7 @@ export default function Dice() {
 
             {/* Target Slider */}
             <div className="mb-4">
-              <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
                 <span>1</span>
                 <span className="font-bold text-foreground text-xs">{target}</span>
                 <span>99</span>
@@ -211,13 +211,13 @@ export default function Dice() {
             <div className="grid grid-cols-2 gap-2 mb-4">
               <button onClick={() => setDirection("over")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  direction === "over" ? "bg-[#00C805] text-foreground shadow-lg shadow-[#00C805]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
+                  direction === "over" ? "bg-[color:var(--color-win)] text-foreground shadow-lg shadow-[color:var(--color-win)]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}>
                 Roll Over {target}
               </button>
               <button onClick={() => setDirection("under")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  direction === "under" ? "bg-[#FF5252] text-foreground shadow-lg shadow-[#FF5252]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
+                  direction === "under" ? "bg-[color:var(--color-loss)] text-foreground shadow-lg shadow-[color:var(--color-loss)]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}>
                 Roll Under {target}
               </button>
@@ -228,13 +228,13 @@ export default function Dice() {
               <div className={`bg-secondary/50 rounded-lg p-2.5 text-center transition-all ${
                 multiplier > 5 ? "ring-1 ring-yellow-500/30 shadow-md shadow-yellow-500/10" : ""
               }`}>
-                <p className="text-[11px] text-muted-foreground uppercase">Multiplier</p>
+                <p className="text-xs text-muted-foreground uppercase">Multiplier</p>
                 <p className="text-lg font-bold text-yellow-400 font-mono">{multiplier}x</p>
               </div>
               <div className={`bg-secondary/50 rounded-lg p-2.5 text-center transition-all ${
                 winChance < 20 ? "ring-1 ring-red-500/30 shadow-md shadow-red-500/10" : ""
               }`}>
-                <p className="text-[11px] text-muted-foreground uppercase">Win Chance</p>
+                <p className="text-xs text-muted-foreground uppercase">Win Chance</p>
                 <p className="text-lg font-bold text-foreground font-mono">{winChance}%</p>
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Dice() {
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
         <CasinoGameLog />

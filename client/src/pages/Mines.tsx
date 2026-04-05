@@ -125,7 +125,7 @@ export default function Mines() {
   const setupControls = (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
       <div>
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">
           {language === "ko" ? "지뢰 수" : "Mines"}: {mineCount}
         </p>
         <div className="flex gap-1.5 flex-wrap">
@@ -174,11 +174,11 @@ export default function Mines() {
   const activePanel = isPlaying && game ? (
     <div className="space-y-3">
       <div className="rounded-xl border border-border bg-black/20 p-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
           {language === "ko" ? "현재 배율" : "Current Multiplier"}
         </p>
         <p className="mt-2 text-3xl font-bold font-mono text-foreground">{game.multiplier}x</p>
-        <p className="mt-1 text-[11px] font-mono text-muted-foreground">
+        <p className="mt-1 text-xs font-mono text-muted-foreground">
           ${(game.bet * game.multiplier).toFixed(2)} · {language === "ko" ? "다음" : "next"} {game.nextMultiplier}x
         </p>
       </div>
@@ -188,7 +188,7 @@ export default function Mines() {
         whileTap={{ scale: 0.98 }}
         onClick={() => cashoutMutation.mutate()}
         disabled={isPending}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-lg shadow-[#00C805]/20"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[color:var(--color-win)] to-emerald-600 text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-lg shadow-[color:var(--color-win)]/20"
       >
         {cashoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
           `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(game.bet * game.multiplier).toFixed(2)}`}
@@ -217,7 +217,7 @@ export default function Mines() {
           {isPlaying && game && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
               className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/25">
-              <span className="text-[11px] font-mono font-bold text-yellow-400">{game.multiplier}x</span>
+              <span className="text-xs font-mono font-bold text-yellow-400">{game.multiplier}x</span>
             </motion.div>
           )}
         </div>
@@ -238,7 +238,7 @@ export default function Mines() {
                         className="text-2xl font-bold text-foreground font-mono">
                         {game.multiplier}x
                       </motion.p>
-                      <p className="text-[11px] text-muted-foreground font-mono">
+                      <p className="text-xs text-muted-foreground font-mono">
                         ${(game.bet * game.multiplier).toFixed(2)} · {language === "ko" ? "다음" : "next"}: {game.nextMultiplier}x
                       </p>
                     </div>
@@ -252,7 +252,7 @@ export default function Mines() {
                       className="text-center mb-4">
                       {game.status === "won" ? (
                         <div>
-                          <p className="text-xl font-bold text-[#00C805]">
+                          <p className="text-xl font-bold text-[color:var(--color-win)]">
                             {game.multiplier}x · +${game.payout.toFixed(2)}
                           </p>
                           <p className="text-xs text-muted-foreground">{language === "ko" ? "캐시아웃 성공!" : "Cashed out!"}</p>
@@ -260,7 +260,7 @@ export default function Mines() {
                       ) : (
                         <div>
                           <motion.p initial={{ x: [-5, 5, -5, 5, 0] }} animate={{ x: 0 }}
-                            className="text-xl font-bold text-[#FF5252]">
+                            className="text-xl font-bold text-[color:var(--color-loss)]">
                             💣 {language === "ko" ? "지뢰!" : "BOOM!"}
                           </motion.p>
                           <p className="text-xs text-muted-foreground">-${game.bet.toFixed(2)}</p>
@@ -300,7 +300,7 @@ export default function Mines() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => cashoutMutation.mutate()}
                     disabled={isPending}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#00C805] to-emerald-600 text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-lg shadow-[#00C805]/20 mb-3 lg:hidden"
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[color:var(--color-win)] to-emerald-600 text-foreground font-bold text-sm disabled:opacity-40 transition-colors shadow-lg shadow-[color:var(--color-win)]/20 mb-3 lg:hidden"
                   >
                     {cashoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
                       `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(game.bet * game.multiplier).toFixed(2)}`}
@@ -314,7 +314,7 @@ export default function Mines() {
 
           {(!game || isOver) && (
             <div className="hidden lg:block rounded-2xl border border-border/80 bg-card p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 {language === "ko" ? "베팅 패널" : "Bet Panel"}
               </p>
               {setupControls}
@@ -322,7 +322,7 @@ export default function Mines() {
           )}
           {activePanel && (
             <div className="hidden lg:block rounded-2xl border border-border/80 bg-card p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 {language === "ko" ? "현재 라운드" : "Live Round"}
               </p>
               {activePanel}
@@ -330,7 +330,7 @@ export default function Mines() {
           )}
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
 

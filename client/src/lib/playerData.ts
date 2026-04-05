@@ -58,10 +58,10 @@ export interface ETFDataPoint {
 
 // ─── ETF Definitions ───
 export const TICKERS = [
-  { symbol: "DORI", name: "DORI", description: "1x LP Tracker", leverage: 1, inverse: false, color: "#00C805" },
+  { symbol: "DORI", name: "DORI", description: "1x LP Tracker", leverage: 1, inverse: false, color: "var(--color-win)" },
   { symbol: "DDRI", name: "DDRI", description: "2x Leveraged LP", leverage: 2, inverse: false, color: "#4CAF50" },
   { symbol: "TDRI", name: "TDRI", description: "3x Leveraged LP", leverage: 3, inverse: false, color: "#8BC34A" },
-  { symbol: "SDRI", name: "SDRI", description: "2x Inverse LP", leverage: 2, inverse: true, color: "#FF5252" },
+  { symbol: "SDRI", name: "SDRI", description: "2x Inverse LP", leverage: 2, inverse: true, color: "var(--color-loss)" },
   { symbol: "XDRI", name: "XDRI", description: "3x Inverse LP", leverage: 3, inverse: true, color: "#FF1744" },
 ] as const;
 

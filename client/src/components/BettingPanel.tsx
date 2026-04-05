@@ -48,7 +48,7 @@ export default function BettingPanel() {
           {language === "ko" ? "다음 게임 베팅" : "Bet on Next Game"}
         </h3>
         {pendingPool && pendingPool.total > 0 && (
-          <span className="ml-auto text-[11px] text-muted-foreground font-mono">
+          <span className="ml-auto text-xs text-muted-foreground font-mono">
             {pendingPool.total} bet{pendingPool.total !== 1 ? "s" : ""} · ${pendingPool.totalPool.toFixed(0)} pool
           </span>
         )}
@@ -62,14 +62,14 @@ export default function BettingPanel() {
           <div className="flex items-center justify-center gap-2 mt-2">
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
               pendingBet.prediction === "win"
-                ? "bg-[#00C805]/20 text-[#00C805]"
-                : "bg-[#FF5252]/20 text-[#FF5252]"
+                ? "bg-[color:var(--color-win)]/20 text-[color:var(--color-win)]"
+                : "bg-[color:var(--color-loss)]/20 text-[color:var(--color-loss)]"
             }`}>
               {pendingBet.prediction === "win" ? "🐂 WIN" : "🐻 LOSS"}
             </span>
             <span className="text-sm font-mono font-bold">${pendingBet.amount.toFixed(2)}</span>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             {language === "ko" ? "게임 끝나면 자동 정산됩니다" : "Auto-resolved when game ends"}
           </p>
         </div>
@@ -81,8 +81,8 @@ export default function BettingPanel() {
               onClick={() => setPrediction("win")}
               className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                 prediction === "win"
-                  ? "bg-[#00C805] text-white shadow-lg shadow-[#00C805]/25"
-                  : "bg-[#00C805]/10 text-[#00C805] hover:bg-[#00C805]/20 border border-[#00C805]/30"
+                  ? "bg-[color:var(--color-win)] text-white shadow-lg shadow-[color:var(--color-win)]/25"
+                  : "bg-[color:var(--color-win)]/10 text-[color:var(--color-win)] hover:bg-[color:var(--color-win)]/20 border border-[color:var(--color-win)]/30"
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
@@ -92,8 +92,8 @@ export default function BettingPanel() {
               onClick={() => setPrediction("loss")}
               className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                 prediction === "loss"
-                  ? "bg-[#FF5252] text-white shadow-lg shadow-[#FF5252]/25"
-                  : "bg-[#FF5252]/10 text-[#FF5252] hover:bg-[#FF5252]/20 border border-[#FF5252]/30"
+                  ? "bg-[color:var(--color-loss)] text-white shadow-lg shadow-[color:var(--color-loss)]/25"
+                  : "bg-[color:var(--color-loss)]/10 text-[color:var(--color-loss)] hover:bg-[color:var(--color-loss)]/20 border border-[color:var(--color-loss)]/30"
               }`}
             >
               <TrendingDown className="w-3.5 h-3.5" />
@@ -128,14 +128,14 @@ export default function BettingPanel() {
               <button
                 key={amt}
                 onClick={() => setAmount(String(amt))}
-                className="flex-1 py-1 rounded-lg bg-secondary/50 text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                className="flex-1 py-1 rounded-lg bg-secondary/50 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
               >
                 ${amt}
               </button>
             ))}
           </div>
 
-          <p className="text-[11px] text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground text-center">
             {language === "ko"
               ? "맞추면 2배! 다음 솔랭 결과에 베팅하세요"
               : "2x payout if correct! Bet on next ranked game result"}
@@ -146,24 +146,24 @@ export default function BettingPanel() {
       {/* Recent bet history */}
       {recentBets.length > 0 && (
         <div className="mt-4 pt-3 border-t border-border/50">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
             {language === "ko" ? "최근 베팅" : "Recent Bets"}
           </p>
           <div className="space-y-1">
             {recentBets.map(bet => (
               <div key={bet.id} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className={bet.status === "won" ? "text-[#00C805]" : "text-[#FF5252]"}>
+                  <span className={bet.status === "won" ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}>
                     {bet.status === "won" ? "✅" : "❌"}
                   </span>
                   <span className="font-mono">{bet.prediction.toUpperCase()}</span>
                   <span className="text-muted-foreground font-mono">${bet.amount.toFixed(0)}</span>
                 </div>
                 {bet.status === "won" && bet.payout && (
-                  <span className="text-[#00C805] font-mono font-bold">+${bet.payout.toFixed(0)}</span>
+                  <span className="text-[color:var(--color-win)] font-mono font-bold">+${bet.payout.toFixed(0)}</span>
                 )}
                 {bet.status === "lost" && (
-                  <span className="text-[#FF5252] font-mono">-${bet.amount.toFixed(0)}</span>
+                  <span className="text-[color:var(--color-loss)] font-mono">-${bet.amount.toFixed(0)}</span>
                 )}
               </div>
             ))}

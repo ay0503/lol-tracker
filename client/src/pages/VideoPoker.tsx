@@ -46,16 +46,16 @@ const PokerCard = memo(function PokerCard({
     <motion.div
       initial={isNew ? { rotateY: -180, opacity: 0, y: -20 } : { rotateY: -90, opacity: 0 }}
       animate={{ rotateY: 0, opacity: 1, y: held ? -8 : 0 }}
-      transition={{ delay: index * 0.12, duration: 0.4, type: "spring", stiffness: 200, damping: 18 }}
+      transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.12, duration: 0.4, type: "spring", stiffness: 200, damping: 18 }}
       onClick={canHold ? onClick : undefined}
       className={`relative w-[4rem] h-[5.5rem] sm:w-[5rem] sm:h-[7rem] rounded-lg border bg-white dark:bg-card shadow-lg select-none flex-shrink-0 transition-all ${
         canHold ? "cursor-pointer hover:shadow-xl" : ""
-      } ${held ? "ring-2 ring-yellow-400 shadow-yellow-400/20" : "border-zinc-200 dark:border-border"}`}
+      } ${held ? "ring-2 ring-yellow-400 shadow-yellow-400/20" : "border-border dark:border-border"}`}
     >
       {/* Top-left */}
       <div className={`absolute top-1 left-1.5 leading-tight ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
-        <div className="text-[11px] sm:text-sm font-extrabold font-mono leading-none">{rank}</div>
-        <div className="text-[11px] sm:text-xs leading-none">{suit}</div>
+        <div className="text-xs sm:text-sm font-extrabold font-mono leading-none">{rank}</div>
+        <div className="text-xs sm:text-xs leading-none">{suit}</div>
       </div>
       {/* Center */}
       <div className={`absolute inset-0 flex items-center justify-center ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
@@ -63,14 +63,14 @@ const PokerCard = memo(function PokerCard({
       </div>
       {/* Bottom-right */}
       <div className={`absolute bottom-1 right-1.5 leading-tight rotate-180 ${isRed ? "text-red-500" : "text-gray-800 dark:text-gray-200"}`}>
-        <div className="text-[11px] sm:text-sm font-extrabold font-mono leading-none">{rank}</div>
-        <div className="text-[11px] sm:text-xs leading-none">{suit}</div>
+        <div className="text-xs sm:text-sm font-extrabold font-mono leading-none">{rank}</div>
+        <div className="text-xs sm:text-xs leading-none">{suit}</div>
       </div>
       {/* HELD badge */}
       <AnimatePresence>
         {held && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[11px] font-bold bg-yellow-500 text-black tracking-wider">
+            className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-xs font-bold bg-yellow-500 text-black tracking-wider">
             HELD
           </motion.div>
         )}
@@ -155,8 +155,8 @@ export default function VideoPoker() {
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center mb-4">
                     {game.payout > 0 ? (
                       <div>
-                        <p className="text-lg font-bold text-[#00C805]">{game.result}</p>
-                        <p className="text-sm font-mono text-[#00C805]">+${game.payout.toFixed(2)} ({game.multiplier}x)</p>
+                        <p className="text-lg font-bold text-[color:var(--color-win)]">{game.result}</p>
+                        <p className="text-sm font-mono text-[color:var(--color-win)]">+${game.payout.toFixed(2)} ({game.multiplier}x)</p>
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">{language === "ko" ? "당첨 없음" : "No winning hand"}</p>
@@ -185,7 +185,7 @@ export default function VideoPoker() {
               </div>
 
               {isHolding && (
-                <p className="text-center text-[11px] text-muted-foreground mb-4">
+                <p className="text-center text-xs text-muted-foreground mb-4">
                   {language === "ko" ? "카드를 클릭하여 홀드/취소" : "Click cards to hold, then draw"}
                 </p>
               )}
@@ -237,15 +237,15 @@ export default function VideoPoker() {
 
           {/* Pay Table */}
           <div className="bg-card border border-border rounded-xl p-3 h-fit">
-            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
               {language === "ko" ? "페이 테이블" : "Pay Table"}
             </h3>
             <div className="space-y-1">
               {PAY_TABLE.map(row => {
                 const isWin = isComplete && game?.result === row.hand;
                 return (
-                  <div key={row.hand} className={`flex items-center justify-between py-1 px-2 rounded text-[11px] font-mono transition-colors ${
-                    isWin ? "bg-[#00C805]/20 text-[#00C805] font-bold" : "text-muted-foreground"
+                  <div key={row.hand} className={`flex items-center justify-between py-1 px-2 rounded text-xs font-mono transition-colors ${
+                    isWin ? "bg-[color:var(--color-win)]/20 text-[color:var(--color-win)] font-bold" : "text-muted-foreground"
                   }`}>
                     <span className="truncate">{row.hand}</span>
                     <span className="font-bold ml-2">{row.payout}</span>
@@ -256,7 +256,7 @@ export default function VideoPoker() {
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "텐즈 오어 베터 · 클래식 비디오 포커" : "Tens or Better · classic video poker"}
         </p>
 

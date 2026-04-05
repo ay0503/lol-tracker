@@ -55,7 +55,7 @@ function getColorLabel(color: RouletteColor, language: string): string {
 
 function getColorClasses(color: RouletteColor): string {
   if (color === "red") return "border-red-500/40 bg-red-500/15 text-red-200";
-  if (color === "black") return "border-border bg-secondary/80 text-zinc-100";
+  if (color === "black") return "border-border bg-secondary/80 text-foreground";
   return "border-emerald-500/40 bg-emerald-500/15 text-emerald-100";
 }
 
@@ -270,7 +270,7 @@ export default function Roulette() {
             </div>
           </div>
           <div className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/25">
-            <span className="text-[11px] font-mono font-bold text-yellow-400">
+            <span className="text-xs font-mono font-bold text-yellow-400">
               ${parsedBetAmount.toFixed(2)}
             </span>
           </div>
@@ -326,10 +326,10 @@ export default function Roulette() {
                     </span>
                     <span className={`text-sm font-mono font-bold ${
                       latestResult.outcome === "win"
-                        ? "text-[#00C805]"
+                        ? "text-[color:var(--color-win)]"
                         : latestResult.outcome === "push"
                           ? "text-yellow-300"
-                          : "text-[#FF5252]"
+                          : "text-[color:var(--color-loss)]"
                     }`}>
                       {latestResult.outcome === "win"
                         ? `+$${latestResult.totalPayout.toFixed(2)}`
@@ -355,7 +355,7 @@ export default function Roulette() {
                   className={`rounded-xl border px-3 py-3 text-sm font-bold transition-all ${getColorButtonClasses(color, selectedColor === color)}`}
                 >
                   <div>{getColorLabel(color, language)}</div>
-                  <div className="mt-1 text-[11px] font-mono opacity-80">
+                  <div className="mt-1 text-xs font-mono opacity-80">
                     {color === "green" ? "37x" : "2x"}
                   </div>
                 </button>
@@ -386,7 +386,7 @@ export default function Roulette() {
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "초록은 컬러 베팅 환불 · 깔끔한 중립 룰렛" : "Green refunds color bets · clean neutral roulette"}
         </p>
 

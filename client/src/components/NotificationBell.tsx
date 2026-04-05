@@ -12,9 +12,9 @@ import { Bell, Check, CheckCheck, X, ShoppingCart, AlertTriangle, Gift, Info } f
 function getNotifIcon(type: string) {
   switch (type) {
     case "order_filled":
-      return <ShoppingCart className="w-3.5 h-3.5 text-[#00C805]" />;
+      return <ShoppingCart className="w-3.5 h-3.5 text-[color:var(--color-win)]" />;
     case "stop_loss_triggered":
-      return <AlertTriangle className="w-3.5 h-3.5 text-[#FF5252]" />;
+      return <AlertTriangle className="w-3.5 h-3.5 text-[color:var(--color-loss)]" />;
     case "dividend_received":
       return <Gift className="w-3.5 h-3.5 text-[#facc15]" />;
     default:
@@ -90,12 +90,12 @@ export default function NotificationBell() {
           setOpen(!open);
           if (!open) refetchNotifs();
         }}
-        className="relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
+        className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
         title={t.notifications.title}
       >
         <Bell className="w-4 h-4" />
         {count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#FF5252] text-[11px] font-bold text-white flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[color:var(--color-loss)] text-xs font-bold text-white flex items-center justify-center">
             {count > 9 ? "9+" : count}
           </span>
         )}
@@ -115,7 +115,7 @@ export default function NotificationBell() {
                     markAllReadMutation.mutate();
                     utils.notifications.unreadCount.invalidate();
                   }}
-                  className="text-[11px] text-primary hover:text-primary/80 font-semibold flex items-center gap-1"
+                  className="text-xs text-primary hover:text-primary/80 font-semibold flex items-center gap-1"
                 >
                   <CheckCheck className="w-3 h-3" />
                   {t.notifications.markAllRead}
@@ -136,7 +136,7 @@ export default function NotificationBell() {
               <div className="text-center py-8">
                 <Bell className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
                 <p className="text-xs text-muted-foreground">{t.notifications.empty}</p>
-                <p className="text-[11px] text-muted-foreground/60 mt-1">
+                <p className="text-xs text-muted-foreground/60 mt-1">
                   {t.notifications.emptyDesc}
                 </p>
               </div>
@@ -155,10 +155,10 @@ export default function NotificationBell() {
                     <p className={`text-xs font-semibold ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>
                       {n.title}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                       {n.message}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/60 mt-1">
+                    <p className="text-xs text-muted-foreground/60 mt-1">
                       {formatTimeAgoFromDate(n.createdAt, language)}
                     </p>
                   </div>

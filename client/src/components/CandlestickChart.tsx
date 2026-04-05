@@ -36,10 +36,10 @@ import { useTranslation } from "@/contexts/LanguageContext";
 type TimeRange = "3H" | "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
 
 const TICKER_COLORS: Record<string, { color: string; inverse: boolean }> = {
-  DORI: { color: "#00C805", inverse: false },
+  DORI: { color: "var(--color-win)", inverse: false },
   DDRI: { color: "#4CAF50", inverse: false },
   TDRI: { color: "#8BC34A", inverse: false },
-  SDRI: { color: "#FF5252", inverse: true },
+  SDRI: { color: "var(--color-loss)", inverse: true },
   XDRI: { color: "#FF1744", inverse: true },
 };
 
@@ -315,8 +315,8 @@ export default function CandlestickChart({
   const isIntraday = INTRADAY_RANGES.has(timeRange);
 
   // Candle colors: green for up, red for down
-  const upColor = "#00C805";
-  const downColor = "#FF5252";
+  const upColor = "var(--color-win)";
+  const downColor = "var(--color-loss)";
 
   // Fetch full ETF history from backend
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
@@ -486,7 +486,7 @@ export default function CandlestickChart({
           markers.push({
             time: candles[bestIdx].time,
             position: isBuy ? "belowBar" : "aboveBar",
-            color: isBuy ? "#00C805" : "#FF5252",
+            color: isBuy ? "var(--color-win)" : "var(--color-loss)",
             shape: isBuy ? "arrowUp" : "arrowDown",
             text: `${label} ${trade.shares.toFixed(1)}`,
           });
@@ -763,7 +763,7 @@ export default function CandlestickChart({
               key={tool.id}
               onClick={() => handleToolClick(tool.id)}
               title={tool.label}
-              className={`p-1.5 rounded-md transition-all ${
+              className={`p-2 rounded-lg transition-colors ${
                 activeTool === tool.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -778,20 +778,20 @@ export default function CandlestickChart({
           <button
             onClick={clearAnnotations}
             title={t.chart.clearAnnotations}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-[#FF5252] hover:bg-secondary transition-all ml-1"
+            className="p-2 rounded-lg text-muted-foreground hover:text-[color:var(--color-loss)] hover:bg-secondary transition-all ml-1"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
 
         {annotations.length > 0 && (
-          <span className="text-[11px] text-muted-foreground ml-2 font-[var(--font-mono)]">
+          <span className="text-xs text-muted-foreground ml-2 font-[var(--font-mono)]">
             {annotations.length} {t.chart.annotationCount}
           </span>
         )}
 
         <div className="flex-1" />
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-[var(--font-mono)]">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground font-[var(--font-mono)]">
           <Pencil className="w-3 h-3" />
           {t.chart.drawOnChart}
         </div>

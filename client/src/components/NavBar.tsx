@@ -128,7 +128,7 @@ export default function NavBar() {
 
   function desktopLinkClass(href: string) {
     const active = isActive(href);
-    return `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+    return `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
       active
         ? "text-foreground bg-secondary/70 font-semibold"
         : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -173,7 +173,7 @@ export default function NavBar() {
             {/* Casino link — special gold styling */}
             <Link
               href="/casino"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
                 isActive("/casino")
                   ? "text-yellow-300 bg-yellow-950/40 font-semibold"
                   : "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30"
@@ -186,7 +186,7 @@ export default function NavBar() {
             {(user as any)?.role === "admin" && (
               <Link
                 href="/admin"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
                   isActive("/admin")
                     ? "text-red-300 bg-red-950/40 font-semibold"
                     : "text-red-400 hover:text-red-300 hover:bg-red-950/30"
@@ -233,10 +233,10 @@ export default function NavBar() {
                         }
                       }}
                     />
-                    <button onClick={() => { if (editName.trim()) updateNameMutation.mutate({ displayName: editName.trim() }); }} className="p-0.5 text-[#00C805] hover:bg-secondary rounded">
+                    <button onClick={() => { if (editName.trim()) updateNameMutation.mutate({ displayName: editName.trim() }); }} className="p-0.5 text-[color:var(--color-win)] hover:bg-secondary rounded">
                       <Check className="w-3 h-3" />
                     </button>
-                    <button onClick={() => setIsEditingName(false)} className="p-0.5 text-[#FF5252] hover:bg-secondary rounded">
+                    <button onClick={() => setIsEditingName(false)} className="p-0.5 text-[color:var(--color-loss)] hover:bg-secondary rounded">
                       <X className="w-3 h-3" />
                     </button>
                   </div>
@@ -304,7 +304,7 @@ export default function NavBar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ type: "spring", damping: 26, stiffness: 260 }}
             className="md:hidden overflow-hidden border-t border-border bg-background/95 backdrop-blur-xl"
           >
             <div className="container py-3 space-y-1">
@@ -327,7 +327,7 @@ export default function NavBar() {
               {isCasinoPage && (
                 <div className="pl-6 space-y-0.5">
                   {CASINO_GAME_LINKS.map((game) => (
-                    <Link key={game.href} href={game.href} onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all ${isActive(game.href) ? "text-yellow-300 bg-yellow-950/30 font-semibold" : "text-zinc-400 hover:text-yellow-300 hover:bg-yellow-950/20"}`}>
+                    <Link key={game.href} href={game.href} onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${isActive(game.href) ? "text-yellow-300 bg-yellow-950/30 font-semibold" : "text-muted-foreground hover:text-yellow-300 hover:bg-yellow-950/20"}`}>
                       <span className="text-sm">{game.emoji}</span>
                       {language === "ko" ? game.labelKo : game.label}
                     </Link>
@@ -357,7 +357,7 @@ export default function NavBar() {
                   </div>
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
+                    className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-[color:var(--color-loss)] hover:bg-[color:var(--color-loss)]/10 transition-all w-full"
                   >
                     <LogOut className="w-4 h-4" />
                     {t.nav.signOut}
@@ -378,7 +378,7 @@ export default function NavBar() {
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-all whitespace-nowrap ${
                 location === "/casino"
                   ? "text-yellow-300 bg-yellow-950/40 font-semibold"
-                  : "text-zinc-400 hover:text-yellow-300 hover:bg-yellow-950/20"
+                  : "text-muted-foreground hover:text-yellow-300 hover:bg-yellow-950/20"
               }`}
             >
               <Gamepad2 className="w-3 h-3" />
@@ -392,7 +392,7 @@ export default function NavBar() {
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs transition-all whitespace-nowrap ${
                   isActive(game.href)
                     ? "text-yellow-300 bg-yellow-950/40 font-semibold"
-                    : "text-zinc-400 hover:text-yellow-300 hover:bg-yellow-950/20"
+                    : "text-muted-foreground hover:text-yellow-300 hover:bg-yellow-950/20"
                 }`}
               >
                 <span className="text-sm">{game.emoji}</span>

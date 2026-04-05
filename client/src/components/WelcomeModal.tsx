@@ -22,7 +22,7 @@ export default function WelcomeModal() {
 
   const steps = language === "ko" ? [
     {
-      icon: <TrendingUp className="w-8 h-8 text-[#00C805]" />,
+      icon: <TrendingUp className="w-8 h-8 text-[color:var(--color-win)]" />,
       title: "$DORI 트레이딩",
       desc: "목도리 도마뱀의 랭크 LP를 추적하는 가상 주식입니다. $200 가상 현금으로 시작하여 $DORI와 레버리지/인버스 ETF를 거래하세요.",
       highlight: "트레이딩 잔고: $200",
@@ -47,7 +47,7 @@ export default function WelcomeModal() {
     },
   ] : [
     {
-      icon: <TrendingUp className="w-8 h-8 text-[#00C805]" />,
+      icon: <TrendingUp className="w-8 h-8 text-[color:var(--color-win)]" />,
       title: "Trading",
       desc: "Trade a virtual stock that tracks a League of Legends player's ranked LP. Start with $200 virtual cash and trade $DORI and leveraged/inverse ETFs.",
       highlight: "Trading balance: $200",
@@ -110,7 +110,7 @@ export default function WelcomeModal() {
               {/* Step dots */}
               <div className="flex gap-1.5 mt-3">
                 {steps.map((_, i) => (
-                  <div key={i} className={`h-1 rounded-full transition-all ${i === step ? "w-6 bg-primary" : "w-2 bg-border"}`} />
+                  <div key={i} className={`h-1 rounded-full transition-colors ${i === step ? "w-6 bg-primary" : "w-2 bg-border"}`} />
                 ))}
               </div>
             </div>
@@ -122,7 +122,7 @@ export default function WelcomeModal() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
+                transition={{ type: "spring", damping: 26, stiffness: 260 }}
                 className="px-6 py-5"
               >
                 <div className="flex items-start gap-4">

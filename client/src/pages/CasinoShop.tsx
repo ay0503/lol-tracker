@@ -108,7 +108,7 @@ export default function CasinoShop() {
         {/* Equipped Preview */}
         {isAuthenticated && (equipped?.title || equipped?.nameEffect) && (
           <div className="bg-card border border-border/80 rounded-xl p-3 mb-4">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold mb-1.5">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1.5">
               {language === "ko" ? "내 프로필" : "Equipped"}
             </p>
             <StyledName
@@ -121,11 +121,11 @@ export default function CasinoShop() {
             <div className="flex gap-2 mt-1.5">
               {equipped?.title && (
                 <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
-                  className="text-[11px] text-muted-foreground hover:text-foreground/80 transition-colors">Unequip title</button>
+                  className="text-xs text-muted-foreground hover:text-foreground/80 transition-colors">Unequip title</button>
               )}
               {equipped?.nameEffect && (
                 <button onClick={() => equipMutation.mutate({ type: "name_effect", cosmeticId: null })}
-                  className="text-[11px] text-muted-foreground hover:text-foreground/80 transition-colors">Unequip effect</button>
+                  className="text-xs text-muted-foreground hover:text-foreground/80 transition-colors">Unequip effect</button>
               )}
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function CasinoShop() {
         <div className="flex gap-1.5 mb-4">
           {([["all", "All", "전체"], ["title", "Titles", "칭호"], ["name_effect", "Effects", "효과"]] as const).map(([key, en, ko]) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
                 tab === key
                   ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
                   : "bg-secondary/50 text-muted-foreground border border-border/30 hover:text-foreground/80"
@@ -157,12 +157,12 @@ export default function CasinoShop() {
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.02 }}
+                transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.02 }}
                 className={`relative rounded-xl border overflow-hidden transition-all ${TIER_BORDER[item.tier] || "border-border"}`}
               >
                 {/* Tier badge — top right */}
                 <div className="absolute top-1.5 right-1.5 z-10">
-                  <span className={`px-1 py-0.5 rounded text-[6px] font-bold uppercase border ${TIER_BADGE[item.tier] || TIER_BADGE.common}`}>
+                  <span className={`px-1 py-0.5 rounded text-xs font-bold uppercase border ${TIER_BADGE[item.tier] || TIER_BADGE.common}`}>
                     {item.tier}
                   </span>
                 </div>
@@ -170,7 +170,7 @@ export default function CasinoShop() {
                 {/* Limited stock */}
                 {item.isLimited && item.stock >= 0 && (
                   <div className="absolute top-1.5 left-1.5 z-10">
-                    <span className="px-1 py-0.5 rounded text-[6px] font-bold text-red-400 bg-red-500/15 border border-red-500/30">
+                    <span className="px-1 py-0.5 rounded text-xs font-bold text-red-400 bg-red-500/15 border border-red-500/30">
                       {item.stock} left
                     </span>
                   </div>
@@ -180,7 +180,7 @@ export default function CasinoShop() {
                 <div className="bg-background px-3 py-4 flex items-center justify-center min-h-[80px]">
                   {item.type === "title" ? (
                     <div className="flex flex-col items-center gap-1">
-                      <span className="text-[11px] text-muted-foreground font-medium">{myName}</span>
+                      <span className="text-xs text-muted-foreground font-medium">{myName}</span>
                       <TitleBadge name={item.name} cssClass={item.cssClass} />
                     </div>
                   ) : (
@@ -191,24 +191,24 @@ export default function CasinoShop() {
                 {/* Info Bar */}
                 <div className="bg-card px-2.5 py-2 space-y-2.5">
                   <div>
-                    <p className="text-[11px] text-foreground/80 font-semibold truncate">{item.name}</p>
+                    <p className="text-xs text-foreground/80 font-semibold truncate">{item.name}</p>
                     {item.description && (
-                      <p className="text-[11px] text-muted-foreground truncate">{item.description}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.description}</p>
                     )}
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono font-bold text-foreground">${item.price.toFixed(0)}</span>
+                    <span className="text-xs font-mono font-bold text-foreground">${item.price.toFixed(0)}</span>
                     {isOwned ? (
                       isEquipped ? (
-                        <span className="flex items-center gap-0.5 text-[11px] text-emerald-400 font-bold">
+                        <span className="flex items-center gap-0.5 text-xs text-emerald-400 font-bold">
                           <Check className="w-2.5 h-2.5" /> On
                         </span>
                       ) : (
                         <button
                           onClick={() => equipMutation.mutate({ type: item.type as "title" | "name_effect", cosmeticId: item.id })}
                           disabled={equipMutation.isPending}
-                          className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 text-[11px] font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40">
+                          className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 text-xs font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40">
                           Equip
                         </button>
                       )
@@ -216,7 +216,7 @@ export default function CasinoShop() {
                       <button
                         onClick={() => purchaseMutation.mutate({ cosmeticId: item.id })}
                         disabled={purchaseMutation.isPending || !canAfford || !isAuthenticated}
-                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors disabled:opacity-30 ${
+                        className={`px-2 py-0.5 rounded text-xs font-bold transition-colors disabled:opacity-30 ${
                           canAfford ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-secondary text-muted-foreground"
                         }`}>
                         Buy
@@ -231,12 +231,12 @@ export default function CasinoShop() {
 
         {filtered.length === 0 && (
           <div className="text-center py-12">
-            <ShoppingBag className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+            <ShoppingBag className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">No items in this category</p>
           </div>
         )}
 
-        <p className="text-center text-[11px] text-zinc-700 mt-8 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-8 font-mono">
           {language === "ko" ? "카지노 캐시로 구매 · 리더보드에 표시" : "Buy with casino cash · Shows on leaderboard"}
         </p>
 

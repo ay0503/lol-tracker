@@ -47,11 +47,11 @@ export default function RecentPerformance() {
     <div>
       {isLive && (
         <div className="flex items-center gap-1 mb-3">
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary">
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary">
             <Activity className="w-2.5 h-2.5" />
             {t.common.live}
           </span>
-          <span className="text-[11px] text-muted-foreground">{t.common.autoUpdated}</span>
+          <span className="text-xs text-muted-foreground">{t.common.autoUpdated}</span>
         </div>
       )}
       <div className="space-y-2">
@@ -64,7 +64,7 @@ export default function RecentPerformance() {
               key={champ.champion}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.06, duration: 0.3 }}
+              transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.06, duration: 0.3 }}
               className="flex items-center gap-3"
             >
               <img
@@ -81,7 +81,7 @@ export default function RecentPerformance() {
                   <span
                     className="text-xs font-bold font-[var(--font-mono)]"
                     style={{
-                      color: isGood ? "#00C805" : isBad ? "#FF5252" : "#9CA3AF",
+                      color: isGood ? "var(--color-win)" : isBad ? "var(--color-loss)" : "#9CA3AF",
                     }}
                   >
                     {champ.winRate}%
@@ -91,23 +91,23 @@ export default function RecentPerformance() {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(champ.wins / total) * 100}%` }}
-                    transition={{ delay: i * 0.06 + 0.2, duration: 0.5 }}
+                    transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.06 + 0.2, duration: 0.5 }}
                     className="h-full rounded-full"
-                    style={{ backgroundColor: "#00C805" }}
+                    style={{ backgroundColor: "var(--color-win)" }}
                   />
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(champ.losses / total) * 100}%` }}
-                    transition={{ delay: i * 0.06 + 0.2, duration: 0.5 }}
+                    transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.06 + 0.2, duration: 0.5 }}
                     className="h-full rounded-full"
-                    style={{ backgroundColor: "#FF5252" }}
+                    style={{ backgroundColor: "var(--color-loss)" }}
                   />
                 </div>
                 <div className="flex justify-between mt-0.5">
-                  <span className="text-[11px] text-muted-foreground font-[var(--font-mono)]">
+                  <span className="text-xs text-muted-foreground font-[var(--font-mono)]">
                     {champ.wins}{t.stats.wins} {champ.losses}{t.stats.losses}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {total} {t.performance.games}
                   </span>
                 </div>

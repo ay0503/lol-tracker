@@ -163,10 +163,10 @@ export default function AppNav() {
                         if (event.key === "Escape") setIsEditingName(false);
                       }}
                     />
-                    <button onClick={submitDisplayName} className="p-0.5 text-[#00C805] hover:bg-secondary rounded" disabled={updateNameMutation.isPending}>
+                    <button onClick={submitDisplayName} className="p-0.5 text-[color:var(--color-win)] hover:bg-secondary rounded" disabled={updateNameMutation.isPending}>
                       <Check className="w-3 h-3" />
                     </button>
-                    <button onClick={() => setIsEditingName(false)} className="p-0.5 text-[#FF5252] hover:bg-secondary rounded" disabled={updateNameMutation.isPending}>
+                    <button onClick={() => setIsEditingName(false)} className="p-0.5 text-[color:var(--color-loss)] hover:bg-secondary rounded" disabled={updateNameMutation.isPending}>
                       <X className="w-3 h-3" />
                     </button>
                   </div>
@@ -220,7 +220,7 @@ export default function AppNav() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ type: "spring", damping: 26, stiffness: 260 }}
             className="md:hidden overflow-hidden border-t border-border bg-background/95 backdrop-blur-xl"
           >
             <div className="container py-3 space-y-1">
@@ -262,7 +262,7 @@ export default function AppNav() {
                         <button
                           onClick={submitDisplayName}
                           disabled={updateNameMutation.isPending}
-                          className="flex-1 px-3 py-2 rounded-lg bg-[#00C805]/15 text-[#00C805] text-sm font-semibold"
+                          className="flex-1 px-3 py-2 rounded-lg bg-[color:var(--color-win)]/15 text-[color:var(--color-win)] text-sm font-semibold"
                         >
                           {copy.common.save}
                         </button>
@@ -292,7 +292,7 @@ export default function AppNav() {
                   )}
                   <button
                     onClick={() => { logout(); setMobileOpen(false); }}
-                    className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
+                    className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-[color:var(--color-loss)] hover:bg-[color:var(--color-loss)]/10 transition-all w-full"
                   >
                     <LogOut className="w-4 h-4" />
                     {copy.nav.signOut}

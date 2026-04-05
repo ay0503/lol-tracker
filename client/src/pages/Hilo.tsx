@@ -23,7 +23,7 @@ function CardFace({ rank, suit }: { rank: number; suit: string }) {
       initial={{ rotateY: -90, scale: 0.8 }}
       animate={{ rotateY: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      className="w-24 h-36 sm:w-28 sm:h-40 rounded-xl bg-white border-2 border-zinc-200 shadow-xl flex flex-col items-center justify-center relative"
+      className="w-24 h-36 sm:w-28 sm:h-40 rounded-xl bg-white border-2 border-border shadow-xl flex flex-col items-center justify-center relative"
     >
       <div className={`absolute top-2 left-3 leading-tight ${isRed ? "text-red-500" : "text-gray-800"}`}>
         <div className="text-base font-extrabold">{label}</div>
@@ -107,7 +107,7 @@ export default function Hilo() {
           {isPlaying && game && (
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
               className="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/25">
-              <span className="text-[11px] font-mono font-bold text-yellow-400">{game.multiplier.toFixed(2)}x</span>
+              <span className="text-xs font-mono font-bold text-yellow-400">{game.multiplier.toFixed(2)}x</span>
             </motion.div>
           )}
         </div>
@@ -122,7 +122,7 @@ export default function Hilo() {
               <div className="flex gap-1.5 overflow-x-auto mb-4 pb-1 scrollbar-hide">
                 {game.history.map((card: any, idx: number) => (
                   <div key={idx} className="flex-shrink-0 w-8 h-11 rounded bg-white/10 border border-white/20 flex items-center justify-center">
-                    <span className={`text-[11px] font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-foreground"}`}>
+                    <span className={`text-xs font-bold ${card.suit === "♥" || card.suit === "♦" ? "text-red-400" : "text-foreground"}`}>
                       {card.label}
                     </span>
                   </div>
@@ -159,9 +159,9 @@ export default function Hilo() {
               {isOver && game && (
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="text-center mb-4">
                   {game.status === "won" ? (
-                    <p className="text-xl font-bold text-[#00C805]">+${game.payout.toFixed(2)} ({game.multiplier.toFixed(2)}x)</p>
+                    <p className="text-xl font-bold text-[color:var(--color-win)]">+${game.payout.toFixed(2)} ({game.multiplier.toFixed(2)}x)</p>
                   ) : (
-                    <p className="text-xl font-bold text-[#FF5252]">Wrong! -{game.bet.toFixed(2)}</p>
+                    <p className="text-xl font-bold text-[color:var(--color-loss)]">Wrong! -{game.bet.toFixed(2)}</p>
                   )}
                 </motion.div>
               )}
@@ -176,7 +176,7 @@ export default function Hilo() {
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
                     onClick={() => guessMutation.mutate({ direction: "higher" })}
                     disabled={isPending}
-                    className="py-4 rounded-xl bg-[#00C805] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
+                    className="py-4 rounded-xl bg-[color:var(--color-win)] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
                   >
                     <ArrowUp className="w-5 h-5" />
                     <span>Higher ({game.nextHigherMult.toFixed(2)}x)</span>
@@ -185,7 +185,7 @@ export default function Hilo() {
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
                     onClick={() => guessMutation.mutate({ direction: "lower" })}
                     disabled={isPending}
-                    className="py-4 rounded-xl bg-[#FF5252] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
+                    className="py-4 rounded-xl bg-[color:var(--color-loss)] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
                   >
                     <ArrowDown className="w-5 h-5" />
                     <span>Lower ({game.nextLowerMult.toFixed(2)}x)</span>
@@ -206,7 +206,7 @@ export default function Hilo() {
                   </motion.button>
                 )}
 
-                <p className="text-center text-[11px] text-foreground/20 font-mono">
+                <p className="text-center text-xs text-foreground/20 font-mono">
                   {game.cardsRemaining} cards remaining
                 </p>
               </div>
@@ -241,7 +241,7 @@ export default function Hilo() {
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "1% 플레이어 우위 · 최대 $250 지급" : "1% player edge · $250 max payout"}
         </p>
         <CasinoGameLog />

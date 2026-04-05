@@ -69,7 +69,7 @@ export default function PlayerHeader() {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
+      transition={{ type: "spring", damping: 26, stiffness: 260 }}
     >
       {/* Ticker identity row */}
       <div className="flex items-center gap-3 mb-2">
@@ -126,7 +126,7 @@ export default function PlayerHeader() {
                   backgroundColor: isPositive
                     ? "rgba(0, 200, 5, 0.12)"
                     : "rgba(255, 82, 82, 0.12)",
-                  color: isPositive ? "#00C805" : "#FF5252",
+                  color: isPositive ? "var(--color-win)" : "var(--color-loss)",
                 }}
               >
                 {isPositive ? (
@@ -164,9 +164,9 @@ export default function PlayerHeader() {
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">{t.player.record}</p>
               <p className="text-sm font-semibold font-[var(--font-mono)]">
-                <span style={{ color: "#00C805" }}>{wins}{t.stats.wins}</span>
+                <span style={{ color: "var(--color-win)" }}>{wins}{t.stats.wins}</span>
                 <span className="text-muted-foreground"> / </span>
-                <span style={{ color: "#FF5252" }}>{losses}{t.stats.losses}</span>
+                <span style={{ color: "var(--color-loss)" }}>{losses}{t.stats.losses}</span>
               </p>
             </div>
             <div>

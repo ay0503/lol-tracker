@@ -19,26 +19,26 @@ export default function CasinoSubNav() {
   const { language } = useTranslation();
 
   return (
-    <div className="sticky top-14 z-40 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-md">
+    <div className="sticky top-14 z-40 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="container relative">
         {/* Edge fade indicators for scroll */}
-        <div className="absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-zinc-950 to-transparent z-10 pointer-events-none sm:hidden" />
-        <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none sm:hidden" />
+        <div className="absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none sm:hidden" />
+        <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
 
-        <div className="flex items-center gap-0.5 overflow-x-auto py-1.5 scrollbar-hide px-1">
+        <div className="flex items-center gap-1 overflow-x-auto py-1.5 scrollbar-hide px-1">
           {CASINO_GAMES.map((game) => {
             const isActive = game.exact ? location === game.href : location === game.href;
             return (
               <Link
                 key={game.href}
                 href={game.href}
-                className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] sm:text-[11px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs sm:text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                   isActive
                     ? "bg-yellow-500/15 text-yellow-400"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                    : "text-muted-foreground hover:text-foreground/80 hover:bg-secondary/50"
                 }`}
               >
-                <span className="text-[11px] sm:text-xs">{game.emoji}</span>
+                <span className="text-xs sm:text-xs">{game.emoji}</span>
                 <span className="hidden sm:inline">{language === "ko" ? game.labelKo : game.label}</span>
                 <span className="sm:hidden">{language === "ko" ? game.labelKo : game.label}</span>
               </Link>

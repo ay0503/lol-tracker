@@ -159,7 +159,7 @@ export default function AdminSQL() {
                 <p className="text-lg font-bold font-[var(--font-mono)]">
                   {tbl.count.toLocaleString()}
                 </p>
-                <p className="text-[11px] text-muted-foreground">rows</p>
+                <p className="text-xs text-muted-foreground">rows</p>
               </div>
             ))}
             <div className="bg-card border border-border rounded-xl p-3">
@@ -170,7 +170,7 @@ export default function AdminSQL() {
               <p className="text-lg font-bold font-[var(--font-mono)] text-primary">
                 {totalRows.toLocaleString()}
               </p>
-              <p className="text-[11px] text-muted-foreground truncate" title={dbStatus.data.dbPath}>
+              <p className="text-xs text-muted-foreground truncate" title={dbStatus.data.dbPath}>
                 {dbStatus.data.dbPath}
               </p>
             </div>
@@ -183,7 +183,7 @@ export default function AdminSQL() {
             <span className="text-xs font-semibold text-muted-foreground">
               SQL Query
             </span>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               Ctrl+Enter to run
             </span>
           </div>
@@ -205,7 +205,7 @@ export default function AdminSQL() {
                     setQuery(eq);
                     textareaRef.current?.focus();
                   }}
-                  className="text-[11px] font-[var(--font-mono)] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                  className="text-xs font-[var(--font-mono)] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
                 >
                   {eq.length > 40 ? eq.slice(0, 40) + "..." : eq}
                 </button>
@@ -255,11 +255,11 @@ export default function AdminSQL() {
                 ) : (
                   <AlertCircle className="w-3.5 h-3.5 text-destructive" />
                 )}
-                <code className="text-[11px] font-[var(--font-mono)] text-muted-foreground max-w-md truncate">
+                <code className="text-xs font-[var(--font-mono)] text-muted-foreground max-w-md truncate">
                   {result.query}
                 </code>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 {result.success && (
                   <span>
                     {result.rowCount} row{result.rowCount !== 1 ? "s" : ""}

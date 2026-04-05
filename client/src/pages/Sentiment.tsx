@@ -14,8 +14,8 @@ import { useCosmetics } from "@/hooks/useCosmetics";
 
 function getSentimentConfig(tr: any) {
   return {
-    bullish: { icon: TrendingUp, color: "#00C805", label: tr.sentiment.bullish, emoji: "\uD83D\uDC02" },
-    bearish: { icon: TrendingDown, color: "#FF5252", label: tr.sentiment.bearish, emoji: "\uD83D\uDE10" },
+    bullish: { icon: TrendingUp, color: "var(--color-win)", label: tr.sentiment.bullish, emoji: "\uD83D\uDC02" },
+    bearish: { icon: TrendingDown, color: "var(--color-loss)", label: tr.sentiment.bearish, emoji: "\uD83D\uDE10" },
     neutral: { icon: Minus, color: "#888", label: tr.sentiment.neutral, emoji: "\uD83D\uDE10" },
   };
 }
@@ -112,12 +112,12 @@ export default function Sentiment() {
             <span className="text-xs text-muted-foreground">{totalComments} {t.sentiment.opinions}</span>
           </div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-bold" style={{ color: "#00C805" }}>{"\uD83D\uDC02"} {bullishPct.toFixed(0)}%</span>
+            <span className="text-xs font-bold" style={{ color: "var(--color-win)" }}>{"\uD83D\uDC02"} {bullishPct.toFixed(0)}%</span>
             <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden flex">
-              <div className="h-full bg-[#00C805] transition-all" style={{ width: `${bullishPct}%` }} />
-              <div className="h-full bg-[#FF5252] transition-all" style={{ width: `${bearishPct}%` }} />
+              <div className="h-full bg-[color:var(--color-win)] transition-all" style={{ width: `${bullishPct}%` }} />
+              <div className="h-full bg-[color:var(--color-loss)] transition-all" style={{ width: `${bearishPct}%` }} />
             </div>
-            <span className="text-xs font-bold" style={{ color: "#FF5252" }}>{bearishPct.toFixed(0)}% {"\uD83D\uDC3B"}</span>
+            <span className="text-xs font-bold" style={{ color: "var(--color-loss)" }}>{bearishPct.toFixed(0)}% {"\uD83D\uDC3B"}</span>
           </div>
           <div className="flex justify-center gap-4 text-xs text-muted-foreground">
             <span>{t.sentiment.bullish}: {rawCounts.bullish}</span>
@@ -218,7 +218,7 @@ export default function Sentiment() {
                   key={comment.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.02 }}
+                  transition={{ type: "spring", damping: 26, stiffness: 260, delay: idx * 0.02 }}
                   className="bg-card border border-border rounded-xl p-3"
                 >
                   <div className="flex items-start gap-3">
@@ -232,17 +232,17 @@ export default function Sentiment() {
                       <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                         <StyledName name={comment.userName} nameEffectCss={getCosmetics(comment.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(comment.userId).isCloseFriend} showTitle={false} className="text-xs" />
                         {comment.ticker && (
-                          <span className="text-[11px] sm:text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
+                          <span className="text-xs sm:text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground font-mono">
                             ${comment.ticker}
                           </span>
                         )}
                         <span
-                          className="text-[11px] sm:text-xs font-bold px-1.5 py-0.5 rounded"
+                          className="text-xs sm:text-xs font-bold px-1.5 py-0.5 rounded"
                           style={{ backgroundColor: config.color + "15", color: config.color }}
                         >
                           {config.emoji} {config.label}
                         </span>
-                        <span className="text-[11px] sm:text-xs text-muted-foreground sm:ml-auto">
+                        <span className="text-xs sm:text-xs text-muted-foreground sm:ml-auto">
                           {formatTimeAgoFromDate(comment.createdAt, language)}
                         </span>
                       </div>
@@ -258,7 +258,7 @@ export default function Sentiment() {
                               key={rType}
                               onClick={() => isAuthenticated && reactMutation.mutate({ commentId: comment.id, type: rType })}
                               disabled={!isAuthenticated || reactMutation.isPending}
-                              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] transition-all border ${
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all border ${
                                 myReacted
                                   ? "bg-primary/15 border-primary/30 text-foreground"
                                   : "bg-secondary/50 border-transparent text-muted-foreground hover:bg-secondary hover:border-border"

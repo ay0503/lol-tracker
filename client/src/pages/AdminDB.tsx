@@ -576,7 +576,7 @@ function CIDashboard() {
     if (status === "queued") return { label: "Queued", bg: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" };
     if (conclusion === "success") return { label: "Passing", bg: "bg-green-500/10 text-green-400 border-green-500/30" };
     if (conclusion === "failure") return { label: "Failing", bg: "bg-red-500/10 text-red-400 border-red-500/30" };
-    return { label: "Unknown", bg: "bg-zinc-500/10 text-muted-foreground border-zinc-500/30" };
+    return { label: "Unknown", bg: "bg-muted text-muted-foreground border-border" };
   };
 
   if (isLoading) {
@@ -621,14 +621,14 @@ function CIDashboard() {
               return (
                 <tr key={run.id} className={`border-b border-border/50 ${idx === 0 ? "bg-card/50" : ""}`}>
                   <td className="px-3 py-2.5">
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${statusColor(run.conclusion, run.status)}`}>
+                    <span className={`inline-flex items-center gap-1 text-xs font-bold ${statusColor(run.conclusion, run.status)}`}>
                       {run.conclusion === "success" ? <CheckCircle2 className="w-3 h-3" /> : run.conclusion === "failure" ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                       {(run.conclusion ?? run.status ?? "").toUpperCase()}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
                     <div>
-                      <span className="text-foreground font-mono text-[11px] bg-secondary px-1 py-0.5 rounded mr-1.5">{run.commitSha}</span>
+                      <span className="text-foreground font-mono text-xs bg-secondary px-1 py-0.5 rounded mr-1.5">{run.commitSha}</span>
                       <span className="text-muted-foreground">{run.commitMessage}</span>
                     </div>
                   </td>
@@ -661,19 +661,19 @@ function CIDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <div className="text-lg font-bold font-mono text-foreground">19</div>
-            <div className="text-[11px] text-muted-foreground">Test Files</div>
+            <div className="text-xs text-muted-foreground">Test Files</div>
           </div>
           <div>
             <div className="text-lg font-bold font-mono text-green-400">~290</div>
-            <div className="text-[11px] text-muted-foreground">Test Cases</div>
+            <div className="text-xs text-muted-foreground">Test Cases</div>
           </div>
           <div>
             <div className="text-lg font-bold font-mono text-foreground">Server</div>
-            <div className="text-[11px] text-muted-foreground">ETF, Trading, Casino, Discord, Poll Engine</div>
+            <div className="text-xs text-muted-foreground">ETF, Trading, Casino, Discord, Poll Engine</div>
           </div>
           <div>
             <div className="text-lg font-bold font-mono text-foreground">Client</div>
-            <div className="text-[11px] text-muted-foreground">Formatters, PlayerData, i18n</div>
+            <div className="text-xs text-muted-foreground">Formatters, PlayerData, i18n</div>
           </div>
         </div>
       </div>
@@ -764,7 +764,7 @@ function QuickActions() {
           )}
           <h3 className="text-sm font-bold">Trading Halt</h3>
           {isHalted && (
-            <span className="ml-auto px-2 py-0.5 rounded-full bg-red-900/60 text-red-300 text-[11px] font-bold uppercase tracking-wider">
+            <span className="ml-auto px-2 py-0.5 rounded-full bg-red-900/60 text-red-300 text-xs font-bold uppercase tracking-wider">
               HALTED
             </span>
           )}
@@ -1106,7 +1106,7 @@ function SQLConsole() {
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-secondary/30">
           <span className="text-xs font-semibold text-muted-foreground">SQL Query</span>
-          <span className="text-[11px] text-muted-foreground">Ctrl+Enter to run</span>
+          <span className="text-xs text-muted-foreground">Ctrl+Enter to run</span>
         </div>
         <textarea
           ref={textareaRef}
@@ -1123,7 +1123,7 @@ function SQLConsole() {
               <button
                 key={i}
                 onClick={() => { setQuery(eq); textareaRef.current?.focus(); }}
-                className="text-[11px] font-[var(--font-mono)] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                className="text-xs font-[var(--font-mono)] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
               >
                 {eq.length > 40 ? eq.slice(0, 40) + "..." : eq}
               </button>
@@ -1150,9 +1150,9 @@ function SQLConsole() {
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-secondary/30">
             <div className="flex items-center gap-2">
               {result.success ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <AlertCircle className="w-3.5 h-3.5 text-destructive" />}
-              <code className="text-[11px] font-[var(--font-mono)] text-muted-foreground max-w-md truncate">{result.query}</code>
+              <code className="text-xs font-[var(--font-mono)] text-muted-foreground max-w-md truncate">{result.query}</code>
             </div>
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               {result.success && (
                 <span>{result.rowCount} row{result.rowCount !== 1 ? "s" : ""}{result.rowsAffected > 0 && ` · ${result.rowsAffected} affected`}</span>
               )}

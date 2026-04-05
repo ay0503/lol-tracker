@@ -248,13 +248,13 @@ export default function Plinko() {
     return (
       <>
       <div className="flex gap-1.5 justify-center lg:justify-start mb-3">
-        <span className="text-[11px] text-muted-foreground self-center mr-1">Balls:</span>
+        <span className="text-xs text-muted-foreground self-center mr-1">Balls:</span>
         {([1, 3, 5] as const).map((countOption) => (
           <button
             key={countOption}
             onClick={() => !dropping && setBallCount(countOption)}
             disabled={dropping}
-            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-secondary text-muted-foreground border border-border/30 hover:text-foreground/80"}`}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${ballCount === countOption ? "bg-pink-500/30 text-pink-300 border border-pink-500/40" : "bg-secondary text-muted-foreground border border-border/30 hover:text-foreground/80"}`}
           >
             {countOption}
           </button>
@@ -267,7 +267,7 @@ export default function Plinko() {
             key={riskOption}
             onClick={() => !dropping && setRisk(riskOption)}
             disabled={dropping}
-            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
               risk === riskOption
                 ? riskOption === "high"
                   ? "bg-red-500/30 text-red-300 border border-red-500/40"
@@ -282,7 +282,7 @@ export default function Plinko() {
         ))}
       </div>
 
-      <p className="mb-3 text-center lg:text-left text-[11px] text-muted-foreground">
+      <p className="mb-3 text-center lg:text-left text-xs text-muted-foreground">
         {language === "ko" ? RISK_DESCRIPTIONS[risk].ko : RISK_DESCRIPTIONS[risk].en}
       </p>
 
@@ -296,7 +296,7 @@ export default function Plinko() {
         />
       </div>
 
-      <p className="mb-3 text-center lg:text-left text-[11px] font-mono text-muted-foreground">
+      <p className="mb-3 text-center lg:text-left text-xs font-mono text-muted-foreground">
         {language === "ko"
           ? `공당 $${parsedBetAmount.toFixed(2)} · 총 $${totalBetAmount.toFixed(2)}`
           : `Per ball $${parsedBetAmount.toFixed(2)} · Total $${totalBetAmount.toFixed(2)}`}
@@ -602,7 +602,7 @@ export default function Plinko() {
                 {history.slice(0, 15).map((historyEntry: any, index: number) => (
                   <div
                     key={index}
-                    className={`flex-shrink-0 px-1.5 h-5 rounded flex items-center justify-center text-[7px] font-mono font-bold ${
+                    className={`flex-shrink-0 px-1.5 h-5 rounded flex items-center justify-center text-xs font-mono font-bold ${
                       historyEntry.multiplier >= 3
                         ? "bg-yellow-500/30 text-yellow-400"
                         : historyEntry.multiplier >= 1
@@ -687,7 +687,7 @@ export default function Plinko() {
                 {multipliers.map((multiplier, index) => (
                   <div
                     key={index}
-                    className={`flex-1 py-1.5 rounded text-center text-[7px] sm:text-[11px] font-mono font-bold transition-all duration-300 ${getBucketColor(multiplier)} ${landedBuckets.includes(index) ? "ring-2 ring-yellow-400 scale-110 z-10" : ""}`}
+                    className={`flex-1 py-1.5 rounded text-center text-xs sm:text-xs font-mono font-bold transition-all duration-300 ${getBucketColor(multiplier)} ${landedBuckets.includes(index) ? "ring-2 ring-yellow-400 scale-110 z-10" : ""}`}
                   >
                     {multiplier}x
                   </div>
@@ -699,11 +699,11 @@ export default function Plinko() {
               {lastResults.length > 0 && (
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0.8, opacity: 0 }} className="text-center mb-2">
                   {lastResults.length === 1 ? (
-                    <p className={`text-2xl font-bold font-mono ${lastResults[0].payout > 0 ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                    <p className={`text-2xl font-bold font-mono ${lastResults[0].payout > 0 ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
                       {lastResults[0].multiplier}x {lastResults[0].payout > 0 ? `+$${lastResults[0].payout.toFixed(2)}` : `-$${lastResults[0].bet.toFixed(2)}`}
                     </p>
                   ) : (
-                    <p className={`text-2xl font-bold font-mono ${lastResults.reduce((sum, entry) => sum + entry.payout, 0) >= lastResults.reduce((sum, entry) => sum + entry.bet, 0) ? "text-[#00C805]" : "text-[#FF5252]"}`}>
+                    <p className={`text-2xl font-bold font-mono ${lastResults.reduce((sum, entry) => sum + entry.payout, 0) >= lastResults.reduce((sum, entry) => sum + entry.bet, 0) ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
                       {lastResults.length} balls · ${lastResults.reduce((sum, entry) => sum + entry.payout, 0).toFixed(2)}
                     </p>
                   )}
@@ -718,14 +718,14 @@ export default function Plinko() {
           </div>
 
           <div className="hidden lg:block rounded-2xl border border-border/80 bg-card p-4 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
-            <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
               {language === "ko" ? "드롭 패널" : "Drop Panel"}
             </p>
             {renderControlPanel()}
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-zinc-700 mt-4 font-mono">
+        <p className="text-center text-xs text-muted-foreground/40 mt-4 font-mono">
           {language === "ko" ? "약 1% 플레이어 우위 · 최대 $500 지급" : "~1% player edge · $500 max payout"}
         </p>
         <CasinoGameLog />
