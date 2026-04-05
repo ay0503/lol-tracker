@@ -1,17 +1,19 @@
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "@/contexts/LanguageContext";
+import type { LucideIcon } from "lucide-react";
+import { CircleDollarSign, Layers, Rocket, CircleDot, Dice5, ShoppingBag, Target } from "lucide-react";
 
-const CASINO_GAMES = [
-  { href: "/casino", label: "Lobby", labelKo: "로비", emoji: "🎰", exact: true },
-  { href: "/casino/blackjack", label: "BJ", labelKo: "블랙잭", emoji: "🃏" },
-  { href: "/casino/crash", label: "Crash", labelKo: "크래시", emoji: "🚀" },
-  { href: "/casino/roulette", label: "Roulette", labelKo: "룰렛", emoji: "🎡" },
-  { href: "/casino/mines", label: "Mines", labelKo: "지뢰", emoji: "💣" },
-  { href: "/casino/poker", label: "Poker", labelKo: "포커", emoji: "🃑" },
-  { href: "/casino/dice", label: "Dice", labelKo: "주사위", emoji: "🎲" },
-  { href: "/casino/hilo", label: "Hi-Lo", labelKo: "하이로", emoji: "🃏" },
-  { href: "/casino/plinko", label: "Plinko", labelKo: "플링코", emoji: "📌" },
-  { href: "/casino/shop", label: "Shop", labelKo: "상점", emoji: "🛍️" },
+const CASINO_GAMES: { href: string; label: string; labelKo: string; icon: LucideIcon; exact?: boolean }[] = [
+  { href: "/casino", label: "Lobby", labelKo: "로비", icon: CircleDollarSign, exact: true },
+  { href: "/casino/blackjack", label: "BJ", labelKo: "블랙잭", icon: Layers },
+  { href: "/casino/crash", label: "Crash", labelKo: "크래시", icon: Rocket },
+  { href: "/casino/roulette", label: "Roulette", labelKo: "룰렛", icon: CircleDollarSign },
+  { href: "/casino/mines", label: "Mines", labelKo: "지뢰", icon: CircleDot },
+  { href: "/casino/poker", label: "Poker", labelKo: "포커", icon: Layers },
+  { href: "/casino/dice", label: "Dice", labelKo: "주사위", icon: Dice5 },
+  { href: "/casino/hilo", label: "Hi-Lo", labelKo: "하이로", icon: Layers },
+  { href: "/casino/plinko", label: "Plinko", labelKo: "플링코", icon: Target },
+  { href: "/casino/shop", label: "Shop", labelKo: "상점", icon: ShoppingBag },
 ];
 
 export default function CasinoSubNav() {
@@ -38,7 +40,7 @@ export default function CasinoSubNav() {
                     : "text-muted-foreground hover:text-foreground/80 hover:bg-secondary/50"
                 }`}
               >
-                <span className="text-xs sm:text-xs">{game.emoji}</span>
+                <game.icon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{language === "ko" ? game.labelKo : game.label}</span>
                 <span className="sm:hidden">{language === "ko" ? game.labelKo : game.label}</span>
               </Link>

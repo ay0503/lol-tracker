@@ -26,6 +26,10 @@ import {
   Globe,
   Activity,
   Menu,
+  Layers,
+  Rocket,
+  CircleDot,
+  CircleDollarSign,
 } from "lucide-react";
 
 // ─── Sub-components ───
@@ -86,11 +90,11 @@ const NAV_LINKS: NavLink[] = [
 ];
 
 const CASINO_GAME_LINKS = [
-  { href: "/casino/blackjack", label: "Blackjack", labelKo: "블랙잭", emoji: "🃏" },
-  { href: "/casino/crash", label: "Crash", labelKo: "크래시", emoji: "🚀" },
-  { href: "/casino/mines", label: "Mines", labelKo: "지뢰찾기", emoji: "💣" },
-  { href: "/casino/roulette", label: "Roulette", labelKo: "룰렛", emoji: "🎡" },
-  { href: "/casino/poker", label: "Video Poker", labelKo: "비디오 포커", emoji: "🃑" },
+  { href: "/casino/blackjack", label: "Blackjack", labelKo: "블랙잭", icon: Layers },
+  { href: "/casino/crash", label: "Crash", labelKo: "크래시", icon: Rocket },
+  { href: "/casino/mines", label: "Mines", labelKo: "지뢰찾기", icon: CircleDot },
+  { href: "/casino/roulette", label: "Roulette", labelKo: "룰렛", icon: CircleDollarSign },
+  { href: "/casino/poker", label: "Video Poker", labelKo: "비디오 포커", icon: Layers },
 ];
 
 // ─── NavBar Component ───
@@ -325,7 +329,7 @@ export default function NavBar() {
                 <div className="pl-6 space-y-0.5">
                   {CASINO_GAME_LINKS.map((game) => (
                     <Link key={game.href} href={game.href} onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${isActive(game.href) ? "text-yellow-300 bg-yellow-950/30 font-semibold" : "text-muted-foreground hover:text-yellow-300 hover:bg-yellow-950/20"}`}>
-                      <span className="text-sm">{game.emoji}</span>
+                      <game.icon className="w-3.5 h-3.5" />
                       {language === "ko" ? game.labelKo : game.label}
                     </Link>
                   ))}
@@ -392,7 +396,7 @@ export default function NavBar() {
                     : "text-muted-foreground hover:text-yellow-300 hover:bg-yellow-950/20"
                 }`}
               >
-                <span className="text-sm">{game.emoji}</span>
+                <game.icon className="w-3.5 h-3.5" />
                 {language === "ko" ? game.labelKo : game.label}
               </Link>
             ))}

@@ -1,17 +1,18 @@
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import StyledName from "./StyledName";
+import type { LucideIcon } from "lucide-react";
+import { Layers, TrendingUp, CircleDot, CircleDollarSign, Dice5, Target, Gamepad2 } from "lucide-react";
 
-
-const GAME_ICONS: Record<string, string> = {
-  blackjack: "🃏",
-  crash: "📈",
-  mines: "💣",
-  roulette: "🎰",
-  dice: "🎲",
-  hilo: "🔮",
-  plinko: "📌",
-  poker: "🂡",
+const GAME_ICONS: Record<string, LucideIcon> = {
+  blackjack: Layers,
+  crash: TrendingUp,
+  mines: CircleDot,
+  roulette: CircleDollarSign,
+  dice: Dice5,
+  hilo: Layers,
+  plinko: Target,
+  poker: Layers,
 };
 
 const GAME_LABELS: Record<string, string> = {
@@ -68,7 +69,7 @@ export default function CasinoGameLog() {
               }`}
             >
               <span className="text-sm flex-shrink-0" title={GAME_LABELS[entry.game] || entry.game}>
-                {GAME_ICONS[entry.game] || "🎮"}
+                {(() => { const Icon = GAME_ICONS[entry.game] || Gamepad2; return <Icon className="w-3.5 h-3.5" />; })()}
               </span>
 
               <span className="font-bold text-foreground truncate min-w-0 max-w-[100px]">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Wallet, ArrowRightLeft, Sparkles, Dice5, TrendingUp } from "lucide-react";
+import { X, Wallet, ArrowRightLeft, Sparkles, Dice5, TrendingUp, Gamepad2 } from "lucide-react";
 
 const STORAGE_KEY = "dori-welcome-seen";
 
@@ -102,7 +102,7 @@ export default function WelcomeModal() {
             {/* Header */}
             <div className="bg-gradient-to-r from-primary/10 to-yellow-500/10 px-6 pt-6 pb-4">
               <div className="flex items-center gap-3 mb-1">
-                <span className="text-2xl">🎮</span>
+                <Gamepad2 className="w-6 h-6 text-primary" />
                 <h2 className="text-lg font-bold text-foreground font-[var(--font-heading)]">
                   {language === "ko" ? "$DORI에 오신 것을 환영합니다!" : "Welcome to $DORI!"}
                 </h2>

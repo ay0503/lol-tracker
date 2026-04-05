@@ -2,7 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import { Loader2, Trophy, TrendingUp, TrendingDown, Dice5 } from "lucide-react";
+import { Loader2, Trophy, TrendingUp, TrendingDown, Dice5, CircleCheck, CircleX } from "lucide-react";
 import NumberInput from "./NumberInput";
 
 export default function BettingPanel() {
@@ -16,7 +16,7 @@ export default function BettingPanel() {
 
   const placeMutation = trpc.betting.place.useMutation({
     onSuccess: () => {
-      toast.success(prediction === "win" ? "Bet placed: WIN 🎯" : "Bet placed: LOSS 🎯");
+      toast.success(prediction === "win" ? "Bet placed: WIN" : "Bet placed: LOSS");
       setAmount("");
       setPrediction(null);
       utils.betting.myBets.invalidate();
@@ -65,7 +65,7 @@ export default function BettingPanel() {
                 ? "bg-[color:var(--color-win)]/20 text-[color:var(--color-win)]"
                 : "bg-[color:var(--color-loss)]/20 text-[color:var(--color-loss)]"
             }`}>
-              {pendingBet.prediction === "win" ? "🐂 WIN" : "🐻 LOSS"}
+              {pendingBet.prediction === "win" ? "WIN" : "LOSS"}
             </span>
             <span className="text-sm font-mono font-bold">${pendingBet.amount.toFixed(2)}</span>
           </div>
@@ -154,7 +154,7 @@ export default function BettingPanel() {
               <div key={bet.id} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className={bet.status === "won" ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}>
-                    {bet.status === "won" ? "✅" : "❌"}
+                    {bet.status === "won" ? <CircleCheck className="w-3 h-3" /> : <CircleX className="w-3 h-3" />}
                   </span>
                   <span className="font-mono">{bet.prediction.toUpperCase()}</span>
                   <span className="text-muted-foreground font-mono">${bet.amount.toFixed(0)}</span>

@@ -35,6 +35,8 @@ import {
   History,
   Trophy,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Shield,
   LogIn,
   LogOut,
@@ -269,7 +271,7 @@ function LiveSentimentFeed() {
                   : "text-muted-foreground/60 hover:text-muted-foreground"
               }`}
             >
-              {sm === "bullish" ? "📈" : sm === "bearish" ? "📉" : "😐"}
+              {sm === "bullish" ? <TrendingUp className="w-3 h-3" /> : sm === "bearish" ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
             </button>
           ))}
         </div>
@@ -284,7 +286,7 @@ function LiveSentimentFeed() {
             <span className={`flex-shrink-0 ${
               cm.sentiment === "bullish" ? "text-green-400" : cm.sentiment === "bearish" ? "text-red-400" : "text-muted-foreground"
             }`}>
-              {cm.sentiment === "bullish" ? "📈" : cm.sentiment === "bearish" ? "📉" : "💬"}
+              {cm.sentiment === "bullish" ? <TrendingUp className="w-3 h-3" /> : cm.sentiment === "bearish" ? <TrendingDown className="w-3 h-3" /> : <MessageCircle className="w-3 h-3" />}
             </span>
             <span className="font-bold text-foreground/80 flex-shrink-0">{cm.userName}</span>
             <span className="text-muted-foreground break-all">{cm.content}</span>
@@ -924,7 +926,7 @@ function SentimentPreview() {
       <div className="space-y-2.5">
         {comments.map((c: any) => (
           <div key={c.id} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-card border border-border">
-            <span className="text-xs">{c.sentiment === "bullish" ? "🐂" : c.sentiment === "bearish" ? "🐻" : "😐"}</span>
+            <span className="text-xs flex items-center">{c.sentiment === "bullish" ? <TrendingUp className="w-3 h-3 text-green-400" /> : c.sentiment === "bearish" ? <TrendingDown className="w-3 h-3 text-red-400" /> : <Minus className="w-3 h-3 text-muted-foreground" />}</span>
             <div className="min-w-0 flex-1">
               <span className="text-xs text-muted-foreground font-mono">{String(c.userName ?? "")}</span>
               <p className="text-xs text-foreground truncate">{c.content}</p>

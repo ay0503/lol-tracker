@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, Layers, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
@@ -97,7 +97,7 @@ export default function Hilo() {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/25 to-indigo-600/15 border border-violet-500/20">
-              <span className="text-lg">🃏</span>
+              <Layers className="w-5 h-5 text-violet-400" />
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Hi-Lo</h1>
@@ -138,7 +138,12 @@ export default function Hilo() {
                   streak >= 5 ? "bg-purple-500/20 text-purple-400" :
                   "bg-blue-500/20 text-blue-400"
                 }`}>
-                  {streak} streak {"🔥".repeat(Math.min(Math.floor(streak / 3), 3))}
+                  <span className="flex items-center gap-1">
+                    {streak} streak
+                    {Array.from({ length: Math.min(Math.floor(streak / 3), 3) }).map((_, idx) => (
+                      <Flame key={idx} className="w-3 h-3" />
+                    ))}
+                  </span>
                 </span>
               </motion.div>
             )}

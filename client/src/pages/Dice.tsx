@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Dice5 as Dice5Icon } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import GamblingDisclaimer from "@/components/GamblingDisclaimer";
@@ -87,7 +87,7 @@ export default function Dice() {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500/25 to-blue-600/15 border border-cyan-500/20">
-              <span className="text-lg">🎲</span>
+              <Dice5Icon className="w-5 h-5 text-cyan-400" />
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Dice</h1>

@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown, Bot, Filter, X } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown, Bot, Filter, X, Clock, CircleCheck, CircleX } from "lucide-react";
 import { Link } from "wouter";
 import StyledName from "@/components/StyledName";
 import { useCosmetics } from "@/hooks/useCosmetics";
@@ -526,7 +526,7 @@ export default function Ledger() {
                             isPending ? "bg-yellow-500/15 text-yellow-400" :
                             isWon ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
                           }`}>
-                            {isPending ? "⏳ PENDING" : isWon ? "✅ WON" : "❌ LOST"}
+                            {isPending ? <><Clock className="w-3 h-3 inline mr-1" />PENDING</> : isWon ? <><CircleCheck className="w-3 h-3 inline mr-1" />WON</> : <><CircleX className="w-3 h-3 inline mr-1" />LOST</>}
                           </span>
                         </div>
                         <div className="col-span-2 text-right">
@@ -567,7 +567,7 @@ export default function Ledger() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className={`font-bold ${isPending ? "text-yellow-400" : isWon ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
-                            {isPending ? "⏳ PENDING" : isWon ? "✅ WON" : "❌ LOST"}
+                            {isPending ? <><Clock className="w-3 h-3 inline mr-1" />PENDING</> : isWon ? <><CircleCheck className="w-3 h-3 inline mr-1" />WON</> : <><CircleX className="w-3 h-3 inline mr-1" />LOST</>}
                           </span>
                           <span className="text-muted-foreground">{formatTimeAgoFromDate(bet.createdAt, language)}</span>
                         </div>

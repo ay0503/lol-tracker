@@ -3,7 +3,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Link } from "wouter";
 import { useState } from "react";
-import { Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag, Info } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag, Info, Layers, Rocket, CircleDollarSign, CircleDot, Dice5, Target } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { motion } from "framer-motion";
@@ -19,15 +20,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const GAMES = [
-  { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", emoji: "🃏", desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 - $50", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
-  { id: "crash", title: "Crash", titleKo: "크래시", emoji: "🚀", desc: "Cash out before it crashes", descKo: "추락 전에 캐시아웃", bet: "$0.10 - $50", href: "/casino/crash", active: true, bg: "from-orange-950/50 to-red-900/30", border: "border-orange-700/40", badge: "from-orange-500 to-red-600" },
-  { id: "roulette", title: "Roulette", titleKo: "룰렛", emoji: "🎡", desc: "Pick a color and spin", descKo: "색을 고르고 스핀", bet: "$0.10 - $50", href: "/casino/roulette", active: true, bg: "from-green-950/50 to-emerald-900/30", border: "border-green-700/40", badge: "from-green-500 to-emerald-600" },
-  { id: "mines", title: "Mines", titleKo: "지뢰찾기", emoji: "💣", desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 - $50", href: "/casino/mines", active: true, bg: "from-red-950/50 to-rose-900/30", border: "border-red-700/40", badge: "from-red-500 to-orange-600" },
-  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", emoji: "🃑", desc: "Draw, hold, and chase a hand", descKo: "카드를 들고 패를 노려라", bet: "$0.10 - $50", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
-  { id: "dice", title: "Dice", titleKo: "주사위", emoji: "🎲", desc: "Roll over/under", descKo: "높낮이 베팅", bet: "$0.10 - $50", href: "/casino/dice", active: true, bg: "from-cyan-950/50 to-blue-900/30", border: "border-cyan-700/40", badge: "from-cyan-500 to-blue-600" },
-  { id: "hilo", title: "Hi-Lo", titleKo: "하이로", emoji: "🃏", desc: "Higher or lower cards", descKo: "높을까 낮을까", bet: "$0.10 - $50", href: "/casino/hilo", active: true, bg: "from-violet-950/50 to-indigo-900/30", border: "border-violet-700/40", badge: "from-violet-500 to-indigo-600" },
-  { id: "plinko", title: "Plinko", titleKo: "플링코", emoji: "📌", desc: "Drop the ball, hit big", descKo: "공을 떨어뜨려라", bet: "$0.10 - $50", href: "/casino/plinko", active: true, bg: "from-pink-950/50 to-rose-900/30", border: "border-pink-700/40", badge: "from-pink-500 to-rose-600" },
+const GAMES: { id: string; title: string; titleKo: string; icon: LucideIcon; desc: string; descKo: string; bet: string; href: string; active: boolean; bg: string; border: string; badge: string }[] = [
+  { id: "blackjack", title: "Blackjack", titleKo: "블랙잭", icon: Layers, desc: "Beat the dealer to 21", descKo: "딜러를 이겨라", bet: "$0.10 - $50", href: "/casino/blackjack", active: true, bg: "from-emerald-950/50 to-emerald-900/30", border: "border-emerald-700/40", badge: "from-emerald-500 to-green-600" },
+  { id: "crash", title: "Crash", titleKo: "크래시", icon: Rocket, desc: "Cash out before it crashes", descKo: "추락 전에 캐시아웃", bet: "$0.10 - $50", href: "/casino/crash", active: true, bg: "from-orange-950/50 to-red-900/30", border: "border-orange-700/40", badge: "from-orange-500 to-red-600" },
+  { id: "roulette", title: "Roulette", titleKo: "룰렛", icon: CircleDollarSign, desc: "Pick a color and spin", descKo: "색을 고르고 스핀", bet: "$0.10 - $50", href: "/casino/roulette", active: true, bg: "from-green-950/50 to-emerald-900/30", border: "border-green-700/40", badge: "from-green-500 to-emerald-600" },
+  { id: "mines", title: "Mines", titleKo: "지뢰찾기", icon: CircleDot, desc: "Avoid mines, cash out", descKo: "지뢰를 피해라", bet: "$0.10 - $50", href: "/casino/mines", active: true, bg: "from-red-950/50 to-rose-900/30", border: "border-red-700/40", badge: "from-red-500 to-orange-600" },
+  { id: "poker", title: "Video Poker", titleKo: "비디오 포커", icon: Layers, desc: "Draw, hold, and chase a hand", descKo: "카드를 들고 패를 노려라", bet: "$0.10 - $50", href: "/casino/poker", active: true, bg: "from-indigo-950/50 to-blue-900/30", border: "border-indigo-700/40", badge: "from-indigo-500 to-blue-600" },
+  { id: "dice", title: "Dice", titleKo: "주사위", icon: Dice5, desc: "Roll over/under", descKo: "높낮이 베팅", bet: "$0.10 - $50", href: "/casino/dice", active: true, bg: "from-cyan-950/50 to-blue-900/30", border: "border-cyan-700/40", badge: "from-cyan-500 to-blue-600" },
+  { id: "hilo", title: "Hi-Lo", titleKo: "하이로", icon: Layers, desc: "Higher or lower cards", descKo: "높을까 낮을까", bet: "$0.10 - $50", href: "/casino/hilo", active: true, bg: "from-violet-950/50 to-indigo-900/30", border: "border-violet-700/40", badge: "from-violet-500 to-indigo-600" },
+  { id: "plinko", title: "Plinko", titleKo: "플링코", icon: Target, desc: "Drop the ball, hit big", descKo: "공을 떨어뜨려라", bet: "$0.10 - $50", href: "/casino/plinko", active: true, bg: "from-pink-950/50 to-rose-900/30", border: "border-pink-700/40", badge: "from-pink-500 to-rose-600" },
 ];
 
 const EDGE_DETAILS = [
@@ -159,7 +160,7 @@ export default function Casino() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
                 <div className="flex items-center gap-4 mb-1">
-                  <span className="text-2xl">🎰</span>
+                  <CircleDollarSign className="w-6 h-6 text-yellow-400" />
                   <h1 className="text-xl sm:text-2xl font-bold text-foreground font-[var(--font-heading)]">
                     {language === "ko" ? "$DORI 카지노" : "$DORI Casino"}
                   </h1>
@@ -381,7 +382,7 @@ export default function Casino() {
                 <Link href={game.href}>
                   <div className={`group relative rounded-xl border ${game.border} bg-gradient-to-br ${game.bg} p-4 cursor-pointer hover:border-emerald-600/60 transition-all hover:shadow-lg hover:shadow-emerald-900/20 h-full`}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl">{game.emoji}</span>
+                      <game.icon className="w-5 h-5 text-foreground/80" />
                       <span className={`px-1.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-gradient-to-r ${game.badge} text-foreground`}>LIVE</span>
                     </div>
                     <h3 className="text-sm font-bold text-foreground mb-0.5">{language === "ko" ? game.titleKo : game.title}</h3>
@@ -392,7 +393,7 @@ export default function Casino() {
               ) : (
                 <div className={`rounded-xl border ${game.border} bg-gradient-to-br ${game.bg} p-4 opacity-40 h-full`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-2xl grayscale">{game.emoji}</span>
+                    <game.icon className="w-5 h-5 text-muted-foreground" />
                     <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold uppercase bg-secondary text-muted-foreground">
                       <Lock className="w-2 h-2" /> SOON
                     </span>

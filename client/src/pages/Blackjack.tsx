@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Dice5, Loader2 } from "lucide-react";
+import { Dice5, Loader2, Layers, Zap, CircleCheck, CircleX, Minus } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
@@ -265,7 +265,7 @@ export default function Casino() {
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       setLastBet(game.bet);
-      if (game.status === "blackjack") toast.success("BLACKJACK! 🃏");
+      if (game.status === "blackjack") toast.success("BLACKJACK!");
       refetchBalance();
     },
     onError: (err) => toast.error(err.message),
@@ -275,7 +275,7 @@ export default function Casino() {
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       if (game.status === "player_bust") {
-        setTimeout(() => toast.error("Bust! 💥"), 700);
+        setTimeout(() => toast.error("Bust!"), 700);
       }
       refetchBalance();
     },
@@ -293,9 +293,9 @@ export default function Casino() {
       const delay = dealerCards > 2 ? (dealerCards - 2) * 500 + 300 : 300;
       setTimeout(() => {
         const status = game.status;
-        if (status === "player_win" || status === "dealer_bust") toast.success("You win! 🎉");
+        if (status === "player_win" || status === "dealer_bust") toast.success("You win!");
         else if (status === "push") toast("Push — bet returned");
-        else toast.error("Dealer wins 😞");
+        else toast.error("Dealer wins");
       }, delay);
     },
     onError: (err) => {
@@ -310,10 +310,10 @@ export default function Casino() {
       refetchBalance();
       setTimeout(() => {
         const status = game.status;
-        if (status === "player_win" || status === "dealer_bust") toast.success("Double down wins! 🎉🎉");
-        else if (status === "player_bust") toast.error("Bust on double! 💥💥");
+        if (status === "player_win" || status === "dealer_bust") toast.success("Double down wins!");
+        else if (status === "player_bust") toast.error("Bust on double!");
         else if (status === "push") toast("Push — bet returned");
-        else toast.error("Dealer wins 😞");
+        else toast.error("Dealer wins");
       }, 500);
     },
     onError: (err) => {
@@ -396,12 +396,12 @@ export default function Casino() {
   }, [dealMutation, language, parsedBetAmount]);
 
   const statusConfig = !showResult ? null :
-    visibleStatus === "blackjack" ? { text: "BLACKJACK!", emoji: "🃏", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
-    visibleStatus === "player_win" ? { text: language === "ko" ? "승리!" : "You Win!", emoji: "🎉", color: "text-[color:var(--color-win)]", glow: "shadow-[color:var(--color-win)]/30" } :
-    visibleStatus === "dealer_bust" ? { text: language === "ko" ? "딜러 버스트!" : "Dealer Bust!", emoji: "💥", color: "text-[color:var(--color-win)]", glow: "shadow-[color:var(--color-win)]/30" } :
-    visibleStatus === "player_bust" ? { text: language === "ko" ? "버스트!" : "Bust!", emoji: "💀", color: "text-[color:var(--color-loss)]", glow: "shadow-[color:var(--color-loss)]/30" } :
-    visibleStatus === "dealer_win" ? { text: language === "ko" ? "딜러 승리" : "Dealer Wins", emoji: "😞", color: "text-[color:var(--color-loss)]", glow: "shadow-[color:var(--color-loss)]/30" } :
-    visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", emoji: "🤝", color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
+    visibleStatus === "blackjack" ? { text: "BLACKJACK!", icon: <Layers className="w-5 h-5 text-yellow-400" />, color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
+    visibleStatus === "player_win" ? { text: language === "ko" ? "승리!" : "You Win!", icon: <CircleCheck className="w-5 h-5 text-[color:var(--color-win)]" />, color: "text-[color:var(--color-win)]", glow: "shadow-[color:var(--color-win)]/30" } :
+    visibleStatus === "dealer_bust" ? { text: language === "ko" ? "딜러 버스트!" : "Dealer Bust!", icon: <Zap className="w-5 h-5 text-[color:var(--color-win)]" />, color: "text-[color:var(--color-win)]", glow: "shadow-[color:var(--color-win)]/30" } :
+    visibleStatus === "player_bust" ? { text: language === "ko" ? "버스트!" : "Bust!", icon: <CircleX className="w-5 h-5 text-[color:var(--color-loss)]" />, color: "text-[color:var(--color-loss)]", glow: "shadow-[color:var(--color-loss)]/30" } :
+    visibleStatus === "dealer_win" ? { text: language === "ko" ? "딜러 승리" : "Dealer Wins", icon: <CircleX className="w-5 h-5 text-[color:var(--color-loss)]" />, color: "text-[color:var(--color-loss)]", glow: "shadow-[color:var(--color-loss)]/30" } :
+    visibleStatus === "push" ? { text: language === "ko" ? "무승부" : "Push", icon: <Minus className="w-5 h-5 text-yellow-400" />, color: "text-yellow-400", glow: "shadow-yellow-500/30" } :
     null;
 
   const pregameControls = (
@@ -524,7 +524,7 @@ export default function Casino() {
                     >
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <span className="text-xl">{statusConfig.emoji}</span>
+                          {statusConfig.icon}
                           <span className={`text-base font-bold ${statusConfig.color}`}>{statusConfig.text}</span>
                         </div>
                         {showResult && game && (

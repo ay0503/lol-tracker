@@ -2,7 +2,7 @@ import { useState, useCallback, memo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, CircleDot, Diamond } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
@@ -50,7 +50,7 @@ const Tile = memo(function Tile({
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="text-xl sm:text-2xl"
           >
-            {isMine ? "💣" : "💎"}
+            {isMine ? <CircleDot className="w-5 h-5 sm:w-6 sm:h-6 text-red-300" /> : <Diamond className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-300" />}
           </motion.span>
         ) : (
           <motion.span key="hidden" className="text-muted-foreground text-xs sm:text-sm">
@@ -88,7 +88,7 @@ export default function Mines() {
     onSuccess: (game) => {
       utils.casino.mines.active.setData(undefined, game as any);
       if (game.status === "lost") {
-        toast.error(language === "ko" ? "지뢰! 💣" : "BOOM! 💣");
+        toast.error(language === "ko" ? "지뢰!" : "BOOM!");
         refetchBalance();
       } else if (game.status === "won") {
         toast.success(`${language === "ko" ? "전부 찾았다!" : "All gems found!"} +$${game.payout.toFixed(2)}`);
@@ -207,7 +207,7 @@ export default function Mines() {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/25 to-orange-600/15 border border-red-500/20">
-              <span className="text-lg">💣</span>
+              <CircleDot className="w-5 h-5 text-red-400" />
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Mines</h1>
@@ -261,7 +261,7 @@ export default function Mines() {
                         <div>
                           <motion.p initial={{ x: [-5, 5, -5, 5, 0] }} animate={{ x: 0 }}
                             className="text-xl font-bold text-[color:var(--color-loss)]">
-                            💣 {language === "ko" ? "지뢰!" : "BOOM!"}
+                            {language === "ko" ? "지뢰!" : "BOOM!"}
                           </motion.p>
                           <p className="text-xs text-muted-foreground">-${game.bet.toFixed(2)}</p>
                         </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Rocket } from "lucide-react";
 import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
@@ -367,7 +367,7 @@ export default function Crash() {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500/25 to-red-600/15 border border-orange-500/20">
-              <span className="text-lg">🚀</span>
+              <Rocket className="w-5 h-5 text-orange-400" />
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground font-[var(--font-heading)]">Crash</h1>
