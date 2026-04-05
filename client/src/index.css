@@ -92,7 +92,7 @@
 .theme-navy {
   --background: oklch(0.12 0.02 260);
   --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.16 0.015 260 / 0.82);
+  --card: oklch(0.16 0.015 260 );
   --card-foreground: oklch(0.95 0.005 260);
   --popover: oklch(0.16 0.015 260);
   --popover-foreground: oklch(0.95 0.005 260);
@@ -131,7 +131,7 @@
 .theme-purple {
   --background: oklch(0.11 0.025 300);
   --foreground: oklch(0.93 0.01 300);
-  --card: oklch(0.15 0.02 300 / 0.82);
+  --card: oklch(0.15 0.02 300 );
   --card-foreground: oklch(0.93 0.01 300);
   --popover: oklch(0.15 0.02 300);
   --popover-foreground: oklch(0.93 0.01 300);
@@ -170,7 +170,7 @@
 .theme-charcoal {
   --background: oklch(0.13 0.003 60);
   --foreground: oklch(0.93 0.005 60);
-  --card: oklch(0.17 0.003 60 / 0.82);
+  --card: oklch(0.17 0.003 60 );
   --card-foreground: oklch(0.93 0.005 60);
   --popover: oklch(0.17 0.003 60);
   --popover-foreground: oklch(0.93 0.005 60);
@@ -209,7 +209,7 @@
 .theme-neon {
   --background: oklch(0.0 0 0);
   --foreground: oklch(1.0 0 0);
-  --card: oklch(0.08 0 0 / 0.82);
+  --card: oklch(0.08 0 0 );
   --card-foreground: oklch(1.0 0 0);
   --popover: oklch(0.08 0 0);
   --popover-foreground: oklch(1.0 0 0);
@@ -248,7 +248,7 @@
 .dark:not([class*="theme-"]) {
   --background: oklch(0.13 0.003 60);
   --foreground: oklch(0.93 0.005 60);
-  --card: oklch(0.17 0.003 60 / 0.82);
+  --card: oklch(0.17 0.003 60 );
   --card-foreground: oklch(0.93 0.005 60);
   --popover: oklch(0.17 0.003 60);
   --popover-foreground: oklch(0.93 0.005 60);
@@ -333,52 +333,23 @@
   }
 }
 
-/* ─── Liquid Glass Effect ─── */
-/* Light theme: strong frosted glass */
-:root .bg-card {
-  backdrop-filter: blur(32px) saturate(1.6);
-  -webkit-backdrop-filter: blur(32px) saturate(1.6);
-  box-shadow: var(--shadow-card);
-}
+/* ─── Glass Effect — only on overlays, not every card ─── */
 :root .bg-popover {
-  backdrop-filter: blur(40px) saturate(1.8);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
   box-shadow: var(--shadow-card);
 }
-:root nav.sticky {
-  backdrop-filter: blur(40px) saturate(1.6);
-  -webkit-backdrop-filter: blur(40px) saturate(1.6);
-}
-/* Dark theme: macOS Tahoe liquid glass — dark, subtle, warm */
-.dark .bg-card {
+/* Dark theme: macOS Tahoe style — opaque cards, blur only on overlays */
+.dark .bg-popover {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-}
-.dark .bg-popover {
-  backdrop-filter: blur(24px) saturate(1.3);
-  -webkit-backdrop-filter: blur(24px) saturate(1.3);
   box-shadow: var(--shadow-card);
-}
-.dark nav.sticky {
-  backdrop-filter: blur(24px) saturate(1.3);
-  -webkit-backdrop-filter: blur(24px) saturate(1.3);
 }
 
 /* Glass borders: barely perceptible white edge */
 .dark .bg-card,
 [class*="theme-"] .bg-card {
   border-color: rgba(255,255,255,0.04);
-}
-
-/* Hover: no lift, just subtle background brighten */
-.dark .bg-card:hover,
-[class*="theme-"] .bg-card:hover {
-  border-color: rgba(255,255,255,0.07);
-  transition: border-color 0.2s ease;
-}
-.dark .bg-card,
-[class*="theme-"] .bg-card {
-  transition: border-color 0.2s ease;
 }
 
 /* Gradient text utility — for hero prices */
