@@ -74,6 +74,9 @@ let confirmedIsInGame = false; // only changes after 2 consecutive agreeing poll
 let consecutiveApiErrors = 0; // auto-release live status after 3 consecutive API failures
 
 // Pre-game snapshot for post-game LP notification banner
+// Persist current game's champion info across polls (survives spectator flicker)
+let currentGameChampion: { id: number; name: string } | null = null;
+
 let preGameSnapshot: {
   lp: number;
   tier: string;
@@ -275,6 +278,15 @@ export async function pollNow(): Promise<PollResult> {
         };
         console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
 
+        // Store champion info for this game (persists across spectator flicker)
+        const gameParticipant = activeGameData?.participants.find(p => p.puuid === playerData.account.puuid);
+        if (gameParticipant?.championId) {
+          currentGameChampion = {
+            id: gameParticipant.championId,
+            name: CHAMPION_NAMES[gameParticipant.championId] ?? `Champion ${gameParticipant.championId}`,
+          };
+        }
+
         // Discord notification — only if this is a NEW game (compare gameId with DB)
         const currentGameId = activeGameData?.gameId ? String(activeGameData.gameId) : null;
         const lastNotified = await getLastNotifiedGameId();
@@ -298,21 +310,24 @@ export async function pollNow(): Promise<PollResult> {
     // Update the cache with the CONFIRMED status (used by trade endpoints + bot)
     cache.set("player.liveGame.check", confirmedIsInGame, 45_000); // 45s TTL (slightly > poll interval)
 
-    // Cache game details from the poll so the liveGame route doesn't re-fetch
-    // Only cache for Solo/Duo games (the only mode that triggers confirmedIsInGame)
-    if (confirmedIsInGame && activeGameData && activeGameData.gameQueueConfigId === 420) {
-      const participant = activeGameData.participants.find(pp => pp.puuid === playerData.account.puuid);
+    // Cache game details — use live spectator data when available, fallback to stored champion info
+    if (confirmedIsInGame) {
+      const participant = activeGameData?.participants?.find(pp => pp.puuid === playerData.account.puuid);
+      const champId = participant?.championId ?? currentGameChampion?.id;
+      const champName = champId ? (CHAMPION_NAMES[champId] ?? currentGameChampion?.name) : currentGameChampion?.name;
+
       cache.set("player.liveGame.details", {
         inGame: true as const,
         gameMode: "Ranked Solo/Duo",
-        gameStartTime: activeGameData.gameStartTime,
-        gameLengthSeconds: activeGameData.gameLength,
-        championId: participant?.championId,
-        championName: participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? undefined) : undefined,
+        gameStartTime: activeGameData?.gameStartTime ?? (preGameSnapshot?.timestamp ? preGameSnapshot.timestamp / 1000 : undefined),
+        gameLengthSeconds: activeGameData?.gameLength ?? 0,
+        championId: champId,
+        championName: champName,
         isRanked: true,
       }, 45_000);
-    } else if (!confirmedIsInGame) {
+    } else {
       cache.invalidate("player.liveGame.details");
+      currentGameChampion = null;
     }
 
     let { tier, rank: division, leaguePoints: lp, wins, losses } = playerData.soloEntry;
