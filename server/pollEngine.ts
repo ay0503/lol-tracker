@@ -507,8 +507,8 @@ export async function pollNow(): Promise<PollResult> {
           cs: participant.totalMinionsKilled + participant.neutralMinionsKilled,
           position: participant.teamPosition || participant.individualPosition,
           gameDuration: match.info.gameDuration,
-          priceBefore: isRemake ? prevPrice : prevPrice,
-          priceAfter: isRemake ? prevPrice : price, // Remakes don't change price
+          priceBefore: isRemake ? prevPrice : (preGameSnapshot?.price ?? prevPrice),
+          priceAfter: isRemake ? prevPrice : price,
           gameCreation: match.info.gameCreation,
           isRemake,
         });
@@ -584,6 +584,10 @@ export async function pollNow(): Promise<PollResult> {
           );
 
           if (newsHeadline) {
+            // Use preGameSnapshot for accurate price change (avoids stale LP issue)
+            const actualPriceChange = preGameSnapshot && price !== preGameSnapshot.price
+              ? price - preGameSnapshot.price
+              : price - prevPrice;
             await addNews({
               headline: newsHeadline.headline,
               body: newsHeadline.body,
@@ -591,7 +595,7 @@ export async function pollNow(): Promise<PollResult> {
               isWin: participant.win,
               champion: participant.championName,
               kda: `${participant.kills}/${participant.deaths}/${participant.assists}`,
-              priceChange: price - prevPrice,
+              priceChange: actualPriceChange,
             });
             await markMatchNewsGenerated(matchId);
             result.newsGenerated++;
