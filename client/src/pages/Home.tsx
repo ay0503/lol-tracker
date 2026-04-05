@@ -460,6 +460,7 @@ function LiveGameBanner() {
                   src={`https://ddragon.leagueoflegends.com/cdn/16.6.1/img/champion/${liveGame.championName}.png`}
                   alt={liveGame.championName}
                   className="w-11 h-11 rounded-full border-2 border-primary/40"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               ) : (
                 <div className="p-2.5 rounded-full bg-primary/20 border border-primary/40">
