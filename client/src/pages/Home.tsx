@@ -13,18 +13,13 @@ import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import PlayerHeader from "@/components/PlayerHeader";
-import LPChart from "@/components/LPChart";
 import StreakBar from "@/components/StreakBar";
 import ChampionCard from "@/components/ChampionCard";
 import type { ChampionStatData } from "@/components/ChampionCard";
 import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
-import TradingPanel from "@/components/TradingPanel";
-import BettingPanel from "@/components/BettingPanel";
-import { TickerProvider } from "@/contexts/TickerContext";
 import NotificationBell from "@/components/NotificationBell";
-import PriceRankLegend from "@/components/PriceRankLegend";
 import { type MatchResult } from "@/lib/playerData";
 import { translateRank, formatDuration, formatTimeAgo, formatMatchResult } from "@/lib/formatters";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,9 +56,6 @@ import {
 import { Link } from "wouter";
 
 const HERO_BG = "/assets/hero-bg.webp";
-const CREATOR_PHOTO_FORMAL = new URL("../../../data/DSC01880.JPG", import.meta.url).href;
-const CREATOR_PHOTO_TRAVEL = new URL("../../../data/20220729_171511.jpg", import.meta.url).href;
-const CREATOR_PHOTO_CHAOS = new URL("../../../data/image-3.png", import.meta.url).href;
 
 function SectionHeader({
   icon: Icon,
@@ -141,96 +133,6 @@ function StatCard({
   );
 }
 
-function CreatorSection() {
-  const { language } = useTranslation();
-
-  const creatorTitle = language === "ko" ? "이 웹사이트의 제작자" : "Creator of This Website";
-  const creatorSubtitle = language === "ko"
-    ? "랭크 추적, 밈, 사이드 퀘스트 경제를 하나로 묶은 사람."
-    : "The person who decided rank tracking, markets, memes, and side quests belonged in one website.";
-  const creatorBody = language === "ko"
-    ? "Andrew Youn은 친구들의 경쟁심을 그냥 두지 않고, 그것을 실시간 리그 랭크 추적기와 예측 시장, 그리고 코스메틱을 위한 카지노까지 갖춘 제품으로 키워낸 사람입니다. 이 프로젝트는 과하게 진지한 부분과 완전히 장난스러운 부분이 한데 섞여 있는데, 그 균형 자체가 Andrew의 감각에 가깝습니다."
-    : "Andrew Youn is the builder behind the whole experiment: taking a friend-group obsession with League rank swings and turning it into a live tracker, a prediction market, and a cosmetics-fueled casino. The site is equal parts overengineered, competitive, and unserious in exactly the way a good group project should be.";
-  const creatorBodyTwo = language === "ko"
-    ? "사진 셋만 봐도 분위기가 잘 드러납니다. 어느 날은 정장 차림으로 제품 발표를 할 것 같고, 어느 날은 여행 중에도 뭔가를 만들어내며, 또 어느 날은 패치 노트보다 먼저 기절해 있습니다. 그래도 결국 다음 기능은 또 추가됩니다."
-    : "The three photos more or less tell the story: one part polished operator, one part chaotic field researcher, and one part fully exhausted after shipping too much. Somehow that combination is what made this site happen.";
-
-  const galleryItems = [
-    {
-      src: CREATOR_PHOTO_FORMAL,
-      alt: language === "ko" ? "정장을 입은 Andrew Youn" : "Andrew Youn in a suit",
-      title: language === "ko" ? "Andrew Youn" : "Andrew Youn",
-      caption: language === "ko" ? "정식 모드" : "Serious Mode",
-      className: "h-72",
-    },
-    {
-      src: CREATOR_PHOTO_TRAVEL,
-      alt: language === "ko" ? "여행 중인 Andrew Youn" : "Andrew Youn while traveling",
-      title: language === "ko" ? "여행 중에도 제작 중" : "Still Building On Vacation",
-      caption: language === "ko" ? "사이드 퀘스트 현장 조사" : "Side-quest field research",
-      className: "h-72",
-    },
-    {
-      src: CREATOR_PHOTO_CHAOS,
-      alt: language === "ko" ? "담요에 감싸여 쉬고 있는 Andrew Youn" : "Andrew Youn wrapped in a blanket resting",
-      title: language === "ko" ? "패치 후 재부팅" : "Post-Deploy Recovery",
-      caption: language === "ko" ? "기능은 늘어나고 잠은 줄어듭니다" : "Features up, sleep down",
-      className: "md:col-span-2 h-56",
-      imageClassName: "object-contain bg-background",
-    },
-  ];
-
-  return (
-    <section className="mt-10">
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ type: "spring", damping: 26, stiffness: 260 }}
-        className="relative overflow-hidden rounded-2xl border border-border bg-card"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.14),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_34%)]" />
-        <div className="relative grid gap-6 px-4 py-5 sm:px-6 sm:py-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-yellow-300">
-              <User className="h-3.5 w-3.5" />
-              {creatorTitle}
-            </div>
-            <h2 className="max-w-2xl text-2xl font-bold text-foreground font-[var(--font-heading)] sm:text-3xl">
-              {language === "ko" ? "Andrew Youn" : "Andrew Youn"}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
-              {creatorSubtitle}
-            </p>
-            <div className="mt-5 space-y-3 text-sm leading-7 text-foreground/80 sm:text-[15px]">
-              <p>{creatorBody}</p>
-              <p>{creatorBodyTwo}</p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {galleryItems.map((item) => (
-              <div
-                key={item.src}
-                className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-card ${item.className}`}
-              >
-                <img
-                  src={item.src}
-                  alt={item.alt}
-                  className={`h-full w-full transition-transform duration-500 group-hover:scale-[1.03] ${item.imageClassName ?? "object-cover"}`}
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-4 pb-4 pt-12">
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                  <p className="mt-1 text-xs text-foreground/80">{item.caption}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </motion.div>
-    </section>
-  );
-}
 
 /**
  * Live game alert banner — shows when the tracked player is in an active game.
@@ -907,75 +809,7 @@ function ChampionPoolSection() {
   );
 }
 
-function SentimentPreview() {
-  const { t, language } = useTranslation();
-  const { data: comments } = trpc.comments.list.useQuery({ limit: 3 }, { staleTime: 60_000 });
 
-  if (!comments || comments.length === 0) return null;
-
-  return (
-    <section className="mt-8">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          {language === "ko" ? "최근 의견" : "Latest Takes"}
-        </h3>
-        <Link href="/sentiment" className="text-xs text-primary hover:underline">
-          {language === "ko" ? "더 보기" : "View all"}
-        </Link>
-      </div>
-      <div className="space-y-2.5">
-        {comments.map((c: any) => (
-          <div key={c.id} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-card border border-border">
-            <span className="text-xs flex items-center">{c.sentiment === "bullish" ? <TrendingUp className="w-3 h-3 text-green-400" /> : c.sentiment === "bearish" ? <TrendingDown className="w-3 h-3 text-red-400" /> : <Minus className="w-3 h-3 text-muted-foreground" />}</span>
-            <div className="min-w-0 flex-1">
-              <span className="text-xs text-muted-foreground font-mono">{String(c.userName ?? "")}</span>
-              <p className="text-xs text-foreground truncate">{c.content}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function PortfolioSummary() {
-  const { t } = useTranslation();
-  const { data: portfolio } = trpc.trading.portfolio.useQuery(undefined, { staleTime: 60_000 });
-  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { staleTime: 60_000 });
-
-  if (!portfolio || !etfPrices) return null;
-
-  const cash = portfolio.cashBalance ?? 0;
-  let holdVal = 0, shortPnl = 0;
-  for (const h of portfolio.holdings ?? []) {
-    const p = etfPrices.find((e: any) => e.ticker === h.ticker)?.price ?? 0;
-    holdVal += (h.shares ?? 0) * p;
-    shortPnl += (h.shortShares ?? 0) * ((h.shortAvgPrice ?? 0) - p);
-  }
-  const totalValue = cash + holdVal + shortPnl;
-  const pnl = totalValue - 200;
-  const pnlPct = (pnl / 200) * 100;
-  const isUp = pnl >= 0;
-
-  return (
-    <section className="mt-4">
-      <Link href="/portfolio">
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-card border border-border hover:bg-secondary/30 transition-all cursor-pointer">
-          <div className="flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{t.nav.portfolio}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold font-mono text-foreground">${totalValue.toFixed(2)}</span>
-            <span className={`text-xs font-mono font-bold ${isUp ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
-              {isUp ? "+" : ""}{pnlPct.toFixed(1)}%
-            </span>
-          </div>
-        </div>
-      </Link>
-    </section>
-  );
-}
 
 const TICKER_COLORS: Record<string, string> = {
   DORI: "var(--color-win)",
@@ -1056,39 +890,9 @@ export default function Home() {
           <PlayerHeader />
         </section>
 
-        {/* Portfolio Summary (logged in only) */}
-        {isAuthenticated && <PortfolioSummary />}
-
         {/* Live Game Alert */}
         <LiveGameBanner />
         <PostGameBanner />
-
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-8" />
-
-        <TickerProvider>
-          <section>
-            <LPChart />
-          </section>
-
-          {isAuthenticated && (
-            <section className="mt-8">
-              <TradingPanel />
-            </section>
-          )}
-        </TickerProvider>
-
-        {isAuthenticated && (
-          <section className="mt-8">
-            <BettingPanel />
-          </section>
-        )}
-
-        {/* Sentiment Preview */}
-        <SentimentPreview />
-
-        <section className="mt-8">
-          <PriceRankLegend />
-        </section>
 
         <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-8" />
 
@@ -1155,8 +959,6 @@ export default function Home() {
         <section>
           <MatchHistorySection />
         </section>
-
-        <CreatorSection />
 
         {/* Footer */}
         <footer className="mt-16 pt-6 border-t border-border text-center">

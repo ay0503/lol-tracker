@@ -33,6 +33,8 @@ const Dice = lazy(() => import("./pages/Dice"));
 const Hilo = lazy(() => import("./pages/Hilo"));
 const Plinko = lazy(() => import("./pages/Plinko"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
+const Trade = lazy(() => import("./pages/Trade"));
+const About = lazy(() => import("./pages/About"));
 
 function LoadingFallback() {
   return (
@@ -47,6 +49,8 @@ function Router() {
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
         <Route path={"/"} component={Home} />
+        <Route path={"/trade"} component={Trade} />
+        <Route path={"/about"} component={About} />
         <Route path={"/login"} component={Login} />
         <Route path={"/register"} component={Register} />
         <Route path={"/ledger"} component={Ledger} />

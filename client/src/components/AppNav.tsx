@@ -7,7 +7,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, BookOpen, Crown, Newspaper, MessageCircle, Gamepad2,
-  Wallet, Shield, LogIn, LogOut, User, Menu, Globe, Pencil, Check, X, Palette,
+  Wallet, Shield, LogIn, LogOut, User, Menu, Globe, Pencil, Check, X, Palette, ArrowLeftRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import NotificationBell from "./NotificationBell";
@@ -102,6 +102,7 @@ export default function AppNav() {
 
   const links = [
     { href: "/", label: "$DORI", icon: BarChart3, highlight: false, always: true },
+    { href: "/trade", label: language === "ko" ? "거래" : "Trade", icon: ArrowLeftRight, auth: true },
     { href: "/ledger", label: copy.nav.ledger, icon: BookOpen },
     { href: "/leaderboard", label: copy.nav.leaderboard, icon: Crown },
     { href: "/news", label: copy.nav.news, icon: Newspaper },
