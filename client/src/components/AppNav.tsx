@@ -102,7 +102,7 @@ export default function AppNav() {
 
   const links = [
     { href: "/", label: "$DORI", icon: BarChart3, highlight: false, always: true },
-    { href: "/trade", label: language === "ko" ? "거래" : "Trade", icon: ArrowLeftRight, auth: true },
+    { href: "/trade", label: languageContext.language === "ko" ? "거래" : "Trade", icon: ArrowLeftRight, auth: true },
     { href: "/ledger", label: copy.nav.ledger, icon: BookOpen },
     { href: "/leaderboard", label: copy.nav.leaderboard, icon: Crown },
     { href: "/news", label: copy.nav.news, icon: Newspaper },
