@@ -91,10 +91,24 @@ let previousDivision: string | null = null;
 let lastNotifiedStreakCount = 0;
 let lastNotifiedMatchId: string | null = null;
 
-// Prevent duplicate game-start Discord notifications during spectator flicker
-let gameStartNotified = false;
-// Track if this is the first poll after server start (suppress notification for in-progress games)
-let isFirstPollCycle = true;
+// DB-backed game notification tracking — survives server restarts
+async function getLastNotifiedGameId(): Promise<string | null> {
+  try {
+    const client = getRawClient();
+    await client.execute(`CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+    const result = await client.execute({ sql: `SELECT value FROM app_state WHERE key = ?`, args: ["lastNotifiedGameId"] });
+    return result.rows.length > 0 ? String(result.rows[0].value) : null;
+  } catch { return null; }
+}
+async function setLastNotifiedGameId(gameId: string): Promise<void> {
+  try {
+    const client = getRawClient();
+    await client.execute({
+      sql: `INSERT INTO app_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+      args: ["lastNotifiedGameId", gameId, gameId],
+    });
+  } catch { /* ignore */ }
+}
 
 // Snapshot throttling: only store if price changed or 5 min elapsed
 let lastSnapshotPrice: number | null = null;
@@ -229,7 +243,6 @@ export async function pollNow(): Promise<PollResult> {
     if (spectatorApiOk) {
       if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
         confirmedIsInGame = rawIsInGame;
-        // Note: do NOT reset gameStartNotified here — spectator can flicker.
         // Only reset when match data confirms game ended (authoritative).
         console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
       }
@@ -246,7 +259,8 @@ export async function pollNow(): Promise<PollResult> {
     }
 
     // Track game-start: capture pre-game LP/price snapshot (only once per game)
-    if (!wasConfirmedInGame && confirmedIsInGame && !preGameSnapshot && !gameStartNotified) {
+    // Uses DB-backed gameId to prevent duplicate notifications across restarts/flicker
+    if (!wasConfirmedInGame && confirmedIsInGame && !preGameSnapshot) {
       try {
         const snapEntry = playerData.soloEntry;
         const snapTotalLP = tierToTotalLP(snapEntry.tier, snapEntry.rank, snapEntry.leaguePoints);
@@ -261,17 +275,21 @@ export async function pollNow(): Promise<PollResult> {
         };
         console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
 
-        // Discord notification — skip if this is first poll after server restart (game already in progress)
-        if (isFirstPollCycle) {
-          console.log(`[Poll] Game detected on first poll after restart — skipping Discord notification (game was already live)`);
-        } else {
+        // Discord notification — only if this is a NEW game (compare gameId with DB)
+        const currentGameId = activeGameData?.gameId ? String(activeGameData.gameId) : null;
+        const lastNotified = await getLastNotifiedGameId();
+
+        if (currentGameId && currentGameId !== lastNotified) {
           const participant = activeGameData?.participants.find(p => p.puuid === playerData.account.puuid);
           const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
           const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
           const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
           notifyGameStart(champName, gameMode).catch(() => {});
+          await setLastNotifiedGameId(currentGameId);
+          console.log(`[Poll] Discord: game start notification sent (gameId: ${currentGameId})`);
+        } else {
+          console.log(`[Poll] Skipping Discord notification — already notified for gameId ${currentGameId}`);
         }
-        gameStartNotified = true;
       } catch (err: any) {
         console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
       }
@@ -326,7 +344,6 @@ export async function pollNow(): Promise<PollResult> {
         console.log(`[Poll] Deferred game END resolved: ${winResult ? "WIN" : "LOSS"}, LP ${snap.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snap.price.toFixed(2)} → $${price.toFixed(2)}`);
         notifyGameEnd(lpDelta, snap.price, price, pendingGameEnd.win).catch(() => {});
         pendingGameEnd = null;
-        if (!confirmedIsInGame) gameStartNotified = false;
       }
     }
 
@@ -423,7 +440,6 @@ export async function pollNow(): Promise<PollResult> {
       confirmedIsInGame = false;
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
-      gameStartNotified = false;
       cache.set("player.liveGame.check", false, 45_000);
       cache.invalidate("player.liveGame.details");
     } else if (confirmedIsInGame && newMatchIds.length > 0 && rawIsInGame) {
@@ -436,7 +452,6 @@ export async function pollNow(): Promise<PollResult> {
       confirmedIsInGame = false;
       previousRawIsInGame = false;
       consecutiveApiErrors = 0;
-      gameStartNotified = false;
       cache.set("player.liveGame.check", false, 45_000);
       cache.invalidate("player.liveGame.details");
     }
@@ -633,7 +648,6 @@ export async function pollNow(): Promise<PollResult> {
         // Single Discord notification with LP/price info
         notifyGameEnd(lpDelta, snapPrice, price, lastMatchWinResult).catch(() => {});
         // Only reset notification flag if game is actually over — this match could be from a previous game
-        if (!confirmedIsInGame) gameStartNotified = false;
       }
     }
 
@@ -822,7 +836,6 @@ export async function pollNow(): Promise<PollResult> {
     console.error("[Poll] Error:", err);
   } finally {
     isPolling = false;
-    isFirstPollCycle = false;
     lastPollTime = new Date();
     lastPollResult = result;
     // Invalidate all server-side caches after poll writes new data

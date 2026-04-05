@@ -99,107 +99,25 @@ describe("shouldCaptureSnapshot", () => {
     expect(shouldCaptureSnapshot(true, false, false)).toBe(false);
   });
 
-  // ─── Duplicate notification edge cases ───
-
-  it("gameStartNotified=true blocks even if snapshot is null", () => {
-    expect(shouldCaptureSnapshot(false, true, false, true)).toBe(false);
-  });
-
-  it("gameStartNotified=false with no snapshot: allows capture", () => {
-    expect(shouldCaptureSnapshot(false, true, false, false)).toBe(true);
-  });
-
-  it("both snapshot AND notified set: blocked by both guards", () => {
-    expect(shouldCaptureSnapshot(false, true, true, true)).toBe(false);
-  });
-
-  it("spectator flicker scenario: game confirmed→unconfirmed→reconfirmed, notified=true blocks", () => {
-    // Simulate: game starts, snapshot captured, notified=true
-    // Then spectator flickers: confirmed goes false→true
-    // wasConfirmed=false (just flipped back), isConfirmed=true, snapshot may be null, but notified=true
-    expect(shouldCaptureSnapshot(false, true, false, true)).toBe(false);
-  });
-
-  it("new game after previous ended: notified=false allows capture", () => {
-    // Previous game ended → notified reset to false → new game starts
-    expect(shouldCaptureSnapshot(false, true, false, false)).toBe(true);
-  });
 });
 
-// ─── Full game lifecycle simulation ───
+// ─── Game lifecycle — snapshot capture uses preGameSnapshot guard ───
+// Note: duplicate NOTIFICATION prevention is now DB-backed (gameId comparison),
+// not via shouldCaptureSnapshot. The snapshot capture guard only checks preGameSnapshot.
 
-describe("game lifecycle: duplicate notification prevention", () => {
-  it("complete lifecycle: start→flicker→end→new game", () => {
-    const initial: GameConfirmationState = { rawIsInGame: null, confirmed: false, errors: 0 };
-    let notified = false;
-    let hasSnapshot = false;
-
-    // 1. Game starts: two consecutive true polls
-    let state = evaluateGameConfirmation(true, true, initial);
-    state = evaluateGameConfirmation(true, true, state);
-    expect(state.confirmed).toBe(true);
-
-    // Capture snapshot + notify
-    const shouldCapture1 = shouldCaptureSnapshot(false, true, false, false);
-    expect(shouldCapture1).toBe(true);
-    notified = true;
-    hasSnapshot = true;
-
-    // 2. Spectator flickers: two consecutive false → unconfirm
-    state = evaluateGameConfirmation(false, true, state);
-    state = evaluateGameConfirmation(false, true, state);
-    expect(state.confirmed).toBe(false);
-
-    // 3. Spectator recovers: two consecutive true → reconfirm
-    state = evaluateGameConfirmation(true, true, state);
-    state = evaluateGameConfirmation(true, true, state);
-    expect(state.confirmed).toBe(true);
-
-    // Should NOT capture again (notified=true blocks it)
-    const shouldCapture2 = shouldCaptureSnapshot(false, true, hasSnapshot, notified);
-    expect(shouldCapture2).toBe(false);
-
-    // Even if snapshot was consumed (hasSnapshot=false), notified still blocks
-    hasSnapshot = false;
-    const shouldCapture3 = shouldCaptureSnapshot(false, true, false, notified);
-    expect(shouldCapture3).toBe(false);
-
-    // 4. Spectator says game ended (two consecutive false)
-    state = evaluateGameConfirmation(false, true, state);
-    state = evaluateGameConfirmation(false, true, state);
-    expect(state.confirmed).toBe(false);
-    // notified stays TRUE here — only reset when match data confirms game end
-    // (simulating: match data arrives and game-end event emits)
-    notified = false; // reset by match data / game-end event emission
-
-    // 5. New game starts
-    state = evaluateGameConfirmation(true, true, state);
-    state = evaluateGameConfirmation(true, true, state);
-    expect(state.confirmed).toBe(true);
-
-    // Should capture for new game (notified was reset)
-    const shouldCapture4 = shouldCaptureSnapshot(false, true, false, false);
-    expect(shouldCapture4).toBe(true);
+describe("game lifecycle: snapshot capture", () => {
+  it("snapshot captured on game start, blocked while snapshot exists", () => {
+    // Game starts: should capture
+    expect(shouldCaptureSnapshot(false, true, false)).toBe(true);
+    // Snapshot exists: should NOT capture again
+    expect(shouldCaptureSnapshot(false, true, true)).toBe(false);
   });
 
-  it("API errors during game: 3 errors auto-release, then recovery does NOT re-notify", () => {
-    let state: GameConfirmationState = { rawIsInGame: true, confirmed: true, errors: 0 };
-    let notified = true; // game was already started and notified
-
-    // 3 API errors → auto-release
-    state = evaluateGameConfirmation(true, false, state);
-    state = evaluateGameConfirmation(true, false, state);
-    state = evaluateGameConfirmation(true, false, state);
-    expect(state.confirmed).toBe(false); // auto-released
-    // DO NOT reset notified (game might still be going, just API errors)
-
-    // API recovers, spectator shows in-game again
-    state = evaluateGameConfirmation(true, true, state);
-    state = evaluateGameConfirmation(true, true, state);
-    expect(state.confirmed).toBe(true); // reconfirmed
-
-    // Should NOT re-notify (notified=true persists through API errors)
-    expect(shouldCaptureSnapshot(false, true, false, notified)).toBe(false);
+  it("after snapshot consumed (match processed), new game can capture", () => {
+    // Snapshot was consumed by match processing (hasExistingSnapshot = false)
+    // New game starts — shouldCaptureSnapshot allows it
+    // (duplicate notification is prevented by DB gameId, not here)
+    expect(shouldCaptureSnapshot(false, true, false)).toBe(true);
   });
 });
 
