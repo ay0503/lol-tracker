@@ -36,10 +36,10 @@ import { useTranslation } from "@/contexts/LanguageContext";
 type TimeRange = "3H" | "6H" | "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "ALL";
 
 const TICKER_COLORS: Record<string, { color: string; inverse: boolean }> = {
-  DORI: { color: "var(--color-win)", inverse: false },
+  DORI: { color: "#22c55e", inverse: false },
   DDRI: { color: "#4CAF50", inverse: false },
   TDRI: { color: "#8BC34A", inverse: false },
-  SDRI: { color: "var(--color-loss)", inverse: true },
+  SDRI: { color: "#ef4444", inverse: true },
   XDRI: { color: "#FF1744", inverse: true },
 };
 
@@ -314,9 +314,17 @@ export default function CandlestickChart({
 
   const isIntraday = INTRADAY_RANGES.has(timeRange);
 
-  // Candle colors: green for up, red for down
-  const upColor = "var(--color-win)";
-  const downColor = "var(--color-loss)";
+  // Candle colors: lightweight-charts uses canvas, can't resolve CSS vars — compute from DOM
+  const [upColor, setUpColor] = useState("#00C805");
+  const [downColor, setDownColor] = useState("#FF5252");
+  useEffect(() => {
+    const root = getComputedStyle(document.documentElement);
+    const win = root.getPropertyValue("--color-win").trim();
+    const loss = root.getPropertyValue("--color-loss").trim();
+    // oklch values need conversion — fall back to safe hex if parsing fails
+    if (win) setUpColor(win.startsWith("#") ? win : "#22c55e");
+    if (loss) setDownColor(loss.startsWith("#") ? loss : "#ef4444");
+  }, []);
 
   // Fetch full ETF history from backend
   const { data: etfHistory, isLoading } = trpc.prices.etfHistory.useQuery(
