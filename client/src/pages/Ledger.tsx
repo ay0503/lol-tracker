@@ -1,13 +1,12 @@
 /*
- * Ledger: Public trade ledger with Trades and Dividends tabs.
+ * Ledger: Public trade ledger with Trades (incl. dividends) and Bets tabs.
  * Full i18n support (EN/KR).
  */
 import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, BookOpen, RefreshCw, Coins, Dice5, TrendingUp, TrendingDown, Bot, Filter, X, Clock, CircleCheck, CircleX } from "lucide-react";
-import { Link } from "wouter";
+import { ArrowUpRight, ArrowDownRight, BookOpen, RefreshCw, Dice5, TrendingUp, TrendingDown, Filter, X, Clock, CircleCheck, CircleX } from "lucide-react";
 import StyledName from "@/components/StyledName";
 import { useCosmetics } from "@/hooks/useCosmetics";
 import { TICKERS } from "@/lib/playerData";
@@ -17,13 +16,15 @@ function getTickerColor(ticker: string): string {
   return TICKERS.find(tk => tk.symbol === ticker)?.color ?? "#fff";
 }
 
-type LedgerTab = "trades" | "dividends" | "bets" | "bot";
+type LedgerTab = "trades" | "bets";
+
+const TRADES_PAGE_SIZE = 50;
 
 export default function Ledger() {
   const { t, language } = useTranslation();
   const [tab, setTabState] = useState<LedgerTab>(() => {
     const hash = window.location.hash.slice(1);
-    return (["trades", "dividends", "bets", "bot"] as const).includes(hash as LedgerTab)
+    return (["trades", "bets"] as const).includes(hash as LedgerTab)
       ? (hash as LedgerTab) : "trades";
   });
   const setTab = (newTab: LedgerTab) => {
@@ -33,7 +34,7 @@ export default function Ledger() {
   useEffect(() => {
     const onHash = () => {
       const hash = window.location.hash.slice(1);
-      if ((["trades", "dividends", "bets", "bot"] as const).includes(hash as LedgerTab)) {
+      if ((["trades", "bets"] as const).includes(hash as LedgerTab)) {
         setTabState(hash as LedgerTab);
       }
     };
@@ -48,34 +49,44 @@ export default function Ledger() {
   const hasFilters = filterTicker || filterType || filterUser;
   const clearFilters = () => { setFilterTicker(""); setFilterType(""); setFilterUser(""); };
 
-  const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 });
-  const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 });
-  const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 });
-  const [botPage, setBotPage] = useState(1);
-  const BOT_PAGE_SIZE = 25;
-  const { data: botTrades, isLoading: botLoading, refetch: refetchBot, isRefetching: botRefetching } = trpc.ledger.botTrades.useQuery({ limit: BOT_PAGE_SIZE * botPage });
+  // Pagination
+  const [tradesPage, setTradesPage] = useState(1);
+
+  const { data: trades, isLoading: tradesLoading, refetch: refetchTrades, isRefetching: tradesRefetching } = trpc.ledger.all.useQuery({ limit: 200 }, { enabled: tab === "trades" });
+  const { data: dividends, isLoading: dividendsLoading, refetch: refetchDividends, isRefetching: dividendsRefetching } = trpc.ledger.dividends.useQuery({ limit: 200 }, { enabled: tab === "trades" });
+  const { data: allBets, isLoading: betsLoading, refetch: refetchBets, isRefetching: betsRefetching } = trpc.ledger.bets.useQuery({ limit: 200 }, { enabled: tab === "bets" });
 
   const { getCosmetics } = useCosmetics();
 
-  // Apply filters
-  const filteredTrades = useMemo(() => {
-    if (!trades) return [];
-    return trades.filter((row: any) => {
-      if (filterTicker && row.ticker !== filterTicker) return false;
-      if (filterType && row.type !== filterType) return false;
-      if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) return false;
-      return true;
-    });
-  }, [trades, filterTicker, filterType, filterUser]);
+  // Merge trades + dividends, apply filters, sort by timestamp
+  const filteredAll = useMemo(() => {
+    const tradeRows: any[] = [];
+    const divRows: any[] = [];
 
-  const filteredDividends = useMemo(() => {
-    if (!dividends) return [];
-    return dividends.filter((row: any) => {
-      if (filterTicker && row.ticker !== filterTicker) return false;
-      if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) return false;
-      return true;
-    });
-  }, [dividends, filterTicker, filterUser]);
+    if (trades && (filterType === "" || filterType === "buy" || filterType === "sell")) {
+      for (const row of trades) {
+        if (filterTicker && row.ticker !== filterTicker) continue;
+        if (filterType && row.type !== filterType) continue;
+        if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) continue;
+        tradeRows.push({ ...row, _kind: "trade" });
+      }
+    }
+
+    if (dividends && (filterType === "" || filterType === "dividend")) {
+      for (const row of dividends) {
+        if (filterTicker && row.ticker !== filterTicker) continue;
+        if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) continue;
+        divRows.push({ ...row, _kind: "dividend" });
+      }
+    }
+
+    const merged = [...tradeRows, ...divRows];
+    merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return merged;
+  }, [trades, dividends, filterTicker, filterType, filterUser]);
+
+  // Reset page when filters change
+  useEffect(() => { setTradesPage(1); }, [filterTicker, filterType, filterUser]);
 
   const filteredBets = useMemo(() => {
     if (!allBets) return [];
@@ -92,18 +103,13 @@ export default function Ledger() {
     });
   }, [allBets, filterType, filterUser]);
 
-  const filteredBotTrades = useMemo(() => {
-    if (!botTrades) return [];
-    return botTrades.filter((row: any) => {
-      if (filterTicker && row.ticker !== filterTicker) return false;
-      if (filterType && row.type !== filterType) return false;
-      return true;
-    });
-  }, [botTrades, filterTicker, filterType]);
+  const isLoading = tab === "trades" ? (tradesLoading || dividendsLoading) : betsLoading;
+  const isRefetching = tab === "trades" ? (tradesRefetching || dividendsRefetching) : betsRefetching;
+  const refetch = tab === "trades" ? () => { refetchTrades(); refetchDividends(); } : refetchBets;
 
-  const isLoading = tab === "trades" ? tradesLoading : tab === "dividends" ? dividendsLoading : tab === "bets" ? betsLoading : botLoading;
-  const isRefetching = tab === "trades" ? tradesRefetching : tab === "dividends" ? dividendsRefetching : tab === "bets" ? betsRefetching : botRefetching;
-  const refetch = tab === "trades" ? refetchTrades : tab === "dividends" ? refetchDividends : tab === "bets" ? refetchBets : refetchBot;
+  // Pagination slicing
+  const pagedAll = filteredAll.slice((tradesPage - 1) * TRADES_PAGE_SIZE, tradesPage * TRADES_PAGE_SIZE);
+  const totalTradesPages = Math.max(1, Math.ceil(filteredAll.length / TRADES_PAGE_SIZE));
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,15 +151,6 @@ export default function Ledger() {
             {language === "ko" ? "거래" : "Trades"}
           </button>
           <button
-            onClick={() => setTab("dividends")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              tab === "dividends" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Coins className="w-3.5 h-3.5" />
-            {language === "ko" ? "배당금" : "Dividends"}
-          </button>
-          <button
             onClick={() => setTab("bets")}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
               tab === "bets" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -162,21 +159,20 @@ export default function Ledger() {
             <Dice5 className="w-3.5 h-3.5" />
             {language === "ko" ? "베팅" : "Bets"}
           </button>
-          <button
-            onClick={() => setTab("bot")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              tab === "bot" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Bot className="w-3.5 h-3.5" />
-            {language === "ko" ? "퀀트봇" : "QuantBot"}
-          </button>
         </div>
 
-        {/* Ticker Legend */}
+        {/* Ticker Legend — clickable to filter */}
         <div className="flex gap-2 sm:gap-3 mb-8 flex-wrap">
           {TICKERS.map(tk => (
-            <div key={tk.symbol} className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-secondary/50">
+            <div
+              key={tk.symbol}
+              onClick={() => setFilterTicker(filterTicker === tk.symbol ? "" : tk.symbol)}
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg cursor-pointer transition-all ${
+                filterTicker === tk.symbol
+                  ? "bg-secondary ring-2 ring-primary/60 shadow-sm"
+                  : "bg-secondary/50 hover:bg-secondary/80"
+              }`}
+            >
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tk.color }} />
               <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: tk.color }}>
                 ${tk.symbol}
@@ -209,8 +205,8 @@ export default function Ledger() {
               animate={{ opacity: 1, height: "auto" }}
               className="mt-2 flex flex-wrap gap-2 items-center"
             >
-              {/* Ticker filter — trades, dividends, bot tabs */}
-              {(tab === "trades" || tab === "dividends" || tab === "bot") && (
+              {/* Ticker filter — trades tab */}
+              {tab === "trades" && (
                 <select
                   value={filterTicker}
                   onChange={ev => setFilterTicker(ev.target.value)}
@@ -223,8 +219,8 @@ export default function Ledger() {
                 </select>
               )}
 
-              {/* Type filter — trades/bot: buy/sell, bets: prediction/status */}
-              {(tab === "trades" || tab === "bot") && (
+              {/* Type filter — trades: buy/sell/dividend */}
+              {tab === "trades" && (
                 <select
                   value={filterType}
                   onChange={ev => setFilterType(ev.target.value)}
@@ -233,6 +229,7 @@ export default function Ledger() {
                   <option value="">{language === "ko" ? "모든 유형" : "All Types"}</option>
                   <option value="buy">{language === "ko" ? "매수" : "Buy"}</option>
                   <option value="sell">{language === "ko" ? "매도" : "Sell"}</option>
+                  <option value="dividend">{language === "ko" ? "배당금" : "Dividend"}</option>
                 </select>
               )}
               {tab === "bets" && (
@@ -250,16 +247,14 @@ export default function Ledger() {
                 </select>
               )}
 
-              {/* User search — trades, dividends, bets (not bot) */}
-              {tab !== "bot" && (
-                <input
-                  type="text"
-                  value={filterUser}
-                  onChange={ev => setFilterUser(ev.target.value)}
-                  placeholder={language === "ko" ? "유저 검색..." : "Search user..."}
-                  className="px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs w-36 focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
-                />
-              )}
+              {/* User search */}
+              <input
+                type="text"
+                value={filterUser}
+                onChange={ev => setFilterUser(ev.target.value)}
+                placeholder={language === "ko" ? "유저 검색..." : "Search user..."}
+                className="px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs w-36 focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-muted-foreground/50"
+              />
 
               {hasFilters && (
                 <button
@@ -286,8 +281,8 @@ export default function Ledger() {
             ))}
           </div>
         ) : tab === "trades" ? (
-          /* ─── Trades Tab ─── */
-          filteredTrades && filteredTrades.length > 0 ? (
+          /* ─── Trades Tab (merged with Dividends) ─── */
+          pagedAll.length > 0 ? (
             <>
               <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                 <div className="col-span-2">{t.ledger.user}</div>
@@ -300,89 +295,187 @@ export default function Ledger() {
               </div>
 
               <div className="space-y-2.5">
-                {filteredTrades.map((trade, i) => (
-                  <motion.div
-                    key={trade.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.02, duration: 0.3 }}
-                  >
-                    {/* Desktop row */}
-                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                      <div className="col-span-2 flex items-center gap-2 min-w-0">
-                        <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-foreground">
-                            {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
-                          </span>
+                {pagedAll.map((entry, i) => {
+                  if (entry._kind === "dividend") {
+                    // Dividend row
+                    return (
+                      <motion.div
+                        key={`div-${entry.id}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.02, duration: 0.3 }}
+                      >
+                        {/* Desktop row */}
+                        <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                          <div className="col-span-2 flex items-center gap-2 min-w-0">
+                            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-green-400">$</span>
+                            </div>
+                            <StyledName name={entry.userName} nameEffectCss={getCosmetics(entry.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(entry.userId).isCloseFriend} showTitle={false} className="text-xs truncate" />
+                          </div>
+                          <div className="col-span-1">
+                            <span className="inline-flex items-center gap-1 text-xs font-bold uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-400">
+                              DIV
+                            </span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(entry.ticker) }}>
+                              ${entry.ticker}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-xs text-muted-foreground truncate block" title={entry.reason}>
+                              {entry.reason}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-xs text-muted-foreground">—</span>
+                          </div>
+                          <div className="col-span-1 text-right">
+                            <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">
+                              +${entry.totalPayout.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-xs text-muted-foreground">{formatTimeAgoFromDate(entry.createdAt, language)}</span>
+                          </div>
                         </div>
-                        <StyledName
-                          name={String(trade.userName || t.common.anonymous)}
-                          nameEffectCss={getCosmetics(trade.userId).nameEffect?.cssClass}
-                          showTitle={false}
-                          className="text-xs truncate"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase px-2 py-0.5 rounded ${
-                          trade.type === "buy" ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
-                        }`}>
-                          {trade.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                          {trade.type === "buy" ? t.trading.buy : t.trading.sell}
-                        </span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>
-                          ${trade.ticker}
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-muted-foreground font-[var(--font-mono)]">${trade.pricePerShare.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-1 text-right">
-                        <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
-                      </div>
-                    </div>
 
-                    {/* Mobile card */}
-                    <div className="sm:hidden bg-card border border-border rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                        {/* Mobile card */}
+                        <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                                <span className="text-xs font-bold text-green-400">$</span>
+                              </div>
+                              <StyledName name={entry.userName} nameEffectCss={getCosmetics(entry.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(entry.userId).isCloseFriend} showTitle={false} className="text-xs truncate max-w-[80px]" />
+                              <span className="inline-flex items-center gap-0.5 text-xs font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400">
+                                DIV
+                              </span>
+                            </div>
+                            <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">+${entry.totalPayout.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(entry.ticker) }}>${entry.ticker}</span>
+                              <span className="text-muted-foreground truncate max-w-[150px]">{entry.reason}</span>
+                            </div>
+                            <span className="text-muted-foreground shrink-0">{formatTimeAgoFromDate(entry.createdAt, language)}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  }
+
+                  // Trade row
+                  return (
+                    <motion.div
+                      key={`trade-${entry.id}`}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.02, duration: 0.3 }}
+                    >
+                      {/* Desktop row */}
+                      <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
+                        <div className="col-span-2 flex items-center gap-2 min-w-0">
                           <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
                             <span className="text-xs font-bold text-foreground">
-                              {String(trade.userName || t.common.anonymous).charAt(0).toUpperCase()}
+                              {String(entry.userName || t.common.anonymous).charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <StyledName
-                            name={String(trade.userName || t.common.anonymous)}
-                            nameEffectCss={getCosmetics(trade.userId).nameEffect?.cssClass}
+                            name={String(entry.userName || t.common.anonymous)}
+                            nameEffectCss={getCosmetics(entry.userId).nameEffect?.cssClass}
                             showTitle={false}
-                            className="text-xs truncate max-w-[80px]"
+                            className="text-xs truncate"
                           />
-                          <span className={`inline-flex items-center gap-0.5 text-xs font-bold uppercase px-1.5 py-0.5 rounded ${
-                            trade.type === "buy" ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
+                        </div>
+                        <div className="col-span-1">
+                          <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase px-2 py-0.5 rounded ${
+                            entry.type === "buy" ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
                           }`}>
-                            {trade.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
-                            {trade.type === "buy" ? t.trading.buy : t.trading.sell}
+                            {entry.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                            {entry.type === "buy" ? t.trading.buy : t.trading.sell}
                           </span>
                         </div>
-                        <span className="text-xs text-foreground font-bold font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(trade.ticker) }}>${trade.ticker}</span>
-                          <span className="text-muted-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
+                        <div className="col-span-2">
+                          <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(entry.ticker) }}>
+                            ${entry.ticker}
+                          </span>
                         </div>
-                        <span className="text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
+                        <div className="col-span-2 text-right">
+                          <span className="text-xs text-foreground font-[var(--font-mono)]">{entry.shares.toFixed(2)}</span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-xs text-muted-foreground font-[var(--font-mono)]">${entry.pricePerShare.toFixed(2)}</span>
+                        </div>
+                        <div className="col-span-1 text-right">
+                          <span className="text-xs text-foreground font-semibold font-[var(--font-mono)]">${entry.totalAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="col-span-2 text-right">
+                          <span className="text-xs text-muted-foreground">{formatTimeAgoFromDate(entry.createdAt, language)}</span>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      {/* Mobile card */}
+                      <div className="sm:hidden bg-card border border-border rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-foreground">
+                                {String(entry.userName || t.common.anonymous).charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <StyledName
+                              name={String(entry.userName || t.common.anonymous)}
+                              nameEffectCss={getCosmetics(entry.userId).nameEffect?.cssClass}
+                              showTitle={false}
+                              className="text-xs truncate max-w-[80px]"
+                            />
+                            <span className={`inline-flex items-center gap-0.5 text-xs font-bold uppercase px-1.5 py-0.5 rounded ${
+                              entry.type === "buy" ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
+                            }`}>
+                              {entry.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                              {entry.type === "buy" ? t.trading.buy : t.trading.sell}
+                            </span>
+                          </div>
+                          <span className="text-xs text-foreground font-bold font-[var(--font-mono)]">${entry.totalAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(entry.ticker) }}>${entry.ticker}</span>
+                            <span className="text-muted-foreground font-[var(--font-mono)]">{entry.shares.toFixed(2)} @ ${entry.pricePerShare.toFixed(2)}</span>
+                          </div>
+                          <span className="text-muted-foreground">{formatTimeAgoFromDate(entry.createdAt, language)}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4 px-1">
+                <span className="text-xs text-muted-foreground">
+                  {(tradesPage - 1) * TRADES_PAGE_SIZE + 1}–{Math.min(tradesPage * TRADES_PAGE_SIZE, filteredAll.length)} {language === "ko" ? "/" : "of"} {filteredAll.length}
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setTradesPage(p => Math.max(1, p - 1))}
+                    disabled={tradesPage <= 1}
+                    className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    {language === "ko" ? "이전" : "Prev"}
+                  </button>
+                  <span className="px-2 py-1 text-xs text-muted-foreground font-mono">{tradesPage}/{totalTradesPages}</span>
+                  <button
+                    onClick={() => setTradesPage(p => Math.min(totalTradesPages, p + 1))}
+                    disabled={tradesPage >= totalTradesPages}
+                    className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    {language === "ko" ? "다음" : "Next"}
+                  </button>
+                </div>
               </div>
             </>
           ) : (
@@ -390,90 +483,6 @@ export default function Ledger() {
               <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-sm text-muted-foreground">{t.ledger.noTrades}</p>
               <p className="text-xs text-muted-foreground/60 mt-1">{t.ledger.beFirst}</p>
-            </div>
-          )
-        ) : tab === "dividends" ? (
-          /* ─── Dividends Tab ─── */
-          filteredDividends && filteredDividends.length > 0 ? (
-            <>
-              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                <div className="col-span-2">{t.ledger.user}</div>
-                <div className="col-span-2">{t.ledger.ticker}</div>
-                <div className="col-span-4">{language === "ko" ? "사유" : "Reason"}</div>
-                <div className="col-span-2 text-right">{language === "ko" ? "지급액" : "Payout"}</div>
-                <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
-              </div>
-
-              <div className="space-y-2.5">
-                {filteredDividends.map((div, i) => (
-                  <motion.div
-                    key={div.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.02, duration: 0.3 }}
-                  >
-                    {/* Desktop row */}
-                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                      <div className="col-span-2 flex items-center gap-2 min-w-0">
-                        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                          <Coins className="w-3 h-3 text-green-400" />
-                        </div>
-                        <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(div.userId).isCloseFriend} showTitle={false} className="text-xs truncate" />
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>
-                          ${div.ticker}
-                        </span>
-                      </div>
-                      <div className="col-span-4">
-                        <span className="text-xs text-muted-foreground truncate block">
-                          {div.reason}
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">
-                          +${div.totalPayout.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimeAgoFromDate(div.createdAt, language)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mobile card */}
-                    <div className="sm:hidden bg-card border border-border rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                            <Coins className="w-3 h-3 text-green-400" />
-                          </div>
-                          <StyledName name={div.userName} nameEffectCss={getCosmetics(div.userId).nameEffect?.cssClass} isCloseFriend={getCosmetics(div.userId).isCloseFriend} showTitle={false} className="text-xs truncate max-w-[80px]" />
-                        </div>
-                        <span className="text-xs text-green-400 font-bold font-[var(--font-mono)]">+${div.totalPayout.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold font-[var(--font-mono)]" style={{ color: getTickerColor(div.ticker) }}>${div.ticker}</span>
-                          <span className="text-muted-foreground truncate max-w-[150px]">{div.reason}</span>
-                        </div>
-                        <span className="text-muted-foreground shrink-0">{formatTimeAgoFromDate(div.createdAt, language)}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-20">
-              <Coins className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">
-                {language === "ko" ? "아직 배당금이 없습니다" : "No dividends yet"}
-              </p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                {language === "ko" ? "게임이 끝나면 배당금이 지급됩니다" : "Dividends are paid after each game"}
-              </p>
             </div>
           )
         ) : tab === "bets" ? (
@@ -583,105 +592,6 @@ export default function Ledger() {
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
                 {language === "ko" ? "홈에서 다음 게임 결과를 예측하세요" : "Predict the next game result from the home page"}
-              </p>
-            </div>
-          )
-        ) : tab === "bot" ? (
-          /* ─── Bot Tab ─── */
-          filteredBotTrades && filteredBotTrades.length > 0 ? (
-            <>
-              <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                <div className="col-span-2">{t.ledger.type}</div>
-                <div className="col-span-2">{t.ledger.ticker}</div>
-                <div className="col-span-2 text-right">{t.ledger.shares}</div>
-                <div className="col-span-2 text-right">{t.ledger.price}</div>
-                <div className="col-span-2 text-right">{t.ledger.total}</div>
-                <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
-              </div>
-              <div className="space-y-2.5">
-                {filteredBotTrades.slice((botPage - 1) * BOT_PAGE_SIZE, botPage * BOT_PAGE_SIZE).map((trade: any, i: number) => (
-                  <motion.div
-                    key={trade.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ type: "spring", damping: 26, stiffness: 260, delay: i * 0.02, duration: 0.3 }}
-                  >
-                    <div className="hidden sm:grid grid-cols-12 gap-2 items-center px-4 py-3 bg-card border border-border rounded-lg hover:bg-secondary/30 transition-colors">
-                      <div className="col-span-2">
-                        <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase px-2 py-0.5 rounded ${
-                          trade.type === "buy" ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
-                        }`}>
-                          {trade.type === "buy" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                          {trade.type === "buy" ? t.trading.buy : t.trading.sell}
-                        </span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-xs font-bold font-[var(--font-mono)] text-foreground">${trade.ticker}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-foreground font-[var(--font-mono)]">{trade.shares.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-muted-foreground font-[var(--font-mono)]">${trade.pricePerShare.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-foreground font-[var(--font-mono)]">${trade.totalAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="col-span-2 text-right">
-                        <span className="text-xs text-muted-foreground">{formatTimeAgoFromDate(trade.createdAt, language)}</span>
-                      </div>
-                    </div>
-                    {/* Mobile */}
-                    <div className="sm:hidden bg-card border border-border rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-0.5 text-xs font-bold uppercase px-1.5 py-0.5 rounded ${
-                            trade.type === "buy" ? "bg-[color:var(--color-win)]/15 text-[color:var(--color-win)]" : "bg-[color:var(--color-loss)]/15 text-[color:var(--color-loss)]"
-                          }`}>
-                            {trade.type === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
-                            {trade.type === "buy" ? t.trading.buy : t.trading.sell}
-                          </span>
-                          <span className="text-xs font-bold font-[var(--font-mono)]">${trade.ticker}</span>
-                        </div>
-                        <span className="text-xs font-[var(--font-mono)] text-foreground">${trade.totalAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
-                        <span>{formatTimeAgoFromDate(trade.createdAt, language)}</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-              {/* Pagination */}
-              <div className="flex items-center justify-between mt-4 px-1">
-                <span className="text-xs text-muted-foreground">
-                  {(botPage - 1) * BOT_PAGE_SIZE + 1}–{Math.min(botPage * BOT_PAGE_SIZE, filteredBotTrades.length)} of {filteredBotTrades.length}{filteredBotTrades.length >= botPage * BOT_PAGE_SIZE ? "+" : ""}
-                </span>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => setBotPage(p => Math.max(1, p - 1))}
-                    disabled={botPage <= 1}
-                    className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                  >
-                    {language === "ko" ? "이전" : "Prev"}
-                  </button>
-                  <span className="px-2 py-1 text-xs text-muted-foreground font-mono">{botPage}</span>
-                  <button
-                    onClick={() => setBotPage(p => p + 1)}
-                    disabled={filteredBotTrades.length < botPage * BOT_PAGE_SIZE}
-                    className="px-3 py-1 rounded-lg bg-secondary text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                  >
-                    {language === "ko" ? "다음" : "Next"}
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-20">
-              <Bot className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">
-                {language === "ko" ? "퀀트봇 거래 기록이 없습니다" : "No QuantBot trades yet"}
               </p>
             </div>
           )
