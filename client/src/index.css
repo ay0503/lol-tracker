@@ -278,25 +278,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Subtle animated gradient background — gives the page depth */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    opacity: 0.15;
-    background: radial-gradient(ellipse 60% 50% at 30% 30%, var(--primary) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 50% at 70% 70%, var(--destructive) 0%, transparent 70%);
-    filter: blur(160px) saturate(0.4);
-    animation: ambient-glow 25s ease-in-out infinite alternate;
-    pointer-events: none;
-  }
-
-  @keyframes ambient-glow {
-    0% { opacity: 0.12; transform: scale(1) translate(0, 0); }
-    50% { opacity: 0.18; transform: scale(1.05) translate(-2%, 1%); }
-    100% { opacity: 0.15; transform: scale(1.02) translate(1%, -1%); }
-  }
 
   /* Styled number input spinners */
   input[type="number"] {
