@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, THEMES } from "@/contexts/ThemeContext";
 import { trpc } from "@/lib/trpc";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, BookOpen, Crown, Newspaper, MessageCircle, Gamepad2,
-  Wallet, Shield, LogIn, LogOut, User, Menu, Moon, Sun, Globe, Pencil, Check, X,
+  Wallet, Shield, LogIn, LogOut, User, Menu, Globe, Pencil, Check, X, Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import NotificationBell from "./NotificationBell";
@@ -26,14 +26,47 @@ function LanguageToggle() {
 }
 
 function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { language } = useTranslation();
+  const [open, setOpen] = useState(false);
   return (
-    <button
-      onClick={() => toggleTheme?.()}
-      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-    >
-      {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-    </button>
+    <div className="relative">
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
+        title="Theme"
+      >
+        <Palette className="w-3.5 h-3.5" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -4, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-lg shadow-xl p-1.5 min-w-[160px]"
+            >
+              {THEMES.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { setTheme(item.id); setOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs transition-all ${
+                    theme === item.id ? "bg-primary/10 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  }`}
+                >
+                  <div className="w-3 h-3 rounded-full flex-shrink-0 border border-border" style={{ backgroundColor: item.accent }} />
+                  {language === "ko" ? item.labelKo : item.label}
+                  {theme === item.id && <Check className="w-3 h-3 ml-auto text-primary" />}
+                </button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
