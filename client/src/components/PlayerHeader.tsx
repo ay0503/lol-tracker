@@ -12,7 +12,11 @@ import { translateRank } from "@/lib/formatters";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Activity, DollarSign, Loader2 } from "lucide-react";
 
-const EMERALD_RANK_IMG = "/assets/emerald-rank.webp";
+function getRankEmblem(tierName: string): string {
+  const lower = tierName.toLowerCase();
+  // Community Dragon hosts official rank emblems
+  return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/images/${lower}.png`;
+}
 
 export default function PlayerHeader() {
   const { t, language } = useTranslation();
@@ -150,9 +154,10 @@ export default function PlayerHeader() {
           <>
             <div className="flex items-center gap-2">
               <img
-                src={EMERALD_RANK_IMG}
-                alt={t.player.rank}
-                className="w-10 h-10 object-contain ring-1 ring-border rounded-xl"
+                src={getRankEmblem(tier)}
+                alt={tier}
+                className="w-12 h-12 object-contain drop-shadow-md"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/assets/emerald-rank.webp"; }}
               />
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">{t.player.rank}</p>
