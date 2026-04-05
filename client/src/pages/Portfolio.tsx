@@ -173,7 +173,7 @@ function PortfolioPnlChart() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-card border border-border rounded-xl p-6 mb-6"
+        className="bg-card border border-border rounded-xl p-6 mb-8"
       >
         <div className="flex items-center gap-2 mb-4">
           <LineChart className="w-4 h-4 text-muted-foreground" />
@@ -199,7 +199,7 @@ function PortfolioPnlChart() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 }}
-      className="bg-card border border-border rounded-xl p-6 mb-6"
+      className="bg-card border border-border rounded-xl p-6 mb-8"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -371,7 +371,7 @@ export default function Portfolio() {
           <h2 className="text-lg font-bold text-foreground font-[var(--font-heading)] mb-2">
             {t.common.signInRequired}
           </h2>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm text-muted-foreground mb-8">
             {t.portfolio.startTrading}
           </p>
           <a
@@ -421,7 +421,7 @@ export default function Portfolio() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-6"
+              className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-8"
             >
               <p className="text-xs text-muted-foreground mb-1">{t.portfolio.totalValue}</p>
               <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
@@ -444,7 +444,7 @@ export default function Portfolio() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
                 <div className="bg-secondary/50 rounded-lg p-3">
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">{t.portfolio.cashBalance}</p>
                   <p className="text-lg font-bold text-foreground font-[var(--font-mono)]">
@@ -482,7 +482,7 @@ export default function Portfolio() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-6"
+              className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-8"
             >
               <div className="flex items-center gap-2 mb-4">
                 <PieChart className="w-4 h-4 text-muted-foreground" />
@@ -572,7 +572,7 @@ export default function Portfolio() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="bg-card border border-purple-500/30 rounded-xl p-6 mb-6"
+                className="bg-card border border-purple-500/30 rounded-xl p-6 mb-8"
               >
                 <div className="flex items-center gap-2 mb-4">
                   <ArrowDownUp className="w-4 h-4 text-purple-400" />
@@ -698,7 +698,7 @@ export default function Portfolio() {
               ) : filter === "bet" ? (
                 /* Bets list */
                 myBets && myBets.length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2.5">
                     {myBets.map((bet) => {
                       const isPending = bet.status === "pending";
                       const isWon = bet.status === "won";
@@ -757,7 +757,7 @@ export default function Portfolio() {
                   </div>
                 )
               ) : filteredTrades.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2.5">
                   {filteredTrades.map((trade) => {
                     const style = getTradeTypeStyle(trade.type, t);
                     const Icon = style.icon;

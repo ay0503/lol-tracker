@@ -156,7 +156,7 @@ export default function Register() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center">
               <p className="text-sm text-muted-foreground">
                 {t.auth.hasAccount}{" "}
                 <button

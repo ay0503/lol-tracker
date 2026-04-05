@@ -457,9 +457,9 @@ export default function Casino() {
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-6xl mx-auto px-4">
+      <div className="container py-8 sm:py-8 max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500/25 to-amber-600/15 border border-yellow-500/20">
               <Dice5 className="w-4 h-4 text-yellow-400" />
             </div>
@@ -502,7 +502,7 @@ export default function Casino() {
                     <HandValue value={dealerVal} bust={dealerVal > 21} blackjack={dealerVal === 21 && dealerRevealed.length === 2 && !dealerRevealed.some((card) => card.hidden)} />
                   )}
                 </div>
-                <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
+                <div className="flex gap-2 sm:gap-4 min-h-[5.5rem] sm:min-h-[7rem] items-end">
                   <AnimatePresence>
                     {dealerRevealed.length > 0 ? dealerRevealed.map((card, index) => (
                       <CardDisplay key={`d-${index}`} card={card} index={index} isNew={index >= prevDealerCards} />
@@ -605,7 +605,7 @@ export default function Casino() {
                         <HandValue value={playerVal} bust={playerVal > 21} blackjack={playerVal === 21 && game.playerHand.length === 2} soft={playerSoft} />
                       )}
                     </div>
-                    <div className="flex gap-2 sm:gap-2.5 min-h-[5.5rem] sm:min-h-[7rem] items-end">
+                    <div className="flex gap-2 sm:gap-4 min-h-[5.5rem] sm:min-h-[7rem] items-end">
                       <AnimatePresence>
                         {game ? game.playerHand.map((card: Card, index: number) => (
                           <CardDisplay key={`p-${index}`} card={card} index={index} isNew={index >= prevPlayerCards} />
@@ -616,7 +616,7 @@ export default function Casino() {
                 )}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-white/[0.05]">
+              <div className="mt-8 pt-4 border-t border-white/[0.05]">
                 <AnimatePresence mode="wait">
                   {!game || isOver ? (
                     <motion.div
@@ -637,7 +637,7 @@ export default function Casino() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className={`grid gap-2.5 ${canSplitHand ? "grid-cols-4" : "grid-cols-3"}`}>
+                      <div className={`grid gap-4 ${canSplitHand ? "grid-cols-4" : "grid-cols-3"}`}>
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.96 }}

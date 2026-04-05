@@ -85,14 +85,14 @@ export default function CasinoShop() {
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
-      <div className="container py-6 sm:py-8 max-w-2xl mx-auto px-4">
+      <div className="container py-8 sm:py-8 max-w-2xl mx-auto px-4">
         <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors mb-5">
           <ArrowLeft className="w-3.5 h-3.5" /> Casino
         </Link>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/25 to-violet-600/15 border border-purple-500/20">
               <ShoppingBag className="w-4 h-4 text-purple-400" />
             </div>
@@ -146,7 +146,7 @@ export default function CasinoShop() {
         </div>
 
         {/* Card Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
           {filtered.map((item, i) => {
             const isOwned = ownedIds.has(item.id);
             const isEquipped = equipped?.title?.id === item.id || equipped?.nameEffect?.id === item.id;
@@ -189,7 +189,7 @@ export default function CasinoShop() {
                 </div>
 
                 {/* Info Bar */}
-                <div className="bg-zinc-900/80 px-2.5 py-2 space-y-1.5">
+                <div className="bg-zinc-900/80 px-2.5 py-2 space-y-2.5">
                   <div>
                     <p className="text-[11px] text-zinc-300 font-semibold truncate">{item.name}</p>
                     {item.description && (
@@ -236,7 +236,7 @@ export default function CasinoShop() {
           </div>
         )}
 
-        <p className="text-center text-[11px] text-zinc-700 mt-6 font-mono">
+        <p className="text-center text-[11px] text-zinc-700 mt-8 font-mono">
           {language === "ko" ? "카지노 캐시로 구매 · 리더보드에 표시" : "Buy with casino cash · Shows on leaderboard"}
         </p>
 

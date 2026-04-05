@@ -69,8 +69,8 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       <AppNav />
-      <main className="container py-6 max-w-3xl">
-        <Link href="/leaderboard" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6">
+      <main className="container py-8 max-w-3xl">
+        <Link href="/leaderboard" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-8">
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Leaderboard
         </Link>
 
@@ -185,7 +185,7 @@ export default function UserProfilePage() {
               {data.trades.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No trades yet</p>
               ) : (
-                <div className="space-y-1.5 max-h-80 overflow-y-auto">
+                <div className="space-y-2.5 max-h-80 overflow-y-auto">
                   {data.trades.map((trade, i) => {
                     const isBuy = trade.type === "buy" || trade.type === "short";
                     return (
@@ -223,7 +223,7 @@ export default function UserProfilePage() {
                   </span>
                 </div>
                 {data.bets.length > 0 && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2.5">
                     {data.bets.map((bet, i) => (
                       <div key={i} className="flex items-center justify-between text-sm py-1 border-b border-border/30 last:border-0">
                         <span className="text-foreground">{bet.prediction}</span>

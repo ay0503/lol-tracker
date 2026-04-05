@@ -99,14 +99,14 @@ export default function Sentiment() {
     <div className="min-h-screen bg-background">
       <AppNav />
 
-      <main className="container py-6 max-w-3xl">
-        <div className="mb-6">
+      <main className="container py-8 max-w-3xl">
+        <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.sentiment.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t.sentiment.subtitle}</p>
         </div>
 
         {/* Sentiment Gauge */}
-        <div className="bg-card border border-border rounded-xl p-4 mb-6">
+        <div className="bg-card border border-border rounded-xl p-4 mb-8">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{t.sentiment.gauge}</span>
             <span className="text-xs text-muted-foreground">{totalComments} {t.sentiment.opinions}</span>
@@ -128,7 +128,7 @@ export default function Sentiment() {
 
         {/* Post Comment */}
         {isAuthenticated ? (
-          <div className="bg-card border border-border rounded-xl p-4 mb-6">
+          <div className="bg-card border border-border rounded-xl p-4 mb-8">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs text-muted-foreground">{t.sentiment.postingAs}</span>
               <span className="text-xs font-bold text-foreground">{user?.name || t.common.anonymous}</span>
@@ -190,7 +190,7 @@ export default function Sentiment() {
             </div>
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl p-4 mb-6 text-center">
+          <div className="bg-card border border-border rounded-xl p-4 mb-8 text-center">
             <p className="text-sm text-muted-foreground mb-2">{t.sentiment.loginToPost}</p>
             <a href={getLoginUrl()} className="text-sm text-primary hover:underline font-bold">{t.nav.signIn}</a>
           </div>

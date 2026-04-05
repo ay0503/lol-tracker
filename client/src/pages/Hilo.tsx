@@ -93,9 +93,9 @@ export default function Hilo() {
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
+      <div className="container py-8 sm:py-8 max-w-lg mx-auto px-4">
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/25 to-indigo-600/15 border border-violet-500/20">
               <span className="text-lg">🃏</span>
             </div>
@@ -144,7 +144,7 @@ export default function Hilo() {
             )}
 
             {/* Current Card */}
-            <div className={`flex justify-center mb-6 min-h-[160px] items-center rounded-2xl transition-all ${streakGlow}`}>
+            <div className={`flex justify-center mb-8 min-h-[160px] items-center rounded-2xl transition-all ${streakGlow}`}>
               {game ? (
                 <CardFace rank={game.currentCard.rank} suit={game.currentCard.suit} />
               ) : (
@@ -171,7 +171,7 @@ export default function Hilo() {
             {isPlaying ? (
               <div className="space-y-3">
                 {/* Guess Buttons */}
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-4">
                   <motion.button
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
                     onClick={() => guessMutation.mutate({ direction: "higher" })}

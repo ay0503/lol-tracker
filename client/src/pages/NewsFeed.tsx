@@ -34,14 +34,14 @@ export default function NewsFeed() {
     <div className="min-h-screen bg-background">
       <AppNav />
 
-      <main className="container py-6 max-w-3xl">
-        <div className="mb-6">
+      <main className="container py-8 max-w-3xl">
+        <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.news.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t.news.subtitle}</p>
         </div>
 
         {newsItems && newsItems.length > 0 && (
-          <div className="mb-6 bg-card border border-border rounded-xl p-3 overflow-hidden">
+          <div className="mb-8 bg-card border border-border rounded-xl p-3 overflow-hidden">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
               <span className="text-xs font-bold text-red-500 uppercase tracking-wider">{t.news.breakingNews}</span>

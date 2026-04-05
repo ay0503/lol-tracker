@@ -482,7 +482,7 @@ export default function TradingPanel() {
                           onClick={() => { setSelectedTicker(tk.symbol as TickerSymbol); setShowTickerDropdown(false); }}
                           className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-secondary/50 transition-colors ${selectedTicker === tk.symbol ? "bg-secondary/30" : ""}`}
                         >
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-center gap-4">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: tk.color }} />
                             <span className="text-xs font-bold text-foreground font-[var(--font-mono)]">${tk.symbol}</span>
                             <span className="text-[11px] text-muted-foreground">{t.tickers[tkKey] || tk.symbol}</span>
@@ -753,7 +753,7 @@ export default function TradingPanel() {
             <AnimatePresence>
               {showOrders && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="space-y-1.5">
+                  <div className="space-y-2.5">
                     {pendingOrdersList.map((order: any) => (
                       <div key={order.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/20">
                         <div className="flex items-center gap-2">
@@ -788,7 +788,7 @@ export default function TradingPanel() {
           <AnimatePresence>
             {showHistory && tradeHistory && tradeHistory.length > 0 && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-3">
-                <div className="space-y-1.5">
+                <div className="space-y-2.5">
                   {tradeHistory.map((trade: any) => {
                     const style = getTradeTypeStyle(trade.type, t);
                     const Icon = style.icon;

@@ -150,15 +150,15 @@ export default function Casino() {
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-5xl mx-auto px-4">
+      <div className="container py-8 sm:py-8 max-w-5xl mx-auto px-4">
         {/* ─── Hero ─── */}
-        <div className="relative mb-6 rounded-2xl overflow-hidden">
+        <div className="relative mb-8 rounded-2xl overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/15 via-amber-500/8 to-yellow-600/15" />
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, white 0.5px, transparent 0.5px)", backgroundSize: "10px 10px" }} />
           <div className="relative px-5 sm:px-8 py-6 sm:py-8">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2.5 mb-1">
+                <div className="flex items-center gap-4 mb-1">
                   <span className="text-2xl">🎰</span>
                   <h1 className="text-xl sm:text-2xl font-bold text-white font-[var(--font-heading)]">
                     {language === "ko" ? "$DORI 카지노" : "$DORI Casino"}
@@ -216,7 +216,7 @@ export default function Casino() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-4 mb-6 overflow-hidden"
+            className="bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-4 mb-8 overflow-hidden"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -295,7 +295,7 @@ export default function Casino() {
           </motion.div>
         )}
 
-        <div className="relative mb-6 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/70">
+        <div className="relative mb-8 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/70">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(250,204,21,0.10),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.08),transparent_32%)]" />
           <div className="relative grid gap-4 px-5 py-5 sm:grid-cols-[1.4fr_0.9fr] sm:px-6">
             <div>
@@ -374,7 +374,7 @@ export default function Casino() {
         <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
           {language === "ko" ? "게임" : "Games"}
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {GAMES.map((game, i) => (
             <motion.div key={game.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               {game.active ? (
@@ -424,7 +424,7 @@ export default function Casino() {
                     transition={{ delay: i * 0.03 }}
                     className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-800/20 transition-colors"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-4 min-w-0">
                       <RankIcon rank={i + 1} />
                       <StyledName
                         name={player.userName}

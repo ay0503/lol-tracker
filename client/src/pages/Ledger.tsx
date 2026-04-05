@@ -111,7 +111,7 @@ export default function Ledger() {
       <AppNav />
       <div className="container py-8 max-w-4xl">
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-secondary">
               <BookOpen className="w-5 h-5 text-primary" />
@@ -136,7 +136,7 @@ export default function Ledger() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-secondary/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 mb-8 bg-secondary/50 p-1 rounded-xl w-fit">
           <button
             onClick={() => setTab("trades")}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -176,7 +176,7 @@ export default function Ledger() {
         </div>
 
         {/* Ticker Legend */}
-        <div className="flex gap-2 sm:gap-3 mb-6 flex-wrap">
+        <div className="flex gap-2 sm:gap-3 mb-8 flex-wrap">
           {TICKERS.map(tk => (
             <div key={tk.symbol} className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-secondary/50">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tk.color }} />
@@ -301,7 +301,7 @@ export default function Ledger() {
                 <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2.5">
                 {filteredTrades.map((trade, i) => (
                   <motion.div
                     key={trade.id}
@@ -406,7 +406,7 @@ export default function Ledger() {
                 <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2.5">
                 {filteredDividends.map((div, i) => (
                   <motion.div
                     key={div.id}
@@ -491,7 +491,7 @@ export default function Ledger() {
                 <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2.5">
                 {filteredBets.map((bet, i) => {
                   const isPending = bet.status === "pending";
                   const isWon = bet.status === "won";
@@ -600,7 +600,7 @@ export default function Ledger() {
                 <div className="col-span-2 text-right">{t.ledger.total}</div>
                 <div className="col-span-2 text-right">{language === 'ko' ? '시간' : 'Time'}</div>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2.5">
                 {filteredBotTrades.slice((botPage - 1) * BOT_PAGE_SIZE, botPage * BOT_PAGE_SIZE).map((trade: any, i: number) => (
                   <motion.div
                     key={trade.id}

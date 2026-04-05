@@ -77,7 +77,7 @@ function SectionHeader({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2.5 mb-4">
+    <div className="flex items-center gap-4 mb-4">
       <div className="p-1.5 rounded-lg bg-secondary">
         <Icon className="w-4 h-4 text-muted-foreground" />
       </div>
@@ -115,7 +115,7 @@ function StatCard({
   isLive?: boolean;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-3 sm:p-4">
+    <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <p className="text-[11px] sm:text-xs text-muted-foreground">{label}</p>
         {isLive && (
@@ -439,7 +439,7 @@ function LiveGameBanner() {
 
   return (
     <motion.section
-      className="mt-6"
+      className="mt-8"
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -699,7 +699,7 @@ function MatchHistorySection() {
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-4">
           <div className="p-1.5 rounded-lg bg-secondary">
             <History className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -726,9 +726,9 @@ function MatchHistorySection() {
           <Clock className="w-4 h-4 text-muted-foreground animate-spin" />
         )}
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-2.5">
         {isLoading ? (
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-lg bg-card border border-border">
                 <div className="animate-pulse bg-secondary rounded-lg w-10 h-10" />
@@ -807,7 +807,7 @@ function StatsGrid() {
 
   if (isPlayerLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-card border border-border rounded-xl p-4">
             <div className="animate-pulse bg-secondary rounded w-16 h-3 mb-2" />
@@ -820,7 +820,7 @@ function StatsGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <StatCard
         label={t.stats.soloDuo}
         value={soloTier && soloRank ? translateRank(`${formatTier(soloTier)} ${formatDiv(soloRank)}`, language) : "--"}
@@ -909,7 +909,7 @@ function SentimentPreview() {
   if (!comments || comments.length === 0) return null;
 
   return (
-    <section className="mt-6">
+    <section className="mt-8">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           {language === "ko" ? "최근 의견" : "Latest Takes"}
@@ -918,7 +918,7 @@ function SentimentPreview() {
           {language === "ko" ? "더 보기" : "View all"}
         </Link>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-2.5">
         {comments.map((c: any) => (
           <div key={c.id} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-card border border-border">
             <span className="text-xs">{c.sentiment === "bullish" ? "🐂" : c.sentiment === "bearish" ? "🐻" : "😐"}</span>
@@ -1021,19 +1021,19 @@ export default function Home() {
         <PostGameBanner />
 
         <TickerProvider>
-          <section className="mt-6">
+          <section className="mt-8">
             <LPChart />
           </section>
 
           {isAuthenticated && (
-            <section className="mt-6">
+            <section className="mt-8">
               <TradingPanel />
             </section>
           )}
         </TickerProvider>
 
         {isAuthenticated && (
-          <section className="mt-6">
+          <section className="mt-8">
             <BettingPanel />
           </section>
         )}
@@ -1041,7 +1041,7 @@ export default function Home() {
         {/* Sentiment Preview */}
         <SentimentPreview />
 
-        <section className="mt-6">
+        <section className="mt-8">
           <PriceRankLegend />
         </section>
 

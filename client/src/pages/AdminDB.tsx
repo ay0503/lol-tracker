@@ -1241,7 +1241,7 @@ export default function AdminDB() {
         </div>
       </div>
 
-      <div className="container py-6">
+      <div className="container py-8">
         <Tabs defaultValue="tables" className="space-y-4">
           <TabsList className="bg-secondary/50">
             <TabsTrigger value="tables" className="text-xs">

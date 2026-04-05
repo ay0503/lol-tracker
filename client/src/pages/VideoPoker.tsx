@@ -127,11 +127,11 @@ export default function VideoPoker() {
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-2xl mx-auto">
+      <div className="container py-8 sm:py-8 max-w-2xl mx-auto">
         
 
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/25 to-blue-600/15 border border-indigo-500/20">
               <span className="text-lg">🃑</span>
             </div>

@@ -258,9 +258,9 @@ export default function Roulette() {
     <div className="dark min-h-screen bg-gradient-to-b from-zinc-900 via-zinc-950 to-black">
       <AppNav />
       <CasinoSubNav />
-      <div className="container py-6 sm:py-8 max-w-lg mx-auto px-4">
+      <div className="container py-8 sm:py-8 max-w-lg mx-auto px-4">
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-gradient-to-br from-green-500/25 to-emerald-600/15 border border-green-500/20">
               <span className="text-lg">🎡</span>
             </div>

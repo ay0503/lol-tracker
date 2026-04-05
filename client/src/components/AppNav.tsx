@@ -53,7 +53,7 @@ function ThemeToggle() {
                 <button
                   key={item.id}
                   onClick={() => { setTheme(item.id); setOpen(false); }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs transition-all ${
+                  className={`w-full flex items-center gap-4 px-2.5 py-1.5 rounded-md text-xs transition-all ${
                     theme === item.id ? "bg-primary/10 text-foreground font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                   }`}
                 >
@@ -120,7 +120,7 @@ export default function AppNav() {
             <BarChart3 className="w-5 h-5 text-primary" />
             <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">$DORI</span>
           </Link>
-          <div className="hidden md:flex items-center gap-1 ml-2">
+          <div className="hidden md:flex items-center gap-1.5 ml-3">
             {links.filter(l => !l.always).map(l => {
               if (l.auth && !isAuthenticated) return null;
               if (l.admin && user?.role !== "admin") return null;
@@ -130,7 +130,7 @@ export default function AppNav() {
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] transition-all ${
                     l.className ? l.className :
                     active ? "text-foreground bg-secondary/50" :
                     "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -233,7 +233,7 @@ export default function AppNav() {
                     key={l.href}
                     href={l.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                    className={`flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm transition-all ${
                       l.className ?? "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                     }`}
                   >
@@ -281,9 +281,9 @@ export default function AppNav() {
                         setEditName(currentName);
                         setIsEditingName(true);
                       }}
-                      className="flex items-center justify-between gap-2.5 px-3 py-2.5 text-sm text-foreground rounded-lg hover:bg-secondary/50 transition-all w-full"
+                      className="flex items-center justify-between gap-4 px-3 py-2.5 text-sm text-foreground rounded-lg hover:bg-secondary/50 transition-all w-full"
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-4">
                         <User className="w-4 h-4" />
                         {currentName}
                       </div>
@@ -292,7 +292,7 @@ export default function AppNav() {
                   )}
                   <button
                     onClick={() => { logout(); setMobileOpen(false); }}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
+                    className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
                   >
                     <LogOut className="w-4 h-4" />
                     {copy.nav.signOut}

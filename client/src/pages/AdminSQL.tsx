@@ -137,7 +137,7 @@ export default function AdminSQL() {
         </div>
       </div>
 
-      <div className="container py-6 space-y-6">
+      <div className="container py-8 space-y-6">
         {/* DB Status Cards */}
         {dbStatus.data && (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">

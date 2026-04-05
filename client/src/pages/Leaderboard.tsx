@@ -400,7 +400,7 @@ function LeaderboardCharts() {
   }, [valueData, userNames, hiddenUsers, hasData]);
 
   return (
-    <div className="space-y-4 mb-6">
+    <div className="space-y-4 mb-8">
       {/* ─── Standings Chart (Rank) ─── */}
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
@@ -573,14 +573,14 @@ export default function Leaderboard() {
     <div className="min-h-screen bg-background">
       <AppNav />
 
-      <main className="container py-6">
-        <div className="mb-6">
+      <main className="container py-8">
+        <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.leaderboard.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t.leaderboard.subtitle}</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-secondary/50 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 mb-8 bg-secondary/50 p-1 rounded-xl w-fit">
           <button
             onClick={() => { setTab("trading"); setExpandedUserId(null); }}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${

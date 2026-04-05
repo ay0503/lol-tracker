@@ -137,7 +137,7 @@ export default function NavBar() {
 
   function mobileLinkClass(href: string) {
     const active = isActive(href);
-    return `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${
+    return `flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm transition-all ${
       active
         ? "text-foreground bg-secondary/70 font-semibold"
         : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -319,7 +319,7 @@ export default function NavBar() {
                   </Link>
                 );
               })}
-              <Link href="/casino" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${isActive("/casino") ? "text-yellow-300 bg-yellow-950/40 font-semibold" : "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30"}`}>
+              <Link href="/casino" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm transition-all ${isActive("/casino") ? "text-yellow-300 bg-yellow-950/40 font-semibold" : "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30"}`}>
                 <Gamepad2 className="w-4 h-4" />
                 Casino
               </Link>
@@ -335,7 +335,7 @@ export default function NavBar() {
                 </div>
               )}
               {(user as any)?.role === "admin" && (
-                <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all ${isActive("/admin") ? "text-red-300 bg-red-950/40 font-semibold" : "text-red-400 hover:text-red-300 hover:bg-red-950/30"}`}>
+                <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm transition-all ${isActive("/admin") ? "text-red-300 bg-red-950/40 font-semibold" : "text-red-400 hover:text-red-300 hover:bg-red-950/30"}`}>
                   <Shield className="w-4 h-4" />
                   Admin
                 </Link>
@@ -344,20 +344,20 @@ export default function NavBar() {
                 href="https://op.gg/lol/summoners/na/%EB%AA%A9%EB%8F%84%EB%A6%AC%20%EB%8F%84%EB%A7%88%EB%B1%80-dori"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
+                className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
               >
                 <Activity className="w-4 h-4" />
                 OP.GG
               </a>
               {isAuthenticated && (
                 <div className="border-t border-border pt-2 mt-2">
-                  <div className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-foreground">
+                  <div className="flex items-center gap-4 px-3 py-2.5 text-sm text-foreground">
                     <User className="w-4 h-4" />
                     {(user as any)?.displayName || user?.name || t.common.trader}
                   </div>
                   <button
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
+                    className="flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm text-[#FF5252] hover:bg-[#FF5252]/10 transition-all w-full"
                   >
                     <LogOut className="w-4 h-4" />
                     {t.nav.signOut}
