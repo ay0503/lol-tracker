@@ -380,17 +380,25 @@ export const appRouter = router({
         const history = await getPriceHistory();
         if (history.length === 0) return [];
         const etfPrices = computeAllETFPricesSync(history);
-        const historyWithoutLast = history.slice(0, -1);
-        const prevPrices = historyWithoutLast.length > 0
-          ? computeAllETFPricesSync(historyWithoutLast)
+
+        // Calculate daily change: current price vs start-of-day price
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayStartMs = todayStart.getTime();
+
+        // Find the last snapshot before today (yesterday's close)
+        const yesterdaySnapshots = history.filter((snap: any) => snap.timestamp < todayStartMs);
+        const dayOpenPrices = yesterdaySnapshots.length > 0
+          ? computeAllETFPricesSync(yesterdaySnapshots)
           : etfPrices;
+
         return TICKERS.map((ticker) => {
           const price = etfPrices[ticker];
-          const prevPrice = prevPrices[ticker];
+          const openPrice = dayOpenPrices[ticker];
           return {
             ticker, price,
-            change: price - prevPrice,
-            changePct: prevPrice > 0 ? ((price - prevPrice) / prevPrice) * 100 : 0,
+            change: price - openPrice,
+            changePct: openPrice > 0 ? ((price - openPrice) / openPrice) * 100 : 0,
           };
         });
       }, ONE_MIN);
