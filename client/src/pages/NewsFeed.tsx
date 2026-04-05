@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import AppNav from "@/components/AppNav";
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { formatTimeAgoFromDate } from "@/lib/formatters";
@@ -32,8 +31,6 @@ export default function NewsFeed() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
-
       <main className="container py-8 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.news.title}</h1>

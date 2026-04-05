@@ -5,6 +5,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import WelcomeModal from "./components/WelcomeModal";
+import AppNav from "./components/AppNav";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { Loader2 } from "lucide-react";
 
@@ -35,7 +36,7 @@ const UserProfile = lazy(() => import("./pages/UserProfile"));
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex items-center justify-center py-32">
       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
     </div>
   );
@@ -81,6 +82,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <WelcomeModal />
+          <AppNav />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

@@ -21,7 +21,6 @@ import MatchRow from "@/components/MatchRow";
 import RecentPerformance from "@/components/RecentPerformance";
 import SeasonHistory from "@/components/SeasonHistory";
 import TradingPanel from "@/components/TradingPanel";
-import AppNav from "@/components/AppNav";
 import BettingPanel from "@/components/BettingPanel";
 import { TickerProvider } from "@/contexts/TickerContext";
 import NotificationBell from "@/components/NotificationBell";
@@ -1044,9 +1043,6 @@ export default function Home() {
           filter: "blur(60px)",
         }}
       />
-
-      <AppNav />
-
       {/* ETF Price Ticker — floats below nav as part of the glass bar */}
       <div className="sticky top-[60px] z-40 px-4">
         <div className="mx-auto max-w-[1200px] -mt-1 rounded-b-2xl bg-card/40 backdrop-blur-2xl backdrop-saturate-[1.6]" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.06)', borderLeft: '0.5px solid rgba(255,255,255,0.06)', borderRight: '0.5px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>

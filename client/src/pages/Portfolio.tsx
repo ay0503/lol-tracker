@@ -1,4 +1,3 @@
-import AppNav from "@/components/AppNav";
 /*
  * Portfolio: Personal portfolio page with holdings, P&L, returns, and transaction history.
  * Now wired to live backend prices via trpc.prices.etfPrices.
@@ -364,7 +363,6 @@ export default function Portfolio() {
   if (!authLoading && !isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
-      <AppNav />
       <div className="flex items-center justify-center flex-1 min-h-[80vh]">
         <div className="text-center">
           <Wallet className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
@@ -389,7 +387,6 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
       <div className="container py-8 max-w-5xl">
 
         <div className="flex items-center gap-3 mb-8">

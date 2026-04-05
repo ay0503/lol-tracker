@@ -3,7 +3,6 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { Loader2 } from "lucide-react";
-import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -125,7 +124,6 @@ export default function VideoPoker() {
 
   return (
     <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
-      <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-2xl mx-auto">
         

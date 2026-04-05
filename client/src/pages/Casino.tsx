@@ -5,7 +5,6 @@ import { Link } from "wouter";
 import { useState } from "react";
 import { Trophy, TrendingUp, TrendingDown, Lock, Crown, Medal, Award, Gift, Loader2, ArrowRightLeft, ShoppingBag, Info, Layers, Rocket, CircleDollarSign, CircleDot, Dice5, Target } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import AppNav from "@/components/AppNav";
 import CasinoSubNav from "@/components/CasinoSubNav";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -149,7 +148,6 @@ export default function Casino() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
       <CasinoSubNav />
       <div className="container py-8 sm:py-8 max-w-5xl mx-auto px-4">
         {/* ─── Hero ─── */}

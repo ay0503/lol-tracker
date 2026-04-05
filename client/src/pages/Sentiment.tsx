@@ -1,4 +1,3 @@
-import AppNav from "@/components/AppNav";
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -97,8 +96,6 @@ export default function Sentiment() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
-
       <main className="container py-8 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{t.sentiment.title}</h1>

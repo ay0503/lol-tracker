@@ -1,4 +1,3 @@
-import AppNav from "@/components/AppNav";
 /*
  * Ledger: Public trade ledger with Trades and Dividends tabs.
  * Full i18n support (EN/KR).
@@ -108,7 +107,6 @@ export default function Ledger() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
       <div className="container py-8 max-w-4xl">
 
         <div className="flex items-center justify-between mb-8">

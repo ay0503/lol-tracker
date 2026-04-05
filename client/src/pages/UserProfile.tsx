@@ -1,4 +1,3 @@
-import AppNav from "@/components/AppNav";
 import { trpc } from "@/lib/trpc";
 import { useParams } from "wouter";
 import { Link } from "wouter";
@@ -58,7 +57,6 @@ export default function UserProfilePage() {
   if (isNaN(userId)) {
     return (
       <div className="min-h-screen bg-background">
-        <AppNav />
         <main className="container py-12 text-center">
           <p className="text-muted-foreground">Invalid user ID</p>
         </main>
@@ -68,7 +66,6 @@ export default function UserProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav />
       <main className="container py-8 max-w-3xl">
         <Link href="/leaderboard" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-8">
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Leaderboard
