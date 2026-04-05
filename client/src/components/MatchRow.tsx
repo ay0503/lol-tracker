@@ -40,18 +40,18 @@ export default function MatchRow({ match, index }: Props) {
       <img
         src={match.championImage}
         alt={match.champion}
-        className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex-shrink-0"
+        className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex-shrink-0 ring-1 ring-border shadow-sm"
         loading="lazy"
       />
 
       {/* Main info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground font-[var(--font-heading)]">
+          <span className="text-sm font-semibold text-foreground font-[var(--font-heading)] tracking-tight">
             {match.champion}
           </span>
           <span
-            className="text-xs font-semibold font-[var(--font-mono)] px-1.5 py-0.5 rounded"
+            className="text-xs font-semibold font-[var(--font-mono)] px-2 py-0.5 rounded-md"
             style={{
               color: borderColor,
               backgroundColor: isWin
@@ -65,7 +65,7 @@ export default function MatchRow({ match, index }: Props) {
           </span>
         </div>
         <p
-          className="text-xs text-muted-foreground mt-0.5"
+          className="text-xs text-muted-foreground font-medium mt-0.5"
           title={match.gameCreation ? new Date(match.gameCreation).toLocaleString() : undefined}
         >
           {match.duration} · {match.timeAgo}
@@ -76,9 +76,9 @@ export default function MatchRow({ match, index }: Props) {
       <div className="text-right flex-shrink-0">
         <p className="text-sm font-bold font-[var(--font-mono)] text-foreground">
           <span style={{ color: "var(--color-win)" }}>{match.kills}</span>
-          <span className="text-muted-foreground"> / </span>
+          <span className="text-muted-foreground">{" \u00B7 "}</span>
           <span style={{ color: "var(--color-loss)" }}>{match.deaths}</span>
-          <span className="text-muted-foreground"> / </span>
+          <span className="text-muted-foreground">{" \u00B7 "}</span>
           <span className="text-foreground">{match.assists}</span>
         </p>
         <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
@@ -88,7 +88,7 @@ export default function MatchRow({ match, index }: Props) {
 
       {/* CS - hidden on mobile */}
       <div className="text-right flex-shrink-0 hidden sm:block w-20">
-        <p className="text-xs text-muted-foreground font-[var(--font-mono)]">
+        <p className="text-xs text-foreground font-medium font-[var(--font-mono)]">
           {match.cs}
         </p>
         <p className="text-xs text-muted-foreground">{t.common.cs}</p>

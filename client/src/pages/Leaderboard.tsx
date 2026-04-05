@@ -9,10 +9,10 @@ import StyledName from "@/components/StyledName";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 function getRankIcon(rank: number) {
-  if (rank === 1) return <Crown className="w-5 h-5 text-yellow-400" />;
-  if (rank === 2) return <Medal className="w-5 h-5 text-gray-300" />;
-  if (rank === 3) return <Award className="w-5 h-5 text-amber-600" />;
-  return <span className="text-sm text-muted-foreground font-mono w-5 text-center">#{rank}</span>;
+  if (rank === 1) return <div className="w-8 h-8 rounded-full bg-yellow-500/15 flex items-center justify-center"><Crown className="w-4 h-4 text-yellow-400" /></div>;
+  if (rank === 2) return <div className="w-8 h-8 rounded-full bg-gray-400/15 flex items-center justify-center"><Medal className="w-4 h-4 text-gray-300" /></div>;
+  if (rank === 3) return <div className="w-8 h-8 rounded-full bg-amber-600/15 flex items-center justify-center"><Award className="w-4 h-4 text-amber-600" /></div>;
+  return <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"><span className="text-xs font-bold text-muted-foreground">{rank}</span></div>;
 }
 
 function getRankBg(rank: number) {
@@ -583,8 +583,8 @@ export default function Leaderboard() {
         <div className="flex gap-1 mb-8 bg-secondary/50 p-1 rounded-xl w-fit">
           <button
             onClick={() => { setTab("trading"); setExpandedUserId(null); }}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              tab === "trading" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs transition-all ${
+              tab === "trading" ? "bg-card text-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground font-medium"
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
@@ -592,8 +592,8 @@ export default function Leaderboard() {
           </button>
           <button
             onClick={() => { setTab("casino"); setExpandedUserId(null); }}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              tab === "casino" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs transition-all ${
+              tab === "casino" ? "bg-card text-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground font-medium"
             }`}
           >
             <Dice5 className="w-3.5 h-3.5" />
@@ -629,7 +629,7 @@ export default function Leaderboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", damping: 26, stiffness: 260, delay: idx * 0.05 }}
-                  className={`border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${getRankBg(rank)} ${isExpanded ? "ring-1 ring-primary/30" : ""}`}
+                  className={`border rounded-xl p-4 cursor-pointer transition-all transition-shadow duration-200 hover:shadow-md ${getRankBg(rank)} ${isExpanded ? "ring-1 ring-primary/30" : ""}`}
                   onClick={() => setExpandedUserId(isExpanded ? null : trader.userId)}
                 >
                   {/* Desktop layout */}
@@ -670,7 +670,7 @@ export default function Leaderboard() {
                             <TrendingDown className="w-3 h-3 text-[color:var(--color-loss)]" />
                           )}
                           <span
-                            className="text-xs font-mono font-bold"
+                            className="text-xs sm:text-sm font-mono font-bold"
                             style={{ color: isPositive ? "var(--color-win)" : "var(--color-loss)" }}
                           >
                             {isPositive ? "+" : ""}${trader.pnl.toFixed(2)} ({isPositive ? "+" : ""}{trader.pnlPct.toFixed(1)}%)
@@ -777,7 +777,7 @@ export default function Leaderboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: "spring", damping: 26, stiffness: 260, delay: idx * 0.05 }}
-                  className={`border rounded-xl p-4 ${getRankBg(rank)}`}
+                  className={`border rounded-xl p-4 transition-shadow duration-200 hover:shadow-md ${getRankBg(rank)}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -804,7 +804,7 @@ export default function Leaderboard() {
                           <TrendingDown className="w-3 h-3 text-[color:var(--color-loss)]" />
                         )}
                         <span
-                          className="text-xs font-mono font-bold"
+                          className="text-xs sm:text-sm font-mono font-bold"
                           style={{ color: isProfit ? "var(--color-win)" : "var(--color-loss)" }}
                         >
                           {isProfit ? "+" : ""}${player.profit.toFixed(2)}

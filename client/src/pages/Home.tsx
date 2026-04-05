@@ -115,9 +115,12 @@ function StatCard({
   isLive?: boolean;
 }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 group">
+    <div
+      className="bg-card border border-border rounded-2xl p-4 sm:p-5 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+      style={{ borderLeft: color ? `3px solid ${color}` : undefined }}
+    >
       <div className="flex items-center justify-between mb-1">
-        <p className="text-xs sm:text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">{label}</p>
         {isLive && (
           <span className="flex items-center gap-0.5 text-xs font-semibold text-primary">
             <Activity className="w-2 h-2" />
@@ -125,7 +128,7 @@ function StatCard({
         )}
       </div>
       <p
-        className="text-base sm:text-xl font-bold font-[var(--font-mono)] truncate"
+        className="text-lg sm:text-2xl font-bold font-[var(--font-mono)] truncate"
         style={{ color: color || undefined }}
       >
         {value}
@@ -1059,8 +1062,10 @@ export default function Home() {
         <LiveGameBanner />
         <PostGameBanner />
 
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-8" />
+
         <TickerProvider>
-          <section className="mt-8">
+          <section>
             <LPChart />
           </section>
 
@@ -1084,7 +1089,9 @@ export default function Home() {
           <PriceRankLegend />
         </section>
 
-        <section className="mt-8">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-8" />
+
+        <section>
           <StatsGrid />
         </section>
 
@@ -1142,7 +1149,9 @@ export default function Home() {
           </motion.div>
         </section>
 
-        <section className="mt-8">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent my-8" />
+
+        <section>
           <MatchHistorySection />
         </section>
 

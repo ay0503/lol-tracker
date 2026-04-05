@@ -130,13 +130,13 @@ export default function AppNav() {
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] transition-all ${
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
                     l.className ? l.className :
-                    active ? "text-foreground bg-secondary/50" :
+                    active ? "text-foreground bg-secondary/50 font-semibold" :
                     "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className="w-4 h-4" />
                   {l.label}
                 </Link>
               );

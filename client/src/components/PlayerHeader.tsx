@@ -79,7 +79,7 @@ export default function PlayerHeader() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-primary font-[var(--font-heading)]">
+              <span className="text-lg font-bold text-primary font-[var(--font-heading)] tracking-tight">
                 $DORI
               </span>
               {playerName ? (
@@ -145,14 +145,14 @@ export default function PlayerHeader() {
       </div>
 
       {/* Secondary: Rank & Stats row */}
-      <div className="flex items-center gap-3 sm:gap-5 mt-4 sm:mt-5 flex-wrap">
+      <div className="flex items-center gap-3 sm:gap-5 mt-6 sm:mt-8 flex-wrap">
         {tier && division && lp !== undefined ? (
           <>
             <div className="flex items-center gap-2">
               <img
                 src={EMERALD_RANK_IMG}
                 alt={t.player.rank}
-                className="w-8 h-8 object-contain"
+                className="w-10 h-10 object-contain ring-1 ring-border rounded-xl"
               />
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">{t.player.rank}</p>
@@ -163,7 +163,7 @@ export default function PlayerHeader() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">{t.player.record}</p>
-              <p className="text-sm font-semibold font-[var(--font-mono)]">
+              <p className="text-sm font-semibold font-[var(--font-mono)] bg-secondary/30 px-2.5 py-1 rounded-lg inline-block">
                 <span style={{ color: "var(--color-win)" }}>{wins}{t.stats.wins}</span>
                 <span className="text-muted-foreground"> / </span>
                 <span style={{ color: "var(--color-loss)" }}>{losses}{t.stats.losses}</span>

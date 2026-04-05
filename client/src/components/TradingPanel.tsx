@@ -528,21 +528,21 @@ export default function TradingPanel() {
             {/* Market Order Tab */}
             {orderTab === "market" && (
               <>
-                <div className="flex gap-1 bg-secondary/50 rounded-lg p-0.5 mb-4">
-                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.buy}</button>
+                <div className="flex gap-1 bg-secondary/50 rounded-xl p-1 mb-4">
+                  <button onClick={() => setTradeType("buy")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "buy" ? "bg-[color:var(--color-win)] text-primary-foreground hover:shadow-lg" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.buy}</button>
                   <button onClick={() => setTradeType("sell")} className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${tradeType === "sell" ? "bg-[color:var(--color-loss)] text-white" : "text-muted-foreground hover:text-foreground"}`}>{t.trading.sell}</button>
                 </div>
                 {/* Dollar / Shares toggle */}
                 <div className="flex items-center gap-2 mb-3">
                   <button
                     onClick={() => { setInputMode("dollars"); setAmount(""); }}
-                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "dollars" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "dollars" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground border border-transparent"}`}
                   >
                     <DollarSign className="inline w-3 h-3 mr-0.5" />USD
                   </button>
                   <button
                     onClick={() => { setInputMode("shares"); setAmount(""); }}
-                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "shares" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "shares" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground border border-transparent"}`}
                   >
                     Shares
                   </button>
@@ -565,10 +565,10 @@ export default function TradingPanel() {
                 <div className="flex gap-2 mb-4">
                   {inputMode === "dollars"
                     ? ["10", "25", "50", "100"].map((val) => (
-                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
+                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary border border-border/50 hover:border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">${val}</button>
                       ))
                     : ["0.5", "1", "2", "5"].map((val) => (
-                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">{val}</button>
+                        <button key={val} onClick={() => setAmount(val)} className="flex-1 py-1.5 rounded-md bg-secondary border border-border/50 hover:border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors font-[var(--font-mono)]">{val}</button>
                       ))
                   }
                 </div>
