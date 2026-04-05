@@ -112,8 +112,9 @@ export default function AppNav() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/50 backdrop-blur-2xl backdrop-saturate-[1.8]" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)', boxShadow: '0 0 0 0.5px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.15)' }}>
-      <div className="container flex items-center justify-between h-14">
+    <div className="sticky top-0 z-50 px-4 pt-3">
+    <nav className="mx-auto max-w-[1200px] rounded-2xl bg-card/50 backdrop-blur-2xl backdrop-saturate-[1.8]" style={{ border: '0.5px solid rgba(255,255,255,0.1)', boxShadow: '0 0 0 0.5px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.1)' }}>
+      <div className="flex items-center justify-between h-12 px-5">
         {/* Left: Logo + Links */}
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -304,5 +305,6 @@ export default function AppNav() {
         )}
       </AnimatePresence>
     </nav>
+    </div>
   );
 }
