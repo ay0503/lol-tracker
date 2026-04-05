@@ -320,7 +320,7 @@ export async function pollNow(): Promise<PollResult> {
         console.log(`[Poll] Deferred game END resolved: ${winResult ? "WIN" : "LOSS"}, LP ${snap.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snap.price.toFixed(2)} → $${price.toFixed(2)}`);
         notifyGameEnd(lpDelta, snap.price, price, pendingGameEnd.win).catch(() => {});
         pendingGameEnd = null;
-        gameStartNotified = false; // game confirmed over via LP update → allow next game notification
+        if (!confirmedIsInGame) gameStartNotified = false;
       }
     }
 
@@ -626,7 +626,8 @@ export async function pollNow(): Promise<PollResult> {
 
         // Single Discord notification with LP/price info
         notifyGameEnd(lpDelta, snapPrice, price, lastMatchWinResult).catch(() => {});
-        gameStartNotified = false; // game confirmed over via match → allow next game notification
+        // Only reset notification flag if game is actually over — this match could be from a previous game
+        if (!confirmedIsInGame) gameStartNotified = false;
       }
     }
 
