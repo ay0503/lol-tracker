@@ -553,8 +553,8 @@ export async function pollNow(): Promise<PollResult> {
           const bestMate = teammates.length > 0
             ? teammates.reduce((best: any, p: any) => (p.kills + p.assists) / Math.max(p.deaths, 1) > (best.kills + best.assists) / Math.max(best.deaths, 1) ? p : best)
             : null;
-          const ceoKDA = deaths > 0 ? (kills + assists) / deaths : kills + assists;
-          const wasCarried = win && ceoKDA < 2 && bestMate && (bestMate.kills + bestMate.assists) / Math.max(bestMate.deaths, 1) > 4;
+          const ceoKDA = participant.deaths > 0 ? (participant.kills + participant.assists) / participant.deaths : participant.kills + participant.assists;
+          const wasCarried = participant.win && ceoKDA < 2 && bestMate && (bestMate.kills + bestMate.assists) / Math.max(bestMate.deaths, 1) > 4;
 
           const matchTeamContext: TeamContext = {
             teamKills,
