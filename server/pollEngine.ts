@@ -985,13 +985,16 @@ ${sameChampGames.length > 0 ? `- ${champion} record today: ${sameChampRecord.w}W
   // Team context situation tags
   if (teamContext) {
     if (teamContext.wasCarried && teamContext.bestTeammate) {
-      situationTags.push(`팀운 CARRIED — CEO went ${kda} but won because ${teamContext.bestTeammate.champion} went ${teamContext.bestTeammate.kills}/${teamContext.bestTeammate.deaths}/${teamContext.bestTeammate.assists}. CEO got HARD carried. Roast the 팀운 (team luck).`);
+      situationTags.push(`팀운 고트 (team luck GOAT) — CEO went ${kda} but won because ${teamContext.bestTeammate.champion} went ${teamContext.bestTeammate.kills}/${teamContext.bestTeammate.deaths}/${teamContext.bestTeammate.assists}. CEO got HARD carried. His 팀운 is insane. Roast the 팀운 — say things like "팀운 고트" "CEO's 팀운 is doing all the work" "teammates carrying this stock price"`);
     }
     if (teamContext.ceoKillParticipation < 20 && kills + assists < 5 && win) {
-      situationTags.push(`AFK WIN — CEO participated in only ${teamContext.ceoKillParticipation}% of team kills. Basically a passenger.`);
+      situationTags.push(`팀운 고트 — CEO participated in only ${teamContext.ceoKillParticipation}% of team kills but still won. Pure 팀운. Basically a passenger with godlike team luck.`);
     }
     if (teamContext.ceoKillParticipation > 70 && kills >= 5) {
-      situationTags.push(`1v9 — CEO was ${teamContext.ceoKillParticipation}% of team's kills. Literal solo carry.`);
+      situationTags.push(`1v9 NO 팀운 NEEDED — CEO was ${teamContext.ceoKillParticipation}% of team's kills. Literal solo carry. This wasn't 팀운, this was pure skill.`);
+    }
+    if (!win && teamContext.ceoKillParticipation > 50 && deaths <= 3 && kills >= 5) {
+      situationTags.push(`팀운 ZERO — CEO went ${kda} and STILL lost. Teammates griefed. CEO had no 팀운 today.`);
     }
   }
 
@@ -1003,7 +1006,7 @@ TEAM CONTEXT (use this to write funnier headlines):
 - CEO kill participation: ${teamContext.ceoKillParticipation}% of team kills
 - Team total: ${teamContext.teamKills} kills / ${teamContext.teamDeaths} deaths
 ${teamContext.bestTeammate ? `- Best teammate: ${teamContext.bestTeammate.champion} ${teamContext.bestTeammate.kills}/${teamContext.bestTeammate.deaths}/${teamContext.bestTeammate.assists}` : ""}
-${teamContext.wasCarried ? `- CARRIED: CEO had trash KDA but won thanks to teammates. ROAST THE 팀운 (team luck). Headlines like "CEO 2/8 but somehow wins ㅋㅋ ${teamContext.bestTeammate?.champion} did all the work"` : ""}`;
+${teamContext.wasCarried ? `- 팀운 고트: CEO had trash KDA but won. Use "팀운 고트" (team luck GOAT). "${teamContext.bestTeammate?.champion} went ${teamContext.bestTeammate?.kills}/${teamContext.bestTeammate?.deaths}/${teamContext.bestTeammate?.assists} and carried. 팀운 고트 carrying $DORI"` : ""}`;
   }
 
   const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "목도리 도마뱀" (dori). This is a fake trading platform and you are the news desk.
@@ -1033,9 +1036,10 @@ EXAMPLES OF GOOD HEADLINES (notice: each is EITHER English OR has minimal Korean
 - "SEC investigating $DORI after CEO's 1/9 ${champion}. 'This has to be intentional.'"
 - "$DORI up 3% after CEO goes 12/2. Cathie Wood seen buying. Inverse Cramer confirmed."
 - "CEO 0/7 on ${champion}. Goldman downgrades to 'Please God No.' ㅎㄷㄷ"
-- "CEO 2/8 on ${champion} but WINS. His Jinx went 18/3. 팀운 is doing the heavy lifting here."
-- "$DORI green despite CEO's 1/6 performance. Teammates literally 4v5'd this win. 팀운 diff."
-- "CEO participated in 15% of team kills. Shareholders wondering who's actually playing."
+- "CEO 2/8 on ${champion} but WINS. His Jinx went 18/3. 팀운 고트. Teammates are the real shareholders."
+- "$DORI green despite CEO's 1/6 performance. 팀운 diff. Teammates literally 4v5'd this."
+- "CEO participated in 15% of kills. 팀운 고트 carrying the stock price. Shareholders confused."
+- "CEO goes 8/2 and LOSES. 팀운 zero today. Teammates sold harder than $DORI bears."
 
 EXAMPLES OF BAD HEADLINES (DO NOT write like this):
 - "CEO 목도리 도마뱀씹놈, 20+킬에 연루돼서 팀파이트 전투기 몬스터 인증!" ← unnatural forced Korean translation
