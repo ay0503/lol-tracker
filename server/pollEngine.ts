@@ -227,7 +227,8 @@ export async function pollNow(): Promise<PollResult> {
     if (spectatorApiOk) {
       if (previousRawIsInGame !== null && rawIsInGame === previousRawIsInGame && rawIsInGame !== confirmedIsInGame) {
         confirmedIsInGame = rawIsInGame;
-        if (!confirmedIsInGame) gameStartNotified = false; // game ended via spectator → allow next game notification
+        // Note: do NOT reset gameStartNotified here — spectator can flicker.
+        // Only reset when match data confirms game ended (authoritative).
         console.log(`[Poll] Live game CONFIRMED: ${confirmedIsInGame ? "IN GAME" : "not in game"} (after 2 consecutive checks)`);
       }
       previousRawIsInGame = rawIsInGame;
@@ -319,6 +320,7 @@ export async function pollNow(): Promise<PollResult> {
         console.log(`[Poll] Deferred game END resolved: ${winResult ? "WIN" : "LOSS"}, LP ${snap.lp} → ${lp} (${lpDelta >= 0 ? "+" : ""}${lpDelta}), Price $${snap.price.toFixed(2)} → $${price.toFixed(2)}`);
         notifyGameEnd(lpDelta, snap.price, price, pendingGameEnd.win).catch(() => {});
         pendingGameEnd = null;
+        gameStartNotified = false; // game confirmed over via LP update → allow next game notification
       }
     }
 
@@ -624,6 +626,7 @@ export async function pollNow(): Promise<PollResult> {
 
         // Single Discord notification with LP/price info
         notifyGameEnd(lpDelta, snapPrice, price, lastMatchWinResult).catch(() => {});
+        gameStartNotified = false; // game confirmed over via match → allow next game notification
       }
     }
 

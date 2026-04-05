@@ -164,11 +164,13 @@ describe("game lifecycle: duplicate notification prevention", () => {
     const shouldCapture3 = shouldCaptureSnapshot(false, true, false, notified);
     expect(shouldCapture3).toBe(false);
 
-    // 4. Game actually ends: two consecutive false
+    // 4. Spectator says game ended (two consecutive false)
     state = evaluateGameConfirmation(false, true, state);
     state = evaluateGameConfirmation(false, true, state);
     expect(state.confirmed).toBe(false);
-    notified = false; // reset on game end
+    // notified stays TRUE here — only reset when match data confirms game end
+    // (simulating: match data arrives and game-end event emits)
+    notified = false; // reset by match data / game-end event emission
 
     // 5. New game starts
     state = evaluateGameConfirmation(true, true, state);
