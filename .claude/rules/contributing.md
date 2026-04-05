@@ -76,6 +76,16 @@ Insert first, then SELECT to get the row back.
 if (timerRef.current) clearInterval(timerRef.current);
 ```
 
+### 13. Spectator API is unreliable — never trust it as authoritative
+The Riot Spectator API flickers (briefly reports game ended, then comes back). Any state reset based on spectator status MUST be treated as potentially wrong.
+- `gameStartNotified` resets ONLY on match data (authoritative), never on spectator unconfirmation
+- `preGameSnapshot` should NOT be consumed when `confirmedIsInGame` is true
+- Match-history-based game end requires `!rawIsInGame` (spectator agrees)
+- Discord game-start notifications use `gameStartNotified` flag independent of `preGameSnapshot`
+
+### 14. Theme tokens — never hardcode zinc/slate/gray in pages
+All pages must use theme CSS variables (`bg-background`, `bg-card`, `bg-secondary`, `text-foreground`, `text-muted-foreground`, `border-border`), NOT hardcoded Tailwind color classes like `bg-zinc-900`, `text-zinc-400`, etc. Hardcoded colors break the 4-theme system.
+
 ---
 
 ## PR Rules (MUST check before submitting)
