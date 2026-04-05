@@ -46,7 +46,7 @@ const PokerCard = memo(function PokerCard({
     <motion.div
       initial={isNew ? { rotateY: -180, opacity: 0, y: -20 } : { rotateY: -90, opacity: 0 }}
       animate={{ rotateY: 0, opacity: 1, y: held ? -8 : 0 }}
-      transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.12, duration: 0.4, type: "spring", stiffness: 200, damping: 18 }}
+      transition={{ type: "spring", stiffness: 200, damping: 18, delay: index * 0.12 }}
       onClick={canHold ? onClick : undefined}
       className={`relative w-[4rem] h-[5.5rem] sm:w-[5rem] sm:h-[7rem] rounded-lg border bg-white dark:bg-card shadow-lg select-none flex-shrink-0 transition-all ${
         canHold ? "cursor-pointer hover:shadow-xl" : ""

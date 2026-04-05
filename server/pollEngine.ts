@@ -93,6 +93,8 @@ let lastNotifiedMatchId: string | null = null;
 
 // Prevent duplicate game-start Discord notifications during spectator flicker
 let gameStartNotified = false;
+// Track if this is the first poll after server start (suppress notification for in-progress games)
+let isFirstPollCycle = true;
 
 // Snapshot throttling: only store if price changed or 5 min elapsed
 let lastSnapshotPrice: number | null = null;
@@ -259,12 +261,16 @@ export async function pollNow(): Promise<PollResult> {
         };
         console.log(`[Poll] Game START detected — snapshot: ${snapEntry.tier} ${snapEntry.rank} ${snapEntry.leaguePoints}LP, $${snapPrice.toFixed(2)}`);
 
-        // Discord notification — reuse activeGameData instead of re-fetching
-        const participant = activeGameData?.participants.find(p => p.puuid === playerData.account.puuid);
-        const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
-        const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
-        const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
-        notifyGameStart(champName, gameMode).catch(() => {});
+        // Discord notification — skip if this is first poll after server restart (game already in progress)
+        if (isFirstPollCycle) {
+          console.log(`[Poll] Game detected on first poll after restart — skipping Discord notification (game was already live)`);
+        } else {
+          const participant = activeGameData?.participants.find(p => p.puuid === playerData.account.puuid);
+          const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
+          const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
+          const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
+          notifyGameStart(champName, gameMode).catch(() => {});
+        }
         gameStartNotified = true;
       } catch (err: any) {
         console.warn("[Poll] Failed to capture pre-game snapshot:", err?.message);
@@ -816,6 +822,7 @@ export async function pollNow(): Promise<PollResult> {
     console.error("[Poll] Error:", err);
   } finally {
     isPolling = false;
+    isFirstPollCycle = false;
     lastPollTime = new Date();
     lastPollResult = result;
     // Invalidate all server-side caches after poll writes new data

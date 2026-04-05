@@ -30,7 +30,7 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
         initial={{ rotateY: 180, opacity: 0, x: 60, scale: 0.7 }}
         animate={{ rotateY: 0, opacity: 1, x: 0, scale: 1 }}
         exit={{ rotateY: 90, opacity: 0, scale: 0.8 }}
-        transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.2, duration: 0.5, type: "spring", stiffness: 150, damping: 15 }}
+        transition={{ type: "spring", stiffness: 150, damping: 15, delay: index * 0.2 }}
         className="w-[3.75rem] h-[5.25rem] sm:w-[4.75rem] sm:h-[6.75rem] rounded-lg border border-blue-500/40 shadow-lg relative overflow-hidden select-none flex-shrink-0"
         style={{ zIndex: index }}
       >
@@ -58,7 +58,7 @@ const CardDisplay = memo(function CardDisplay({ card, index = 0, isNew = false }
       initial={isNew ? { rotateY: -180, opacity: 0, x: 60, scale: 0.7 } : { rotateY: -90, opacity: 0, x: 20 }}
       animate={{ rotateY: 0, opacity: 1, x: 0, scale: 1 }}
       exit={{ rotateY: 90, opacity: 0, x: -20, scale: 0.8 }}
-      transition={{ type: "spring", damping: 26, stiffness: 260, delay: index * 0.2, duration: 0.5, type: "spring", stiffness: 150, damping: 15 }}
+      transition={{ type: "spring", stiffness: 150, damping: 15, delay: index * 0.2 }}
       whileHover={{ y: -3, transition: { duration: 0.15 } }}
       className="w-[3.75rem] h-[5.25rem] sm:w-[4.75rem] sm:h-[6.75rem] rounded-lg border border-border dark:border-border bg-white dark:bg-card shadow-[0_2px_8px_rgba(0,0,0,0.15)] relative overflow-hidden select-none flex-shrink-0"
       style={{ zIndex: index }}

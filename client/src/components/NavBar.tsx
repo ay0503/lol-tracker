@@ -22,8 +22,7 @@ import {
   Pencil,
   Check,
   X,
-  Moon,
-  Sun,
+  Palette,
   Globe,
   Activity,
   Menu,
@@ -32,19 +31,17 @@ import {
 // ─── Sub-components ───
 
 function ThemeToggleButton() {
-  const { theme, toggleTheme } = useTheme();
-  const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  const { THEMES } = require("@/contexts/ThemeContext");
+  const currentIdx = THEMES.findIndex((item: any) => item.id === theme);
+  const nextTheme = THEMES[(currentIdx + 1) % THEMES.length];
   return (
     <button
-      onClick={toggleTheme}
-      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-      title={theme === "dark" ? t.common.switchToLight : t.common.switchToDark}
+      onClick={() => setTheme(nextTheme.id)}
+      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+      title={nextTheme.label}
     >
-      {theme === "dark" ? (
-        <Sun className="w-4 h-4" />
-      ) : (
-        <Moon className="w-4 h-4" />
-      )}
+      <Palette className="w-4 h-4" />
     </button>
   );
 }
