@@ -23,8 +23,8 @@ export default function CasinoSubNav() {
   return (
     <div className="sticky top-[60px] z-40 px-4 pt-1">
       <div
-        className="mx-auto max-w-[1200px] -mt-1 rounded-b-2xl bg-card/40 backdrop-blur-2xl backdrop-saturate-[1.6]"
-        style={{ borderBottom: '0.5px solid rgba(255,255,255,0.06)', borderLeft: '0.5px solid rgba(255,255,255,0.06)', borderRight: '0.5px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}
+        className="mx-auto max-w-[1200px] -mt-1 rounded-b-2xl bg-card/60 backdrop-blur-xl backdrop-saturate-[1.2]"
+        style={{ borderBottom: '0.5px solid rgba(255,255,255,0.04)', borderLeft: '0.5px solid rgba(255,255,255,0.04)', borderRight: '0.5px solid rgba(255,255,255,0.04)' }}
       >
         <div className="flex items-center justify-center gap-1 overflow-x-auto py-1.5 scrollbar-hide px-3">
           {CASINO_GAMES.map((game) => {

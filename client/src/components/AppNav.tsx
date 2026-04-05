@@ -114,7 +114,7 @@ export default function AppNav() {
 
   return (
     <div className="sticky top-0 z-50 px-4 pt-3">
-    <nav className="mx-auto max-w-[1200px] rounded-2xl bg-card/50 backdrop-blur-2xl backdrop-saturate-[1.8]" style={{ border: '0.5px solid rgba(255,255,255,0.1)', boxShadow: '0 0 0 0.5px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.1)' }}>
+    <nav className="mx-auto max-w-[1200px] rounded-2xl bg-card/70 backdrop-blur-xl backdrop-saturate-[1.2]" style={{ border: '0.5px solid rgba(255,255,255,0.05)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
       <div className="flex items-center justify-between h-12 px-5">
         {/* Left: Logo + Links */}
         <div className="flex items-center gap-4">

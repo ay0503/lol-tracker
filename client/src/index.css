@@ -8,8 +8,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --shadow-card: 0 0 0 0.5px rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.12);
-  --shadow-card-hover: 0 0 0 0.5px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.25), 0 12px 32px rgba(0,0,0,0.18);
+  --shadow-card: 0 0 0 0.5px rgba(255,255,255,0.04), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 0 0 0.5px rgba(255,255,255,0.06), 0 1px 4px rgba(0,0,0,0.12);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -92,7 +92,7 @@
 .theme-navy {
   --background: oklch(0.12 0.02 260);
   --foreground: oklch(0.95 0.005 260);
-  --card: oklch(0.16 0.015 260 / 0.65);
+  --card: oklch(0.16 0.015 260 / 0.82);
   --card-foreground: oklch(0.95 0.005 260);
   --popover: oklch(0.16 0.015 260);
   --popover-foreground: oklch(0.95 0.005 260);
@@ -131,7 +131,7 @@
 .theme-purple {
   --background: oklch(0.11 0.025 300);
   --foreground: oklch(0.93 0.01 300);
-  --card: oklch(0.15 0.02 300 / 0.65);
+  --card: oklch(0.15 0.02 300 / 0.82);
   --card-foreground: oklch(0.93 0.01 300);
   --popover: oklch(0.15 0.02 300);
   --popover-foreground: oklch(0.93 0.01 300);
@@ -170,7 +170,7 @@
 .theme-charcoal {
   --background: oklch(0.13 0.003 60);
   --foreground: oklch(0.93 0.005 60);
-  --card: oklch(0.17 0.003 60 / 0.65);
+  --card: oklch(0.17 0.003 60 / 0.82);
   --card-foreground: oklch(0.93 0.005 60);
   --popover: oklch(0.17 0.003 60);
   --popover-foreground: oklch(0.93 0.005 60);
@@ -209,7 +209,7 @@
 .theme-neon {
   --background: oklch(0.0 0 0);
   --foreground: oklch(1.0 0 0);
-  --card: oklch(0.08 0 0 / 0.65);
+  --card: oklch(0.08 0 0 / 0.82);
   --card-foreground: oklch(1.0 0 0);
   --popover: oklch(0.08 0 0);
   --popover-foreground: oklch(1.0 0 0);
@@ -248,7 +248,7 @@
 .dark:not([class*="theme-"]) {
   --background: oklch(0.13 0.003 60);
   --foreground: oklch(0.93 0.005 60);
-  --card: oklch(0.17 0.003 60 / 0.65);
+  --card: oklch(0.17 0.003 60 / 0.82);
   --card-foreground: oklch(0.93 0.005 60);
   --popover: oklch(0.17 0.003 60);
   --popover-foreground: oklch(0.93 0.005 60);
@@ -349,39 +349,36 @@
   backdrop-filter: blur(40px) saturate(1.6);
   -webkit-backdrop-filter: blur(40px) saturate(1.6);
 }
-/* Dark theme: liquid glass vibrancy */
+/* Dark theme: macOS Tahoe liquid glass — dark, subtle, warm */
 .dark .bg-card {
-  backdrop-filter: blur(28px) saturate(1.6);
-  -webkit-backdrop-filter: blur(28px) saturate(1.6);
-  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
 .dark .bg-popover {
-  backdrop-filter: blur(36px) saturate(1.8);
-  -webkit-backdrop-filter: blur(36px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
   box-shadow: var(--shadow-card);
 }
 .dark nav.sticky {
-  backdrop-filter: blur(36px) saturate(1.6);
-  -webkit-backdrop-filter: blur(36px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
 }
 
-/* Liquid glass: subtle inner highlight on card borders */
+/* Glass borders: barely perceptible white edge */
 .dark .bg-card,
 [class*="theme-"] .bg-card {
-  border-color: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.04);
 }
 
-/* Liquid glass hover: lift + brighten on interactive cards */
+/* Hover: no lift, just subtle background brighten */
 .dark .bg-card:hover,
 [class*="theme-"] .bg-card:hover {
-  box-shadow: var(--shadow-card-hover);
-  border-color: rgba(255,255,255,0.1);
-  transform: translateY(-1px);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  border-color: rgba(255,255,255,0.07);
+  transition: border-color 0.2s ease;
 }
 .dark .bg-card,
 [class*="theme-"] .bg-card {
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  transition: border-color 0.2s ease;
 }
 
 /* Gradient text utility — for hero prices */
