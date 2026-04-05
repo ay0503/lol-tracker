@@ -990,7 +990,7 @@ function PriceTicker() {
   if (!etfPrices || etfPrices.length === 0) return null;
 
   return (
-    <div className="flex items-center justify-center gap-5 sm:gap-6 py-1.5 overflow-x-auto scrollbar-hide">
+    <div className="flex items-center justify-center gap-5 sm:gap-6 py-2.5 overflow-x-auto scrollbar-hide px-3">
       {etfPrices.map((etf: any) => {
         const pct = etf.changePct ?? 0;
         const isUp = pct >= 0;
