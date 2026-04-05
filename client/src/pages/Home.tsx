@@ -991,26 +991,24 @@ function PriceTicker() {
   if (!etfPrices || etfPrices.length === 0) return null;
 
   return (
-    <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden">
-      <div className="container flex items-center gap-6 py-1.5 overflow-x-auto scrollbar-hide">
-        {etfPrices.map((etf: any) => {
-          const pct = etf.changePct ?? 0;
-          const isUp = pct >= 0;
-          return (
-            <div key={etf.ticker} className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKER_COLORS[etf.ticker] || "var(--foreground)" }}>
-                ${etf.ticker}
-              </span>
-              <span className="text-xs font-[var(--font-mono)] text-foreground/80">
-                ${etf.price.toFixed(2)}
-              </span>
-              <span className="text-xs font-[var(--font-mono)] font-semibold" style={{ color: isUp ? "var(--color-win)" : "var(--color-loss)" }}>
-                {isUp ? "+" : ""}{pct.toFixed(1)}%
-              </span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex items-center justify-center gap-5 sm:gap-6 py-1.5 overflow-x-auto scrollbar-hide">
+      {etfPrices.map((etf: any) => {
+        const pct = etf.changePct ?? 0;
+        const isUp = pct >= 0;
+        return (
+          <div key={etf.ticker} className="flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-[11px] font-bold font-[var(--font-mono)]" style={{ color: TICKER_COLORS[etf.ticker] || "var(--foreground)" }}>
+              ${etf.ticker}
+            </span>
+            <span className="text-[11px] font-[var(--font-mono)] text-foreground/60">
+              ${etf.price.toFixed(2)}
+            </span>
+            <span className="text-[11px] font-[var(--font-mono)] font-semibold" style={{ color: isUp ? "var(--color-win)" : "var(--color-loss)" }}>
+              {isUp ? "+" : ""}{pct.toFixed(1)}%
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1049,8 +1047,12 @@ export default function Home() {
 
       <AppNav />
 
-      {/* ETF Price Ticker Strip */}
-      <PriceTicker />
+      {/* ETF Price Ticker — floats below nav as part of the glass bar */}
+      <div className="sticky top-[60px] z-40 px-4">
+        <div className="mx-auto max-w-[1200px] -mt-1 rounded-b-2xl bg-card/40 backdrop-blur-2xl backdrop-saturate-[1.6]" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.06)', borderLeft: '0.5px solid rgba(255,255,255,0.06)', borderRight: '0.5px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
+          <PriceTicker />
+        </div>
+      </div>
 
       {/* Main content */}
       <main className="container relative z-10 pb-20">
