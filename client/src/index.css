@@ -278,6 +278,26 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Subtle animated gradient background — gives the page depth */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.4;
+    background: radial-gradient(ellipse at 20% 20%, var(--primary) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, var(--destructive) 0%, transparent 50%);
+    filter: blur(120px) saturate(0.6);
+    animation: ambient-glow 20s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+
+  @keyframes ambient-glow {
+    0% { opacity: 0.25; transform: scale(1) translate(0, 0); }
+    50% { opacity: 0.4; transform: scale(1.1) translate(-3%, 2%); }
+    100% { opacity: 0.3; transform: scale(1.05) translate(2%, -1%); }
+  }
+
   /* Styled number input spinners */
   input[type="number"] {
     -moz-appearance: textfield;
@@ -374,6 +394,43 @@
 .dark .bg-card:hover,
 [class*="theme-"] .bg-card:hover {
   box-shadow: var(--shadow-card-hover);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateY(-1px);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+.dark .bg-card,
+[class*="theme-"] .bg-card {
+  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+}
+
+/* Gradient text utility — for hero prices */
+.text-gradient-win {
+  background: linear-gradient(135deg, var(--color-win), oklch(0.85 0.15 165));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-loss {
+  background: linear-gradient(135deg, var(--color-loss), oklch(0.75 0.15 15));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-primary {
+  background: linear-gradient(135deg, var(--primary), oklch(0.85 0.12 200));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effect for key numbers */
+.glow-win { text-shadow: 0 0 20px oklch(0.72 0.19 145 / 0.4), 0 0 40px oklch(0.72 0.19 145 / 0.15); }
+.glow-loss { text-shadow: 0 0 20px oklch(0.65 0.2 25 / 0.4), 0 0 40px oklch(0.65 0.2 25 / 0.15); }
+.glow-primary { text-shadow: 0 0 20px var(--primary) / 0.3, 0 0 40px var(--primary) / 0.1; }
+
+/* Accent stripe for important cards */
+.accent-stripe-left {
+  border-left: 3px solid var(--primary);
 }
 
 /* Scrollbar styling - adapts to theme */

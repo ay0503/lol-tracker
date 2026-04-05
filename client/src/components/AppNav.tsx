@@ -118,7 +118,7 @@ export default function AppNav() {
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <BarChart3 className="w-5 h-5 text-primary" />
-            <span className="text-sm font-bold text-foreground font-[var(--font-heading)]">$DORI</span>
+            <span className="text-[15px] font-bold text-gradient-primary font-[var(--font-heading)] tracking-tight">$DORI</span>
           </Link>
           <div className="hidden md:flex items-center gap-1.5 ml-3">
             {links.filter(l => !l.always).map(l => {

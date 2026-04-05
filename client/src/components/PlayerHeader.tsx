@@ -110,7 +110,7 @@ export default function PlayerHeader() {
       <div className="mt-4">
         <div className="flex items-baseline gap-3">
           {currentPrice !== null ? (
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground font-[var(--font-heading)] tracking-tight tabular-nums">
+            <h2 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold font-[var(--font-heading)] tracking-tight tabular-nums ${isPositive ? 'text-gradient-win glow-win' : isPositive === false ? 'text-gradient-loss glow-loss' : 'text-foreground'}`}>
               ${currentPrice.toFixed(2)}
             </h2>
           ) : (

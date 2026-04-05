@@ -115,7 +115,7 @@ function StatCard({
   isLive?: boolean;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 sm:p-5">
+    <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 group">
       <div className="flex items-center justify-between mb-1">
         <p className="text-xs sm:text-xs text-muted-foreground">{label}</p>
         {isLive && (
@@ -444,8 +444,8 @@ function LiveGameBanner() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", damping: 26, stiffness: 260 }}
     >
-      <div className="relative overflow-hidden rounded-xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10" />
+      <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 backdrop-blur-sm accent-stripe-left">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/15 via-transparent to-primary/10 animate-pulse" style={{ animationDuration: "4s" }} />
 
         <div className="relative px-5 py-4">
           <div className="flex items-center gap-4">
@@ -972,6 +972,43 @@ function PortfolioSummary() {
   );
 }
 
+const TICKER_COLORS: Record<string, string> = {
+  DORI: "var(--color-win)",
+  DDRI: "#FFD54F",
+  TDRI: "#FF9800",
+  SDRI: "var(--color-loss)",
+  XDRI: "#E040FB",
+};
+
+function PriceTicker() {
+  const { data: etfPrices } = trpc.prices.etfPrices.useQuery(undefined, { staleTime: 30_000 });
+  if (!etfPrices || etfPrices.length === 0) return null;
+
+  return (
+    <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden">
+      <div className="container flex items-center gap-6 py-1.5 overflow-x-auto scrollbar-hide">
+        {etfPrices.map((etf: any) => {
+          const change = etf.change ?? 0;
+          const isUp = change >= 0;
+          return (
+            <div key={etf.ticker} className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: TICKER_COLORS[etf.ticker] || "var(--foreground)" }}>
+                ${etf.ticker}
+              </span>
+              <span className="text-xs font-[var(--font-mono)] text-foreground/80">
+                ${etf.price.toFixed(2)}
+              </span>
+              <span className={`text-xs font-[var(--font-mono)] font-semibold`} style={{ color: isUp ? "var(--color-win)" : "var(--color-loss)" }}>
+                {isUp ? "+" : ""}{((change / (etf.price - change || 1)) * 100).toFixed(1)}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
@@ -1006,6 +1043,8 @@ export default function Home() {
 
       <AppNav />
 
+      {/* ETF Price Ticker Strip */}
+      <PriceTicker />
 
       {/* Main content */}
       <main className="container relative z-10 pb-20">
