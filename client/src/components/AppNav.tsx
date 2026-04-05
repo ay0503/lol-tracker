@@ -112,7 +112,7 @@ export default function AppNav() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 bg-card/50 backdrop-blur-2xl backdrop-saturate-[1.8]" style={{ borderBottom: '0.5px solid rgba(255,255,255,0.08)', boxShadow: '0 0 0 0.5px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.15)' }}>
       <div className="container flex items-center justify-between h-14">
         {/* Left: Logo + Links */}
         <div className="flex items-center gap-4">
