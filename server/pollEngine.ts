@@ -528,6 +528,32 @@ export async function pollNow(): Promise<PollResult> {
         // 5. Generate AI meme news
         let newsHeadline: { headline: string; body: string } | null = null;
         try {
+          // Build team context for smarter headlines
+          const teammates = match.info.participants.filter(
+            (p: any) => p.teamId === participant.teamId && p.puuid !== puuid
+          );
+          const teamKills = teammates.reduce((sum: number, p: any) => sum + p.kills, 0) + participant.kills;
+          const teamDeaths = teammates.reduce((sum: number, p: any) => sum + p.deaths, 0) + participant.deaths;
+          const ceoKP = teamKills > 0 ? ((participant.kills + participant.assists) / teamKills) * 100 : 0;
+          const bestMate = teammates.length > 0
+            ? teammates.reduce((best: any, p: any) => (p.kills + p.assists) / Math.max(p.deaths, 1) > (best.kills + best.assists) / Math.max(best.deaths, 1) ? p : best)
+            : null;
+          const ceoKDA = deaths > 0 ? (kills + assists) / deaths : kills + assists;
+          const wasCarried = win && ceoKDA < 2 && bestMate && (bestMate.kills + bestMate.assists) / Math.max(bestMate.deaths, 1) > 4;
+
+          const matchTeamContext: TeamContext = {
+            teamKills,
+            teamDeaths,
+            ceoKillParticipation: Math.round(ceoKP),
+            bestTeammate: bestMate ? {
+              champion: bestMate.championName,
+              kills: bestMate.kills,
+              deaths: bestMate.deaths,
+              assists: bestMate.assists,
+            } : null,
+            wasCarried: !!wasCarried,
+          };
+
           newsHeadline = await generateMemeNews(
             participant.championName,
             participant.win,
@@ -538,7 +564,8 @@ export async function pollNow(): Promise<PollResult> {
             prevPrice,
             participant.totalMinionsKilled + participant.neutralMinionsKilled,
             match.info.gameDuration,
-            participant.teamPosition || "UNKNOWN"
+            participant.teamPosition || "UNKNOWN",
+            matchTeamContext
           );
 
           if (newsHeadline) {
@@ -866,10 +893,18 @@ async function getNewsMode(): Promise<"ai" | "templates"> {
   return "ai"; // default: AI news
 }
 
+interface TeamContext {
+  teamKills: number;
+  teamDeaths: number;
+  ceoKillParticipation: number; // percentage
+  bestTeammate: { champion: string; kills: number; deaths: number; assists: number } | null;
+  wasCarried: boolean; // CEO had bad KDA but team won
+}
+
 async function generateMemeNews(
   champion: string, win: boolean, kills: number, deaths: number, assists: number,
   currentPrice: number, previousPrice: number, cs: number, gameDuration: number,
-  position: string
+  position: string, teamContext?: TeamContext
 ): Promise<{ headline: string; body: string } | null> {
   const priceChange = currentPrice - previousPrice;
   const pctChange = previousPrice > 0 ? ((priceChange / previousPrice) * 100).toFixed(1) : "0";
@@ -947,6 +982,30 @@ ${sameChampGames.length > 0 ? `- ${champion} record today: ${sameChampRecord.w}W
   if (kdRatio >= 5 && kills >= 3) situationTags.push(`PERFECT KDA RATIO — ${kdRatio.toFixed(1)} KDA is institutional-grade`);
   if (Math.abs(parseFloat(pctChange)) >= 5) situationTags.push(`BIG PRICE MOVE — $DORI moved ${pctChange}% in one game`);
 
+  // Team context situation tags
+  if (teamContext) {
+    if (teamContext.wasCarried && teamContext.bestTeammate) {
+      situationTags.push(`팀운 CARRIED — CEO went ${kda} but won because ${teamContext.bestTeammate.champion} went ${teamContext.bestTeammate.kills}/${teamContext.bestTeammate.deaths}/${teamContext.bestTeammate.assists}. CEO got HARD carried. Roast the 팀운 (team luck).`);
+    }
+    if (teamContext.ceoKillParticipation < 20 && kills + assists < 5 && win) {
+      situationTags.push(`AFK WIN — CEO participated in only ${teamContext.ceoKillParticipation}% of team kills. Basically a passenger.`);
+    }
+    if (teamContext.ceoKillParticipation > 70 && kills >= 5) {
+      situationTags.push(`1v9 — CEO was ${teamContext.ceoKillParticipation}% of team's kills. Literal solo carry.`);
+    }
+  }
+
+  // Build team context string for the prompt
+  let teamContextStr = "";
+  if (teamContext) {
+    teamContextStr = `
+TEAM CONTEXT (use this to write funnier headlines):
+- CEO kill participation: ${teamContext.ceoKillParticipation}% of team kills
+- Team total: ${teamContext.teamKills} kills / ${teamContext.teamDeaths} deaths
+${teamContext.bestTeammate ? `- Best teammate: ${teamContext.bestTeammate.champion} ${teamContext.bestTeammate.kills}/${teamContext.bestTeammate.deaths}/${teamContext.bestTeammate.assists}` : ""}
+${teamContext.wasCarried ? `- CARRIED: CEO had trash KDA but won thanks to teammates. ROAST THE 팀운 (team luck). Headlines like "CEO 2/8 but somehow wins ㅋㅋ ${teamContext.bestTeammate?.champion} did all the work"` : ""}`;
+  }
+
   const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "목도리 도마뱀" (dori). This is a fake trading platform and you are the news desk.
 
 YOUR VIBE: You write like a deranged r/wallstreetbets poster. Think loss porn captions, gain screenshots, maximum brainrot. Financial jargon meets League of Legends. Write headlines in ENGLISH only — do NOT mix Korean and English in the same headline. You may include a few Korean slang words naturally (ㅋㅋㅋ, ㄹㅇ) as seasoning but the sentence structure must be English.
@@ -960,6 +1019,7 @@ MATCH DATA:
 - Game Duration: ${minutes} minutes
 - $DORI Price: $${currentPrice.toFixed(2)} (${priceChange >= 0 ? "+" : ""}${pctChange}%)
 ${situationTags.length > 0 ? `- SITUATION: ${situationTags.join(". ")}` : ""}
+${teamContextStr}
 ${historyContext}
 
 EXAMPLES OF GOOD HEADLINES (notice: each is EITHER English OR has minimal Korean seasoning):
@@ -973,6 +1033,9 @@ EXAMPLES OF GOOD HEADLINES (notice: each is EITHER English OR has minimal Korean
 - "SEC investigating $DORI after CEO's 1/9 ${champion}. 'This has to be intentional.'"
 - "$DORI up 3% after CEO goes 12/2. Cathie Wood seen buying. Inverse Cramer confirmed."
 - "CEO 0/7 on ${champion}. Goldman downgrades to 'Please God No.' ㅎㄷㄷ"
+- "CEO 2/8 on ${champion} but WINS. His Jinx went 18/3. 팀운 is doing the heavy lifting here."
+- "$DORI green despite CEO's 1/6 performance. Teammates literally 4v5'd this win. 팀운 diff."
+- "CEO participated in 15% of team kills. Shareholders wondering who's actually playing."
 
 EXAMPLES OF BAD HEADLINES (DO NOT write like this):
 - "CEO 목도리 도마뱀씹놈, 20+킬에 연루돼서 팀파이트 전투기 몬스터 인증!" ← unnatural forced Korean translation
@@ -991,6 +1054,9 @@ RULES:
 - If kills are high: greatest investment thesis ever conceived energy
 - If repeat champion: roast the one-trick behavior
 - If on a streak: make it about the streak, not just this game
+- If CARRIED (팀운): roast the CEO for getting carried. Mention the teammate who actually did the work. "CEO 2/8 but Jinx went 18/3" energy. 팀운 = team luck
+- If low kill participation: roast for being a passenger. "CEO participated in 15% of kills"
+- If 1v9 carry (high KP): celebrate the solo carry
 - DO NOT be generic or boring. Every headline should make someone laugh out loud.
 
 Respond in JSON: { "headline": "...", "body": "..." }`;
