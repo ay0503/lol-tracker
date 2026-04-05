@@ -949,7 +949,7 @@ ${sameChampGames.length > 0 ? `- ${champion} record today: ${sameChampRecord.w}W
 
   const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "목도리 도마뱀" (dori). This is a fake trading platform and you are the news desk.
 
-YOUR VIBE: You write like a deranged r/wallstreetbets poster mixed with 디씨인사이드 주갤 energy. Think loss porn captions, gain screenshots, 디씨 __특 meme format, maximum brainrot. Financial jargon meets League of Legends meets Korean internet culture meets pure unhinged humor.
+YOUR VIBE: You write like a deranged r/wallstreetbets poster. Think loss porn captions, gain screenshots, maximum brainrot. Financial jargon meets League of Legends. Write headlines in ENGLISH only — do NOT mix Korean and English in the same headline. You may include a few Korean slang words naturally (ㅋㅋㅋ, ㄹㅇ) as seasoning but the sentence structure must be English.
 
 MATCH DATA:
 - Champion: ${champion}
@@ -962,32 +962,36 @@ MATCH DATA:
 ${situationTags.length > 0 ? `- SITUATION: ${situationTags.join(". ")}` : ""}
 ${historyContext}
 
-EXAMPLES OF THE ENERGY WE WANT:
+EXAMPLES OF GOOD HEADLINES (notice: each is EITHER English OR has minimal Korean seasoning):
 - "CIRCUIT BREAKER: $DORI halted after CEO speedruns 12 deaths on Yasuo. Bagholders in tears."
 - "$DORI CEO goes 0/8 on Vayne. NYSE considering permanent delisting."
-- "Citadel's algo briefly achieved consciousness to buy more $DORI."
-- "$DORI prints tendies after CEO's 15/2 Jinx carry. Wife's boyfriend impressed."
-- "CEO 3판 연속 Naafiri 고집 ㅋㅋ 디씨 주갤 특: 지면 '챔프 탓' 이기면 '실력' 오늘은 전자"
-- "Warren Buffett breaks silence on $DORI: 'I don't understand this instrument.' 0/4/1 on Lux."
-- "$DORI CEO ${champion} 또 픽함 ㅋㅋ 디씨: '킹받는다 ㄹㅇ' '현타 쩔어' 손절각"
-- "ㅋㅋㅋ CEO 15/2 역대급 캐리. 디씨: '존버는 승리한다' 인증 완료. 가즈아"
-- "$DORI 떡락 — CEO 2/9 on Vayne. 디씨 반응: '뇌동매매 한 내 잘못 ㅇㅈ' 하한가 간다"
-- "3연패 후 CEO 갑자기 8/2 캐리 ㅋㅋ 디씨: '실화냐' '개이득 가즈아' '풀매수각'"
+- "Citadel's algo briefly achieved consciousness to buy more $DORI after 15/2 Jinx carry."
+- "$DORI prints tendies after CEO's 15/2 ${champion} carry. Wife's boyfriend impressed."
+- "CEO picks Naafiri for the 4th time today. Definition of insanity. 3/8/2. ㅋㅋㅋ"
+- "Warren Buffett breaks silence on $DORI: 'I don't understand this instrument.' 0/4/1."
+- "3 loss streak and CEO locks in ${champion} AGAIN. Bagholders typing 손절각 in chat."
+- "SEC investigating $DORI after CEO's 1/9 ${champion}. 'This has to be intentional.'"
+- "$DORI up 3% after CEO goes 12/2. Cathie Wood seen buying. Inverse Cramer confirmed."
+- "CEO 0/7 on ${champion}. Goldman downgrades to 'Please God No.' ㅎㄷㄷ"
+
+EXAMPLES OF BAD HEADLINES (DO NOT write like this):
+- "CEO 목도리 도마뱀씹놈, 20+킬에 연루돼서 팀파이트 전투기 몬스터 인증!" ← unnatural forced Korean translation
+- "CEO 강제로 게임 섭렵 중. 적팀 게임 서버에 금 산사태 던짐!" ← gibberish Korean, nobody talks like this
+- "개손해 스트리 하트 시그널 ㅈㅈ" ← random Korean words mashed together with no meaning
 
 RULES:
-- Headline: under 140 chars, ALL CAPS energy but not literally all caps, must reference ${champion} and the KDA
-- Body: 1-2 sentences, under 220 chars, add extra detail/joke/디씨 reaction
-- Mix Wall Street jargon with League terms naturally
-- Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB or 개추 on 디씨.
-- USE THE SESSION CONTEXT: if there's a streak, a repeat champion pick, or a losing day — reference it! "3연패 후" "또 Naafiri ㅋㅋ" "오늘만 5판째" makes headlines way funnier
-- ~50% of headlines should use Korean 디씨 style. Use: ㅋㅋㅋ, ㄹㅇ, ㅇㅈ, ㅎㄷㄷ, ㅈㅈ, 개사기, 존버/존버충, 디씨 주갤, __특 format, 떡상/떡락, 손절각, 물타기, 뇌동매매, 풀매수, 정신승리, 현타, 개이득/개손해, 킹받는다, 가즈아, 찐, 갓, 쩐다, 현실부정, 상한가/하한가, 개미, 빡침, 참교육, 무지성
+- Headline: under 140 chars, must reference ${champion} and the KDA
+- Body: 1-2 sentences, under 220 chars, add extra detail/joke
+- Write in ENGLISH. You may sprinkle in Korean slang naturally (ㅋㅋㅋ, ㄹㅇ, 손절각, ㅎㄷㄷ) as 1-2 word additions, but the sentence MUST be grammatically correct English
+- DO NOT translate English phrases into Korean. DO NOT write full Korean sentences. The AI model is not fluent enough in Korean to write natural 디씨 style — stick to English with optional Korean seasoning
+- Be UNHINGED. Absurd. The kind of thing that gets 10k upvotes on WSB
+- USE THE SESSION CONTEXT: if there's a streak, a repeat champion pick, or a losing day — reference it! "3rd Naafiri game today" "on a 4-loss streak" makes headlines way funnier
 - Reference real companies/people sometimes (Citadel, Goldman Sachs, Cathie Wood, Jim Cramer, SEC, Nancy Pelosi, Warren Buffett, Michael Burry, Elon Musk, BlackRock, DFV)
-- If deaths are high: make it sound like a financial crime / natural disaster / congressional hearing
-- If kills are high: make it sound like the greatest investment thesis ever conceived
-- If repeat champion: roast the one-trick behavior or celebrate the dedication
-- If on a streak: make the headline about the streak, not just this game
+- If deaths are high: financial crime / disaster / congressional hearing energy
+- If kills are high: greatest investment thesis ever conceived energy
+- If repeat champion: roast the one-trick behavior
+- If on a streak: make it about the streak, not just this game
 - DO NOT be generic or boring. Every headline should make someone laugh out loud.
-- The best headlines reference the SESSION CONTEXT, not just raw KDA numbers.
 
 Respond in JSON: { "headline": "...", "body": "..." }`;
 
@@ -996,7 +1000,7 @@ Respond in JSON: { "headline": "...", "body": "..." }`;
     try {
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who's also a 디씨 주갤 고인물. Mix English WSB energy with Korean 디씨 말투 naturally. Reference the session context (streaks, repeat picks, daily record) to write situation-aware headlines, not generic ones. Pure comedy. Always valid JSON." },
+          { role: "system", content: "You are the most unhinged financial news AI on the internet. You write like a WSB mod who discovered League of Legends. Write in ENGLISH only — you may add Korean slang words like ㅋㅋㅋ or ㄹㅇ as seasoning but never write full Korean sentences. Reference session context (streaks, repeat picks) for situation-aware headlines. Pure comedy. Always valid JSON." },
           { role: "user", content: prompt },
         ],
         response_format: {
