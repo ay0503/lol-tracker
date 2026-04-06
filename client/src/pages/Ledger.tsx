@@ -67,7 +67,7 @@ export default function Ledger() {
       for (const row of trades) {
         if (filterTicker && row.ticker !== filterTicker) continue;
         if (filterType && row.type !== filterType) continue;
-        if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) continue;
+        if (filterUser && !String(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) continue;
         tradeRows.push({ ...row, _kind: "trade" });
       }
     }
@@ -75,7 +75,7 @@ export default function Ledger() {
     if (dividends && (filterType === "" || filterType === "dividend")) {
       for (const row of dividends) {
         if (filterTicker && row.ticker !== filterTicker) continue;
-        if (filterUser && !(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) continue;
+        if (filterUser && !String(row.userName || "").toLowerCase().includes(filterUser.toLowerCase())) continue;
         divRows.push({ ...row, _kind: "dividend" });
       }
     }
