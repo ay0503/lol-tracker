@@ -787,9 +787,9 @@ export default function Leaderboard() {
                           titleCss={(player as any).title?.cssClass}
                           className="text-sm"
                         />
-                        <span className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {language === "ko" ? "시작" : "Started"}: $20.00
-                        </span>
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
