@@ -406,10 +406,13 @@ export default function Casino() {
         </div>
 
         {/* ─── Leaderboard ─── */}
-        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-          <Trophy className="w-3.5 h-3.5 text-yellow-400" />
-          {language === "ko" ? "카지노 랭킹" : "Casino Rankings"}
-        </h2>
+        <Link href="/leaderboard#casino">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer group">
+            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+            {language === "ko" ? "카지노 랭킹" : "Casino Rankings"}
+            <span className="text-xs text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors">&rarr;</span>
+          </h2>
+        </Link>
         <div className="bg-card border border-border rounded-xl overflow-hidden mb-8">
           {leaderboard && leaderboard.length > 0 ? (
             <div className="divide-y divide-border">

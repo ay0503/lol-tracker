@@ -847,7 +847,7 @@ function PriceTicker() {
 }
 
 export default function Home() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState("");
@@ -959,6 +959,32 @@ export default function Home() {
         <section>
           <MatchHistorySection />
         </section>
+
+        {/* Feed CTA */}
+        <Link href="/feed">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", damping: 26, stiffness: 260 }}
+            className="mt-8 bg-card border border-border rounded-xl p-5 flex items-center justify-between group hover:bg-secondary/30 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-secondary">
+                <Newspaper className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground font-[var(--font-heading)]">
+                  {language === "ko" ? "피드" : "Feed"}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {language === "ko" ? "경기 뉴스와 트레이더 토론" : "Match news & trader discussion"}
+                </p>
+              </div>
+            </div>
+            <span className="text-muted-foreground group-hover:text-foreground transition-colors text-sm">&rarr;</span>
+          </motion.div>
+        </Link>
 
         {/* Footer */}
         <footer className="mt-16 pt-6 border-t border-border text-center">
