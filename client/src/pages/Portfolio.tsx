@@ -54,22 +54,21 @@ function getTradeTypeStyle(type: string, tr: any) {
   }
 }
 
-type PnlTimeRange = "1W" | "1M" | "3M" | "ALL";
+type PnlTimeRange = "1D" | "1W" | "1M";
 
 function PortfolioPnlChart() {
   const { t, language } = useTranslation();
   const PNL_RANGES: { id: PnlTimeRange; label: string; ms: number }[] = [
+    { id: "1D", label: "1D", ms: 1 * 24 * 60 * 60 * 1000 },
     { id: "1W", label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
     { id: "1M", label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
-    { id: "3M", label: "3M", ms: 90 * 24 * 60 * 60 * 1000 },
-    { id: "ALL", label: t.common.all, ms: 0 },
   ];
   const locale = language === "ko" ? "ko-KR" : "en-US";
   const { isAuthenticated } = useAuth();
-  const [range, setRange] = useState<PnlTimeRange>("ALL");
+  const [range, setRange] = useState<PnlTimeRange>("1M");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const since = range === "ALL" ? undefined : Date.now() - (PNL_RANGES.find(r => r.id === range)?.ms ?? 0);
+  const since = Date.now() - (PNL_RANGES.find(r => r.id === range)?.ms ?? 0);
 
   const { data: snapshots } = trpc.portfolioHistory.history.useQuery(
     { since },
