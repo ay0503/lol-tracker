@@ -560,17 +560,20 @@ function TableBrowser() {
 
 // ─── CI Dashboard Component ───
 function IntegrityCheck() {
-  const { data, isLoading, refetch } = trpc.admin.auditIntegrity.useQuery(undefined, { enabled: false });
+  const { data, isFetching, refetch } = trpc.admin.auditIntegrity.useQuery(undefined, { enabled: false });
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState("");
+  const [showResults, setShowResults] = useState(false);
 
-  // Simulate progress while loading
+  // Simulate progress while fetching
   useEffect(() => {
-    if (!isLoading) {
-      if (data) { setProgress(100); setPhase("Complete"); }
+    if (!isFetching) {
+      if (data) { setProgress(100); setPhase("Complete"); setTimeout(() => setShowResults(true), 300); }
       return;
     }
+    setShowResults(false);
     setProgress(0);
+    setPhase("");
     const phases = [
       "Loading users...", "Replaying trades...", "Checking bets...",
       "Verifying dividends...", "Comparing balances...", "Checking shares...",
@@ -583,7 +586,7 @@ function IntegrityCheck() {
       setPhase(phases[Math.min(step - 1, phases.length - 1)]);
     }, 400);
     return () => clearInterval(interval);
-  }, [isLoading, data]);
+  }, [isFetching, data]);
 
   const passed = data?.users.filter((u: any) => u.pass).length ?? 0;
   const failed = data?.users.filter((u: any) => !u.pass).length ?? 0;
@@ -595,14 +598,14 @@ function IntegrityCheck() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-bold">Integrity Check</h3>
-          {data && !isLoading && (
+          {showResults && data && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${data.allPass ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
               {data.allPass ? `ALL PASS (${total})` : `${failed} DISCREPANC${failed === 1 ? "Y" : "IES"}`}
             </span>
           )}
         </div>
-        <Button size="sm" onClick={() => { setProgress(0); setPhase(""); refetch(); }} disabled={isLoading}>
-          {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+        <Button size="sm" onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
           {data ? "Re-run" : "Run Audit"}
         </Button>
       </div>
@@ -611,7 +614,7 @@ function IntegrityCheck() {
       </p>
 
       {/* Progress bar */}
-      {(isLoading || (progress > 0 && progress < 100)) && (
+      {(isFetching || (progress > 0 && progress < 100)) && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs text-muted-foreground font-mono">{phase}</span>
@@ -627,7 +630,7 @@ function IntegrityCheck() {
       )}
 
       {/* Summary bar */}
-      {data && !isLoading && (
+      {showResults && data && (
         <div className="flex items-center gap-4 mb-3 text-xs">
           <span className="text-green-400 font-bold">{passed} passed</span>
           {failed > 0 && <span className="text-red-400 font-bold">{failed} failed</span>}
@@ -637,7 +640,7 @@ function IntegrityCheck() {
         </div>
       )}
 
-      {data && !isLoading && (
+      {showResults && data && (
         <div className="space-y-2">
           {data.users.map((user: any) => (
             <div key={user.userId} className={`rounded-lg border p-3 ${user.pass ? "border-border bg-secondary/30" : "border-red-500/40 bg-red-950/20"}`}>
