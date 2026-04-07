@@ -267,7 +267,7 @@ export default function Crash() {
       if (game.status === "crashed") {
         elapsedRef.current = timeAtMultiplier(game.crashPoint ?? 1);
         endGame("crashed", game.crashPoint ?? 1, null, 0);
-        toast.error(`Instant crash! ${game.crashPoint?.toFixed(2)}x`);
+        toast.error(`${language === "ko" ? "즉시 크래시!" : "Instant crash!"} ${game.crashPoint?.toFixed(2)}x`);
         return;
       }
       setCrashPoint(null);
@@ -287,11 +287,11 @@ export default function Crash() {
       if (game.status === "cashed_out") {
         elapsedRef.current = timeAtMultiplier(game.cashoutMultiplier ?? 1);
         endGame("cashed_out", game.crashPoint ?? null, game.cashoutMultiplier ?? null, game.payout ?? 0);
-        toast.success(`Cashed out at ${(game.cashoutMultiplier ?? 1).toFixed(2)}x! +$${(game.payout ?? 0).toFixed(2)}`);
+        toast.success(`${language === "ko" ? "캐시아웃" : "Cashed out at"} ${(game.cashoutMultiplier ?? 1).toFixed(2)}x! +$${(game.payout ?? 0).toFixed(2)}`);
       } else {
         elapsedRef.current = timeAtMultiplier(game.crashPoint ?? displayMult);
         endGame("crashed", game.crashPoint ?? null, null, 0);
-        toast.error(`Crashed at ${(game.crashPoint ?? 1).toFixed(2)}x!`);
+        toast.error(`${language === "ko" ? "크래시" : "Crashed at"} ${(game.crashPoint ?? 1).toFixed(2)}x!`);
       }
     },
     onError: (err) => toast.error(err.message),
@@ -308,11 +308,11 @@ export default function Crash() {
     if (d.status === "crashed") {
       elapsedRef.current = timeAtMultiplier(d.crashPoint ?? displayMult);
       endGame("crashed", d.crashPoint ?? null, null, 0);
-      toast.error(`Crashed at ${(d.crashPoint ?? 1).toFixed(2)}x!`);
+      toast.error(`${language === "ko" ? "크래시" : "Crashed at"} ${(d.crashPoint ?? 1).toFixed(2)}x!`);
     } else if (d.status === "cashed_out") {
       elapsedRef.current = timeAtMultiplier(d.cashoutMultiplier ?? 1);
       endGame("cashed_out", d.crashPoint ?? null, d.cashoutMultiplier ?? null, d.payout ?? 0);
-      toast.success(`Auto-cashout at ${(d.cashoutMultiplier ?? 1).toFixed(2)}x! +$${(d.payout ?? 0).toFixed(2)}`);
+      toast.success(`${language === "ko" ? "자동 캐시아웃" : "Auto-cashout at"} ${(d.cashoutMultiplier ?? 1).toFixed(2)}x! +$${(d.payout ?? 0).toFixed(2)}`);
     }
   }, [statusQuery.data?.status]);
 
@@ -337,7 +337,7 @@ export default function Crash() {
       return toast.error(language === "ko" ? "베팅 금액: $0.10 - $50" : "Bet amount: $0.10 - $50");
     }
     const auto = autoCashout ? parseFloat(autoCashout) : undefined;
-    if (auto !== undefined && auto < 1.01) return toast.error("Auto-cashout must be >= 1.01x");
+    if (auto !== undefined && auto < 1.01) return toast.error(language === "ko" ? "자동 캐시아웃은 1.01x 이상이어야 합니다" : "Auto-cashout must be >= 1.01x");
     startMutation.mutate({ bet: amt, autoCashout: auto });
   };
 
@@ -432,7 +432,7 @@ export default function Crash() {
                       transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.15 }}
                       className="text-lg font-black text-[color:var(--color-loss)] tracking-[0.2em] mt-1"
                     >
-                      CRASHED
+                      {language === "ko" ? "크래시" : "CRASHED"}
                     </motion.p>
                   </motion.div>
                 ) : phase === "cashed_out" ? (

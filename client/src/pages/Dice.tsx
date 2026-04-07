@@ -43,10 +43,10 @@ export default function Dice() {
         refetchHistory();
         if (result.won) {
           setBarFlash("win");
-          toast.success(`${result.roll.toFixed(2)} — Won $${result.payout.toFixed(2)} (${result.multiplier}x)`);
+          toast.success(`${result.roll.toFixed(2)} — ${language === "ko" ? "승리" : "Won"} $${result.payout.toFixed(2)} (${result.multiplier}x)`);
         } else {
           setBarFlash("lose");
-          toast.error(`${result.roll.toFixed(2)} — Lost`);
+          toast.error(`${result.roll.toFixed(2)} — ${language === "ko" ? "패배" : "Lost"}`);
         }
         setTimeout(() => { setBarFlash(null); setLastResult(null); setDisplayRoll(null); }, 2500);
       }, 1300);
@@ -211,13 +211,13 @@ export default function Dice() {
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
                   direction === "over" ? "bg-[color:var(--color-win)] text-foreground shadow-lg shadow-[color:var(--color-win)]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}>
-                Roll Over {target}
+                {language === "ko" ? `${target} 이상` : `Roll Over ${target}`}
               </button>
               <button onClick={() => setDirection("under")} disabled={rolling}
                 className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
                   direction === "under" ? "bg-[color:var(--color-loss)] text-foreground shadow-lg shadow-[color:var(--color-loss)]/20" : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}>
-                Roll Under {target}
+                {language === "ko" ? `${target} 이하` : `Roll Under ${target}`}
               </button>
             </div>
 
@@ -226,13 +226,13 @@ export default function Dice() {
               <div className={`bg-secondary/50 rounded-lg p-2.5 text-center transition-all ${
                 multiplier > 5 ? "ring-1 ring-yellow-500/30 shadow-md shadow-yellow-500/10" : ""
               }`}>
-                <p className="text-xs text-muted-foreground uppercase">Multiplier</p>
+                <p className="text-xs text-muted-foreground uppercase">{language === "ko" ? "배율" : "Multiplier"}</p>
                 <p className="text-lg font-bold text-yellow-400 font-mono">{multiplier}x</p>
               </div>
               <div className={`bg-secondary/50 rounded-lg p-2.5 text-center transition-all ${
                 winChance < 20 ? "ring-1 ring-red-500/30 shadow-md shadow-red-500/10" : ""
               }`}>
-                <p className="text-xs text-muted-foreground uppercase">Win Chance</p>
+                <p className="text-xs text-muted-foreground uppercase">{language === "ko" ? "승률" : "Win Chance"}</p>
                 <p className="text-lg font-bold text-foreground font-mono">{winChance}%</p>
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function Dice() {
               }
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-foreground font-bold text-sm disabled:opacity-30 transition-colors shadow-lg"
             >
-              {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `ROLL · $${parsedBetAmount.toFixed(2)}`}
+              {rolling ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `${language === "ko" ? "굴리기" : "ROLL"} · $${parsedBetAmount.toFixed(2)}`}
             </motion.button>
           </div>
         </div>

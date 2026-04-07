@@ -264,7 +264,7 @@ export default function Casino() {
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       setLastBet(game.bet);
-      if (game.status === "blackjack") toast.success("BLACKJACK!");
+      if (game.status === "blackjack") toast.success(language === "ko" ? "블랙잭!" : "BLACKJACK!");
       refetchBalance();
     },
     onError: (err) => toast.error(err.message),
@@ -274,7 +274,7 @@ export default function Casino() {
     onSuccess: (game) => {
       utils.casino.blackjack.active.setData(undefined, game as any);
       if (game.status === "player_bust") {
-        setTimeout(() => toast.error("Bust!"), 700);
+        setTimeout(() => toast.error(language === "ko" ? "버스트!" : "Bust!"), 700);
       }
       refetchBalance();
     },
@@ -292,9 +292,9 @@ export default function Casino() {
       const delay = dealerCards > 2 ? (dealerCards - 2) * 500 + 300 : 300;
       setTimeout(() => {
         const status = game.status;
-        if (status === "player_win" || status === "dealer_bust") toast.success("You win!");
-        else if (status === "push") toast("Push — bet returned");
-        else toast.error("Dealer wins");
+        if (status === "player_win" || status === "dealer_bust") toast.success(language === "ko" ? "승리!" : "You win!");
+        else if (status === "push") toast(language === "ko" ? "무승부 — 베팅 반환" : "Push — bet returned");
+        else toast.error(language === "ko" ? "딜러 승리" : "Dealer wins");
       }, delay);
     },
     onError: (err) => {
@@ -309,10 +309,10 @@ export default function Casino() {
       refetchBalance();
       setTimeout(() => {
         const status = game.status;
-        if (status === "player_win" || status === "dealer_bust") toast.success("Double down wins!");
-        else if (status === "player_bust") toast.error("Bust on double!");
-        else if (status === "push") toast("Push — bet returned");
-        else toast.error("Dealer wins");
+        if (status === "player_win" || status === "dealer_bust") toast.success(language === "ko" ? "더블다운 승리!" : "Double down wins!");
+        else if (status === "player_bust") toast.error(language === "ko" ? "더블다운 버스트!" : "Bust on double!");
+        else if (status === "push") toast(language === "ko" ? "무승부 — 베팅 반환" : "Push — bet returned");
+        else toast.error(language === "ko" ? "딜러 승리" : "Dealer wins");
       }, 500);
     },
     onError: (err) => {
@@ -329,8 +329,8 @@ export default function Casino() {
       if (game.status !== "playing") {
         // Split aces auto-resolved
         setTimeout(() => {
-          if (game.payout > 0) toast.success(`Won $${game.payout.toFixed(2)}`);
-          else toast.error("Both hands lost");
+          if (game.payout > 0) toast.success(`${language === "ko" ? "승리" : "Won"} $${game.payout.toFixed(2)}`);
+          else toast.error(language === "ko" ? "두 핸드 모두 패배" : "Both hands lost");
         }, 1000);
       }
     },
@@ -532,7 +532,7 @@ export default function Casino() {
                             transition={{ type: "spring", damping: 26, stiffness: 260, delay: 0.2 }}
                             className={`text-xs font-mono font-bold mt-0.5 ${isWin ? "text-[color:var(--color-win)]" : isLoss ? "text-[color:var(--color-loss)]" : "text-yellow-400"}`}
                           >
-                            {isWin ? `+$${game.payout.toFixed(2)}` : isLoss ? `-$${game.bet.toFixed(2)}` : `$${game.payout.toFixed(2)} returned`}
+                            {isWin ? `+$${game.payout.toFixed(2)}` : isLoss ? `-$${game.bet.toFixed(2)}` : `$${game.payout.toFixed(2)} ${language === "ko" ? "반환" : "returned"}`}
                           </motion.p>
                         )}
                       </div>
@@ -562,7 +562,7 @@ export default function Casino() {
                           {language === "ko" ? "핸드 1" : "Hand 1"}
                         </span>
                         <HandValue value={handValue(game.playerHand)} bust={handValue(game.playerHand) > 21} soft={isSoftHand(game.playerHand)} />
-                        {activeHand === "main" && <span className="text-xs text-yellow-400 animate-pulse">ACTIVE</span>}
+                        {activeHand === "main" && <span className="text-xs text-yellow-400 animate-pulse">{language === "ko" ? "활성" : "ACTIVE"}</span>}
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>
@@ -581,7 +581,7 @@ export default function Casino() {
                         {(game as any).splitHand && (
                           <HandValue value={handValue((game as any).splitHand)} bust={handValue((game as any).splitHand) > 21} soft={isSoftHand((game as any).splitHand)} />
                         )}
-                        {activeHand === "split" && <span className="text-xs text-yellow-400 animate-pulse">ACTIVE</span>}
+                        {activeHand === "split" && <span className="text-xs text-yellow-400 animate-pulse">{language === "ko" ? "활성" : "ACTIVE"}</span>}
                       </div>
                       <div className="flex gap-1.5 min-h-[5rem] items-end flex-wrap">
                         <AnimatePresence>

@@ -31,7 +31,9 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
+            <h2 className="text-xl mb-4">
+              {navigator.language?.startsWith("ko") ? "예기치 않은 오류가 발생했습니다." : "An unexpected error occurred."}
+            </h2>
 
             <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
               <pre className="text-sm text-muted-foreground whitespace-break-spaces">
@@ -48,7 +50,7 @@ class ErrorBoundary extends Component<Props, State> {
               )}
             >
               <RotateCcw size={16} />
-              Reload Page
+              {navigator.language?.startsWith("ko") ? "페이지 새로고침" : "Reload Page"}
             </button>
           </div>
         </div>

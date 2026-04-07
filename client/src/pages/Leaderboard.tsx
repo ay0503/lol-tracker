@@ -56,7 +56,7 @@ function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[]
 
 /** Expanded user profile panel */
 function UserProfile({ userId }: { userId: number }) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { data, isLoading } = trpc.leaderboard.userProfile.useQuery({ userId });
 
   if (isLoading) {
@@ -73,9 +73,9 @@ function UserProfile({ userId }: { userId: number }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border/50 mt-3">
       {/* Holdings */}
       <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Holdings</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{language === "ko" ? "보유 종목" : "Holdings"}</p>
         {data.holdings.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No positions</p>
+          <p className="text-xs text-muted-foreground">{language === "ko" ? "포지션 없음" : "No positions"}</p>
         ) : (
           <div className="space-y-1">
             {data.holdings.map(h => (
@@ -83,10 +83,10 @@ function UserProfile({ userId }: { userId: number }) {
                 <span className="font-mono font-bold">${h.ticker}</span>
                 <div className="text-right">
                   {h.shares > 0 && (
-                    <span className="text-foreground font-mono">{h.shares.toFixed(2)} shares @ ${h.avgCostBasis.toFixed(2)}</span>
+                    <span className="text-foreground font-mono">{h.shares.toFixed(2)} {language === "ko" ? "주" : "shares"} @ ${h.avgCostBasis.toFixed(2)}</span>
                   )}
                   {h.shortShares > 0 && (
-                    <span className="text-red-400 font-mono ml-2">short {h.shortShares.toFixed(2)} @ ${h.shortAvgPrice.toFixed(2)}</span>
+                    <span className="text-red-400 font-mono ml-2">{language === "ko" ? "숏" : "short"} {h.shortShares.toFixed(2)} @ ${h.shortAvgPrice.toFixed(2)}</span>
                   )}
                 </div>
               </div>
@@ -97,9 +97,9 @@ function UserProfile({ userId }: { userId: number }) {
 
       {/* Recent trades */}
       <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Recent Trades</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{language === "ko" ? "최근 거래" : "Recent Trades"}</p>
         {data.trades.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No trades yet</p>
+          <p className="text-xs text-muted-foreground">{language === "ko" ? "거래 내역 없음" : "No trades yet"}</p>
         ) : (
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {data.trades.slice(0, 10).map((trade, i) => {
@@ -126,12 +126,12 @@ function UserProfile({ userId }: { userId: number }) {
       {data.betStats && data.betStats.total > 0 && (
         <div>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-            <Dice5 className="w-3 h-3 inline mr-1" />Bets
+            <Dice5 className="w-3 h-3 inline mr-1" />{language === "ko" ? "베팅" : "Bets"}
           </p>
           <div className="flex items-center gap-3 text-xs">
             <span className="text-[color:var(--color-win)] font-mono font-bold">{data.betStats.won}W</span>
             <span className="text-[color:var(--color-loss)] font-mono font-bold">{data.betStats.lost}L</span>
-            {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} pending</span>}
+            {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} {language === "ko" ? "대기중" : "pending"}</span>}
             <span className="text-muted-foreground">|</span>
             <span className={`font-mono font-bold ${data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>
               {data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "+" : ""}${(data.betStats.totalWinnings - data.betStats.totalLost).toFixed(2)}
@@ -143,7 +143,7 @@ function UserProfile({ userId }: { userId: number }) {
       {/* Portfolio sparkline */}
       {data.portfolioHistory.length >= 2 && (
         <div className="sm:col-span-2">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">7-Day Portfolio</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{language === "ko" ? "7일 포트폴리오" : "7-Day Portfolio"}</p>
           <Sparkline data={data.portfolioHistory} />
         </div>
       )}
@@ -508,7 +508,7 @@ function LeaderboardCharts() {
                   tickLine={false}
                   width={48}
                 />
-                <ReferenceLine y={200} stroke="#555" strokeDasharray="3 3" label={{ value: "Start", position: "right", fill: "#666", fontSize: 9 }} />
+                <ReferenceLine y={200} stroke="#555" strokeDasharray="3 3" label={{ value: language === "ko" ? "시작" : "Start", position: "right", fill: "#666", fontSize: 9 }} />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#18181b", border: "1px solid #333", borderRadius: 8, fontSize: 12 }}
                   labelFormatter={(ts: number) => new Date(ts).toLocaleString()}

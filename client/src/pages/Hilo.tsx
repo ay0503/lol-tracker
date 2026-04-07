@@ -54,8 +54,8 @@ export default function Hilo() {
   const guessMutation = trpc.casino.hilo.guess.useMutation({
     onSuccess: (game) => {
       utils.casino.hilo.active.setData(undefined, game as any);
-      if (game.status === "lost") { toast.error("Wrong guess!"); refetchBalance(); }
-      else if (game.status === "won") { toast.success(`All correct! +$${game.payout.toFixed(2)}`); refetchBalance(); }
+      if (game.status === "lost") { toast.error(language === "ko" ? "오답!" : "Wrong guess!"); refetchBalance(); }
+      else if (game.status === "won") { toast.success(`${language === "ko" ? "전부 정답!" : "All correct!"} +$${game.payout.toFixed(2)}`); refetchBalance(); }
     },
     onError: (err) => { toast.error(err.message); utils.casino.hilo.active.invalidate(); },
   });
@@ -63,7 +63,7 @@ export default function Hilo() {
   const cashoutMutation = trpc.casino.hilo.cashout.useMutation({
     onSuccess: (game) => {
       utils.casino.hilo.active.setData(undefined, game as any);
-      toast.success(`Cashed out! +$${game.payout.toFixed(2)} (${game.multiplier.toFixed(2)}x)`);
+      toast.success(`${language === "ko" ? "캐시아웃!" : "Cashed out!"} +$${game.payout.toFixed(2)} (${game.multiplier.toFixed(2)}x)`);
       refetchBalance();
     },
     onError: (err) => toast.error(err.message),
@@ -137,7 +137,7 @@ export default function Hilo() {
                   "bg-blue-500/20 text-blue-400"
                 }`}>
                   <span className="flex items-center gap-1">
-                    {streak} streak
+                    {streak} {language === "ko" ? "연속" : "streak"}
                     {Array.from({ length: Math.min(Math.floor(streak / 3), 3) }).map((_, idx) => (
                       <Flame key={idx} className="w-3 h-3" />
                     ))}
@@ -182,7 +182,7 @@ export default function Hilo() {
                     className="py-4 rounded-xl bg-[color:var(--color-win)] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
                   >
                     <ArrowUp className="w-5 h-5" />
-                    <span>Higher ({game.nextHigherMult.toFixed(2)}x)</span>
+                    <span>{language === "ko" ? "높은 카드" : "Higher"} ({game.nextHigherMult.toFixed(2)}x)</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
@@ -191,7 +191,7 @@ export default function Hilo() {
                     className="py-4 rounded-xl bg-[color:var(--color-loss)] text-foreground font-bold text-sm disabled:opacity-40 flex flex-col items-center gap-1"
                   >
                     <ArrowDown className="w-5 h-5" />
-                    <span>Lower ({game.nextLowerMult.toFixed(2)}x)</span>
+                    <span>{language === "ko" ? "낮은 카드" : "Lower"} ({game.nextLowerMult.toFixed(2)}x)</span>
                   </motion.button>
                 </div>
 
@@ -205,12 +205,12 @@ export default function Hilo() {
                     className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold text-sm disabled:opacity-40 shadow-lg"
                   >
                     {cashoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> :
-                      `CASH OUT $${(game.bet * game.multiplier).toFixed(2)}`}
+                      `${language === "ko" ? "캐시아웃" : "CASH OUT"} $${(game.bet * game.multiplier).toFixed(2)}`}
                   </motion.button>
                 )}
 
                 <p className="text-center text-xs text-foreground/20 font-mono">
-                  {game.cardsRemaining} cards remaining
+                  {game.cardsRemaining} {language === "ko" ? "장 남음" : "cards remaining"}
                 </p>
               </div>
             ) : (

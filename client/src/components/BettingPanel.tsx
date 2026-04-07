@@ -16,7 +16,7 @@ export default function BettingPanel() {
 
   const placeMutation = trpc.betting.place.useMutation({
     onSuccess: () => {
-      toast.success(prediction === "win" ? "Bet placed: WIN" : "Bet placed: LOSS");
+      toast.success(language === "ko" ? (prediction === "win" ? "베팅 완료: 승리" : "베팅 완료: 패배") : (prediction === "win" ? "Bet placed: WIN" : "Bet placed: LOSS"));
       setAmount("");
       setPrediction(null);
       utils.betting.myBets.invalidate();
@@ -34,7 +34,7 @@ export default function BettingPanel() {
     if (!prediction || !amount) return;
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt < 1 || amt > 50) {
-      toast.error("Bet amount must be between $1 and $50");
+      toast.error(language === "ko" ? "베팅 금액은 $1에서 $50 사이여야 합니다" : "Bet amount must be between $1 and $50");
       return;
     }
     placeMutation.mutate({ prediction, amount: amt });
@@ -49,7 +49,7 @@ export default function BettingPanel() {
         </h3>
         {pendingPool && pendingPool.total > 0 && (
           <span className="ml-auto text-xs text-muted-foreground font-mono">
-            {pendingPool.total} bet{pendingPool.total !== 1 ? "s" : ""} · ${pendingPool.totalPool.toFixed(0)} pool
+            {pendingPool.total} {language === "ko" ? "베팅" : (pendingPool.total !== 1 ? "bets" : "bet")} · ${pendingPool.totalPool.toFixed(0)} {language === "ko" ? "풀" : "pool"}
           </span>
         )}
       </div>

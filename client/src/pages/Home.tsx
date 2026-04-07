@@ -139,6 +139,7 @@ function StatCard({
  */
 function LiveSentimentFeed() {
   const { isAuthenticated } = useAuth();
+  const { language } = useTranslation();
   const [message, setMessage] = useState("");
   const [sentiment, setSentiment] = useState<"bullish" | "bearish" | "neutral">("neutral");
 
@@ -158,7 +159,7 @@ function LiveSentimentFeed() {
   return (
     <div className="mt-3 pt-3 border-t border-primary/10">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Live Chat</span>
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{language === "ko" ? "실시간 채팅" : "Live Chat"}</span>
         <div className="flex gap-1">
           {(["bullish", "neutral", "bearish"] as const).map(sm => (
             <button
@@ -181,7 +182,7 @@ function LiveSentimentFeed() {
       {/* Comment list */}
       <div className="space-y-1 max-h-[120px] overflow-y-auto scrollbar-hide mb-2">
         {comments.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60 text-center py-2">No comments yet — be the first!</p>
+          <p className="text-xs text-muted-foreground/60 text-center py-2">{language === "ko" ? "아직 댓글이 없습니다 — 첫 번째로 작성하세요!" : "No comments yet — be the first!"}</p>
         ) : comments.map(cm => (
           <div key={cm.id} className="flex items-start gap-1.5 text-xs">
             <span className={`flex-shrink-0 ${
@@ -209,7 +210,7 @@ function LiveSentimentFeed() {
             type="text"
             value={message}
             onChange={ev => setMessage(ev.target.value)}
-            placeholder="Say something..."
+            placeholder={language === "ko" ? "한마디 남기기..." : "Say something..."}
             maxLength={200}
             className="flex-1 px-2.5 py-1.5 rounded-lg bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
@@ -218,7 +219,7 @@ function LiveSentimentFeed() {
             disabled={!message.trim() || postMutation.isPending}
             className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary text-xs font-bold disabled:opacity-30 hover:bg-primary/30 transition-colors"
           >
-            Send
+            {language === "ko" ? "전송" : "Send"}
           </button>
         </form>
       )}
@@ -228,7 +229,7 @@ function LiveSentimentFeed() {
 
 function LiveBettingPanel() {
   const { isAuthenticated } = useAuth();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [betAmount, setBetAmount] = useState(5);
 
   const statusQuery = trpc.betting.status.useQuery(undefined, {
@@ -236,7 +237,7 @@ function LiveBettingPanel() {
   });
   const placeBetMutation = trpc.betting.place.useMutation({
     onSuccess: () => {
-      toast.success("Bet placed!");
+      toast.success(language === "ko" ? "베팅 완료!" : "Bet placed!");
       statusQuery.refetch();
     },
     onError: (err) => toast.error(err.message),
@@ -256,7 +257,7 @@ function LiveBettingPanel() {
         <div className="mb-2.5">
           <div className="flex justify-between text-xs font-bold mb-1">
             <span className="text-green-400">WIN {status.winPct}%</span>
-            <span className="text-xs text-muted-foreground">{status.totalBets} bet{status.totalBets !== 1 ? "s" : ""} · ${status.totalPool.toFixed(0)} pool</span>
+            <span className="text-xs text-muted-foreground">{status.totalBets} {language === "ko" ? "베팅" : (status.totalBets !== 1 ? "bets" : "bet")} · ${status.totalPool.toFixed(0)} {language === "ko" ? "풀" : "pool"}</span>
             <span className="text-red-400">{status.lossPct}% LOSS</span>
           </div>
           <div className="h-1.5 rounded-full bg-secondary overflow-hidden flex">
@@ -302,13 +303,13 @@ function LiveBettingPanel() {
           </button>
 
           {timeLeft !== null && timeLeft > 0 && (
-            <span className="text-xs text-yellow-400 font-mono whitespace-nowrap">{timeStr} left</span>
+            <span className="text-xs text-yellow-400 font-mono whitespace-nowrap">{timeStr} {language === "ko" ? "남음" : "left"}</span>
           )}
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2 py-1.5">
           <Lock className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground font-bold">BETTING LOCKED</span>
+          <span className="text-xs text-muted-foreground font-bold">{language === "ko" ? "베팅 잠김" : "BETTING LOCKED"}</span>
         </div>
       )}
     </div>

@@ -72,7 +72,7 @@ function getTradeTypeStyle(type: string, tr: any) {
 }
 
 export default function TradingPanel() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { activeTicker: selectedTicker, setActiveTicker: setSelectedTicker } = useTicker();
   const [orderTab, setOrderTab] = useState<OrderTab>("market");
   const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
@@ -538,13 +538,13 @@ export default function TradingPanel() {
                     onClick={() => { setInputMode("dollars"); setAmount(""); }}
                     className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "dollars" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground border border-transparent"}`}
                   >
-                    <DollarSign className="inline w-3 h-3 mr-0.5" />USD
+                    <DollarSign className="inline w-3 h-3 mr-0.5" />{language === "ko" ? "달러" : "USD"}
                   </button>
                   <button
                     onClick={() => { setInputMode("shares"); setAmount(""); }}
                     className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${inputMode === "shares" ? "bg-primary/20 text-primary border border-primary/30" : "bg-secondary text-muted-foreground hover:text-foreground border border-transparent"}`}
                   >
-                    Shares
+                    {language === "ko" ? "수량" : "Shares"}
                   </button>
                 </div>
                 <div className="relative mb-3">

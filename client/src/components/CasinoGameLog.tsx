@@ -15,15 +15,15 @@ const GAME_ICONS: Record<string, LucideIcon> = {
   poker: Layers,
 };
 
-const GAME_LABELS: Record<string, string> = {
-  blackjack: "Blackjack",
-  crash: "Crash",
-  mines: "Mines",
-  roulette: "Roulette",
-  dice: "Dice",
-  hilo: "Hi-Lo",
-  plinko: "Plinko",
-  poker: "Poker",
+const GAME_LABELS: Record<string, { en: string; ko: string }> = {
+  blackjack: { en: "Blackjack", ko: "블랙잭" },
+  crash: { en: "Crash", ko: "크래시" },
+  mines: { en: "Mines", ko: "지뢰찾기" },
+  roulette: { en: "Roulette", ko: "룰렛" },
+  dice: { en: "Dice", ko: "주사위" },
+  hilo: { en: "Hi-Lo", ko: "하이로" },
+  plinko: { en: "Plinko", ko: "플링코" },
+  poker: { en: "Poker", ko: "포커" },
 };
 
 function timeAgo(dateStr: string): string {
@@ -68,7 +68,7 @@ export default function CasinoGameLog() {
                   : "hover:bg-secondary/40"
               }`}
             >
-              <span className="text-sm flex-shrink-0" title={GAME_LABELS[entry.game] || entry.game}>
+              <span className="text-sm flex-shrink-0" title={(GAME_LABELS[entry.game] || { en: entry.game, ko: entry.game })[language === "ko" ? "ko" : "en"]}>
                 {(() => { const Icon = GAME_ICONS[entry.game] || Gamepad2; return <Icon className="w-3.5 h-3.5" />; })()}
               </span>
 
@@ -81,7 +81,7 @@ export default function CasinoGameLog() {
               </span>
 
               <span className="text-muted-foreground text-xs flex-shrink-0">
-                {GAME_LABELS[entry.game] || entry.game}
+                {(GAME_LABELS[entry.game] || { en: entry.game, ko: entry.game })[language === "ko" ? "ko" : "en"]}
               </span>
 
               <span className="text-muted-foreground font-mono text-xs flex-shrink-0">

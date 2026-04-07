@@ -247,7 +247,7 @@ export default function Plinko() {
     return (
       <>
       <div className="flex gap-1.5 justify-center lg:justify-start mb-3">
-        <span className="text-xs text-muted-foreground self-center mr-1">Balls:</span>
+        <span className="text-xs text-muted-foreground self-center mr-1">{language === "ko" ? "공:" : "Balls:"}</span>
         {([1, 3, 5] as const).map((countOption) => (
           <button
             key={countOption}
@@ -276,7 +276,7 @@ export default function Plinko() {
                 : "bg-secondary text-muted-foreground border border-border/30 hover:text-foreground/80"
             }`}
           >
-            {riskOption}
+            {language === "ko" ? (riskOption === "low" ? "낮음" : riskOption === "medium" ? "중간" : "높음") : riskOption}
           </button>
         ))}
       </div>
@@ -416,9 +416,9 @@ export default function Plinko() {
     if (resultsAccRef.current.length === 1) {
       const result = resultsAccRef.current[0];
       if (result.payout > 0) toast.success(`${result.multiplier}x — $${result.payout.toFixed(2)}`);
-      else toast.error(`${result.multiplier}x — Lost`);
+      else toast.error(`${result.multiplier}x — ${language === "ko" ? "패배" : "Lost"}`);
     } else {
-      toast.success(`${resultsAccRef.current.length} balls — Total: $${totalPayout.toFixed(2)}`);
+      toast.success(`${resultsAccRef.current.length} ${language === "ko" ? "개 공 — 총:" : "balls — Total:"} $${totalPayout.toFixed(2)}`);
     }
     window.setTimeout(() => {
       setLastResults([]);
@@ -559,7 +559,7 @@ export default function Plinko() {
       rafRef.current = requestAnimationFrame(runResolvedAnimation);
     } catch (err: any) {
       setDropping(false);
-      toast.error(err.message || "Drop failed");
+      toast.error(err.message || (language === "ko" ? "드롭 실패" : "Drop failed"));
     }
   }, [ballCount, boardWidth, cash, dropMutation, dropping, isAuthenticated, language, parsedBetAmount, risk, runResolvedAnimation, totalBetAmount]);
 

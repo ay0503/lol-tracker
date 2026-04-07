@@ -19,15 +19,15 @@ const RANKS = ["", "", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "
 const SUIT_COLORS: Record<string, boolean> = { "♥": true, "♦": true };
 
 const PAY_TABLE = [
-  { hand: "Royal Flush", payout: "250x" },
-  { hand: "Straight Flush", payout: "50x" },
-  { hand: "Four of a Kind", payout: "25x" },
-  { hand: "Full House", payout: "9x" },
-  { hand: "Flush", payout: "5x" },
-  { hand: "Straight", payout: "4x" },
-  { hand: "Three of a Kind", payout: "3x" },
-  { hand: "Two Pair", payout: "2x" },
-  { hand: "Tens or Better", payout: "1x" },
+  { hand: "Royal Flush", ko: "로열 플러시", payout: "250x" },
+  { hand: "Straight Flush", ko: "스트레이트 플러시", payout: "50x" },
+  { hand: "Four of a Kind", ko: "포카드", payout: "25x" },
+  { hand: "Full House", ko: "풀하우스", payout: "9x" },
+  { hand: "Flush", ko: "플러시", payout: "5x" },
+  { hand: "Straight", ko: "스트레이트", payout: "4x" },
+  { hand: "Three of a Kind", ko: "트리플", payout: "3x" },
+  { hand: "Two Pair", ko: "투페어", payout: "2x" },
+  { hand: "Tens or Better", ko: "텐즈 오어 베터", payout: "1x" },
 ];
 
 function cardDisplay(card: { rank: number; suit: number }) {
@@ -70,7 +70,7 @@ const PokerCard = memo(function PokerCard({
         {held && (
           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
             className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-xs font-bold bg-yellow-500 text-black tracking-wider">
-            HELD
+            {language === "ko" ? "홀드" : "HELD"}
           </motion.div>
         )}
       </AnimatePresence>
@@ -157,7 +157,7 @@ export default function VideoPoker() {
                         <p className="text-sm font-mono text-[color:var(--color-win)]">+${game.payout.toFixed(2)} ({game.multiplier}x)</p>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">{language === "ko" ? "당첨 없음" : "No winning hand"}</p>
+                      <p className="text-sm text-muted-foreground">{language === "ko" ? "당첨 없음" : "No win"}</p>
                     )}
                   </motion.div>
                 )}
@@ -245,7 +245,7 @@ export default function VideoPoker() {
                   <div key={row.hand} className={`flex items-center justify-between py-1 px-2 rounded text-xs font-mono transition-colors ${
                     isWin ? "bg-[color:var(--color-win)]/20 text-[color:var(--color-win)] font-bold" : "text-muted-foreground"
                   }`}>
-                    <span className="truncate">{row.hand}</span>
+                    <span className="truncate">{language === "ko" ? row.ko : row.hand}</span>
                     <span className="font-bold ml-2">{row.payout}</span>
                   </div>
                 );

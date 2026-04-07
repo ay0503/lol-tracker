@@ -2,10 +2,11 @@ import { trpc } from "@/lib/trpc";
 import { useParams } from "wouter";
 import { Link } from "wouter";
 import { ArrowLeft, TrendingUp, TrendingDown, Loader2, Dice5, Calendar, Wallet } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 /** Sparkline SVG — larger version for profile page */
-function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[] }) {
-  if (data.length < 2) return <span className="text-sm text-muted-foreground">Not enough data</span>;
+function Sparkline({ data, language }: { data: { totalValue: number; timestamp: number }[]; language: string }) {
+  if (data.length < 2) return <span className="text-sm text-muted-foreground">{language === "ko" ? "데이터 부족" : "Not enough data"}</span>;
 
   const values = data.map(d => d.totalValue);
   const min = Math.min(...values);
@@ -29,17 +30,18 @@ function Sparkline({ data }: { data: { totalValue: number; timestamp: number }[]
   );
 }
 
-function formatDate(d: string | null | undefined) {
+function formatDate(d: string | null | undefined, lang: string) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(d).toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function formatTradeDate(d: string | null | undefined) {
+function formatTradeDate(d: string | null | undefined, lang: string) {
   if (!d) return "";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export default function UserProfilePage() {
+  const { language } = useTranslation();
   const params = useParams<{ userId: string }>();
   const userId = Number(params.userId);
   const { data, isLoading, error } = trpc.leaderboard.userProfile.useQuery(
@@ -58,7 +60,7 @@ export default function UserProfilePage() {
     return (
       <div className="min-h-screen bg-background">
         <main className="container py-12 text-center">
-          <p className="text-muted-foreground">Invalid user ID</p>
+          <p className="text-muted-foreground">{language === "ko" ? "잘못된 사용자 ID" : "Invalid user ID"}</p>
         </main>
       </div>
     );
@@ -68,7 +70,7 @@ export default function UserProfilePage() {
     <div className="min-h-screen bg-background">
       <main className="container py-8 max-w-3xl">
         <Link href="/leaderboard" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-8">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Leaderboard
+          <ArrowLeft className="w-3.5 h-3.5" /> {language === "ko" ? "리더보드로 돌아가기" : "Back to Leaderboard"}
         </Link>
 
         {isLoading ? (
@@ -77,7 +79,7 @@ export default function UserProfilePage() {
           </div>
         ) : error ? (
           <div className="text-center py-20">
-            <p className="text-muted-foreground">User not found</p>
+            <p className="text-muted-foreground">{language === "ko" ? "사용자를 찾을 수 없습니다" : "User not found"}</p>
           </div>
         ) : data ? (
           <div className="space-y-6">
@@ -85,8 +87,8 @@ export default function UserProfilePage() {
             <div className="bg-card border border-border rounded-xl p-6">
               <h1 className="text-2xl font-bold text-foreground font-[var(--font-heading)]">{data.userName}</h1>
               <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Joined {formatDate(data.joinDate)}</span>
-                <span className="flex items-center gap-1"><Wallet className="w-3.5 h-3.5" /> Cash: <span className="text-foreground font-mono">${data.cashBalance.toFixed(2)}</span></span>
+                <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {language === "ko" ? "가입일" : "Joined"} {formatDate(data.joinDate, language)}</span>
+                <span className="flex items-center gap-1"><Wallet className="w-3.5 h-3.5" /> {language === "ko" ? "현금:" : "Cash:"} <span className="text-foreground font-mono">${data.cashBalance.toFixed(2)}</span></span>
               </div>
               {data.portfolioHistory.length >= 2 && (() => {
                 const first = data.portfolioHistory[0].totalValue;
@@ -111,26 +113,26 @@ export default function UserProfilePage() {
             {/* Portfolio Chart */}
             {data.portfolioHistory.length >= 2 && (
               <div className="bg-card border border-border rounded-xl p-6">
-                <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">7-Day Portfolio</h2>
-                <Sparkline data={data.portfolioHistory} />
+                <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{language === "ko" ? "7일 포트폴리오" : "7-Day Portfolio"}</h2>
+                <Sparkline data={data.portfolioHistory} language={language} />
               </div>
             )}
 
             {/* Holdings */}
             <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Holdings</h2>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{language === "ko" ? "보유 종목" : "Holdings"}</h2>
               {data.holdings.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No positions</p>
+                <p className="text-sm text-muted-foreground">{language === "ko" ? "포지션 없음" : "No positions"}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-muted-foreground border-b border-border">
-                        <th className="text-left py-2 font-medium">Ticker</th>
-                        <th className="text-right py-2 font-medium">Shares</th>
-                        <th className="text-right py-2 font-medium">Avg Cost</th>
-                        <th className="text-right py-2 font-medium">Value</th>
-                        <th className="text-right py-2 font-medium">P&L</th>
+                        <th className="text-left py-2 font-medium">{language === "ko" ? "종목" : "Ticker"}</th>
+                        <th className="text-right py-2 font-medium">{language === "ko" ? "수량" : "Shares"}</th>
+                        <th className="text-right py-2 font-medium">{language === "ko" ? "평균가" : "Avg Cost"}</th>
+                        <th className="text-right py-2 font-medium">{language === "ko" ? "가치" : "Value"}</th>
+                        <th className="text-right py-2 font-medium">{language === "ko" ? "손익" : "P&L"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -158,7 +160,7 @@ export default function UserProfilePage() {
                           const pnl = currentVal !== null ? entryVal - currentVal : null;
                           return (
                             <tr key={h.ticker + "-short"} className="border-b border-border/50">
-                              <td className="py-2 font-mono font-bold">${h.ticker} <span className="text-red-400 text-xs">(short)</span></td>
+                              <td className="py-2 font-mono font-bold">${h.ticker} <span className="text-red-400 text-xs">{language === "ko" ? "(숏)" : "(short)"}</span></td>
                               <td className="py-2 text-right font-mono">{h.shortShares.toFixed(2)}</td>
                               <td className="py-2 text-right font-mono">${h.shortAvgPrice.toFixed(2)}</td>
                               <td className="py-2 text-right font-mono">{currentVal !== null ? `$${currentVal.toFixed(2)}` : "—"}</td>
@@ -178,9 +180,9 @@ export default function UserProfilePage() {
 
             {/* Trade History */}
             <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Trade History</h2>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{language === "ko" ? "거래 내역" : "Trade History"}</h2>
               {data.trades.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No trades yet</p>
+                <p className="text-sm text-muted-foreground">{language === "ko" ? "거래 내역 없음" : "No trades yet"}</p>
               ) : (
                 <div className="space-y-2.5 max-h-80 overflow-y-auto">
                   {data.trades.map((trade, i) => {
@@ -195,7 +197,7 @@ export default function UserProfilePage() {
                         </div>
                         <div className="flex items-center gap-3 text-right">
                           <span className="font-mono text-muted-foreground">{trade.shares.toFixed(2)} @ ${trade.pricePerShare.toFixed(2)}</span>
-                          <span className="text-xs text-muted-foreground w-28 text-right hidden sm:inline">{formatTradeDate(trade.createdAt)}</span>
+                          <span className="text-xs text-muted-foreground w-28 text-right hidden sm:inline">{formatTradeDate(trade.createdAt, language)}</span>
                         </div>
                       </div>
                     );
@@ -208,15 +210,15 @@ export default function UserProfilePage() {
             {data.betStats && data.betStats.total > 0 && (
               <div className="bg-card border border-border rounded-xl p-6">
                 <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Dice5 className="w-3.5 h-3.5" /> Bets
+                  <Dice5 className="w-3.5 h-3.5" /> {language === "ko" ? "베팅" : "Bets"}
                 </h2>
                 <div className="flex items-center gap-4 text-sm mb-4">
                   <span className="text-[color:var(--color-win)] font-mono font-bold">{data.betStats.won}W</span>
                   <span className="text-[color:var(--color-loss)] font-mono font-bold">{data.betStats.lost}L</span>
-                  {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} pending</span>}
+                  {data.betStats.pending > 0 && <span className="text-yellow-400 font-mono">{data.betStats.pending} {language === "ko" ? "대기중" : "pending"}</span>}
                   <span className="text-muted-foreground">|</span>
                   <span className="font-mono font-bold" style={{ color: data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
-                    Net: {data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "+" : ""}${(data.betStats.totalWinnings - data.betStats.totalLost).toFixed(2)}
+                    {language === "ko" ? "순이익:" : "Net:"} {data.betStats.totalWinnings - data.betStats.totalLost >= 0 ? "+" : ""}${(data.betStats.totalWinnings - data.betStats.totalLost).toFixed(2)}
                   </span>
                 </div>
                 {data.bets.length > 0 && (

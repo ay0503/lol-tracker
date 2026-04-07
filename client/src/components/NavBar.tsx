@@ -181,7 +181,7 @@ export default function NavBar() {
               }`}
             >
               <Gamepad2 className="w-3.5 h-3.5" />
-              Casino
+              {language === "ko" ? "카지노" : "Casino"}
             </Link>
             {/* Admin link */}
             {(user as any)?.role === "admin" && (
@@ -194,7 +194,7 @@ export default function NavBar() {
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
-                Admin
+                {language === "ko" ? "관리자" : "Admin"}
               </Link>
             )}
           </div>
@@ -322,7 +322,7 @@ export default function NavBar() {
               })}
               <Link href="/casino" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm transition-all ${isActive("/casino") ? "text-yellow-300 bg-yellow-950/40 font-semibold" : "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30"}`}>
                 <Gamepad2 className="w-4 h-4" />
-                Casino
+                {language === "ko" ? "카지노" : "Casino"}
               </Link>
               {/* Casino game sub-links when on casino page */}
               {isCasinoPage && (
@@ -338,7 +338,7 @@ export default function NavBar() {
               {(user as any)?.role === "admin" && (
                 <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className={`flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm transition-all ${isActive("/admin") ? "text-red-300 bg-red-950/40 font-semibold" : "text-red-400 hover:text-red-300 hover:bg-red-950/30"}`}>
                   <Shield className="w-4 h-4" />
-                  Admin
+                  {language === "ko" ? "관리자" : "Admin"}
                 </Link>
               )}
               <a

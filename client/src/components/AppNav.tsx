@@ -34,7 +34,7 @@ function ThemeToggle() {
       <button
         onClick={() => setOpen(prev => !prev)}
         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all"
-        title="Theme"
+        title={language === "ko" ? "테마" : "Theme"}
       >
         <Palette className="w-3.5 h-3.5" />
       </button>
@@ -106,8 +106,8 @@ export default function AppNav() {
     { href: "/portfolio", label: copy.nav.portfolio, icon: Wallet, auth: true },
     { href: "/ledger", label: copy.nav.ledger, icon: BookOpen },
     { href: "/leaderboard", label: copy.nav.leaderboard, icon: Crown },
-    { href: "/casino", label: (copy as any).casino?.casino ?? "Casino", icon: Gamepad2, className: "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30" },
-    { href: "/admin", label: (copy as any).casino?.admin ?? "Admin", icon: Shield, admin: true, className: "text-red-400 hover:text-red-300 hover:bg-red-950/30" },
+    { href: "/casino", label: languageContext.language === "ko" ? "카지노" : "Casino", icon: Gamepad2, className: "text-yellow-400 hover:text-yellow-300 hover:bg-yellow-950/30" },
+    { href: "/admin", label: languageContext.language === "ko" ? "관리자" : "Admin", icon: Shield, admin: true, className: "text-red-400 hover:text-red-300 hover:bg-red-950/30" },
   ];
 
   return (

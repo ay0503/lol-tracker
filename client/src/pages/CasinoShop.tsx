@@ -57,7 +57,7 @@ export default function CasinoShop() {
 
   const purchaseMutation = trpc.casino.shop.purchase.useMutation({
     onSuccess: (data) => {
-      toast.success(`Purchased "${data.name}"!`);
+      toast.success(language === "ko" ? `"${data.name}" 구매 완료!` : `Purchased "${data.name}"!`);
       utils.casino.shop.owned.invalidate();
       utils.casino.shop.catalog.invalidate();
       utils.casino.blackjack.balance.invalidate();
@@ -68,7 +68,7 @@ export default function CasinoShop() {
 
   const equipMutation = trpc.casino.shop.equip.useMutation({
     onSuccess: () => {
-      toast.success("Equipped!");
+      toast.success(language === "ko" ? "장착 완료!" : "Equipped!");
       utils.casino.shop.equipped.invalidate();
       utils.casino.leaderboard.invalidate();
     },
@@ -87,7 +87,7 @@ export default function CasinoShop() {
     <div className="dark min-h-screen bg-gradient-to-b from-card via-background to-background">
       <div className="container py-8 sm:py-8 max-w-2xl mx-auto px-4">
         <Link href="/casino" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> Casino
+          <ArrowLeft className="w-3.5 h-3.5" /> {language === "ko" ? "카지노" : "Casino"}
         </Link>
 
         {/* Header */}
@@ -121,11 +121,11 @@ export default function CasinoShop() {
             <div className="flex gap-2 mt-1.5">
               {equipped?.title && (
                 <button onClick={() => equipMutation.mutate({ type: "title", cosmeticId: null })}
-                  className="text-xs text-muted-foreground hover:text-foreground/80 transition-colors">Unequip title</button>
+                  className="text-xs text-muted-foreground hover:text-foreground/80 transition-colors">{language === "ko" ? "칭호 해제" : "Unequip title"}</button>
               )}
               {equipped?.nameEffect && (
                 <button onClick={() => equipMutation.mutate({ type: "name_effect", cosmeticId: null })}
-                  className="text-xs text-muted-foreground hover:text-foreground/80 transition-colors">Unequip effect</button>
+                  className="text-xs text-muted-foreground hover:text-foreground/80 transition-colors">{language === "ko" ? "효과 해제" : "Unequip effect"}</button>
               )}
             </div>
           </div>
@@ -171,7 +171,7 @@ export default function CasinoShop() {
                 {item.isLimited && item.stock >= 0 && (
                   <div className="absolute top-1.5 left-1.5 z-10">
                     <span className="px-1 py-0.5 rounded text-xs font-bold text-red-400 bg-red-500/15 border border-red-500/30">
-                      {item.stock} left
+                      {item.stock} {language === "ko" ? "남음" : "left"}
                     </span>
                   </div>
                 )}
@@ -202,14 +202,14 @@ export default function CasinoShop() {
                     {isOwned ? (
                       isEquipped ? (
                         <span className="flex items-center gap-0.5 text-xs text-emerald-400 font-bold">
-                          <Check className="w-2.5 h-2.5" /> On
+                          <Check className="w-2.5 h-2.5" /> {language === "ko" ? "장착중" : "On"}
                         </span>
                       ) : (
                         <button
                           onClick={() => equipMutation.mutate({ type: item.type as "title" | "name_effect", cosmeticId: item.id })}
                           disabled={equipMutation.isPending}
                           className="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-400 text-xs font-bold hover:bg-emerald-600/30 transition-colors disabled:opacity-40">
-                          Equip
+                          {language === "ko" ? "장착" : "Equip"}
                         </button>
                       )
                     ) : (
@@ -219,7 +219,7 @@ export default function CasinoShop() {
                         className={`px-2 py-0.5 rounded text-xs font-bold transition-colors disabled:opacity-30 ${
                           canAfford ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-secondary text-muted-foreground"
                         }`}>
-                        Buy
+                        {language === "ko" ? "구매" : "Buy"}
                       </button>
                     )}
                   </div>
@@ -232,7 +232,7 @@ export default function CasinoShop() {
         {filtered.length === 0 && (
           <div className="text-center py-12">
             <ShoppingBag className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">No items in this category</p>
+            <p className="text-xs text-muted-foreground">{language === "ko" ? "이 카테고리에 아이템이 없습니다" : "No items in this category"}</p>
           </div>
         )}
 
