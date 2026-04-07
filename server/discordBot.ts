@@ -457,12 +457,24 @@ async function registerSlashCommands(client: Client) {
   ];
 
   const rest = new REST({ version: "10" }).setToken(ENV.discordBotToken);
+  const commandData = commands.map(cmd => cmd.toJSON());
+
   try {
+    // Register per-guild for instant availability
+    const guilds = Array.from(client.guilds.cache.values());
+    for (const guild of guilds) {
+      await rest.put(
+        Routes.applicationGuildCommands(client.user.id, guild.id),
+        { body: commandData },
+      );
+      console.log(`[discordBot] Slash commands registered for guild: ${guild.name}`);
+    }
+    // Also register globally (takes up to 1hr but ensures coverage)
     await rest.put(
       Routes.applicationCommands(client.user.id),
-      { body: commands.map(cmd => cmd.toJSON()) },
+      { body: commandData },
     );
-    console.log("[discordBot] Slash commands registered");
+    console.log("[discordBot] Global slash commands registered");
   } catch (err: any) {
     console.error("[discordBot] Failed to register commands:", err.message);
   }
@@ -515,8 +527,9 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction): Pro
 // ─── Main Message Handler ───
 
 async function handleMessage(message: Message): Promise<void> {
-  // Ignore bots and DMs
+  // Ignore bots, DMs, and slash command attempts
   if (message.author.bot || !message.guild) return;
+  if (message.content.startsWith("/")) return;
 
   // Only respond in the configured channel (or if mentioned)
   const commandChannel = ENV.discordChannelId;
