@@ -1886,6 +1886,10 @@ export const appRouter = router({
         dividendCount: number;
         casinoDeposits: number;
         notes: string[];
+        breakdown: {
+          starting: number; buys: number; sells: number; shortMargin: number;
+          coverReturns: number; dividends: number; betsPlaced: number; betsWon: number; computed: number;
+        };
       }[] = [];
 
       for (const user of usersRes.rows) {
@@ -2069,7 +2073,7 @@ export const appRouter = router({
 
         // Compute current prices
         const history = await getPriceHistory();
-        const etfPrices = computeAllETFPricesSync(history);
+        const etfPrices: Record<string, number> = computeAllETFPricesSync(history);
 
         // Holdings with live P&L
         const holdingsWithPnl = holdingsList.map(h => {
