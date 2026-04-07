@@ -1,5 +1,6 @@
 /**
  * Discord bot intent parser — converts natural language to structured actions via LLM.
+ * Supports compound instructions like "sell everything and all in on DORI".
  */
 import { invokeLLM } from "./_core/llm";
 
@@ -17,6 +18,8 @@ export type BotIntent =
   | { type: "buy"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "sell"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "sell_all"; ticker: string }
+  | { type: "sell_all_holdings" }
+  | { type: "buy_max"; ticker: string }
   | { type: "short"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "cover"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "cover_all"; ticker: string }
@@ -27,47 +30,55 @@ export type BotIntent =
 
 const VALID_TICKERS = new Set(["DORI", "DDRI", "TDRI", "SDRI", "XDRI"]);
 
-const SYSTEM_PROMPT = `You are a trading assistant bot for the $DORI LP Tracker platform. Parse the user's message and return a JSON object representing their intent.
+const SYSTEM_PROMPT = `You are a trading assistant bot for the $DORI LP Tracker platform. Parse the user's message into one or more actions.
 
 Available tickers: DORI (1x), DDRI (2x bull), TDRI (3x bull), SDRI (-2x bear), XDRI (-3x bear).
 
-Return exactly ONE JSON object with a "type" field. Valid types and their fields:
+Return a JSON object with an "actions" array. Each action has a "type" field.
 
-READ queries (no confirmation needed):
-- {"type":"portfolio"} — show user's portfolio (cash, holdings, P&L)
+READ queries:
+- {"type":"portfolio"} — show portfolio
 - {"type":"prices"} — show all ETF prices
-- {"type":"price","ticker":"DORI"} — show price of one ticker
-- {"type":"leaderboard"} — show top traders
-- {"type":"live_game"} — check if the player is in a game
-- {"type":"casino_balance"} — show casino cash
-- {"type":"match_history","count":5} — show recent matches (default 5)
-- {"type":"holdings"} — show detailed holdings
-- {"type":"compare","targetName":"Kyle"} — compare portfolio with another user
-- {"type":"help"} — show available commands
+- {"type":"price","ticker":"DORI"} — price of one ticker
+- {"type":"leaderboard"} — top traders
+- {"type":"live_game"} — is the player in a game?
+- {"type":"casino_balance"} — casino cash
+- {"type":"match_history","count":5} — recent matches
+- {"type":"holdings"} — detailed holdings
+- {"type":"compare","targetName":"Kyle"} — compare with another user
+- {"type":"help"} — show commands
 
-TRADE actions (will require confirmation):
+TRADE actions:
 - {"type":"buy","ticker":"DORI","amount":20,"unit":"dollars"} — buy $20 of DORI
-- {"type":"buy","ticker":"DORI","amount":5,"unit":"shares"} — buy 5 shares of DORI
-- {"type":"sell","ticker":"DORI","amount":10,"unit":"dollars"} — sell $10 of DORI
-- {"type":"sell","ticker":"DORI","amount":3,"unit":"shares"} — sell 3 shares of DORI
-- {"type":"sell_all","ticker":"DORI"} — sell all shares of a ticker
-- {"type":"short","ticker":"DORI","amount":10,"unit":"dollars"} — short $10 of DORI
+- {"type":"buy","ticker":"DORI","amount":5,"unit":"shares"} — buy 5 shares
+- {"type":"sell","ticker":"DORI","amount":10,"unit":"dollars"} — sell $10
+- {"type":"sell","ticker":"DORI","amount":3,"unit":"shares"} — sell 3 shares
+- {"type":"sell_all","ticker":"DORI"} — sell all shares of one ticker
+- {"type":"sell_all_holdings"} — sell ALL shares across ALL tickers (dump everything)
+- {"type":"buy_max","ticker":"DORI"} — spend all available cash on one ticker (all in / yolo)
+- {"type":"short","ticker":"DORI","amount":10,"unit":"dollars"} — short $10
 - {"type":"cover","ticker":"DORI","amount":5,"unit":"shares"} — cover 5 short shares
 - {"type":"cover_all","ticker":"DORI"} — cover all short shares
-- {"type":"bet","prediction":"win","amount":10} — bet $10 on next game win
-- {"type":"bet","prediction":"loss","amount":5} — bet $5 on next game loss
+- {"type":"bet","prediction":"win","amount":10} — bet on next game
 
-If the ticker is ambiguous or not specified for a trade, default to DORI.
-If the amount is not clear, return {"type":"unknown","message":"reason"}.
-If the message doesn't match any action, return {"type":"unknown","message":"brief explanation"}.
+COMPOUND EXAMPLES:
+- "sell everything and all in on DORI" → {"actions":[{"type":"sell_all_holdings"},{"type":"buy_max","ticker":"DORI"}]}
+- "sell all TDRI and buy SDRI with the money" → {"actions":[{"type":"sell_all","ticker":"TDRI"},{"type":"buy_max","ticker":"SDRI"}]}
+- "what's my portfolio and show leaderboard" → {"actions":[{"type":"portfolio"},{"type":"leaderboard"}]}
+- "yolo everything on XDRI" → {"actions":[{"type":"sell_all_holdings"},{"type":"buy_max","ticker":"XDRI"}]}
+- "dump my DORI and short it" → {"actions":[{"type":"sell_all","ticker":"DORI"},{"type":"short","ticker":"DORI","amount":50,"unit":"dollars"}]}
 
-Respond with ONLY the JSON object, no markdown, no explanation.`;
+For a single action, still wrap it: {"actions":[{"type":"portfolio"}]}
+If the ticker is ambiguous or not specified, default to DORI.
+If unclear, return {"actions":[{"type":"unknown","message":"brief reason"}]}.
+Order actions logically — sells before buys when the user wants to use proceeds.
+
+Respond with ONLY the JSON object.`;
 
 /**
- * Parse a user message into a structured intent using the LLM.
- * Falls back to { type: "unknown" } on any error.
+ * Parse a user message into one or more structured intents.
  */
-export async function parseIntent(message: string): Promise<BotIntent> {
+export async function parseIntent(message: string): Promise<BotIntent[]> {
   try {
     const result = await invokeLLM({
       messages: [
@@ -75,30 +86,36 @@ export async function parseIntent(message: string): Promise<BotIntent> {
         { role: "user", content: message },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 256,
+      max_tokens: 512,
     });
 
     const raw = result.choices[0]?.message?.content;
-    if (!raw) return { type: "unknown", message: "No LLM response" };
+    if (!raw) return [{ type: "unknown", message: "No LLM response" }];
 
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed.type !== "string") {
-      return { type: "unknown", message: "Invalid response format" };
+
+    // Support both { actions: [...] } and legacy single { type: "..." }
+    if (Array.isArray(parsed.actions)) {
+      const validated = parsed.actions.map(validateIntent).filter(Boolean) as BotIntent[];
+      return validated.length > 0 ? validated : [{ type: "unknown", message: "No valid actions found" }];
     }
 
-    // Validate and normalize
-    return validateIntent(parsed);
+    if (parsed.type) {
+      return [validateIntent(parsed)];
+    }
+
+    return [{ type: "unknown", message: "Invalid response format" }];
   } catch (err: any) {
     console.error("[discordIntent] parseIntent error:", err.message);
-    return { type: "unknown", message: "Failed to understand your message" };
+    return [{ type: "unknown", message: "Failed to understand your message" }];
   }
 }
 
 function validateIntent(raw: any): BotIntent {
   const type = raw.type;
 
-  // Read queries — no validation needed
-  if (["portfolio", "prices", "leaderboard", "live_game", "casino_balance", "holdings", "help"].includes(type)) {
+  // Read queries
+  if (["portfolio", "prices", "leaderboard", "live_game", "casino_balance", "holdings", "help", "sell_all_holdings"].includes(type)) {
     return { type } as BotIntent;
   }
 
@@ -116,6 +133,12 @@ function validateIntent(raw: any): BotIntent {
     const ticker = normalizeTicker(raw.ticker);
     if (!ticker) return { type: "unknown", message: `Invalid ticker: ${raw.ticker}` };
     return { type: "price", ticker };
+  }
+
+  if (type === "buy_max") {
+    const ticker = normalizeTicker(raw.ticker);
+    if (!ticker) return { type: "unknown", message: `Invalid ticker: ${raw.ticker}` };
+    return { type: "buy_max", ticker };
   }
 
   // Trade actions — validate ticker + amount
@@ -148,7 +171,6 @@ function normalizeTicker(ticker: any): string | null {
   if (!ticker || typeof ticker !== "string") return null;
   const upper = ticker.toUpperCase().replace("$", "");
   if (VALID_TICKERS.has(upper)) return upper;
-  // Common aliases
-  if (upper === "DORI" || upper === "D") return "DORI";
+  if (upper === "D") return "DORI";
   return null;
 }

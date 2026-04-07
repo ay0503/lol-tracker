@@ -438,28 +438,37 @@ async function handleTradeConfirm(interaction: ButtonInteraction, confirmed: boo
   }
 
   try {
-    const actionType = trade.intent.type === "sell_all" ? "sell" : trade.intent.type === "cover_all" ? "cover" : trade.intent.type;
+    // Support compound trades via _steps
+    const steps = (trade as any)._steps as { action: string; ticker: string; shares: number; price: number; total: number }[] | undefined;
+    const tradeSteps = steps ?? [{ action: trade.intent.type === "sell_all" ? "sell" : trade.intent.type === "cover_all" ? "cover" : trade.intent.type, ticker: trade.ticker, shares: trade.shares, price: trade.price, total: trade.totalCost }];
 
     let result: any;
-    if (actionType === "buy" || actionType === "sell") {
-      result = await executeTrade(trade.userId, trade.ticker as Ticker, actionType, trade.shares, trade.price);
-    } else if (actionType === "short") {
-      result = await executeShort(trade.userId, trade.ticker as Ticker, trade.shares, trade.price);
-    } else if (actionType === "cover") {
-      result = await executeCover(trade.userId, trade.ticker as Ticker, trade.shares, trade.price);
+    const executed: string[] = [];
+
+    for (const step of tradeSteps) {
+      if (step.action === "buy" || step.action === "sell") {
+        result = await executeTrade(trade.userId, step.ticker as Ticker, step.action, step.shares, step.price);
+      } else if (step.action === "short") {
+        result = await executeShort(trade.userId, step.ticker as Ticker, step.shares, step.price);
+      } else if (step.action === "cover") {
+        result = await executeCover(trade.userId, step.ticker as Ticker, step.shares, step.price);
+      }
+      executed.push(`${step.action.toUpperCase()} ${step.shares.toFixed(2)} $${step.ticker} @ ${formatDollars(step.price)}`);
+
+      // Fire passive notification for each trade
+      const userName = String((await getUserByDiscordId(trade.discordUserId))?.displayName ?? "User");
+      import("./discord").then(d => d.notifyTrade(userName, step.action as any, step.ticker, step.shares, step.price)).catch(() => {});
     }
 
     cache.invalidate("leaderboard.rankings");
+    cache.invalidatePrefix("ledger.");
 
     const newCash = parseFloat(String(result?.portfolio?.cashBalance ?? "0"));
     const successEmbed = new EmbedBuilder()
-      .setTitle(`✅ ${actionType.toUpperCase()} Executed`)
+      .setTitle(`✅ ${tradeSteps.length > 1 ? `${tradeSteps.length} Trades` : tradeSteps[0].action.toUpperCase()} Executed`)
       .setColor(embedColor("success"))
+      .setDescription(executed.map((line, idx) => `${idx + 1}. ${line}`).join("\n"))
       .addFields(
-        { name: "Action", value: `${actionType.toUpperCase()} $${trade.ticker}`, inline: true },
-        { name: "Shares", value: trade.shares.toFixed(4), inline: true },
-        { name: "Price", value: formatDollars(trade.price), inline: true },
-        { name: "Total", value: formatDollars(trade.totalCost), inline: true },
         { name: "New Balance", value: formatDollars(newCash), inline: true },
       );
 
@@ -613,82 +622,191 @@ async function handleMessage(message: Message): Promise<void> {
     return;
   }
 
-  // Parse intent
-  const intent = await parseIntent(cleanContent);
+  // Parse intents (can be multiple for compound instructions)
+  const intents = await parseIntent(cleanContent);
+
+  // Separate into reads, trades, and bets
+  const readIntents: BotIntent[] = [];
+  const tradeIntents: BotIntent[] = [];
+  const betIntents: BotIntent[] = [];
+  const unknownIntents: BotIntent[] = [];
+
+  for (const intent of intents) {
+    if (["portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance", "match_history", "holdings", "help", "compare"].includes(intent.type)) {
+      readIntents.push(intent);
+    } else if (intent.type === "bet") {
+      betIntents.push(intent);
+    } else if (intent.type === "unknown") {
+      unknownIntents.push(intent);
+    } else {
+      tradeIntents.push(intent);
+    }
+  }
 
   try {
-    switch (intent.type) {
-      case "portfolio": {
-        const embed = await handlePortfolio(userId, userName);
-        await message.reply({ embeds: [embed] });
-        break;
+    // Execute reads immediately, collect embeds
+    const readEmbeds: EmbedBuilder[] = [];
+    for (const intent of readIntents) {
+      switch (intent.type) {
+        case "portfolio": readEmbeds.push(await handlePortfolio(userId, userName)); break;
+        case "prices": readEmbeds.push(await handlePrices()); break;
+        case "price": {
+          const prices = getETFPrices();
+          const price = prices[(intent as any).ticker];
+          if (price) readEmbeds.push(new EmbedBuilder().setTitle(`$${(intent as any).ticker}`).setColor(embedColor("info")).setDescription(`**${formatDollars(price)}**`));
+          break;
+        }
+        case "leaderboard": readEmbeds.push(await handleLeaderboard()); break;
+        case "live_game": readEmbeds.push(await handleLiveGame()); break;
+        case "match_history": readEmbeds.push(await handleMatchHistory((intent as any).count)); break;
+        case "casino_balance": readEmbeds.push(await handleCasinoBalance(userId, userName)); break;
+        case "holdings": readEmbeds.push(await handleHoldings(userId, userName)); break;
+        case "help": readEmbeds.push(handleHelp()); break;
+        case "compare": readEmbeds.push(await handleCompare(userId, userName, (intent as any).targetName)); break;
       }
-      case "prices": {
-        const embed = await handlePrices();
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "price": {
-        const prices = getETFPrices();
-        const price = prices[intent.ticker];
-        if (!price) { await message.reply(`Unknown ticker: $${intent.ticker}`); break; }
-        await message.reply({ embeds: [new EmbedBuilder().setTitle(`$${intent.ticker}`).setColor(embedColor("info")).setDescription(`**${formatDollars(price)}**`)] });
-        break;
-      }
-      case "leaderboard": {
-        const embed = await handleLeaderboard();
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "live_game": {
-        const embed = await handleLiveGame();
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "match_history": {
-        const embed = await handleMatchHistory(intent.count);
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "casino_balance": {
-        const embed = await handleCasinoBalance(userId, userName);
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "holdings": {
-        const embed = await handleHoldings(userId, userName);
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "help": {
-        const embed = handleHelp();
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "compare": {
-        const embed = await handleCompare(userId, userName, intent.targetName);
-        await message.reply({ embeds: [embed] });
-        break;
-      }
-      case "buy":
-      case "sell":
-      case "sell_all":
-      case "short":
-      case "cover":
-      case "cover_all":
-        await handleTradeIntent(message, userId, userName, intent);
-        break;
-      case "bet":
-        await handleBet(message, userId, intent.prediction, intent.amount);
-        break;
-      case "unknown":
-        await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription(`🤔 ${intent.message}\n\nType **help** for examples.`)] });
-        break;
+    }
+    if (readEmbeds.length > 0) {
+      await message.reply({ embeds: readEmbeds.slice(0, 10) }); // Discord max 10 embeds
+    }
+
+    // Execute bets directly
+    for (const intent of betIntents) {
+      if (intent.type === "bet") await handleBet(message, userId, intent.prediction, intent.amount);
+    }
+
+    // Handle trades — if compound, batch into one confirmation
+    if (tradeIntents.length > 0) {
+      await handleCompoundTrade(message, userId, userName, tradeIntents);
+    }
+
+    // Show unknowns
+    if (unknownIntents.length > 0 && readEmbeds.length === 0 && tradeIntents.length === 0 && betIntents.length === 0) {
+      const msg = (unknownIntents[0] as any).message || "I didn't understand that";
+      await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription(`🤔 ${msg}\n\nType **help** for examples.`)] });
     }
   } catch (err: any) {
     console.error("[discordBot] Handler error:", err);
     await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ Something went wrong: ${err.message}`)] }).catch(() => {});
   }
+}
+
+// ─── Compound Trade Handler ───
+
+async function handleCompoundTrade(message: Message, userId: number, userName: string, intents: BotIntent[]): Promise<void> {
+  const prices = getETFPrices();
+  const portfolio = await getOrCreatePortfolio(userId);
+  const holdingsList = await getUserHoldings(userId);
+  const cash = parseFloat(String(portfolio.cashBalance ?? "200"));
+
+  // Check market
+  const liveGame = cache.get<boolean>("player.liveGame.check") ?? false;
+
+  // Resolve each intent into concrete trade steps
+  const steps: { action: string; ticker: string; shares: number; price: number; total: number }[] = [];
+  let projectedCash = cash;
+
+  for (const intent of intents) {
+    if (liveGame && intent.type !== "cover" && intent.type !== "cover_all") {
+      await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription("⚠️ Trading halted — game in progress.")] });
+      return;
+    }
+
+    if (intent.type === "sell_all_holdings") {
+      // Sell all shares across all tickers
+      for (const h of holdingsList) {
+        const shares = parseFloat(String(h.shares ?? "0"));
+        const price = prices[h.ticker] ?? 0;
+        if (shares > 0 && price > 0) {
+          steps.push({ action: "sell", ticker: h.ticker, shares, price, total: shares * price });
+          projectedCash += shares * price;
+        }
+      }
+    } else if (intent.type === "buy_max") {
+      const ticker = (intent as any).ticker as string;
+      const price = prices[ticker];
+      if (!price) continue;
+      const shares = Math.floor((projectedCash / price) * 10000) / 10000;
+      if (shares > 0) {
+        steps.push({ action: "buy", ticker, shares, price, total: shares * price });
+        projectedCash -= shares * price;
+      }
+    } else if (intent.type === "sell_all") {
+      const ticker = (intent as any).ticker as string;
+      const holding = holdingsList.find(h => h.ticker === ticker);
+      const shares = parseFloat(String(holding?.shares ?? "0"));
+      const price = prices[ticker] ?? 0;
+      if (shares > 0 && price > 0) {
+        steps.push({ action: "sell", ticker, shares, price, total: shares * price });
+        projectedCash += shares * price;
+      }
+    } else if (intent.type === "cover_all") {
+      const ticker = (intent as any).ticker as string;
+      const holding = holdingsList.find(h => h.ticker === ticker);
+      const shares = parseFloat(String(holding?.shortShares ?? "0"));
+      const price = prices[ticker] ?? 0;
+      if (shares > 0 && price > 0) {
+        steps.push({ action: "cover", ticker, shares, price, total: shares * price });
+      }
+    } else if (["buy", "sell", "short", "cover"].includes(intent.type)) {
+      const ticker = (intent as any).ticker as string;
+      const price = prices[ticker] ?? 0;
+      if (!price) continue;
+      let shares: number;
+      if ((intent as any).unit === "dollars") {
+        shares = (intent as any).amount / price;
+      } else {
+        shares = (intent as any).amount;
+      }
+      shares = Math.round(shares * 10000) / 10000;
+      const total = shares * price;
+
+      if (intent.type === "buy") projectedCash -= total;
+      if (intent.type === "sell") projectedCash += total;
+
+      steps.push({ action: intent.type, ticker, shares, price, total });
+    }
+  }
+
+  if (steps.length === 0) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription("Nothing to trade.")] });
+    return;
+  }
+
+  // Build preview
+  const stepLines = steps.map((step, idx) =>
+    `${idx + 1}. **${step.action.toUpperCase()}** ${step.shares.toFixed(2)} $${step.ticker} @ ${formatDollars(step.price)} = ${formatDollars(step.total)}`
+  );
+
+  const embed = new EmbedBuilder()
+    .setTitle(`⚠️ Confirm ${steps.length} Trade${steps.length > 1 ? "s" : ""}`)
+    .setColor(embedColor("warn"))
+    .setDescription(stepLines.join("\n"))
+    .addFields(
+      { name: "Cash Before", value: formatDollars(cash), inline: true },
+      { name: "Cash After (est.)", value: formatDollars(Math.max(0, projectedCash)), inline: true },
+    )
+    .setFooter({ text: "Click ✅ to confirm all or ❌ to cancel. Expires in 60s." });
+
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId("trade_confirm").setLabel("Confirm All").setStyle(ButtonStyle.Success).setEmoji("✅"),
+    new ButtonBuilder().setCustomId("trade_cancel").setLabel("Cancel").setStyle(ButtonStyle.Danger).setEmoji("❌"),
+  );
+
+  const reply = await message.reply({ embeds: [embed], components: [row] });
+
+  // Store all steps as a compound pending trade
+  pendingTrades.set(reply.id, {
+    userId,
+    discordUserId: message.author.id,
+    intent: intents[0], // primary intent for logging
+    ticker: steps[0].ticker,
+    shares: steps[0].shares,
+    price: steps[0].price,
+    totalCost: steps.reduce((sum, step) => sum + step.total, 0),
+    expiresAt: Date.now() + 60_000,
+    // Store full steps for execution
+    _steps: steps,
+  } as any);
 }
 
 // ─── Bot Startup ───
