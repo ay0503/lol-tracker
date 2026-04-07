@@ -446,7 +446,7 @@ async function handleRoulette(message: Message, userId: number, color: "red" | "
     cache.invalidate("casino.leaderboard");
 
     const won = result.totalPayout > 0;
-    const outcomeColor = String(result.outcome?.color ?? result.outcome ?? "?");
+    const outcomeColor = String(result.color ?? "?");
     const embed = new EmbedBuilder()
       .setTitle(won ? "🎰 Roulette — WIN!" : "🎰 Roulette — Loss")
       .setColor(won ? embedColor("success") : embedColor("error"))
