@@ -5,6 +5,7 @@
 import type { MatchResult } from "@/lib/playerData";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { formatMatchResult } from "@/lib/formatters";
+import { getChampionName } from "@/lib/championKo";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -48,7 +49,7 @@ export default function MatchRow({ match, index }: Props) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-foreground font-[var(--font-heading)] tracking-tight">
-            {match.champion}
+            {getChampionName(match.champion, language)}
           </span>
           <span
             className="text-xs font-semibold font-[var(--font-mono)] px-2 py-0.5 rounded-md"

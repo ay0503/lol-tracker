@@ -22,6 +22,7 @@ import SeasonHistory from "@/components/SeasonHistory";
 import NotificationBell from "@/components/NotificationBell";
 import { type MatchResult } from "@/lib/playerData";
 import { translateRank, formatDuration, formatTimeAgo, formatMatchResult } from "@/lib/formatters";
+import { getChampionName } from "@/lib/championKo";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3,
@@ -317,7 +318,7 @@ function LiveBettingPanel() {
 }
 
 function LiveGameBanner() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const liveGameQuery = trpc.player.liveGame.useQuery(undefined, {
     refetchInterval: (query) => query.state.data?.inGame ? 15_000 : 120_000,
     staleTime: 60_000,
@@ -382,7 +383,7 @@ function LiveGameBanner() {
                 </span>
                 {liveGame.championName && (
                   <span className="text-xs text-muted-foreground">
-                    — {liveGame.championName}
+                    — {getChampionName(liveGame.championName, language)}
                   </span>
                 )}
               </div>

@@ -5,11 +5,12 @@
  */
 import { trpc } from "@/lib/trpc";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { getChampionName } from "@/lib/championKo";
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 
 export default function RecentPerformance() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const { data: livePerformance, isLoading } = trpc.stats.recentPerformance.useQuery(undefined, {
     refetchInterval: 60_000,
@@ -76,7 +77,7 @@ export default function RecentPerformance() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium text-foreground">
-                    {champ.champion}
+                    {getChampionName(champ.champion, language)}
                   </span>
                   <span
                     className="text-xs font-bold font-[var(--font-mono)]"

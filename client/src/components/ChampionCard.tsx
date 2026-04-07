@@ -4,6 +4,7 @@
  */
 import { motion } from "framer-motion";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { getChampionName } from "@/lib/championKo";
 
 export interface ChampionStatData {
   name: string;
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export default function ChampionCard({ champion, index }: Props) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const isGoodWinRate = champion.winRate >= 55;
   const isBadWinRate = champion.winRate < 45;
 
@@ -41,7 +42,7 @@ export default function ChampionCard({ champion, index }: Props) {
         />
         <div>
           <h3 className="text-sm font-semibold text-foreground font-[var(--font-heading)]">
-            {champion.name}
+            {getChampionName(champion.name, language)}
           </h3>
           <p className="text-xs text-muted-foreground">
             {champion.games} {t.champion.games}
