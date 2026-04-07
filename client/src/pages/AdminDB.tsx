@@ -559,6 +559,208 @@ function TableBrowser() {
 }
 
 // ─── CI Dashboard Component ───
+function UserAudit() {
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const { data: allUsers } = trpc.admin.tableRows.useQuery(
+    { table: "users", page: 1, pageSize: 100 },
+    { staleTime: 60_000 }
+  );
+  const { data: audit, isLoading } = trpc.admin.auditUser.useQuery(
+    { userId: selectedUserId! },
+    { enabled: selectedUserId !== null }
+  );
+
+  const userList = (allUsers?.rows ?? []).map((row: any) => ({
+    id: Number(row.id),
+    name: String(row.displayName || row.name || row.email || `User ${row.id}`),
+  })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+  return (
+    <div className="space-y-4">
+      {/* User Selector */}
+      <div className="bg-card border border-border rounded-xl p-4">
+        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">Select User</label>
+        <div className="flex flex-wrap gap-2">
+          {userList.map((user: any) => (
+            <button
+              key={user.id}
+              onClick={() => setSelectedUserId(user.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                selectedUserId === user.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+              }`}
+            >
+              {user.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading && selectedUserId && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {audit && (
+        <div className="space-y-4">
+          {/* Overview */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <Search className="w-4 h-4 text-primary" />
+              {audit.user.name} — Audit
+              {audit.user.role === "admin" && <span className="text-xs text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">admin</span>}
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Total Value", value: `$${audit.portfolio.totalValue.toFixed(2)}`, color: audit.portfolio.pnl >= 0 ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]" },
+                { label: "P&L", value: `${audit.portfolio.pnl >= 0 ? "+" : ""}$${audit.portfolio.pnl.toFixed(2)} (${audit.portfolio.pnlPct.toFixed(1)}%)`, color: audit.portfolio.pnl >= 0 ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]" },
+                { label: "Cash", value: `$${audit.portfolio.cash.toFixed(2)}`, color: "text-foreground" },
+                { label: "Casino", value: `$${audit.portfolio.casinoCash.toFixed(2)}`, color: "text-foreground" },
+                { label: "Trade Volume", value: `$${audit.tradeStats.totalVolume.toFixed(2)}`, color: "text-foreground" },
+                { label: "Dividends", value: `$${audit.portfolio.totalDividends.toFixed(2)}`, color: "text-[color:var(--color-win)]" },
+                { label: "Bet Net", value: `${audit.betStats.net >= 0 ? "+" : ""}$${audit.betStats.net.toFixed(2)}`, color: audit.betStats.net >= 0 ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]" },
+                { label: "Joined", value: audit.user.createdAt ? new Date(audit.user.createdAt).toLocaleDateString() : "—", color: "text-muted-foreground" },
+              ].map(stat => (
+                <div key={stat.label} className="bg-secondary/50 rounded-lg p-2.5">
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  <p className={`text-sm font-bold font-[var(--font-mono)] ${stat.color}`}>{stat.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Holdings */}
+          {audit.holdings.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Current Holdings</h4>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left py-1.5 font-medium">Ticker</th>
+                    <th className="text-right py-1.5 font-medium">Type</th>
+                    <th className="text-right py-1.5 font-medium">Shares</th>
+                    <th className="text-right py-1.5 font-medium">Avg Cost</th>
+                    <th className="text-right py-1.5 font-medium">Value</th>
+                    <th className="text-right py-1.5 font-medium">P&L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {audit.holdings.map(h => (
+                    <>
+                      {h.shares > 0 && (
+                        <tr key={h.ticker + "-long"} className="border-b border-border/30">
+                          <td className="py-1.5 font-mono font-bold">${h.ticker}</td>
+                          <td className="py-1.5 text-right text-[color:var(--color-win)]">LONG</td>
+                          <td className="py-1.5 text-right font-mono">{h.shares.toFixed(2)}</td>
+                          <td className="py-1.5 text-right font-mono">${h.avgCost.toFixed(2)}</td>
+                          <td className="py-1.5 text-right font-mono">${h.longValue.toFixed(2)}</td>
+                          <td className="py-1.5 text-right font-mono font-bold" style={{ color: h.longPnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
+                            {h.longPnl >= 0 ? "+" : ""}${h.longPnl.toFixed(2)}
+                          </td>
+                        </tr>
+                      )}
+                      {h.shortShares > 0 && (
+                        <tr key={h.ticker + "-short"} className="border-b border-border/30">
+                          <td className="py-1.5 font-mono font-bold">${h.ticker}</td>
+                          <td className="py-1.5 text-right text-[color:var(--color-loss)]">SHORT</td>
+                          <td className="py-1.5 text-right font-mono">{h.shortShares.toFixed(2)}</td>
+                          <td className="py-1.5 text-right font-mono">${h.shortAvg.toFixed(2)}</td>
+                          <td className="py-1.5 text-right font-mono">—</td>
+                          <td className="py-1.5 text-right font-mono font-bold" style={{ color: h.shortPnl >= 0 ? "var(--color-win)" : "var(--color-loss)" }}>
+                            {h.shortPnl >= 0 ? "+" : ""}${h.shortPnl.toFixed(2)}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Activity Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Trades ({audit.tradeStats.total})</h4>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Buys</span><span className="font-mono">{audit.tradeStats.buys}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Sells</span><span className="font-mono">{audit.tradeStats.sells}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Shorts</span><span className="font-mono">{audit.tradeStats.shorts}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Covers</span><span className="font-mono">{audit.tradeStats.covers}</span></div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Bets ({audit.betStats.total})</h4>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-[color:var(--color-win)]">Won</span><span className="font-mono">{audit.betStats.won}</span></div>
+                <div className="flex justify-between"><span className="text-[color:var(--color-loss)]">Lost</span><span className="font-mono">{audit.betStats.lost}</span></div>
+                <div className="flex justify-between"><span className="text-yellow-400">Pending</span><span className="font-mono">{audit.betStats.pending}</span></div>
+                <div className="flex justify-between border-t border-border/50 pt-1 mt-1"><span className="text-muted-foreground">Wagered</span><span className="font-mono">${audit.betStats.totalWagered.toFixed(0)}</span></div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Dividends ({audit.dividends.length})</h4>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Total Earned</span><span className="font-mono text-[color:var(--color-win)]">${audit.portfolio.totalDividends.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Avg per div</span><span className="font-mono">${audit.dividends.length > 0 ? (audit.portfolio.totalDividends / audit.dividends.length).toFixed(2) : "0.00"}</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Trade Ledger */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Trade Ledger (last {audit.trades.length})</h4>
+            <div className="max-h-[400px] overflow-y-auto space-y-1">
+              {audit.trades.map(tr => {
+                const isBuy = tr.type === "buy" || tr.type === "short";
+                return (
+                  <div key={tr.id} className="flex items-center justify-between text-xs py-1 border-b border-border/20">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-bold uppercase w-12 ${isBuy ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>{tr.type}</span>
+                      <span className="font-mono font-bold">${tr.ticker}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <span className="font-mono">{tr.shares.toFixed(2)} @ ${tr.price.toFixed(2)}</span>
+                      <span className="font-mono w-20 text-right">${tr.total.toFixed(2)}</span>
+                      <span className="w-24 text-right text-xs">{tr.createdAt ? new Date(String(tr.createdAt).endsWith("Z") ? String(tr.createdAt) : String(tr.createdAt) + "Z").toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bet History */}
+          {audit.bets.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Bet History</h4>
+              <div className="max-h-[300px] overflow-y-auto space-y-1">
+                {audit.bets.map(bet => (
+                  <div key={bet.id} className="flex items-center justify-between text-xs py-1 border-b border-border/20">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-bold ${bet.prediction === "win" ? "text-[color:var(--color-win)]" : "text-[color:var(--color-loss)]"}`}>{bet.prediction.toUpperCase()}</span>
+                      <span className="font-mono">${bet.amount.toFixed(0)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${
+                        bet.status === "won" ? "bg-[color:var(--color-win)]/10 text-[color:var(--color-win)]" :
+                        bet.status === "lost" ? "bg-[color:var(--color-loss)]/10 text-[color:var(--color-loss)]" :
+                        "bg-yellow-400/10 text-yellow-400"
+                      }`}>{bet.status}{bet.payout !== null ? ` ($${bet.payout.toFixed(0)})` : ""}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CIDashboard() {
   const { data, isLoading } = trpc.admin.ciStatus.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
@@ -1260,6 +1462,10 @@ export default function AdminDB() {
               <FlaskConical className="w-3.5 h-3.5 mr-1.5" />
               CI / Tests
             </TabsTrigger>
+            <TabsTrigger value="audit" className="text-xs">
+              <Search className="w-3.5 h-3.5 mr-1.5" />
+              User Audit
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="tables">
@@ -1276,6 +1482,10 @@ export default function AdminDB() {
 
           <TabsContent value="ci">
             <CIDashboard />
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <UserAudit />
           </TabsContent>
         </Tabs>
       </div>

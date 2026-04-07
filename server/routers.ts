@@ -1833,6 +1833,101 @@ export const appRouter = router({
         }
       }, FIVE_MIN);
     }),
+    /** Full user audit — trades, bets, dividends, holdings, P&L */
+    auditUser: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+
+        const portfolio = await getOrCreatePortfolio(input.userId);
+        const holdingsList = await getUserHoldings(input.userId);
+        const tradesList = await getUserTrades(input.userId, 200);
+        const betsList = await getUserBets(input.userId);
+        const dividendsList = await getUserDividends(input.userId, 200);
+
+        // Compute current prices
+        const history = await getPriceHistory();
+        const etfPrices = computeAllETFPricesSync(history);
+
+        // Holdings with live P&L
+        const holdingsWithPnl = holdingsList.map(h => {
+          const price = etfPrices[h.ticker] ?? 0;
+          const shares = parseFloat(String(h.shares ?? "0"));
+          const shortShares = parseFloat(String(h.shortShares ?? "0"));
+          const avgCost = parseFloat(String(h.avgCostBasis ?? "0"));
+          const shortAvg = parseFloat(String(h.shortAvgPrice ?? "0"));
+          const longValue = shares * price;
+          const longPnl = longValue - shares * avgCost;
+          const shortPnl = shortShares > 0 ? shortShares * (shortAvg - price) : 0;
+          return {
+            ticker: h.ticker, shares, avgCost, longValue, longPnl,
+            shortShares, shortAvg, shortPnl,
+          };
+        }).filter(h => h.shares > 0 || h.shortShares > 0);
+
+        const cash = parseFloat(String(portfolio.cashBalance ?? "200"));
+        const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+        const holdingsValue = holdingsWithPnl.reduce((sum, h) => sum + h.longValue, 0);
+        const shortPnl = holdingsWithPnl.reduce((sum, h) => sum + h.shortPnl, 0);
+        const totalValue = cash + holdingsValue + shortPnl;
+
+        // Trade stats
+        const tradeStats = {
+          total: tradesList.length,
+          buys: tradesList.filter(tr => tr.type === "buy").length,
+          sells: tradesList.filter(tr => tr.type === "sell").length,
+          shorts: tradesList.filter(tr => tr.type === "short").length,
+          covers: tradesList.filter(tr => tr.type === "cover").length,
+          totalVolume: tradesList.reduce((sum, tr) => sum + parseFloat(String(tr.totalAmount ?? "0")), 0),
+        };
+
+        // Bet stats
+        const wonBets = betsList.filter(b => b.status === "won");
+        const lostBets = betsList.filter(b => b.status === "lost");
+        const betStats = {
+          total: betsList.length,
+          won: wonBets.length,
+          lost: lostBets.length,
+          pending: betsList.filter(b => b.status === "pending").length,
+          totalWagered: betsList.reduce((sum, b) => sum + parseFloat(String(b.amount ?? "0")), 0),
+          totalPayout: wonBets.reduce((sum, b) => sum + parseFloat(String(b.payout ?? "0")), 0),
+          net: wonBets.reduce((sum, b) => sum + parseFloat(String(b.payout ?? "0")), 0)
+            - betsList.filter(b => b.status !== "pending").reduce((sum, b) => sum + parseFloat(String(b.amount ?? "0")), 0),
+        };
+
+        // Dividend stats
+        const totalDividends = dividendsList.reduce((sum, d) => sum + parseFloat(String(d.totalPayout ?? "0")), 0);
+
+        return {
+          user: { id: user.id, name: user.displayName || user.name, email: user.email, role: user.role, createdAt: user.createdAt },
+          portfolio: { cash, casinoCash, holdingsValue, shortPnl, totalValue, pnl: totalValue - 200, pnlPct: ((totalValue - 200) / 200) * 100, totalDividends },
+          holdings: holdingsWithPnl,
+          tradeStats,
+          betStats,
+          trades: tradesList.map(tr => ({
+            id: tr.id, type: tr.type, ticker: tr.ticker,
+            shares: parseFloat(String(tr.shares ?? "0")),
+            price: parseFloat(String(tr.pricePerShare ?? "0")),
+            total: parseFloat(String(tr.totalAmount ?? "0")),
+            createdAt: tr.createdAt,
+          })),
+          bets: betsList.map(b => ({
+            id: b.id, prediction: b.prediction,
+            amount: parseFloat(String(b.amount ?? "0")),
+            status: b.status,
+            payout: b.payout ? parseFloat(String(b.payout)) : null,
+            createdAt: b.createdAt,
+          })),
+          dividends: dividendsList.map(d => ({
+            id: d.id, ticker: d.ticker,
+            payout: parseFloat(String(d.totalPayout ?? "0")),
+            reason: d.reason,
+            createdAt: d.createdAt,
+          })),
+        };
+      }),
   }),
 });
 
