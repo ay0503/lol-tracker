@@ -50,7 +50,7 @@ const COOLDOWN_MS = 2000;
 
 // ─── Helpers ───
 
-function getETFPrices(): Record<string, number> {
+async function getETFPrices(): Promise<Record<string, number>> {
   const cached = cache.get<{ ticker: string; price: number }[]>("prices.etfPrices");
   if (cached) {
     const map: Record<string, number> = {};
@@ -58,8 +58,9 @@ function getETFPrices(): Record<string, number> {
     return map;
   }
   // Fallback: compute from DB
-  const history = getPriceHistory();
-  return computeAllETFPricesSync(history as any);
+  const history = await getPriceHistory();
+  if (!history || history.length === 0) return {};
+  return computeAllETFPricesSync(history);
 }
 
 function formatDollars(n: number): string {
@@ -75,7 +76,7 @@ function embedColor(type: "info" | "success" | "error" | "warn"): number {
 async function handlePortfolio(userId: number, userName: string): Promise<EmbedBuilder> {
   const portfolio = await getOrCreatePortfolio(userId);
   const holdingsList = await getUserHoldings(userId);
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
 
   const cash = parseFloat(String(portfolio.cashBalance ?? "200"));
   const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
@@ -124,7 +125,7 @@ async function handlePortfolio(userId: number, userName: string): Promise<EmbedB
 }
 
 async function handlePrices(): Promise<EmbedBuilder> {
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
   const lines = TICKERS.map(ticker => {
     const price = prices[ticker] ?? 0;
     return `$${ticker}  ${formatDollars(price)}`;
@@ -138,7 +139,7 @@ async function handlePrices(): Promise<EmbedBuilder> {
 
 async function handleLeaderboard(): Promise<EmbedBuilder> {
   const { users: allUsers, holdingsByUser } = await getLeaderboard();
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
 
   const ranked = allUsers.map(user => {
     const cash = parseFloat(String(user.cashBalance ?? "200"));
@@ -222,7 +223,7 @@ async function handleCasinoBalance(userId: number, userName: string): Promise<Em
 
 async function handleHoldings(userId: number, userName: string): Promise<EmbedBuilder> {
   const holdingsList = await getUserHoldings(userId);
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
 
   if (holdingsList.length === 0 || holdingsList.every(h => parseFloat(String(h.shares ?? "0")) === 0 && parseFloat(String(h.shortShares ?? "0")) === 0)) {
     return new EmbedBuilder().setTitle(`💼 ${userName}'s Holdings`).setColor(embedColor("info")).setDescription("No positions.");
@@ -269,7 +270,7 @@ async function handleCompare(userId: number, userName: string, targetName: strin
 
   const targetId = Number(targetRow.id);
   const targetDisplayName = String(targetRow.userName);
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
 
   // Helper to compute total value
   async function computeValue(uid: number) {
@@ -338,7 +339,7 @@ async function handleTradeIntent(
     return;
   }
 
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
   const ticker = (intent as any).ticker as string;
   const price = prices[ticker];
   if (!price) {
@@ -651,7 +652,7 @@ async function handleMessage(message: Message): Promise<void> {
         case "portfolio": readEmbeds.push(await handlePortfolio(userId, userName)); break;
         case "prices": readEmbeds.push(await handlePrices()); break;
         case "price": {
-          const prices = getETFPrices();
+          const prices = await getETFPrices();
           const price = prices[(intent as any).ticker];
           if (price) readEmbeds.push(new EmbedBuilder().setTitle(`$${(intent as any).ticker}`).setColor(embedColor("info")).setDescription(`**${formatDollars(price)}**`));
           break;
@@ -693,7 +694,7 @@ async function handleMessage(message: Message): Promise<void> {
 // ─── Compound Trade Handler ───
 
 async function handleCompoundTrade(message: Message, userId: number, userName: string, intents: BotIntent[]): Promise<void> {
-  const prices = getETFPrices();
+  const prices = await getETFPrices();
   const portfolio = await getOrCreatePortfolio(userId);
   const holdingsList = await getUserHoldings(userId);
   const cash = parseFloat(String(portfolio.cashBalance ?? "200"));
