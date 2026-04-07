@@ -1835,11 +1835,41 @@ export const appRouter = router({
     }),
     /** Integrity check — replay all transactions and verify balances match */
     auditIntegrity: adminProcedure.query(async () => {
-      const db = await getDb();
-      const allUsers = await db.select({
-        id: users.id,
-        name: sql`COALESCE(${users.displayName}, ${users.name})`.as("name"),
-      }).from(users);
+      const client = getRawClient();
+
+      // Batch: fetch everything in parallel with raw SQL
+      const [usersRes, tradesRes, betsRes, portfoliosRes, holdingsRes] = await Promise.all([
+        client.execute(`SELECT id, COALESCE(displayName, name) as userName FROM users`),
+        client.execute(`SELECT userId, ticker, type, shares, pricePerShare, totalAmount FROM trades ORDER BY createdAt ASC`),
+        client.execute(`SELECT userId, amount, status, payout FROM bets`),
+        client.execute(`SELECT userId, cashBalance FROM portfolios`),
+        client.execute(`SELECT userId, ticker, shares, shortShares, avgCostBasis, shortAvgPrice FROM holdings`),
+      ]);
+
+      // Index by userId
+      const tradesByUser = new Map<number, typeof tradesRes.rows>();
+      for (const row of tradesRes.rows) {
+        const uid = Number(row.userId);
+        const arr = tradesByUser.get(uid) ?? [];
+        arr.push(row);
+        tradesByUser.set(uid, arr);
+      }
+      const betsByUser = new Map<number, typeof betsRes.rows>();
+      for (const row of betsRes.rows) {
+        const uid = Number(row.userId);
+        const arr = betsByUser.get(uid) ?? [];
+        arr.push(row);
+        betsByUser.set(uid, arr);
+      }
+      const portfolioByUser = new Map<number, any>();
+      for (const row of portfoliosRes.rows) portfolioByUser.set(Number(row.userId), row);
+      const holdingsByUser = new Map<number, typeof holdingsRes.rows>();
+      for (const row of holdingsRes.rows) {
+        const uid = Number(row.userId);
+        const arr = holdingsByUser.get(uid) ?? [];
+        arr.push(row);
+        holdingsByUser.set(uid, arr);
+      }
 
       const results: {
         userId: number;
@@ -1858,22 +1888,18 @@ export const appRouter = router({
         notes: string[];
       }[] = [];
 
-      for (const user of allUsers) {
-        const userId = user.id;
-        const userName = String(user.name);
+      for (const user of usersRes.rows) {
+        const userId = Number(user.id);
+        const userName = String(user.userName);
 
-        // Get actual state
-        const portfolio = await getOrCreatePortfolio(userId);
-        const actualCash = parseFloat(String(portfolio.cashBalance ?? "200"));
-        const holdingsList = await getUserHoldings(userId);
+        const portfolio = portfolioByUser.get(userId);
+        const actualCash = parseFloat(String(portfolio?.cashBalance ?? "200"));
+        const holdingsList = holdingsByUser.get(userId) ?? [];
+        const userTrades = tradesByUser.get(userId) ?? [];
+        const userBets = betsByUser.get(userId) ?? [];
 
-        // Get all transactions
-        const allTrades = await getUserTrades(userId, 10000);
-        const allBetsList = await db.select().from(bets).where(eq(bets.userId, userId));
-        const allDivs = await getUserDividends(userId, 10000);
-
-        // Sort trades chronologically (oldest first)
-        const sortedTrades = [...allTrades].reverse();
+        // Trades are already sorted ASC by createdAt
+        const sortedTrades = userTrades;
 
         // Replay: start at $200
         let simCash = 200;
@@ -1886,80 +1912,60 @@ export const appRouter = router({
           const shares = parseFloat(String(tr.shares ?? "0"));
           const price = parseFloat(String(tr.pricePerShare ?? "0"));
           const total = parseFloat(String(tr.totalAmount ?? "0"));
+          const type = String(tr.type);
+          const ticker = String(tr.ticker);
 
-          switch (tr.type) {
+          switch (type) {
             case "buy":
               simCash -= total;
-              simShares[tr.ticker] = (simShares[tr.ticker] ?? 0) + shares;
+              simShares[ticker] = (simShares[ticker] ?? 0) + shares;
               break;
             case "sell":
               simCash += total;
-              simShares[tr.ticker] = (simShares[tr.ticker] ?? 0) - shares;
+              simShares[ticker] = (simShares[ticker] ?? 0) - shares;
               break;
             case "short":
-              // cash -= 50% margin
               simCash -= total * 0.5;
-              simShortShares[tr.ticker] = (simShortShares[tr.ticker] ?? 0) + shares;
-              simShortAvg[tr.ticker] = price; // simplified — real uses weighted avg
+              simShortShares[ticker] = (simShortShares[ticker] ?? 0) + shares;
+              simShortAvg[ticker] = price;
               break;
-            case "cover":
-              // cash += marginReturn + saleProceeds - buyCost
-              // marginReturn = shares * shortAvg * 0.5
-              // saleProceeds = shares * shortAvg
-              // buyCost = total (= shares * coverPrice)
-              {
-                const avg = simShortAvg[tr.ticker] ?? price;
-                const marginReturn = shares * avg * 0.5;
-                const saleProceeds = shares * avg;
-                simCash += marginReturn + saleProceeds - total;
-                simShortShares[tr.ticker] = (simShortShares[tr.ticker] ?? 0) - shares;
-              }
+            case "cover": {
+              const avg = simShortAvg[ticker] ?? price;
+              const marginReturn = shares * avg * 0.5;
+              const saleProceeds = shares * avg;
+              simCash += marginReturn + saleProceeds - total;
+              simShortShares[ticker] = (simShortShares[ticker] ?? 0) - shares;
               break;
+            }
             case "dividend":
               simCash += total;
               break;
           }
         }
 
-        // Replay dividends (ones not in trades table)
-        let dividendCount = 0;
-        for (const div of allDivs) {
-          const payout = parseFloat(String(div.totalPayout ?? "0"));
-          // Check if this dividend is already recorded as a trade
-          // Dividends are inserted into both dividends table AND trades table
-          // So we don't double-count — the trades replay above already handles it
-          dividendCount++;
-        }
+        // Dividends are already in trades table (type="dividend"), so already replayed above
+        const dividendCount = sortedTrades.filter(tr => tr.type === "dividend").length;
 
         // Replay bets
         let betCount = 0;
-        for (const bet of allBetsList) {
+        for (const bet of userBets) {
           const amount = parseFloat(String(bet.amount ?? "0"));
           simCash -= amount; // deducted on placement
-          if (bet.status === "won" && bet.payout) {
+          if (String(bet.status) === "won" && bet.payout) {
             simCash += parseFloat(String(bet.payout)); // payout credited
           }
           betCount++;
         }
 
-        // Estimate casino deposits (untracked cash leak)
-        // We can't know exact amount, but flag if there's a gap
-        let casinoDeposits = 0;
-        try {
-          const client = getRawClient();
-          // No deposit log exists, so we estimate: if simCash > actualCash by more than $3,
-          // the difference is likely casino deposits
-          // This is a known gap in the audit
-        } catch { /* ignore */ }
+        // Casino deposits are untracked — flag as known gap
+        const casinoDeposits = 0;
 
         // Compare shares
         const actualSharesMap: Record<string, number> = {};
-        const actualShortMap: Record<string, number> = {};
         for (const h of holdingsList) {
+          const ticker = String(h.ticker);
           const sh = parseFloat(String(h.shares ?? "0"));
-          const ss = parseFloat(String(h.shortShares ?? "0"));
-          if (sh > 0.001) actualSharesMap[h.ticker] = sh;
-          if (ss > 0.001) actualShortMap[h.ticker] = ss;
+          if (sh > 0.001) actualSharesMap[ticker] = sh;
         }
 
         const expectedSharesFlat: Record<string, number> = {};
