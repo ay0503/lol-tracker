@@ -584,9 +584,8 @@ async function handleMessage(message: Message): Promise<void> {
   if (message.author.bot || !message.guild) return;
   if (message.content.startsWith("/")) return;
 
-  // Only respond in the configured channel (or if mentioned)
-  const commandChannel = ENV.discordChannelId;
-  if (message.channel.id !== commandChannel && !message.mentions.has(message.client.user!)) return;
+  // Only respond when @mentioned — don't spam the channel
+  if (!message.mentions.has(message.client.user!)) return;
 
   // Cooldown
   const now = Date.now();
@@ -607,8 +606,15 @@ async function handleMessage(message: Message): Promise<void> {
   // Show typing indicator while LLM processes
   if ("sendTyping" in message.channel) await message.channel.sendTyping();
 
+  // Strip @mention from message before parsing
+  const cleanContent = message.content.replace(/<@!?\d+>/g, "").trim();
+  if (!cleanContent) {
+    await message.reply({ embeds: [handleHelp()] });
+    return;
+  }
+
   // Parse intent
-  const intent = await parseIntent(message.content);
+  const intent = await parseIntent(cleanContent);
 
   try {
     switch (intent.type) {
