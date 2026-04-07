@@ -21,6 +21,7 @@ export type BotIntent =
   | { type: "cover"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "cover_all"; ticker: string }
   | { type: "bet"; prediction: "win" | "loss"; amount: number }
+  | { type: "compare"; targetName: string }
   | { type: "help" }
   | { type: "unknown"; message: string };
 
@@ -41,6 +42,7 @@ READ queries (no confirmation needed):
 - {"type":"casino_balance"} — show casino cash
 - {"type":"match_history","count":5} — show recent matches (default 5)
 - {"type":"holdings"} — show detailed holdings
+- {"type":"compare","targetName":"Kyle"} — compare portfolio with another user
 - {"type":"help"} — show available commands
 
 TRADE actions (will require confirmation):
@@ -102,6 +104,12 @@ function validateIntent(raw: any): BotIntent {
 
   if (type === "match_history") {
     return { type: "match_history", count: Math.min(Math.max(1, Number(raw.count) || 5), 20) };
+  }
+
+  if (type === "compare") {
+    const targetName = raw.targetName;
+    if (!targetName || typeof targetName !== "string") return { type: "unknown", message: "Who do you want to compare with?" };
+    return { type: "compare", targetName };
   }
 
   if (type === "price") {

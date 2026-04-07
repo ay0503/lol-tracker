@@ -297,6 +297,16 @@ export async function pollNow(): Promise<PollResult> {
           const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
           const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
           notifyGameStart(champName, gameMode).catch(() => {});
+          // Open 5-minute betting window in Discord
+          import("./discord").then(d => {
+            d.sendBettingWindowMessage().then(msgId => {
+              if (msgId) {
+                setTimeout(() => {
+                  d.editMessage(msgId, "🔒 **Betting window closed.** Good luck! 🎲").catch(() => {});
+                }, 5 * 60 * 1000);
+              }
+            });
+          }).catch(() => {});
           await setLastNotifiedGameId(currentGameId);
           console.log(`[Poll] Discord: game start notification sent (gameId: ${currentGameId})`);
         } else {

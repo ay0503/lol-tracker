@@ -473,6 +473,11 @@ export const appRouter = router({
         // Invalidate ledger and leaderboard caches after trade
         cache.invalidatePrefix("ledger.");
         cache.invalidate("leaderboard.rankings");
+
+        // Passive Discord feed
+        const userName = ctx.user.displayName || ctx.user.name || "Unknown";
+        import("./discord").then(d => d.notifyTrade(userName, input.type, input.ticker, input.shares, serverPrice)).catch(() => {});
+
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
           sharesOwned: parseFloat(result.holding.shares), ticker: input.ticker,
@@ -521,6 +526,10 @@ export const appRouter = router({
 
         cache.invalidatePrefix("ledger.");
         cache.invalidate("leaderboard.rankings");
+
+        const userName = ctx.user.displayName || ctx.user.name || "Unknown";
+        import("./discord").then(d => d.notifyTrade(userName, "short", input.ticker, input.shares, serverPrice)).catch(() => {});
+
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
           shortShares: parseFloat(result.holding.shortShares), ticker: input.ticker,
@@ -556,6 +565,10 @@ export const appRouter = router({
 
         cache.invalidatePrefix("ledger.");
         cache.invalidate("leaderboard.rankings");
+
+        const userName = ctx.user.displayName || ctx.user.name || "Unknown";
+        import("./discord").then(d => d.notifyTrade(userName, "cover", input.ticker, input.shares, serverPrice)).catch(() => {});
+
         return {
           cashBalance: parseFloat(result.portfolio.cashBalance),
           shortShares: parseFloat(result.holding.shortShares), ticker: input.ticker,
@@ -850,6 +863,10 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message || "Bet failed" });
         }
         cache.invalidate("leaderboard.rankings");
+
+        const userName = ctx.user.displayName || ctx.user.name || "Unknown";
+        import("./discord").then(d => d.notifyBetPlaced(userName, input.prediction, input.amount)).catch(() => {});
+
         return bet;
       }),
     myBets: protectedProcedure.query(async ({ ctx }) => {

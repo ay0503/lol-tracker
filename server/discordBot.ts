@@ -253,6 +253,59 @@ async function handleHoldings(userId: number, userName: string): Promise<EmbedBu
     .setDescription("```\n" + lines.join("\n") + "\n```");
 }
 
+async function handleCompare(userId: number, userName: string, targetName: string): Promise<EmbedBuilder> {
+  // Find target user by display name
+  const client = getRawClient();
+  const allUsers = await client.execute(`SELECT id, COALESCE(displayName, name) as userName FROM users`);
+  const targetRow = allUsers.rows.find(
+    (row: any) => String(row.userName).toLowerCase() === targetName.toLowerCase()
+  );
+
+  if (!targetRow) {
+    return new EmbedBuilder()
+      .setColor(embedColor("error"))
+      .setDescription(`❌ User "${targetName}" not found.`);
+  }
+
+  const targetId = Number(targetRow.id);
+  const targetDisplayName = String(targetRow.userName);
+  const prices = getETFPrices();
+
+  // Helper to compute total value
+  async function computeValue(uid: number) {
+    const portfolio = await getOrCreatePortfolio(uid);
+    const holdingsList = await getUserHoldings(uid);
+    const cash = parseFloat(String(portfolio.cashBalance ?? "200"));
+    let holdingsVal = 0;
+    let shortPnl = 0;
+    for (const h of holdingsList) {
+      const price = prices[h.ticker] ?? 0;
+      const shares = parseFloat(String(h.shares ?? "0"));
+      const shortShares = parseFloat(String(h.shortShares ?? "0"));
+      const shortAvg = parseFloat(String(h.shortAvgPrice ?? "0"));
+      holdingsVal += shares * price;
+      if (shortShares > 0) shortPnl += shortShares * (shortAvg - price);
+    }
+    const total = cash + holdingsVal + shortPnl;
+    return { cash, holdingsVal, shortPnl, total, pnl: total - 200 };
+  }
+
+  const me = await computeValue(userId);
+  const them = await computeValue(targetId);
+  const diff = me.total - them.total;
+  const winning = diff > 0;
+
+  return new EmbedBuilder()
+    .setTitle(`⚔️ ${userName} vs ${targetDisplayName}`)
+    .setColor(winning ? embedColor("success") : embedColor("error"))
+    .addFields(
+      { name: userName, value: `${formatDollars(me.total)}\nP&L: ${me.pnl >= 0 ? "+" : ""}${formatDollars(me.pnl)}`, inline: true },
+      { name: "vs", value: winning ? `← +${formatDollars(Math.abs(diff))}` : `→ +${formatDollars(Math.abs(diff))}`, inline: true },
+      { name: targetDisplayName, value: `${formatDollars(them.total)}\nP&L: ${them.pnl >= 0 ? "+" : ""}${formatDollars(them.pnl)}`, inline: true },
+    )
+    .setFooter({ text: winning ? `${userName} leads by ${formatDollars(diff)}` : `${targetDisplayName} leads by ${formatDollars(Math.abs(diff))}` });
+}
+
 function handleHelp(): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle("🤖 $DORI Bot Commands")
@@ -261,6 +314,7 @@ function handleHelp(): EmbedBuilder {
     .addFields(
       { name: "📊 Info", value: "`what's my portfolio?`\n`show prices`\n`leaderboard`\n`is dori in game?`\n`last 5 matches`\n`my casino balance`\n`my holdings`" },
       { name: "💰 Trading", value: "`buy $20 of DORI`\n`sell 5 shares of TDRI`\n`sell all DORI`\n`short $10 SDRI`\n`cover all XDRI`" },
+      { name: "⚔️ Compare", value: "`compare me to Kyle`\n`how am I doing vs Sarah`" },
       { name: "🎲 Betting", value: "`bet $10 on win`\n`bet $5 loss`" },
       { name: "🔗 Account", value: "`/link your@email.com` — link Discord to your account\n`/whoami` — check your linked account" },
     );
@@ -602,6 +656,11 @@ async function handleMessage(message: Message): Promise<void> {
       }
       case "help": {
         const embed = handleHelp();
+        await message.reply({ embeds: [embed] });
+        break;
+      }
+      case "compare": {
+        const embed = await handleCompare(userId, userName, intent.targetName);
         await message.reply({ embeds: [embed] });
         break;
       }

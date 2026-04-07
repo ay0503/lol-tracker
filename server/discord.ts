@@ -154,4 +154,89 @@ export async function notifyDailySummary(
   ].join("\n"));
 }
 
+// ─── Passive Feed: Trade & Bet Notifications ───
+
+export async function notifyTrade(
+  userName: string,
+  type: "buy" | "sell" | "short" | "cover",
+  ticker: string,
+  shares: number,
+  price: number,
+): Promise<void> {
+  const total = shares * price;
+  const emoji = type === "buy" ? "📈" : type === "sell" ? "📉" : type === "short" ? "🔻" : "🔺";
+  const label = type.toUpperCase();
+  await sendMessage(
+    `${emoji} **${userName}** ${label} ${shares.toFixed(2)} $${ticker} @ $${price.toFixed(2)} ($${total.toFixed(2)})`
+  );
+}
+
+export async function notifyBetPlaced(
+  userName: string,
+  prediction: "win" | "loss",
+  amount: number,
+): Promise<void> {
+  const emoji = prediction === "win" ? "🟢" : "🔴";
+  await sendMessage(
+    `🎲 **${userName}** bet $${amount.toFixed(0)} on **${prediction.toUpperCase()}** ${emoji}`
+  );
+}
+
+export async function notifyCasinoBigWin(
+  userName: string,
+  game: string,
+  multiplier: number,
+  payout: number,
+): Promise<void> {
+  await sendMessage(
+    `🎰 **${userName}** hit **${multiplier.toFixed(2)}x** on ${game}! +$${payout.toFixed(2)} 💰`
+  );
+}
+
+// ─── Betting Window (called from discordBot.ts via Gateway) ───
+
+export async function sendBettingWindowMessage(): Promise<string | null> {
+  if (!isConfigured()) return null;
+
+  try {
+    const res = await fetch(`${DISCORD_API}/channels/${ENV.discordChannelId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${ENV.discordBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: [
+          "🎲 **BETTING IS OPEN!** — 목도리 도마뱀 just started a game",
+          "",
+          "Place your bets in the next **5 minutes**! Type:",
+          '`bet $10 on win` or `bet $5 loss`',
+          "",
+          "⏰ Window closes automatically.",
+        ].join("\n"),
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    return data.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function editMessage(messageId: string, content: string): Promise<void> {
+  if (!isConfigured()) return;
+  try {
+    await fetch(`${DISCORD_API}/channels/${ENV.discordChannelId}/messages/${messageId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bot ${ENV.discordBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    });
+  } catch { /* ignore */ }
+}
+
 export { isConfigured as isDiscordConfigured };
