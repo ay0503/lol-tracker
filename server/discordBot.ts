@@ -469,12 +469,11 @@ async function registerSlashCommands(client: Client) {
       );
       console.log(`[discordBot] Slash commands registered for guild: ${guild.name}`);
     }
-    // Also register globally (takes up to 1hr but ensures coverage)
+    // Clear global commands to avoid duplicates
     await rest.put(
       Routes.applicationCommands(client.user.id),
-      { body: commandData },
+      { body: [] },
     );
-    console.log("[discordBot] Global slash commands registered");
   } catch (err: any) {
     console.error("[discordBot] Failed to register commands:", err.message);
   }
