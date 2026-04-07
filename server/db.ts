@@ -78,6 +78,39 @@ export async function getUserByEmail(email: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+// ─── Discord User Linking ───
+
+let _discordColumnReady = false;
+async function ensureDiscordIdColumn() {
+  if (_discordColumnReady) return;
+  try {
+    const client = getRawClient();
+    await client.execute(`ALTER TABLE users ADD COLUMN discordId TEXT`);
+  } catch { /* column already exists */ }
+  _discordColumnReady = true;
+}
+
+export async function getUserByDiscordId(discordId: string) {
+  await ensureDiscordIdColumn();
+  const client = getRawClient();
+  const result = await client.execute({ sql: `SELECT * FROM users WHERE discordId = ?`, args: [discordId] });
+  return result.rows.length > 0 ? result.rows[0] : undefined;
+}
+
+export async function linkDiscordUser(userId: number, discordId: string) {
+  await ensureDiscordIdColumn();
+  const client = getRawClient();
+  // Clear any existing link for this discordId
+  await client.execute({ sql: `UPDATE users SET discordId = NULL WHERE discordId = ?`, args: [discordId] });
+  await client.execute({ sql: `UPDATE users SET discordId = ? WHERE id = ?`, args: [discordId, userId] });
+}
+
+export async function unlinkDiscordUser(discordId: string) {
+  await ensureDiscordIdColumn();
+  const client = getRawClient();
+  await client.execute({ sql: `UPDATE users SET discordId = NULL WHERE discordId = ?`, args: [discordId] });
+}
+
 export async function createLocalUser(data: {
   email: string;
   passwordHash: string;

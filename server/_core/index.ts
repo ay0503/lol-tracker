@@ -17,6 +17,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startPolling } from "../pollEngine";
 import { ensureBotUser } from "../botTrader";
+import { startDiscordBot } from "../discordBot";
 import { ENV } from "./env";
 
 // Programmatic migration — runs at app startup, after volumes are mounted
@@ -249,6 +250,10 @@ async function startServer() {
       console.error("[Server] Failed to restore casino games:", err);
     }
     startPolling();
+    // Start Discord interactive bot (Gateway connection)
+    startDiscordBot().catch(err => {
+      console.error("[Server] Failed to start Discord bot:", err);
+    });
   });
 }
 
