@@ -15,7 +15,7 @@ import {
   getUserByEmail, getOrCreatePortfolio, getUserHoldings,
   executeTrade, executeShort, executeCover, getUserTrades,
   getRecentMatchesFromDB, getLeaderboard, placeBet, getUserBets,
-  getUserDividends, getRawClient,
+  getUserDividends, getAllTrades, getRawClient,
 } from "./db";
 import { computeAllETFPricesSync, TICKERS, type Ticker } from "./etfPricing";
 import { getPriceHistory } from "./db";
@@ -307,6 +307,168 @@ async function handleCompare(userId: number, userName: string, targetName: strin
     .setFooter({ text: winning ? `${userName} leads by ${formatDollars(diff)}` : `${targetDisplayName} leads by ${formatDollars(Math.abs(diff))}` });
 }
 
+async function handleRecentTrades(count: number): Promise<EmbedBuilder> {
+  const recentTrades = await getAllTrades(count);
+  if (recentTrades.length === 0) {
+    return new EmbedBuilder().setTitle("📋 Recent Trades").setColor(embedColor("info")).setDescription("No trades yet.");
+  }
+  const lines = recentTrades.map(tr => {
+    const type = String(tr.type).toUpperCase().padEnd(5);
+    const shares = parseFloat(String(tr.shares ?? "0")).toFixed(2);
+    const price = parseFloat(String(tr.pricePerShare ?? "0")).toFixed(2);
+    const total = parseFloat(String(tr.totalAmount ?? "0")).toFixed(2);
+    return `${type} $${tr.ticker}  ${shares} @ $${price}  $${total}  ${tr.userName}`;
+  });
+  return new EmbedBuilder()
+    .setTitle(`📋 Last ${recentTrades.length} Trades`)
+    .setColor(embedColor("info"))
+    .setDescription("```\n" + lines.join("\n") + "\n```");
+}
+
+async function handleCasinoLeaderboard(): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute(`
+    SELECT u.id, COALESCE(u.displayName, u.name) as userName, p.casinoBalance
+    FROM users u JOIN portfolios p ON p.userId = u.id
+    WHERE CAST(p.casinoBalance AS REAL) > 0
+    ORDER BY CAST(p.casinoBalance AS REAL) DESC LIMIT 10
+  `);
+  if (result.rows.length === 0) {
+    return new EmbedBuilder().setTitle("🎰 Casino Leaderboard").setColor(embedColor("info")).setDescription("No players yet.");
+  }
+  const medals = ["🥇", "🥈", "🥉"];
+  const lines = result.rows.map((row, idx) => {
+    const medal = medals[idx] ?? `${idx + 1}.`;
+    const balance = parseFloat(String(row.casinoBalance ?? "0"));
+    const profit = balance - 20;
+    return `${medal} ${row.userName}  ${formatDollars(balance)}  (${profit >= 0 ? "+" : ""}${formatDollars(profit)})`;
+  });
+  return new EmbedBuilder()
+    .setTitle("🎰 Casino Leaderboard")
+    .setColor(embedColor("info"))
+    .setDescription("```\n" + lines.join("\n") + "\n```");
+}
+
+async function handleMyTrades(userId: number, userName: string, count: number): Promise<EmbedBuilder> {
+  const myTrades = await getUserTrades(userId, count);
+  if (myTrades.length === 0) {
+    return new EmbedBuilder().setTitle(`📋 ${userName}'s Trades`).setColor(embedColor("info")).setDescription("No trades yet.");
+  }
+  const lines = myTrades.map(tr => {
+    const type = String(tr.type).toUpperCase().padEnd(5);
+    const shares = parseFloat(String(tr.shares ?? "0")).toFixed(2);
+    const price = parseFloat(String(tr.pricePerShare ?? "0")).toFixed(2);
+    const total = parseFloat(String(tr.totalAmount ?? "0")).toFixed(2);
+    return `${type} $${tr.ticker}  ${shares} @ $${price}  $${total}`;
+  });
+  return new EmbedBuilder()
+    .setTitle(`📋 ${userName}'s Last ${myTrades.length} Trades`)
+    .setColor(embedColor("info"))
+    .setDescription("```\n" + lines.join("\n") + "\n```");
+}
+
+async function handleCasinoDeposit(message: Message, userId: number, amount: number): Promise<void> {
+  try {
+    // Fetch multiplier
+    let multiplier = 10;
+    try {
+      const client = getRawClient();
+      const res = await client.execute(`SELECT value FROM app_config WHERE key = 'casino_multiplier'`);
+      if (res.rows.length > 0) multiplier = Number(res.rows[0].value) || 10;
+    } catch { /* use default */ }
+
+    const portfolio = await getOrCreatePortfolio(userId);
+    const tradingCash = parseFloat(String(portfolio.cashBalance ?? "200"));
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+
+    if (amount > tradingCash) {
+      await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient trading cash. You have ${formatDollars(tradingCash)}.`)] });
+      return;
+    }
+
+    const casinoAmount = amount * multiplier;
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({
+      cashBalance: (tradingCash - amount).toFixed(2),
+      casinoBalance: (casinoCash + casinoAmount).toFixed(2),
+    }).where(eq(portfolios.userId, userId));
+
+    cache.invalidate("leaderboard.rankings");
+    cache.invalidate("casino.leaderboard");
+
+    await message.reply({ embeds: [new EmbedBuilder()
+      .setTitle("🎰 Casino Deposit")
+      .setColor(embedColor("success"))
+      .setDescription(`${formatDollars(amount)} trading cash → ${formatDollars(casinoAmount)} casino cash (${multiplier}x)`)
+      .addFields(
+        { name: "Trading Cash", value: formatDollars(tradingCash - amount), inline: true },
+        { name: "Casino Cash", value: formatDollars(casinoCash + casinoAmount), inline: true },
+      )] });
+  } catch (err: any) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
+  }
+}
+
+async function handleRoulette(message: Message, userId: number, color: "red" | "black" | "green", amount: number): Promise<void> {
+  try {
+    const { checkCasinoCooldown, recordCasinoGame } = await import("./casinoUtils");
+    await checkCasinoCooldown(userId);
+
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    if (amount > casinoCash) {
+      await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash. You have ${formatDollars(casinoCash)}.`)] });
+      return;
+    }
+
+    // Deduct bet
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash - amount).toFixed(2) }).where(eq(portfolios.userId, userId));
+
+    // Spin
+    const { spin } = await import("./roulette");
+    const result = spin({ type: color, amount });
+
+    // Credit winnings
+    if (result.totalPayout > 0) {
+      const fresh = await getOrCreatePortfolio(userId);
+      const newCasino = parseFloat(String(fresh.casinoBalance ?? "0")) + result.totalPayout;
+      await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, userId));
+    }
+
+    recordCasinoGame(userId);
+    cache.invalidate("casino.leaderboard");
+
+    const won = result.totalPayout > 0;
+    const outcomeColor = String(result.outcome?.color ?? result.outcome ?? "?");
+    const embed = new EmbedBuilder()
+      .setTitle(won ? "🎰 Roulette — WIN!" : "🎰 Roulette — Loss")
+      .setColor(won ? embedColor("success") : embedColor("error"))
+      .addFields(
+        { name: "Bet", value: `${formatDollars(amount)} on **${color.toUpperCase()}**`, inline: true },
+        { name: "Result", value: `**${outcomeColor.toUpperCase()}**`, inline: true },
+        { name: won ? "Payout" : "Lost", value: won ? `+${formatDollars(result.totalPayout)}` : formatDollars(amount), inline: true },
+      );
+
+    await message.reply({ embeds: [embed] });
+
+    // Big win notification
+    if (won && result.totalPayout >= 10) {
+      const userName = String((await getUserByDiscordId(message.author.id))?.displayName ?? "User");
+      const mult = result.totalPayout / amount;
+      import("./discord").then(d => d.notifyCasinoBigWin(userName, "Roulette", mult, result.totalPayout)).catch(() => {});
+    }
+  } catch (err: any) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
+  }
+}
+
 async function handleAudit(targetName: string): Promise<EmbedBuilder[]> {
   // Find target user
   const client = getRawClient();
@@ -439,11 +601,11 @@ function handleHelp(): EmbedBuilder {
     .setColor(embedColor("info"))
     .setDescription("Just type naturally! Examples:")
     .addFields(
-      { name: "📊 Info", value: "`what's my portfolio?`\n`show prices`\n`leaderboard`\n`is dori in game?`\n`last 5 matches`\n`my casino balance`\n`my holdings`" },
+      { name: "📊 Info", value: "`what's my portfolio?`\n`show prices`\n`leaderboard`\n`is dori in game?`\n`last 5 matches`\n`my casino balance`\n`my holdings`\n`recent trades`\n`my trades`\n`top casino`" },
       { name: "💰 Trading", value: "`buy $20 of DORI`\n`sell 5 shares of TDRI`\n`sell all DORI`\n`short $10 SDRI`\n`cover all XDRI`" },
       { name: "⚔️ Compare", value: "`compare me to Kyle`\n`how am I doing vs Sarah`" },
       { name: "🔍 Audit", value: "`audit Andrew`\n`show me Kyle's trading history`\n`is Shawn cheating?`" },
-      { name: "🎲 Betting", value: "`bet $10 on win`\n`bet $5 loss`" },
+      { name: "🎲 Betting & Casino", value: "`bet $10 on win`\n`bet $5 loss`\n`deposit $5 to casino`\n`put $10 on red`\n`$50 on black roulette`" },
       { name: "🔗 Account", value: "`/link your@email.com` — link Discord to your account\n`/whoami` — check your linked account" },
     );
 }
@@ -760,9 +922,9 @@ async function handleMessage(message: Message): Promise<void> {
   const unknownIntents: BotIntent[] = [];
 
   for (const intent of intents) {
-    if (["portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance", "match_history", "holdings", "help", "compare", "audit"].includes(intent.type)) {
+    if (["portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance", "match_history", "holdings", "help", "compare", "audit", "recent_trades", "casino_leaderboard", "my_trades"].includes(intent.type)) {
       readIntents.push(intent);
-    } else if (intent.type === "bet") {
+    } else if (intent.type === "bet" || intent.type === "casino_deposit" || intent.type === "roulette") {
       betIntents.push(intent);
     } else if (intent.type === "unknown") {
       unknownIntents.push(intent);
@@ -792,15 +954,20 @@ async function handleMessage(message: Message): Promise<void> {
         case "help": readEmbeds.push(handleHelp()); break;
         case "compare": readEmbeds.push(await handleCompare(userId, userName, (intent as any).targetName)); break;
         case "audit": readEmbeds.push(...await handleAudit((intent as any).targetName)); break;
+        case "recent_trades": readEmbeds.push(await handleRecentTrades((intent as any).count)); break;
+        case "casino_leaderboard": readEmbeds.push(await handleCasinoLeaderboard()); break;
+        case "my_trades": readEmbeds.push(await handleMyTrades(userId, userName, (intent as any).count)); break;
       }
     }
     if (readEmbeds.length > 0) {
       await message.reply({ embeds: readEmbeds.slice(0, 10) }); // Discord max 10 embeds
     }
 
-    // Execute bets directly
+    // Execute bets, deposits, roulette directly
     for (const intent of betIntents) {
       if (intent.type === "bet") await handleBet(message, userId, intent.prediction, intent.amount);
+      if (intent.type === "casino_deposit") await handleCasinoDeposit(message, userId, intent.amount);
+      if (intent.type === "roulette") await handleRoulette(message, userId, intent.color, intent.amount);
     }
 
     // Handle trades — if compound, batch into one confirmation

@@ -26,6 +26,11 @@ export type BotIntent =
   | { type: "bet"; prediction: "win" | "loss"; amount: number }
   | { type: "compare"; targetName: string }
   | { type: "audit"; targetName: string }
+  | { type: "recent_trades"; count: number }
+  | { type: "casino_leaderboard" }
+  | { type: "my_trades"; count: number }
+  | { type: "casino_deposit"; amount: number }
+  | { type: "roulette"; color: "red" | "black" | "green"; amount: number }
   | { type: "help" }
   | { type: "unknown"; message: string };
 
@@ -48,6 +53,9 @@ READ queries:
 - {"type":"holdings"} — detailed holdings
 - {"type":"compare","targetName":"Kyle"} — compare with another user
 - {"type":"audit","targetName":"Kyle"} — full audit of a user's trades, bets, dividends, P&L (anyone can audit anyone)
+- {"type":"recent_trades","count":10} — recent trades across ALL users (feed)
+- {"type":"casino_leaderboard"} — top casino balances
+- {"type":"my_trades","count":10} — user's own trade history
 - {"type":"help"} — show commands
 
 TRADE actions:
@@ -62,6 +70,8 @@ TRADE actions:
 - {"type":"cover","ticker":"DORI","amount":5,"unit":"shares"} — cover 5 short shares
 - {"type":"cover_all","ticker":"DORI"} — cover all short shares
 - {"type":"bet","prediction":"win","amount":10} — bet on next game
+- {"type":"casino_deposit","amount":5} — deposit trading cash to casino (multiplied by 10x)
+- {"type":"roulette","color":"red","amount":5} — play roulette (red/black/green)
 
 COMPOUND EXAMPLES:
 - "sell everything and all in on DORI" → {"actions":[{"type":"sell_all_holdings"},{"type":"buy_max","ticker":"DORI"}]}
@@ -117,12 +127,37 @@ function validateIntent(raw: any): BotIntent {
   const type = raw.type;
 
   // Read queries
-  if (["portfolio", "prices", "leaderboard", "live_game", "casino_balance", "holdings", "help", "sell_all_holdings"].includes(type)) {
+  if (["portfolio", "prices", "leaderboard", "live_game", "casino_balance", "holdings", "help"].includes(type)) {
     return { type } as BotIntent;
   }
 
   if (type === "match_history") {
     return { type: "match_history", count: Math.min(Math.max(1, Number(raw.count) || 5), 20) };
+  }
+
+  if (type === "recent_trades") {
+    return { type: "recent_trades", count: Math.min(Math.max(1, Number(raw.count) || 10), 20) };
+  }
+
+  if (type === "casino_leaderboard" || type === "sell_all_holdings") {
+    return { type } as BotIntent;
+  }
+
+  if (type === "my_trades") {
+    return { type: "my_trades", count: Math.min(Math.max(1, Number(raw.count) || 10), 20) };
+  }
+
+  if (type === "casino_deposit") {
+    const amount = Number(raw.amount);
+    if (!amount || amount < 0.5 || amount > 200) return { type: "unknown", message: "Casino deposit must be $0.50-$200" };
+    return { type: "casino_deposit", amount };
+  }
+
+  if (type === "roulette") {
+    const color = ["red", "black", "green"].includes(raw.color) ? raw.color : "red";
+    const amount = Number(raw.amount);
+    if (!amount || amount < 0.10 || amount > 50) return { type: "unknown", message: "Roulette bet must be $0.10-$50" };
+    return { type: "roulette", color, amount } as BotIntent;
   }
 
   if (type === "compare") {
