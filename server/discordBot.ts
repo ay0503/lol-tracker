@@ -469,6 +469,7 @@ async function registerSlashCommands(client: Client) {
 }
 
 async function handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+  try {
   if (interaction.commandName === "link") {
     const email = interaction.options.getString("email", true);
     const user = await getUserByEmail(email);
@@ -479,11 +480,13 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction): Pro
     await linkDiscordUser(user.id, interaction.user.id);
     const name = user.displayName || user.name || email;
     await interaction.reply({ content: `✅ Linked to **${name}**! You can now use the bot.`, ephemeral: true });
+    return;
   }
 
   if (interaction.commandName === "unlink") {
     await unlinkDiscordUser(interaction.user.id);
     await interaction.reply({ content: "✅ Discord account unlinked.", ephemeral: true });
+    return;
   }
 
   if (interaction.commandName === "whoami") {
@@ -500,6 +503,12 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction): Pro
       content: `👤 **${name}**\n💰 Cash: ${formatDollars(cash)}\n🎰 Casino: ${formatDollars(casinoCash)}`,
       ephemeral: true,
     });
+  }
+  } catch (err: any) {
+    console.error("[discordBot] Slash command error:", err);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: `❌ Error: ${err.message}`, ephemeral: true }).catch(() => {});
+    }
   }
 }
 
