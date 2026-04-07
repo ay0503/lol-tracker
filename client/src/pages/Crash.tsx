@@ -22,11 +22,17 @@ function timeAtMultiplier(m: number): number {
   return Math.pow(Math.max(0, m - 1) / 0.06, 1 / 1.5) * 1000;
 }
 
+/** Resolve a CSS variable to a computed hex value for canvas */
+function resolveCssColor(varName: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return value || "#FFFFFF";
+}
+
 function getMultColor(m: number): string {
-  if (m >= 50) return "var(--color-loss)";
+  if (m >= 50) return resolveCssColor("--color-loss");
   if (m >= 10) return "#FF9800";
   if (m >= 5) return "#FFD600";
-  if (m >= 2) return "var(--color-win)";
+  if (m >= 2) return resolveCssColor("--color-win");
   return "#FFFFFF";
 }
 
@@ -128,7 +134,7 @@ function CrashCanvas({
     if (phase === "idle") return;
 
     // ---- Build curve points ----
-    const lineColor = isCrashed ? "var(--color-loss)" : getMultColor(curveMult);
+    const lineColor = isCrashed ? resolveCssColor("--color-loss") : getMultColor(curveMult);
     const STEPS = 180;
     const pts: [number, number][] = [];
     for (let i = 0; i <= STEPS; i++) {
@@ -177,14 +183,14 @@ function CrashCanvas({
       const ct = timeAtMultiplier(cashoutMult);
       const cx = toX(ct), cy = toY(cashoutMult);
       // Outer ring
-      ctx.strokeStyle = "var(--color-win)";
+      ctx.strokeStyle = resolveCssColor("--color-win");
       ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.stroke();
       // Inner dot
-      ctx.fillStyle = "var(--color-win)";
+      ctx.fillStyle = resolveCssColor("--color-win");
       ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
       // Label
-      ctx.fillStyle = "var(--color-win)";
+      ctx.fillStyle = resolveCssColor("--color-win");
       ctx.font = "bold 12px monospace";
       ctx.textAlign = "center";
       ctx.fillText(`${cashoutMult.toFixed(2)}x`, cx, cy - 16);
@@ -194,7 +200,7 @@ function CrashCanvas({
     if (isCrashed && crashPoint && crashPoint > 1) {
       const ct = timeAtMultiplier(crashPoint);
       const cx = toX(ct), cy = toY(crashPoint);
-      ctx.strokeStyle = "var(--color-loss)";
+      ctx.strokeStyle = resolveCssColor("--color-loss");
       ctx.lineWidth = 3;
       const s = 7;
       ctx.beginPath(); ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s); ctx.stroke();
