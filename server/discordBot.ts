@@ -15,7 +15,7 @@ import {
   getUserByEmail, getOrCreatePortfolio, getUserHoldings,
   executeTrade, executeShort, executeCover, getUserTrades,
   getRecentMatchesFromDB, getLeaderboard, placeBet, getUserBets,
-  getRawClient,
+  getUserDividends, getRawClient,
 } from "./db";
 import { computeAllETFPricesSync, TICKERS, type Ticker } from "./etfPricing";
 import { getPriceHistory } from "./db";
@@ -307,6 +307,132 @@ async function handleCompare(userId: number, userName: string, targetName: strin
     .setFooter({ text: winning ? `${userName} leads by ${formatDollars(diff)}` : `${targetDisplayName} leads by ${formatDollars(Math.abs(diff))}` });
 }
 
+async function handleAudit(targetName: string): Promise<EmbedBuilder[]> {
+  // Find target user
+  const client = getRawClient();
+  const allUsers = await client.execute(`SELECT id, COALESCE(displayName, name) as userName FROM users`);
+  const targetRow = allUsers.rows.find(
+    (row: any) => String(row.userName).toLowerCase() === targetName.toLowerCase()
+  );
+
+  if (!targetRow) {
+    return [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ User "${targetName}" not found.`)];
+  }
+
+  const targetId = Number(targetRow.id);
+  const name = String(targetRow.userName);
+  const prices = await getETFPrices();
+
+  // Fetch all data
+  const [portfolio, holdingsList, tradesList, betsList, dividendsList] = await Promise.all([
+    getOrCreatePortfolio(targetId),
+    getUserHoldings(targetId),
+    getUserTrades(targetId, 100),
+    getUserBets(targetId),
+    getUserDividends(targetId, 100),
+  ]);
+
+  const cash = parseFloat(String(portfolio.cashBalance ?? "200"));
+  const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+
+  // Calculate portfolio value
+  let holdingsVal = 0;
+  let shortPnl = 0;
+  for (const h of holdingsList) {
+    const price = prices[h.ticker] ?? 0;
+    const shares = parseFloat(String(h.shares ?? "0"));
+    const shortShares = parseFloat(String(h.shortShares ?? "0"));
+    const shortAvg = parseFloat(String(h.shortAvgPrice ?? "0"));
+    holdingsVal += shares * price;
+    if (shortShares > 0) shortPnl += shortShares * (shortAvg - price);
+  }
+  const totalValue = cash + holdingsVal + shortPnl;
+  const pnl = totalValue - 200;
+
+  // Trade stats
+  const buys = tradesList.filter(tr => tr.type === "buy");
+  const sells = tradesList.filter(tr => tr.type === "sell");
+  const shorts = tradesList.filter(tr => tr.type === "short");
+  const covers = tradesList.filter(tr => tr.type === "cover");
+  const totalTradeVolume = tradesList.reduce((sum, tr) => sum + parseFloat(String(tr.totalAmount ?? "0")), 0);
+
+  // Bet stats
+  const wonBets = betsList.filter(b => b.status === "won");
+  const lostBets = betsList.filter(b => b.status === "lost");
+  const pendingBets = betsList.filter(b => b.status === "pending");
+  const betProfit = wonBets.reduce((sum, b) => sum + parseFloat(String(b.payout ?? "0")), 0)
+    - betsList.filter(b => b.status !== "pending").reduce((sum, b) => sum + parseFloat(String(b.amount ?? "0")), 0);
+
+  // Dividend stats
+  const totalDividends = dividendsList.reduce((sum, d) => sum + parseFloat(String(d.totalPayout ?? "0")), 0);
+
+  // Build embeds
+  const embeds: EmbedBuilder[] = [];
+
+  // Embed 1: Overview
+  const overview = new EmbedBuilder()
+    .setTitle(`🔍 Audit: ${name}`)
+    .setColor(pnl >= 0 ? embedColor("success") : embedColor("error"))
+    .addFields(
+      { name: "Total Value", value: formatDollars(totalValue), inline: true },
+      { name: "P&L", value: `${pnl >= 0 ? "+" : ""}${formatDollars(pnl)} (${((pnl / 200) * 100).toFixed(1)}%)`, inline: true },
+      { name: "Cash", value: formatDollars(cash), inline: true },
+      { name: "Casino Cash", value: formatDollars(casinoCash), inline: true },
+      { name: "Total Dividends", value: formatDollars(totalDividends), inline: true },
+      { name: "Trade Volume", value: formatDollars(totalTradeVolume), inline: true },
+    );
+
+  // Holdings breakdown
+  const holdingLines: string[] = [];
+  for (const h of holdingsList) {
+    const price = prices[h.ticker] ?? 0;
+    const shares = parseFloat(String(h.shares ?? "0"));
+    const shortShares = parseFloat(String(h.shortShares ?? "0"));
+    const avgCost = parseFloat(String(h.avgCostBasis ?? "0"));
+    const shortAvg = parseFloat(String(h.shortAvgPrice ?? "0"));
+    if (shares > 0) {
+      const val = shares * price;
+      const hpnl = val - shares * avgCost;
+      holdingLines.push(`$${h.ticker}  ${shares.toFixed(2)} @ ${formatDollars(avgCost)}  ${hpnl >= 0 ? "+" : ""}${formatDollars(hpnl)}`);
+    }
+    if (shortShares > 0) {
+      const hpnl = shortShares * (shortAvg - price);
+      holdingLines.push(`$${h.ticker}  ${shortShares.toFixed(2)} SHORT @ ${formatDollars(shortAvg)}  ${hpnl >= 0 ? "+" : ""}${formatDollars(hpnl)}`);
+    }
+  }
+  if (holdingLines.length > 0) {
+    overview.addFields({ name: "Current Holdings", value: "```\n" + holdingLines.join("\n") + "\n```" });
+  } else {
+    overview.addFields({ name: "Current Holdings", value: "No positions" });
+  }
+  embeds.push(overview);
+
+  // Embed 2: Activity breakdown
+  const activity = new EmbedBuilder()
+    .setTitle(`📊 ${name} — Activity`)
+    .setColor(embedColor("info"))
+    .addFields(
+      { name: "Trades", value: `${tradesList.length} total\n${buys.length} buys · ${sells.length} sells\n${shorts.length} shorts · ${covers.length} covers`, inline: true },
+      { name: "Bets", value: `${betsList.length} total\n${wonBets.length}W ${lostBets.length}L ${pendingBets.length} pending\nNet: ${betProfit >= 0 ? "+" : ""}${formatDollars(betProfit)}`, inline: true },
+      { name: "Dividends", value: `${dividendsList.length} received\nTotal: ${formatDollars(totalDividends)}`, inline: true },
+    );
+
+  // Recent trades (last 10)
+  const recentTrades = tradesList.slice(0, 10);
+  if (recentTrades.length > 0) {
+    const tradeLines = recentTrades.map(tr => {
+      const shares = parseFloat(String(tr.shares ?? "0")).toFixed(2);
+      const price = parseFloat(String(tr.pricePerShare ?? "0")).toFixed(2);
+      return `${tr.type.toUpperCase().padEnd(5)} $${tr.ticker}  ${shares} @ $${price}`;
+    });
+    activity.addFields({ name: "Last 10 Trades", value: "```\n" + tradeLines.join("\n") + "\n```" });
+  }
+
+  embeds.push(activity);
+
+  return embeds;
+}
+
 function handleHelp(): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle("🤖 $DORI Bot Commands")
@@ -316,6 +442,7 @@ function handleHelp(): EmbedBuilder {
       { name: "📊 Info", value: "`what's my portfolio?`\n`show prices`\n`leaderboard`\n`is dori in game?`\n`last 5 matches`\n`my casino balance`\n`my holdings`" },
       { name: "💰 Trading", value: "`buy $20 of DORI`\n`sell 5 shares of TDRI`\n`sell all DORI`\n`short $10 SDRI`\n`cover all XDRI`" },
       { name: "⚔️ Compare", value: "`compare me to Kyle`\n`how am I doing vs Sarah`" },
+      { name: "🔍 Audit", value: "`audit Andrew`\n`show me Kyle's trading history`\n`is Shawn cheating?`" },
       { name: "🎲 Betting", value: "`bet $10 on win`\n`bet $5 loss`" },
       { name: "🔗 Account", value: "`/link your@email.com` — link Discord to your account\n`/whoami` — check your linked account" },
     );
@@ -633,7 +760,7 @@ async function handleMessage(message: Message): Promise<void> {
   const unknownIntents: BotIntent[] = [];
 
   for (const intent of intents) {
-    if (["portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance", "match_history", "holdings", "help", "compare"].includes(intent.type)) {
+    if (["portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance", "match_history", "holdings", "help", "compare", "audit"].includes(intent.type)) {
       readIntents.push(intent);
     } else if (intent.type === "bet") {
       betIntents.push(intent);
@@ -664,6 +791,7 @@ async function handleMessage(message: Message): Promise<void> {
         case "holdings": readEmbeds.push(await handleHoldings(userId, userName)); break;
         case "help": readEmbeds.push(handleHelp()); break;
         case "compare": readEmbeds.push(await handleCompare(userId, userName, (intent as any).targetName)); break;
+        case "audit": readEmbeds.push(...await handleAudit((intent as any).targetName)); break;
       }
     }
     if (readEmbeds.length > 0) {

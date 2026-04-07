@@ -25,6 +25,7 @@ export type BotIntent =
   | { type: "cover_all"; ticker: string }
   | { type: "bet"; prediction: "win" | "loss"; amount: number }
   | { type: "compare"; targetName: string }
+  | { type: "audit"; targetName: string }
   | { type: "help" }
   | { type: "unknown"; message: string };
 
@@ -46,6 +47,7 @@ READ queries:
 - {"type":"match_history","count":5} — recent matches
 - {"type":"holdings"} — detailed holdings
 - {"type":"compare","targetName":"Kyle"} — compare with another user
+- {"type":"audit","targetName":"Kyle"} — full audit of a user's trades, bets, dividends, P&L (anyone can audit anyone)
 - {"type":"help"} — show commands
 
 TRADE actions:
@@ -127,6 +129,12 @@ function validateIntent(raw: any): BotIntent {
     const targetName = raw.targetName;
     if (!targetName || typeof targetName !== "string") return { type: "unknown", message: "Who do you want to compare with?" };
     return { type: "compare", targetName };
+  }
+
+  if (type === "audit") {
+    const targetName = raw.targetName;
+    if (!targetName || typeof targetName !== "string") return { type: "unknown", message: "Who do you want to audit?" };
+    return { type: "audit", targetName };
   }
 
   if (type === "price") {
