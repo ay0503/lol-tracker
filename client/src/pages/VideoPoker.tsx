@@ -40,6 +40,7 @@ const PokerCard = memo(function PokerCard({
   card: { rank: number; suit: number }; held: boolean; onClick: () => void;
   index: number; isNew: boolean; canHold: boolean;
 }) {
+  const { language } = useTranslation();
   const { rank, suit, isRed } = cardDisplay(card);
   return (
     <motion.div
