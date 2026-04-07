@@ -561,6 +561,33 @@ function TableBrowser() {
 // ─── CI Dashboard Component ───
 function IntegrityCheck() {
   const { data, isLoading, refetch } = trpc.admin.auditIntegrity.useQuery(undefined, { enabled: false });
+  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState("");
+
+  // Simulate progress while loading
+  useEffect(() => {
+    if (!isLoading) {
+      if (data) { setProgress(100); setPhase("Complete"); }
+      return;
+    }
+    setProgress(0);
+    const phases = [
+      "Loading users...", "Replaying trades...", "Checking bets...",
+      "Verifying dividends...", "Comparing balances...", "Checking shares...",
+    ];
+    let step = 0;
+    const interval = setInterval(() => {
+      step++;
+      const pct = Math.min(5 + step * 12, 92);
+      setProgress(pct);
+      setPhase(phases[Math.min(step - 1, phases.length - 1)]);
+    }, 400);
+    return () => clearInterval(interval);
+  }, [isLoading, data]);
+
+  const passed = data?.users.filter((u: any) => u.pass).length ?? 0;
+  const failed = data?.users.filter((u: any) => !u.pass).length ?? 0;
+  const total = data?.users.length ?? 0;
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 mb-4">
@@ -568,13 +595,13 @@ function IntegrityCheck() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-bold">Integrity Check</h3>
-          {data && (
+          {data && !isLoading && (
             <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${data.allPass ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
-              {data.allPass ? "ALL PASS" : "DISCREPANCY FOUND"}
+              {data.allPass ? `ALL PASS (${total})` : `${failed} DISCREPANC${failed === 1 ? "Y" : "IES"}`}
             </span>
           )}
         </div>
-        <Button size="sm" onClick={() => refetch()} disabled={isLoading}>
+        <Button size="sm" onClick={() => { setProgress(0); setPhase(""); refetch(); }} disabled={isLoading}>
           {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
           {data ? "Re-run" : "Run Audit"}
         </Button>
@@ -583,7 +610,34 @@ function IntegrityCheck() {
         Replays all trades, bets, and dividends from $200 start. Verifies cash and share balances match. Tolerance: ${data?.tolerance ?? 3}.
       </p>
 
-      {data && (
+      {/* Progress bar */}
+      {(isLoading || (progress > 0 && progress < 100)) && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-muted-foreground font-mono">{phase}</span>
+            <span className="text-xs text-muted-foreground font-mono">{progress}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Summary bar */}
+      {data && !isLoading && (
+        <div className="flex items-center gap-4 mb-3 text-xs">
+          <span className="text-green-400 font-bold">{passed} passed</span>
+          {failed > 0 && <span className="text-red-400 font-bold">{failed} failed</span>}
+          <span className="text-muted-foreground">
+            {data.users.reduce((sum: number, u: any) => sum + u.tradeCount, 0)} total trades · {data.users.reduce((sum: number, u: any) => sum + u.betCount, 0)} bets
+          </span>
+        </div>
+      )}
+
+      {data && !isLoading && (
         <div className="space-y-2">
           {data.users.map((user: any) => (
             <div key={user.userId} className={`rounded-lg border p-3 ${user.pass ? "border-border bg-secondary/30" : "border-red-500/40 bg-red-950/20"}`}>
