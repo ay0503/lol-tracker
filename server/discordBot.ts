@@ -469,6 +469,354 @@ async function handleRoulette(message: Message, userId: number, color: "red" | "
   }
 }
 
+// ─── New Read Handlers ───
+
+async function handleNews(count: number): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute({ sql: `SELECT headline, body, champion, createdAt FROM news ORDER BY createdAt DESC LIMIT ?`, args: [count] });
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle("📰 News").setColor(embedColor("info")).setDescription("No news yet.");
+  const lines = result.rows.map(row => `**${row.headline}**\n${String(row.body).slice(0, 100)}${String(row.body).length > 100 ? "..." : ""}`);
+  return new EmbedBuilder().setTitle("📰 Latest News").setColor(embedColor("info")).setDescription(lines.join("\n\n"));
+}
+
+async function handleNotifications(userId: number): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute({ sql: `SELECT title, message, isRead, createdAt FROM notifications WHERE userId = ? ORDER BY createdAt DESC LIMIT 10`, args: [userId] });
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle("🔔 Notifications").setColor(embedColor("info")).setDescription("No notifications.");
+  const lines = result.rows.map(row => `${Number(row.isRead) ? "📭" : "📬"} **${row.title}** — ${String(row.message).slice(0, 80)}`);
+  const unread = result.rows.filter(row => !Number(row.isRead)).length;
+  return new EmbedBuilder()
+    .setTitle(`🔔 Notifications${unread > 0 ? ` (${unread} unread)` : ""}`)
+    .setColor(embedColor("info"))
+    .setDescription(lines.join("\n"));
+}
+
+async function handleBettingStatus(): Promise<EmbedBuilder> {
+  const inGame = cache.get<boolean>("player.liveGame.check") ?? false;
+  const details = cache.get<any>("player.liveGame.details") ?? {};
+  const gameElapsed = details?.gameStartTime
+    ? Math.floor((Date.now() - details.gameStartTime) / 1000) + (details.gameLengthSeconds ?? 0)
+    : 0;
+  const bettingOpen = inGame && gameElapsed <= 300;
+  const timeLeft = bettingOpen ? Math.max(0, 300 - gameElapsed) : 0;
+
+  if (!inGame) {
+    return new EmbedBuilder().setTitle("🎲 Betting Status").setColor(embedColor("info")).setDescription("No game in progress. Betting opens when a game starts.");
+  }
+
+  return new EmbedBuilder()
+    .setTitle("🎲 Betting Status")
+    .setColor(bettingOpen ? embedColor("success") : embedColor("error"))
+    .setDescription(bettingOpen
+      ? `**OPEN** — ${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")} remaining\nType: \`bet $10 on win\` or \`bet $5 loss\``
+      : "**CLOSED** — Game has been live for more than 5 minutes.");
+}
+
+async function handleChampionPool(): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute(`
+    SELECT champion, COUNT(*) as games,
+      SUM(CASE WHEN win = 1 THEN 1 ELSE 0 END) as wins,
+      ROUND(AVG(kills), 1) as avgK, ROUND(AVG(deaths), 1) as avgD, ROUND(AVG(assists), 1) as avgA
+    FROM matches GROUP BY champion ORDER BY games DESC LIMIT 10
+  `);
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle("🏆 Champion Pool").setColor(embedColor("info")).setDescription("No matches yet.");
+  const lines = result.rows.map(row => {
+    const games = Number(row.games);
+    const wr = games > 0 ? Math.round((Number(row.wins) / games) * 100) : 0;
+    return `${row.champion}  ${games}G  ${wr}% WR  ${row.avgK}/${row.avgD}/${row.avgA}`;
+  });
+  return new EmbedBuilder().setTitle("🏆 Champion Pool").setColor(embedColor("info")).setDescription("```\n" + lines.join("\n") + "\n```");
+}
+
+async function handleStreaks(): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute(`SELECT win FROM matches ORDER BY gameCreation DESC LIMIT 20`);
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle("🔥 Streaks").setColor(embedColor("info")).setDescription("No matches yet.");
+  let streak = 0;
+  const firstResult = Number(result.rows[0].win);
+  for (const row of result.rows) {
+    if (Number(row.win) === firstResult) streak++;
+    else break;
+  }
+  const streakType = firstResult ? "WIN" : "LOSS";
+  const emoji = firstResult ? (streak >= 5 ? "🔥🔥🔥" : streak >= 3 ? "🔥" : "✅") : (streak >= 5 ? "💀💀💀" : streak >= 3 ? "💀" : "❌");
+  const sequence = result.rows.slice(0, 15).map(row => Number(row.win) ? "W" : "L").join(" ");
+  return new EmbedBuilder()
+    .setTitle(`${emoji} ${streak} ${streakType} STREAK`)
+    .setColor(firstResult ? embedColor("success") : embedColor("error"))
+    .setDescription(`\`${sequence}\``);
+}
+
+async function handleMyBets(userId: number, userName: string): Promise<EmbedBuilder> {
+  const betsList = await getUserBets(userId);
+  if (betsList.length === 0) return new EmbedBuilder().setTitle(`🎲 ${userName}'s Bets`).setColor(embedColor("info")).setDescription("No bets yet.");
+  const lines = betsList.map(bet => {
+    const status = String(bet.status);
+    const icon = status === "won" ? "✅" : status === "lost" ? "❌" : "⏳";
+    const payout = bet.payout ? ` → $${parseFloat(String(bet.payout)).toFixed(0)}` : "";
+    return `${icon} ${bet.prediction.toUpperCase()} $${parseFloat(String(bet.amount)).toFixed(0)}${payout}`;
+  });
+  return new EmbedBuilder().setTitle(`🎲 ${userName}'s Bets`).setColor(embedColor("info")).setDescription("```\n" + lines.join("\n") + "\n```");
+}
+
+async function handleMyOrders(userId: number, userName: string): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute({ sql: `SELECT id, ticker, orderType, shares, targetPrice, status FROM orders WHERE userId = ? ORDER BY createdAt DESC LIMIT 10`, args: [userId] });
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle(`📋 ${userName}'s Orders`).setColor(embedColor("info")).setDescription("No orders.");
+  const lines = result.rows.map(row => {
+    const status = String(row.status) === "pending" ? "⏳" : String(row.status) === "filled" ? "✅" : "❌";
+    return `${status} #${row.id} ${row.orderType} $${row.ticker} ${parseFloat(String(row.shares)).toFixed(2)} @ $${parseFloat(String(row.targetPrice)).toFixed(2)}`;
+  });
+  return new EmbedBuilder().setTitle(`📋 ${userName}'s Orders`).setColor(embedColor("info")).setDescription("```\n" + lines.join("\n") + "\n```");
+}
+
+async function handleMyDividends(userId: number, userName: string, count: number): Promise<EmbedBuilder> {
+  const divs = await getUserDividends(userId, count);
+  if (divs.length === 0) return new EmbedBuilder().setTitle(`💰 ${userName}'s Dividends`).setColor(embedColor("info")).setDescription("No dividends yet.");
+  const total = divs.reduce((sum, d) => sum + parseFloat(String(d.totalPayout ?? "0")), 0);
+  const lines = divs.slice(0, 15).map(d => {
+    const payout = parseFloat(String(d.totalPayout ?? "0")).toFixed(2);
+    const reason = String(d.reason ?? "").slice(0, 40);
+    return `+$${payout}  ${reason}`;
+  });
+  return new EmbedBuilder()
+    .setTitle(`💰 ${userName}'s Dividends`)
+    .setColor(embedColor("success"))
+    .setDescription("```\n" + lines.join("\n") + "\n```")
+    .addFields({ name: "Total", value: formatDollars(total), inline: true });
+}
+
+async function handleShopCatalog(): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute(`SELECT name, type, tier, price, description FROM cosmetic_items WHERE (stock IS NULL OR stock > 0) ORDER BY price DESC LIMIT 20`);
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle("🛒 Shop").setColor(embedColor("info")).setDescription("Shop is empty.");
+  const lines = result.rows.map(row => {
+    const tierEmoji = String(row.tier) === "legendary" ? "⭐" : String(row.tier) === "epic" ? "💎" : String(row.tier) === "rare" ? "🔵" : "⚪";
+    return `${tierEmoji} ${row.name}  $${Number(row.price)}  (${row.type === "title" ? "Title" : "Effect"})`;
+  });
+  return new EmbedBuilder().setTitle("🛒 Cosmetics Shop").setColor(embedColor("info")).setDescription("```\n" + lines.join("\n") + "\n```").setFooter({ text: "Buy with: buy [name]" });
+}
+
+async function handleMyCosmetics(userId: number, userName: string): Promise<EmbedBuilder> {
+  const client = getRawClient();
+  const result = await client.execute({
+    sql: `SELECT ci.name, ci.type, ci.tier FROM user_cosmetics uc JOIN cosmetic_items ci ON ci.id = uc.cosmeticId WHERE uc.userId = ?`,
+    args: [userId],
+  });
+  if (result.rows.length === 0) return new EmbedBuilder().setTitle(`🎨 ${userName}'s Cosmetics`).setColor(embedColor("info")).setDescription("No cosmetics owned. Visit the shop!");
+  const lines = result.rows.map(row => `${row.type === "title" ? "🏷️" : "✨"} ${row.name} (${row.tier})`);
+  return new EmbedBuilder().setTitle(`🎨 ${userName}'s Cosmetics`).setColor(embedColor("info")).setDescription(lines.join("\n"));
+}
+
+async function handlePlayerStats(): Promise<EmbedBuilder> {
+  const current = cache.get<any>("player.current");
+  const client = getRawClient();
+  const kdaResult = await client.execute(`SELECT ROUND(AVG(kills),1) as k, ROUND(AVG(deaths),1) as d, ROUND(AVG(assists),1) as a, COUNT(*) as games FROM matches`);
+  const row = kdaResult.rows[0];
+  const embed = new EmbedBuilder().setTitle("📊 Player Stats").setColor(embedColor("info"));
+  if (current) {
+    embed.addFields(
+      { name: "Rank", value: `${current.tier ?? "?"} ${current.division ?? ""} ${current.lp ?? 0}LP`, inline: true },
+      { name: "Record", value: `${current.wins ?? 0}W ${current.losses ?? 0}L`, inline: true },
+    );
+  }
+  if (row) {
+    embed.addFields(
+      { name: "Avg KDA", value: `${row.k}/${row.d}/${row.a}`, inline: true },
+      { name: "Total Games", value: String(row.games), inline: true },
+    );
+  }
+  return embed;
+}
+
+// ─── New Action Handlers ───
+
+async function handleDice(message: Message, userId: number, amount: number, target: number, direction: "over" | "under"): Promise<void> {
+  try {
+    const { checkCasinoCooldown, recordCasinoGame } = await import("./casinoUtils");
+    await checkCasinoCooldown(userId);
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    if (amount > casinoCash) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash. You have ${formatDollars(casinoCash)}.`)] }); return; }
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash - amount).toFixed(2) }).where(eq(portfolios.userId, userId));
+    const { roll } = await import("./dice");
+    const result = roll(amount, target, direction);
+    if (result.payout > 0) {
+      const fresh = await getOrCreatePortfolio(userId);
+      const newCasino = parseFloat(String(fresh.casinoBalance ?? "0")) + result.payout;
+      await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, userId));
+    }
+    recordCasinoGame(userId);
+    cache.invalidate("casino.leaderboard");
+    const won = result.payout > 0;
+    await message.reply({ embeds: [new EmbedBuilder()
+      .setTitle(won ? "🎲 Dice — WIN!" : "🎲 Dice — Loss")
+      .setColor(won ? embedColor("success") : embedColor("error"))
+      .addFields(
+        { name: "Roll", value: `**${result.roll.toFixed(2)}**`, inline: true },
+        { name: "Target", value: `${direction} ${target}`, inline: true },
+        { name: won ? "Payout" : "Lost", value: won ? `+${formatDollars(result.payout)} (${result.multiplier}x)` : formatDollars(amount), inline: true },
+      )] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handleCrash(message: Message, userId: number, amount: number, autoCashout?: number): Promise<void> {
+  try {
+    const { checkCasinoCooldown, recordCasinoGame } = await import("./casinoUtils");
+    await checkCasinoCooldown(userId);
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    if (amount > casinoCash) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash. You have ${formatDollars(casinoCash)}.`)] }); return; }
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash - amount).toFixed(2) }).where(eq(portfolios.userId, userId));
+    const { startCrashGame } = await import("./crash");
+    const game = startCrashGame(userId, amount, autoCashout);
+    // Crash auto-resolves — wait for it
+    const checkResult = async (): Promise<any> => {
+      const { getCrashGame } = await import("./crash");
+      const g = getCrashGame(userId);
+      if (!g || g.status !== "flying") return g;
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return checkResult();
+    };
+    const result = await Promise.race([checkResult(), new Promise(resolve => setTimeout(() => resolve(null), 15000))]) as any;
+    if (!result) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription("Crash game timed out.")] }); return; }
+    // Credit payout
+    if (result.status === "cashed_out" && result.payout > 0) {
+      const fresh = await getOrCreatePortfolio(userId);
+      const newCasino = parseFloat(String(fresh.casinoBalance ?? "0")) + result.payout;
+      await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, userId));
+    }
+    recordCasinoGame(userId);
+    cache.invalidate("casino.leaderboard");
+    const won = result.status === "cashed_out";
+    await message.reply({ embeds: [new EmbedBuilder()
+      .setTitle(won ? "🚀 Crash — Cashed Out!" : "💥 Crash — Busted!")
+      .setColor(won ? embedColor("success") : embedColor("error"))
+      .addFields(
+        { name: "Crash Point", value: `**${(result.crashPoint ?? 1).toFixed(2)}x**`, inline: true },
+        { name: won ? "Cashout" : "Bet", value: won ? `${(result.cashoutMultiplier ?? 1).toFixed(2)}x → +${formatDollars(result.payout ?? 0)}` : formatDollars(amount), inline: true },
+      )] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handlePlinko(message: Message, userId: number, amount: number, risk: "low" | "medium" | "high"): Promise<void> {
+  try {
+    const { checkCasinoCooldown, recordCasinoGame } = await import("./casinoUtils");
+    await checkCasinoCooldown(userId);
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    if (amount > casinoCash) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash. You have ${formatDollars(casinoCash)}.`)] }); return; }
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash - amount).toFixed(2) }).where(eq(portfolios.userId, userId));
+    const { dropBall } = await import("./plinko");
+    const result = dropBall(amount, risk);
+    if (result.payout > 0) {
+      const fresh = await getOrCreatePortfolio(userId);
+      const newCasino = parseFloat(String(fresh.casinoBalance ?? "0")) + result.payout;
+      await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, userId));
+    }
+    recordCasinoGame(userId);
+    cache.invalidate("casino.leaderboard");
+    const won = result.payout > 0;
+    await message.reply({ embeds: [new EmbedBuilder()
+      .setTitle(won ? "📌 Plinko — WIN!" : "📌 Plinko — Loss")
+      .setColor(won ? embedColor("success") : embedColor("error"))
+      .addFields(
+        { name: "Multiplier", value: `**${result.multiplier.toFixed(2)}x**`, inline: true },
+        { name: "Risk", value: risk.toUpperCase(), inline: true },
+        { name: won ? "Payout" : "Lost", value: won ? `+${formatDollars(result.payout)}` : formatDollars(amount), inline: true },
+      )] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handleDailyBonus(message: Message, userId: number): Promise<void> {
+  try {
+    const client = getRawClient();
+    const today = new Date().toISOString().slice(0, 10);
+    const claimed = await client.execute({ sql: `SELECT id FROM casino_daily_claims WHERE userId = ? AND date(createdAt) = ?`, args: [userId, today] });
+    if (claimed.rows.length > 0) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription("Already claimed today! Come back tomorrow.")] }); return; }
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash + 1).toFixed(2) }).where(eq(portfolios.userId, userId));
+    await client.execute({ sql: `INSERT INTO casino_daily_claims (userId) VALUES (?)`, args: [userId] });
+    await message.reply({ embeds: [new EmbedBuilder().setTitle("🎁 Daily Bonus!").setColor(embedColor("success")).setDescription(`+$1.00 casino cash! Balance: ${formatDollars(casinoCash + 1)}`)] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handleCreateOrder(message: Message, userId: number, ticker: string, orderType: string, shares: number, targetPrice: number): Promise<void> {
+  try {
+    const { createOrder } = await import("./db");
+    await createOrder({ userId, ticker, orderType: orderType as any, shares, targetPrice });
+    const label = orderType.replace("_", " ").toUpperCase();
+    await message.reply({ embeds: [new EmbedBuilder().setTitle("📋 Order Created").setColor(embedColor("success")).addFields(
+      { name: "Type", value: label, inline: true },
+      { name: "Ticker", value: `$${ticker}`, inline: true },
+      { name: "Shares", value: shares.toFixed(2), inline: true },
+      { name: "Target", value: formatDollars(targetPrice), inline: true },
+    )] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handleCancelOrder(message: Message, userId: number, orderId: number): Promise<void> {
+  try {
+    const { cancelOrder } = await import("./db");
+    await cancelOrder(orderId, userId);
+    await message.reply({ embeds: [new EmbedBuilder().setTitle("❌ Order Cancelled").setColor(embedColor("info")).setDescription(`Order #${orderId} cancelled.`)] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handleBuyCosmetic(message: Message, userId: number, itemName: string): Promise<void> {
+  try {
+    const client = getRawClient();
+    const items = await client.execute(`SELECT id, name, price, type FROM cosmetic_items WHERE (stock IS NULL OR stock > 0)`);
+    const match = items.rows.find((row: any) => String(row.name).toLowerCase().includes(itemName.toLowerCase()));
+    if (!match) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Cosmetic "${itemName}" not found.`)] }); return; }
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    const price = Number(match.price);
+    if (price > casinoCash) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Need ${formatDollars(price)}, have ${formatDollars(casinoCash)}.`)] }); return; }
+    // Check if already owned
+    const owned = await client.execute({ sql: `SELECT id FROM user_cosmetics WHERE userId = ? AND cosmeticId = ?`, args: [userId, Number(match.id)] });
+    if (owned.rows.length > 0) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription(`You already own "${match.name}".`)] }); return; }
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash - price).toFixed(2) }).where(eq(portfolios.userId, userId));
+    await client.execute({ sql: `INSERT INTO user_cosmetics (userId, cosmeticId) VALUES (?, ?)`, args: [userId, Number(match.id)] });
+    cache.invalidate("casino.leaderboard");
+    await message.reply({ embeds: [new EmbedBuilder().setTitle("🛒 Purchased!").setColor(embedColor("success")).setDescription(`**${match.name}** — ${formatDollars(price)}\nBalance: ${formatDollars(casinoCash - price)}`)] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
+async function handleEquipCosmetic(message: Message, userId: number, itemName: string, cosmeticType: "title" | "name_effect"): Promise<void> {
+  try {
+    const client = getRawClient();
+    const owned = await client.execute({ sql: `SELECT uc.cosmeticId, ci.name, ci.type FROM user_cosmetics uc JOIN cosmetic_items ci ON ci.id = uc.cosmeticId WHERE uc.userId = ?`, args: [userId] });
+    const match = owned.rows.find((row: any) => String(row.name).toLowerCase().includes(itemName.toLowerCase()) && String(row.type) === cosmeticType);
+    if (!match) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`You don't own a ${cosmeticType} called "${itemName}".`)] }); return; }
+    // Upsert equipped
+    await client.execute({ sql: `INSERT INTO user_equipped (userId, type, cosmeticId) VALUES (?, ?, ?) ON CONFLICT(userId, type) DO UPDATE SET cosmeticId = ?`, args: [userId, cosmeticType, Number(match.cosmeticId), Number(match.cosmeticId)] });
+    await message.reply({ embeds: [new EmbedBuilder().setTitle("✨ Equipped!").setColor(embedColor("success")).setDescription(`**${match.name}** is now active.`)] });
+  } catch (err: any) { await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] }); }
+}
+
 async function handleAudit(targetName: string): Promise<EmbedBuilder[]> {
   // Find target user
   const client = getRawClient();
@@ -601,11 +949,11 @@ function handleHelp(): EmbedBuilder {
     .setColor(embedColor("info"))
     .setDescription("Just type naturally! Examples:")
     .addFields(
-      { name: "📊 Info", value: "`what's my portfolio?`\n`show prices`\n`leaderboard`\n`is dori in game?`\n`last 5 matches`\n`my casino balance`\n`my holdings`\n`recent trades`\n`my trades`\n`top casino`" },
-      { name: "💰 Trading", value: "`buy $20 of DORI`\n`sell 5 shares of TDRI`\n`sell all DORI`\n`short $10 SDRI`\n`cover all XDRI`" },
-      { name: "⚔️ Compare", value: "`compare me to Kyle`\n`how am I doing vs Sarah`" },
-      { name: "🔍 Audit", value: "`audit Andrew`\n`show me Kyle's trading history`\n`is Shawn cheating?`" },
-      { name: "🎲 Betting & Casino", value: "`bet $10 on win`\n`bet $5 loss`\n`deposit $5 to casino`\n`put $10 on red`\n`$50 on black roulette`" },
+      { name: "📊 Info", value: "`portfolio` · `prices` · `leaderboard` · `holdings`\n`is dori in game?` · `last 5 matches` · `recent trades`\n`my trades` · `my bets` · `my dividends` · `my orders`\n`streaks` · `champion pool` · `player stats`\n`news` · `notifications` · `top casino`" },
+      { name: "💰 Trading", value: "`buy $20 DORI` · `sell 5 shares TDRI` · `sell all DORI`\n`short $10 SDRI` · `cover all XDRI` · `all in on DORI`\n`limit buy 5 DORI at $10` · `stop loss 3 DORI at $8`\n`cancel order #42`" },
+      { name: "⚔️ Social", value: "`compare me to Kyle` · `audit Andrew`" },
+      { name: "🎲 Betting & Casino", value: "`bet $10 on win` · `is betting open?`\n`deposit $5 to casino` · `daily bonus`\n`$10 on red` · `roll dice $5 over 50` · `crash $5`\n`plinko $2 high risk`" },
+      { name: "🛒 Cosmetics", value: "`show shop` · `my cosmetics`\n`buy Rainbow` · `equip High Roller`" },
       { name: "🔗 Account", value: "`/link your@email.com` — link Discord to your account\n`/whoami` — check your linked account" },
     );
 }
@@ -922,9 +1270,16 @@ async function handleMessage(message: Message): Promise<void> {
   const unknownIntents: BotIntent[] = [];
 
   for (const intent of intents) {
-    if (["portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance", "match_history", "holdings", "help", "compare", "audit", "recent_trades", "casino_leaderboard", "my_trades"].includes(intent.type)) {
+    const READ_TYPES = [
+      "portfolio", "prices", "price", "leaderboard", "live_game", "casino_balance",
+      "match_history", "holdings", "help", "compare", "audit", "recent_trades",
+      "casino_leaderboard", "my_trades", "news", "notifications", "betting_status",
+      "champion_pool", "streaks", "my_bets", "my_orders", "my_dividends",
+      "shop_catalog", "my_cosmetics", "player_stats",
+    ];
+    if (READ_TYPES.includes(intent.type)) {
       readIntents.push(intent);
-    } else if (intent.type === "bet" || intent.type === "casino_deposit" || intent.type === "roulette") {
+    } else if (["bet", "casino_deposit", "roulette", "dice", "crash", "plinko", "daily_bonus", "create_order", "cancel_order", "buy_cosmetic", "equip_cosmetic"].includes(intent.type)) {
       betIntents.push(intent);
     } else if (intent.type === "unknown") {
       unknownIntents.push(intent);
@@ -957,17 +1312,36 @@ async function handleMessage(message: Message): Promise<void> {
         case "recent_trades": readEmbeds.push(await handleRecentTrades((intent as any).count)); break;
         case "casino_leaderboard": readEmbeds.push(await handleCasinoLeaderboard()); break;
         case "my_trades": readEmbeds.push(await handleMyTrades(userId, userName, (intent as any).count)); break;
+        case "news": readEmbeds.push(await handleNews((intent as any).count)); break;
+        case "notifications": readEmbeds.push(await handleNotifications(userId)); break;
+        case "betting_status": readEmbeds.push(await handleBettingStatus()); break;
+        case "champion_pool": readEmbeds.push(await handleChampionPool()); break;
+        case "streaks": readEmbeds.push(await handleStreaks()); break;
+        case "my_bets": readEmbeds.push(await handleMyBets(userId, userName)); break;
+        case "my_orders": readEmbeds.push(await handleMyOrders(userId, userName)); break;
+        case "my_dividends": readEmbeds.push(await handleMyDividends(userId, userName, (intent as any).count)); break;
+        case "shop_catalog": readEmbeds.push(await handleShopCatalog()); break;
+        case "my_cosmetics": readEmbeds.push(await handleMyCosmetics(userId, userName)); break;
+        case "player_stats": readEmbeds.push(await handlePlayerStats()); break;
       }
     }
     if (readEmbeds.length > 0) {
       await message.reply({ embeds: readEmbeds.slice(0, 10) }); // Discord max 10 embeds
     }
 
-    // Execute bets, deposits, roulette directly
+    // Execute instant actions directly
     for (const intent of betIntents) {
       if (intent.type === "bet") await handleBet(message, userId, intent.prediction, intent.amount);
       if (intent.type === "casino_deposit") await handleCasinoDeposit(message, userId, intent.amount);
       if (intent.type === "roulette") await handleRoulette(message, userId, intent.color, intent.amount);
+      if (intent.type === "dice") await handleDice(message, userId, intent.amount, intent.target, intent.direction);
+      if (intent.type === "crash") await handleCrash(message, userId, intent.amount, intent.autoCashout);
+      if (intent.type === "plinko") await handlePlinko(message, userId, intent.amount, intent.risk);
+      if (intent.type === "daily_bonus") await handleDailyBonus(message, userId);
+      if (intent.type === "create_order") await handleCreateOrder(message, userId, intent.ticker, intent.orderType, intent.shares, intent.targetPrice);
+      if (intent.type === "cancel_order") await handleCancelOrder(message, userId, intent.orderId);
+      if (intent.type === "buy_cosmetic") await handleBuyCosmetic(message, userId, intent.itemName);
+      if (intent.type === "equip_cosmetic") await handleEquipCosmetic(message, userId, intent.itemName, intent.cosmeticType);
     }
 
     // Handle trades — if compound, batch into one confirmation
