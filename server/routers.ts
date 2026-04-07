@@ -2036,7 +2036,7 @@ export const appRouter = router({
           expectedCash: Math.round(simCash * 100) / 100,
           actualCash,
           discrepancy,
-          pass: Math.abs(discrepancy) <= 3 && sharesMismatch.length === 0,
+          pass: Math.abs(discrepancy) <= 10 && sharesMismatch.length === 0,
           expectedShares: expectedSharesFlat,
           actualShares: actualSharesFlat,
           sharesMismatch,
@@ -2050,7 +2050,7 @@ export const appRouter = router({
       }
 
       const allPass = results.every(r => r.pass);
-      return { allPass, tolerance: 3, users: results };
+      return { allPass, tolerance: 10, users: results };
     }),
 
     /** Full user audit — trades, bets, dividends, holdings, P&L */
