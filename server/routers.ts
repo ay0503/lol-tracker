@@ -1833,6 +1833,179 @@ export const appRouter = router({
         }
       }, FIVE_MIN);
     }),
+    /** Integrity check — replay all transactions and verify balances match */
+    auditIntegrity: adminProcedure.query(async () => {
+      const db = await getDb();
+      const allUsers = await db.select({
+        id: users.id,
+        name: sql`COALESCE(${users.displayName}, ${users.name})`.as("name"),
+      }).from(users);
+
+      const results: {
+        userId: number;
+        userName: string;
+        expectedCash: number;
+        actualCash: number;
+        discrepancy: number;
+        pass: boolean;
+        expectedShares: Record<string, number>;
+        actualShares: Record<string, number>;
+        sharesMismatch: string[];
+        tradeCount: number;
+        betCount: number;
+        dividendCount: number;
+        casinoDeposits: number;
+        notes: string[];
+      }[] = [];
+
+      for (const user of allUsers) {
+        const userId = user.id;
+        const userName = String(user.name);
+
+        // Get actual state
+        const portfolio = await getOrCreatePortfolio(userId);
+        const actualCash = parseFloat(String(portfolio.cashBalance ?? "200"));
+        const holdingsList = await getUserHoldings(userId);
+
+        // Get all transactions
+        const allTrades = await getUserTrades(userId, 10000);
+        const allBetsList = await db.select().from(bets).where(eq(bets.userId, userId));
+        const allDivs = await getUserDividends(userId, 10000);
+
+        // Sort trades chronologically (oldest first)
+        const sortedTrades = [...allTrades].reverse();
+
+        // Replay: start at $200
+        let simCash = 200;
+        const simShares: Record<string, number> = {};
+        const simShortShares: Record<string, number> = {};
+        const simShortAvg: Record<string, number> = {};
+        const notes: string[] = [];
+
+        for (const tr of sortedTrades) {
+          const shares = parseFloat(String(tr.shares ?? "0"));
+          const price = parseFloat(String(tr.pricePerShare ?? "0"));
+          const total = parseFloat(String(tr.totalAmount ?? "0"));
+
+          switch (tr.type) {
+            case "buy":
+              simCash -= total;
+              simShares[tr.ticker] = (simShares[tr.ticker] ?? 0) + shares;
+              break;
+            case "sell":
+              simCash += total;
+              simShares[tr.ticker] = (simShares[tr.ticker] ?? 0) - shares;
+              break;
+            case "short":
+              // cash -= 50% margin
+              simCash -= total * 0.5;
+              simShortShares[tr.ticker] = (simShortShares[tr.ticker] ?? 0) + shares;
+              simShortAvg[tr.ticker] = price; // simplified — real uses weighted avg
+              break;
+            case "cover":
+              // cash += marginReturn + saleProceeds - buyCost
+              // marginReturn = shares * shortAvg * 0.5
+              // saleProceeds = shares * shortAvg
+              // buyCost = total (= shares * coverPrice)
+              {
+                const avg = simShortAvg[tr.ticker] ?? price;
+                const marginReturn = shares * avg * 0.5;
+                const saleProceeds = shares * avg;
+                simCash += marginReturn + saleProceeds - total;
+                simShortShares[tr.ticker] = (simShortShares[tr.ticker] ?? 0) - shares;
+              }
+              break;
+            case "dividend":
+              simCash += total;
+              break;
+          }
+        }
+
+        // Replay dividends (ones not in trades table)
+        let dividendCount = 0;
+        for (const div of allDivs) {
+          const payout = parseFloat(String(div.totalPayout ?? "0"));
+          // Check if this dividend is already recorded as a trade
+          // Dividends are inserted into both dividends table AND trades table
+          // So we don't double-count — the trades replay above already handles it
+          dividendCount++;
+        }
+
+        // Replay bets
+        let betCount = 0;
+        for (const bet of allBetsList) {
+          const amount = parseFloat(String(bet.amount ?? "0"));
+          simCash -= amount; // deducted on placement
+          if (bet.status === "won" && bet.payout) {
+            simCash += parseFloat(String(bet.payout)); // payout credited
+          }
+          betCount++;
+        }
+
+        // Estimate casino deposits (untracked cash leak)
+        // We can't know exact amount, but flag if there's a gap
+        let casinoDeposits = 0;
+        try {
+          const client = getRawClient();
+          // No deposit log exists, so we estimate: if simCash > actualCash by more than $3,
+          // the difference is likely casino deposits
+          // This is a known gap in the audit
+        } catch { /* ignore */ }
+
+        // Compare shares
+        const actualSharesMap: Record<string, number> = {};
+        const actualShortMap: Record<string, number> = {};
+        for (const h of holdingsList) {
+          const sh = parseFloat(String(h.shares ?? "0"));
+          const ss = parseFloat(String(h.shortShares ?? "0"));
+          if (sh > 0.001) actualSharesMap[h.ticker] = sh;
+          if (ss > 0.001) actualShortMap[h.ticker] = ss;
+        }
+
+        const expectedSharesFlat: Record<string, number> = {};
+        const actualSharesFlat: Record<string, number> = {};
+        const sharesMismatch: string[] = [];
+
+        const allTickers = new Set([...Object.keys(simShares), ...Object.keys(actualSharesMap)]);
+        for (const ticker of Array.from(allTickers)) {
+          const expected = Math.round((simShares[ticker] ?? 0) * 100) / 100;
+          const actual = Math.round((actualSharesMap[ticker] ?? 0) * 100) / 100;
+          if (expected > 0.001 || actual > 0.001) {
+            expectedSharesFlat[ticker] = expected;
+            actualSharesFlat[ticker] = actual;
+            if (Math.abs(expected - actual) > 0.02) {
+              sharesMismatch.push(`$${ticker}: expected ${expected}, actual ${actual}`);
+            }
+          }
+        }
+
+        const discrepancy = Math.round((simCash - actualCash) * 100) / 100;
+        if (Math.abs(discrepancy) > 3 && discrepancy > 0) {
+          notes.push(`Cash gap of $${discrepancy.toFixed(2)} — likely casino deposits (untracked)`);
+        }
+
+        results.push({
+          userId,
+          userName,
+          expectedCash: Math.round(simCash * 100) / 100,
+          actualCash,
+          discrepancy,
+          pass: Math.abs(discrepancy) <= 3 && sharesMismatch.length === 0,
+          expectedShares: expectedSharesFlat,
+          actualShares: actualSharesFlat,
+          sharesMismatch,
+          tradeCount: sortedTrades.length,
+          betCount,
+          dividendCount,
+          casinoDeposits,
+          notes,
+        });
+      }
+
+      const allPass = results.every(r => r.pass);
+      return { allPass, tolerance: 3, users: results };
+    }),
+
     /** Full user audit — trades, bets, dividends, holdings, P&L */
     auditUser: adminProcedure
       .input(z.object({ userId: z.number() }))

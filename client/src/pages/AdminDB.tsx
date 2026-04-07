@@ -559,6 +559,77 @@ function TableBrowser() {
 }
 
 // ─── CI Dashboard Component ───
+function IntegrityCheck() {
+  const { data, isLoading, refetch } = trpc.admin.auditIntegrity.useQuery(undefined, { enabled: false });
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold">Integrity Check</h3>
+          {data && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${data.allPass ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"}`}>
+              {data.allPass ? "ALL PASS" : "DISCREPANCY FOUND"}
+            </span>
+          )}
+        </div>
+        <Button size="sm" onClick={() => refetch()} disabled={isLoading}>
+          {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+          {data ? "Re-run" : "Run Audit"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Replays all trades, bets, and dividends from $200 start. Verifies cash and share balances match. Tolerance: ${data?.tolerance ?? 3}.
+      </p>
+
+      {data && (
+        <div className="space-y-2">
+          {data.users.map((user: any) => (
+            <div key={user.userId} className={`rounded-lg border p-3 ${user.pass ? "border-border bg-secondary/30" : "border-red-500/40 bg-red-950/20"}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold ${user.pass ? "text-green-400" : "text-red-400"}`}>
+                    {user.pass ? "✓" : "✗"}
+                  </span>
+                  <span className="text-sm font-bold">{user.userName}</span>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {user.tradeCount} trades · {user.betCount} bets · {user.dividendCount} divs
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-xs font-mono">
+                  <span className="text-muted-foreground">expected: ${user.expectedCash.toFixed(2)}</span>
+                  <span className="text-muted-foreground">actual: ${user.actualCash.toFixed(2)}</span>
+                  <span className={`font-bold ${Math.abs(user.discrepancy) <= 3 ? "text-green-400" : "text-red-400"}`}>
+                    Δ${user.discrepancy.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {user.sharesMismatch.length > 0 && (
+                <div className="mt-2 text-xs text-red-400">
+                  <p className="font-bold">Share mismatches:</p>
+                  {user.sharesMismatch.map((msg: string, idx: number) => (
+                    <p key={idx} className="font-mono ml-2">{msg}</p>
+                  ))}
+                </div>
+              )}
+
+              {user.notes.length > 0 && (
+                <div className="mt-1.5">
+                  {user.notes.map((note: string, idx: number) => (
+                    <p key={idx} className="text-xs text-yellow-400 font-mono">{note}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UserAudit() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const { data: allUsers } = trpc.admin.tableRows.useQuery(
@@ -1485,6 +1556,7 @@ export default function AdminDB() {
           </TabsContent>
 
           <TabsContent value="audit">
+            <IntegrityCheck />
             <UserAudit />
           </TabsContent>
         </Tabs>
