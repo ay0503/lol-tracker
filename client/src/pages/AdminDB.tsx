@@ -642,7 +642,10 @@ function IntegrityCheck() {
 
       {showResults && data && (
         <div className="space-y-2">
-          {data.users.map((user: any) => (
+          {data.users.map((user: any) => {
+            const bd = user.breakdown;
+            const hasBd = bd && typeof bd.starting === "number";
+            return (
             <div key={user.userId} className={`rounded-lg border p-3 ${user.pass ? "border-border bg-secondary/30" : "border-red-500/40 bg-red-950/20"}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -663,6 +666,31 @@ function IntegrityCheck() {
                 </div>
               </div>
 
+              {/* Cash flow breakdown — always show for failed, collapsible for passed */}
+              {hasBd && !user.pass && (
+                <div className="mt-2 grid grid-cols-3 sm:grid-cols-5 gap-1.5 text-xs">
+                  {[
+                    { label: "Starting", value: bd.starting, color: "text-foreground" },
+                    { label: "Buys", value: bd.buys, color: "text-[color:var(--color-loss)]" },
+                    { label: "Sells", value: bd.sells, color: "text-[color:var(--color-win)]" },
+                    { label: "Short margin", value: bd.shortMargin, color: "text-orange-400" },
+                    { label: "Cover returns", value: bd.coverReturns, color: "text-blue-400" },
+                    { label: "Dividends", value: bd.dividends, color: "text-[color:var(--color-win)]" },
+                    { label: "Bets placed", value: bd.betsPlaced, color: "text-[color:var(--color-loss)]" },
+                    { label: "Bets won", value: bd.betsWon, color: "text-[color:var(--color-win)]" },
+                    { label: "= Computed", value: bd.computed, color: "text-foreground font-bold" },
+                    { label: "Actual", value: user.actualCash, color: "text-foreground font-bold" },
+                  ].map(item => (
+                    <div key={item.label} className="bg-background/50 rounded px-2 py-1">
+                      <p className="text-muted-foreground text-[10px]">{item.label}</p>
+                      <p className={`font-mono ${item.color}`}>
+                        {item.value >= 0 ? "" : ""}{typeof item.value === "number" ? `$${item.value.toFixed(2)}` : "—"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {user.sharesMismatch.length > 0 && (
                 <div className="mt-2 text-xs text-red-400">
                   <p className="font-bold">Share mismatches:</p>
@@ -680,7 +708,8 @@ function IntegrityCheck() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

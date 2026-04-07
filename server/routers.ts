@@ -1901,12 +1901,21 @@ export const appRouter = router({
         // Trades are already sorted ASC by createdAt
         const sortedTrades = userTrades;
 
-        // Replay: start at $200
+        // Replay: start at $200, track per-category cash flows
         let simCash = 200;
         const simShares: Record<string, number> = {};
         const simShortShares: Record<string, number> = {};
         const simShortAvg: Record<string, number> = {};
         const notes: string[] = [];
+
+        // Cash flow breakdown
+        let cashFromBuys = 0;
+        let cashFromSells = 0;
+        let cashFromShortMargin = 0;
+        let cashFromCovers = 0;
+        let cashFromDividends = 0;
+        let cashFromBetsOut = 0;
+        let cashFromBetsIn = 0;
 
         for (const tr of sortedTrades) {
           const shares = parseFloat(String(tr.shares ?? "0"));
@@ -1918,47 +1927,61 @@ export const appRouter = router({
           switch (type) {
             case "buy":
               simCash -= total;
+              cashFromBuys -= total;
               simShares[ticker] = (simShares[ticker] ?? 0) + shares;
               break;
             case "sell":
               simCash += total;
+              cashFromSells += total;
               simShares[ticker] = (simShares[ticker] ?? 0) - shares;
               break;
-            case "short":
-              simCash -= total * 0.5;
-              simShortShares[ticker] = (simShortShares[ticker] ?? 0) + shares;
-              simShortAvg[ticker] = price;
+            case "short": {
+              // Margin = 50% of totalAmount
+              const margin = total * 0.5;
+              simCash -= margin;
+              cashFromShortMargin -= margin;
+              const prevShares = simShortShares[ticker] ?? 0;
+              const prevAvg = simShortAvg[ticker] ?? 0;
+              const newShares = prevShares + shares;
+              // Weighted average for short avg price
+              simShortAvg[ticker] = newShares > 0
+                ? ((prevAvg * prevShares) + (price * shares)) / newShares
+                : price;
+              simShortShares[ticker] = newShares;
               break;
+            }
             case "cover": {
               const avg = simShortAvg[ticker] ?? price;
               const marginReturn = shares * avg * 0.5;
               const saleProceeds = shares * avg;
-              simCash += marginReturn + saleProceeds - total;
+              const coverReturn = marginReturn + saleProceeds - total;
+              simCash += coverReturn;
+              cashFromCovers += coverReturn;
               simShortShares[ticker] = (simShortShares[ticker] ?? 0) - shares;
               break;
             }
             case "dividend":
               simCash += total;
+              cashFromDividends += total;
               break;
           }
         }
 
-        // Dividends are already in trades table (type="dividend"), so already replayed above
-        const dividendCount = sortedTrades.filter(tr => tr.type === "dividend").length;
+        const dividendCount = sortedTrades.filter(tr => String(tr.type) === "dividend").length;
 
         // Replay bets
         let betCount = 0;
         for (const bet of userBets) {
           const amount = parseFloat(String(bet.amount ?? "0"));
-          simCash -= amount; // deducted on placement
+          simCash -= amount;
+          cashFromBetsOut -= amount;
           if (String(bet.status) === "won" && bet.payout) {
-            simCash += parseFloat(String(bet.payout)); // payout credited
+            const payout = parseFloat(String(bet.payout));
+            simCash += payout;
+            cashFromBetsIn += payout;
           }
           betCount++;
         }
-
-        // Casino deposits are untracked — flag as known gap
-        const casinoDeposits = 0;
 
         // Compare shares
         const actualSharesMap: Record<string, number> = {};
@@ -1986,9 +2009,26 @@ export const appRouter = router({
         }
 
         const discrepancy = Math.round((simCash - actualCash) * 100) / 100;
-        if (Math.abs(discrepancy) > 3 && discrepancy > 0) {
-          notes.push(`Cash gap of $${discrepancy.toFixed(2)} — likely casino deposits (untracked)`);
+
+        // Build explanation notes
+        if (discrepancy > 3) {
+          notes.push(`Expected > actual by $${discrepancy.toFixed(2)} — likely casino deposits or admin reset`);
+        } else if (discrepancy < -3) {
+          notes.push(`Expected < actual by $${Math.abs(discrepancy).toFixed(2)} — likely admin cash grant or short avg drift`);
         }
+
+        // Cash flow breakdown for debugging
+        const breakdown = {
+          starting: 200,
+          buys: Math.round(cashFromBuys * 100) / 100,
+          sells: Math.round(cashFromSells * 100) / 100,
+          shortMargin: Math.round(cashFromShortMargin * 100) / 100,
+          coverReturns: Math.round(cashFromCovers * 100) / 100,
+          dividends: Math.round(cashFromDividends * 100) / 100,
+          betsPlaced: Math.round(cashFromBetsOut * 100) / 100,
+          betsWon: Math.round(cashFromBetsIn * 100) / 100,
+          computed: Math.round(simCash * 100) / 100,
+        };
 
         results.push({
           userId,
@@ -2003,8 +2043,9 @@ export const appRouter = router({
           tradeCount: sortedTrades.length,
           betCount,
           dividendCount,
-          casinoDeposits,
+          casinoDeposits: 0,
           notes,
+          breakdown,
         });
       }
 
