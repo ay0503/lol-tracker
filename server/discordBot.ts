@@ -539,7 +539,7 @@ async function handleMessage(message: Message): Promise<void> {
   const userName = String(discordUser.displayName || discordUser.name || "User");
 
   // Show typing indicator while LLM processes
-  await message.channel.sendTyping();
+  if ("sendTyping" in message.channel) await message.channel.sendTyping();
 
   // Parse intent
   const intent = await parseIntent(message.content);
