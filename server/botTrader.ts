@@ -53,7 +53,7 @@ async function ensureBotLogTable() {
     )`);
   } catch { /* ignore */ }
 }
-ensureBotLogTable();
+let _botLogTableReady = false;
 
 async function logBotDecision(
   decision: TradeDecision,
@@ -63,6 +63,10 @@ async function logBotDecision(
   resultMessage: string,
 ) {
   try {
+    if (!_botLogTableReady) {
+      await ensureBotLogTable();
+      _botLogTableReady = true;
+    }
     const client = getRawClient();
     await client.execute({
       sql: `INSERT INTO bot_decision_log (action, ticker, amount, reasoning, sentiment, confidence, prompt, source, success, resultMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
