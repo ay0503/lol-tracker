@@ -957,6 +957,84 @@ async function handleAudit(targetName: string): Promise<EmbedBuilder[]> {
 
   embeds.push(activity);
 
+  // Embed 3: Integrity replay — replay all transactions from $200 start
+  try {
+    const allTradesRaw = await client.execute({ sql: `SELECT type, ticker, shares, pricePerShare, totalAmount FROM trades WHERE userId = ? ORDER BY createdAt ASC`, args: [targetId] });
+    const allBetsRaw = await client.execute({ sql: `SELECT amount, status, payout FROM bets WHERE userId = ?`, args: [targetId] });
+
+    let simCash = 200;
+    let cashBuys = 0, cashSells = 0, cashShortMargin = 0, cashCovers = 0, cashDivs = 0;
+    const simShortAvg: Record<string, number> = {};
+    const simShortShares: Record<string, number> = {};
+
+    for (const tr of allTradesRaw.rows) {
+      const shares = parseFloat(String(tr.shares ?? "0"));
+      const price = parseFloat(String(tr.pricePerShare ?? "0"));
+      const total = parseFloat(String(tr.totalAmount ?? "0"));
+      const type = String(tr.type);
+      const ticker = String(tr.ticker);
+      switch (type) {
+        case "buy": simCash -= total; cashBuys -= total; break;
+        case "sell": simCash += total; cashSells += total; break;
+        case "short": {
+          const margin = total * 0.5;
+          simCash -= margin; cashShortMargin -= margin;
+          const prev = simShortShares[ticker] ?? 0;
+          const prevAvg = simShortAvg[ticker] ?? 0;
+          const newS = prev + shares;
+          simShortAvg[ticker] = newS > 0 ? ((prevAvg * prev) + (price * shares)) / newS : price;
+          simShortShares[ticker] = newS;
+          break;
+        }
+        case "cover": {
+          const avg = simShortAvg[ticker] ?? price;
+          const ret = shares * avg * 0.5 + shares * avg - total;
+          simCash += ret; cashCovers += ret;
+          simShortShares[ticker] = (simShortShares[ticker] ?? 0) - shares;
+          break;
+        }
+        case "dividend": simCash += total; cashDivs += total; break;
+      }
+    }
+
+    let cashBetsOut = 0, cashBetsIn = 0;
+    for (const bet of allBetsRaw.rows) {
+      const amount = parseFloat(String(bet.amount ?? "0"));
+      simCash -= amount; cashBetsOut -= amount;
+      if (String(bet.status) === "won" && bet.payout) {
+        const pay = parseFloat(String(bet.payout));
+        simCash += pay; cashBetsIn += pay;
+      }
+    }
+
+    const expectedCash = Math.round(simCash * 100) / 100;
+    const discrepancy = Math.round((expectedCash - cash) * 100) / 100;
+    const pass = Math.abs(discrepancy) <= 10;
+
+    const integrity = new EmbedBuilder()
+      .setTitle(`${pass ? "✅" : "⚠️"} ${name} — Integrity Check`)
+      .setColor(pass ? embedColor("success") : embedColor("warn"))
+      .setDescription([
+        "```",
+        `Starting:       $200.00`,
+        `Buys:           ${formatDollars(cashBuys)}`,
+        `Sells:          +${formatDollars(cashSells)}`,
+        `Short margin:   ${formatDollars(cashShortMargin)}`,
+        `Cover returns:  ${cashCovers >= 0 ? "+" : ""}${formatDollars(cashCovers)}`,
+        `Dividends:      +${formatDollars(cashDivs)}`,
+        `Bets placed:    ${formatDollars(cashBetsOut)}`,
+        `Bets won:       +${formatDollars(cashBetsIn)}`,
+        `─────────────────────`,
+        `Expected:       ${formatDollars(expectedCash)}`,
+        `Actual:         ${formatDollars(cash)}`,
+        `Δ Discrepancy:  ${formatDollars(discrepancy)}`,
+        "```",
+      ].join("\n"))
+      .setFooter({ text: pass ? `PASS (within $10 tolerance)` : `FAIL — ${Math.abs(discrepancy) > 0 && discrepancy > 0 ? "likely casino deposits or admin reset" : "possible admin cash grant or short avg drift"}` });
+
+    embeds.push(integrity);
+  } catch { /* integrity check is optional */ }
+
   return embeds;
 }
 
