@@ -681,8 +681,8 @@ async function handleCrash(message: Message, userId: number, amount: number, aut
     const game = startCrashGame(userId, amount, autoCashout);
     // Crash auto-resolves — wait for it
     const checkResult = async (): Promise<any> => {
-      const { getCrashGame } = await import("./crash");
-      const g = getCrashGame(userId);
+      const { getActiveCrashGame } = await import("./crash");
+      const g = getActiveCrashGame(userId);
       if (!g || g.status !== "flying") return g;
       await new Promise(resolve => setTimeout(resolve, 200));
       return checkResult();
@@ -720,7 +720,7 @@ async function handlePlinko(message: Message, userId: number, amount: number, ri
     const { eq } = await import("drizzle-orm");
     const db = await getDatabase();
     await db.update(portfolios).set({ casinoBalance: (casinoCash - amount).toFixed(2) }).where(eq(portfolios.userId, userId));
-    const { dropBall } = await import("./plinko");
+    const { drop: dropBall } = await import("./plinko");
     const result = dropBall(amount, risk);
     if (result.payout > 0) {
       const fresh = await getOrCreatePortfolio(userId);
