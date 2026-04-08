@@ -34,11 +34,20 @@ async function sendMessage(content: string): Promise<boolean> {
   }
 }
 
-export async function notifyGameStart(champion?: string, gameMode?: string): Promise<void> {
+export async function notifyGameStart(
+  champion?: string,
+  gameMode?: string,
+  winProb?: { weighted: number; champion: number; champGames: number; recentRecord: string } | null,
+): Promise<void> {
   const parts = ["🎮 **$DORI LIVE** — 목도리 도마뱀 just entered a game!"];
   if (gameMode) parts.push(`Mode: **${gameMode}**`);
   if (champion) parts.push(`Champion: **${champion}**`);
-  parts.push("⚠️ Trading is now **halted** until the match ends.");
+  if (winProb) {
+    const bar = "█".repeat(Math.round(winProb.weighted / 10)) + "░".repeat(10 - Math.round(winProb.weighted / 10));
+    parts.push(`\n🎯 **Win Probability: ${winProb.weighted}%** ${bar}`);
+    if (winProb.champGames > 0) parts.push(`${champion}: ${winProb.champion}% WR (${winProb.champGames} games) · Recent: ${winProb.recentRecord}`);
+  }
+  parts.push("\n⚠️ Trading is now **halted** until the match ends.");
   await sendMessage(parts.join("\n"));
 }
 

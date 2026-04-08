@@ -187,10 +187,27 @@ async function handleLiveGame(): Promise<EmbedBuilder> {
     ? `${Math.floor(details.gameLengthSeconds / 60)}:${String(details.gameLengthSeconds % 60).padStart(2, "0")}`
     : "just started";
 
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setTitle("🔴 IN GAME")
     .setColor(embedColor("error"))
     .setDescription(`**${champion}** — ${gameMode}\nElapsed: ${elapsed}\n\n⚠️ Trading is halted.`);
+
+  // Win probability
+  const prob = details.winProbability;
+  if (prob) {
+    const bar = "█".repeat(Math.round(prob.weighted / 10)) + "░".repeat(10 - Math.round(prob.weighted / 10));
+    embed.addFields(
+      { name: "🎯 Win Probability", value: `**${prob.weighted}%** ${bar}`, inline: false },
+    );
+    if (prob.champGames > 0) {
+      embed.addFields(
+        { name: `${champion} WR`, value: `${prob.champion}% (${prob.champGames} games)`, inline: true },
+        { name: "Recent", value: prob.recentRecord, inline: true },
+      );
+    }
+  }
+
+  return embed;
 }
 
 async function handleMatchHistory(count: number): Promise<EmbedBuilder> {

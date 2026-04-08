@@ -296,7 +296,28 @@ export async function pollNow(): Promise<PollResult> {
           const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
           const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
           const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
-          notifyGameStart(champName, gameMode).catch(() => {});
+          // Compute win probability for the notification (quick DB query)
+          let notifProb: { weighted: number; champion: number; champGames: number; recentRecord: string } | null = null;
+          try {
+            const probClient = getRawClient();
+            const overallR = await probClient.execute(`SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0`);
+            const allG = Number(overallR.rows[0]?.total ?? 0);
+            const allW = Number(overallR.rows[0]?.wins ?? 0);
+            const oWR = allG > 0 ? allW / allG : 0.5;
+            let cWR = oWR, cG = 0;
+            if (champName) {
+              const cR = await probClient.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE champion=? AND isRemake=0`, args: [champName] });
+              cG = Number(cR.rows[0]?.total ?? 0);
+              cWR = cG >= 3 ? Number(cR.rows[0]?.wins ?? 0) / cG : oWR;
+            }
+            const rR = await probClient.execute(`SELECT win FROM matches WHERE isRemake=0 ORDER BY gameCreation DESC LIMIT 10`);
+            const rW = rR.rows.filter(r => Number(r.win) === 1).length;
+            const rWR = rR.rows.length >= 3 ? rW / rR.rows.length : oWR;
+            const cWeight = cG >= 5 ? 0.4 : cG >= 3 ? 0.25 : 0.1;
+            const w = oWR * 0.3 + cWR * cWeight + rWR * (0.7 - cWeight);
+            notifProb = { weighted: Math.round(Math.min(Math.max(w * 100, 15), 85)), champion: Math.round(cWR * 100), champGames: cG, recentRecord: `${rW}W${rR.rows.length - rW}L` };
+          } catch { /* ignore */ }
+          notifyGameStart(champName, gameMode, notifProb).catch(() => {});
           // Open 5-minute betting window in Discord
           import("./discord").then(d => {
             d.sendBettingWindowMessage().then(msgId => {
@@ -326,6 +347,49 @@ export async function pollNow(): Promise<PollResult> {
       const champId = participant?.championId ?? currentGameChampion?.id;
       const champName = champId ? (CHAMPION_NAMES[champId] ?? currentGameChampion?.name) : currentGameChampion?.name;
 
+      // Compute win probability from match history
+      let winProbability: { overall: number; champion: number; recent: number; weighted: number; champGames: number; recentRecord: string } | null = null;
+      try {
+        const client = getRawClient();
+        // Overall win rate
+        const overallRes = await client.execute(`SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0`);
+        const totalGames = Number(overallRes.rows[0]?.total ?? 0);
+        const totalWins = Number(overallRes.rows[0]?.wins ?? 0);
+        const overallWR = totalGames > 0 ? totalWins / totalGames : 0.5;
+
+        // Champion-specific win rate
+        let champWR = 0.5;
+        let champGames = 0;
+        if (champName) {
+          const champRes = await client.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE champion=? AND isRemake=0`, args: [champName] });
+          champGames = Number(champRes.rows[0]?.total ?? 0);
+          const champWins = Number(champRes.rows[0]?.wins ?? 0);
+          champWR = champGames >= 3 ? champWins / champGames : overallWR; // Need 3+ games for meaningful data
+        }
+
+        // Recent form (last 10 games)
+        const recentRes = await client.execute(`SELECT win FROM matches WHERE isRemake=0 ORDER BY gameCreation DESC LIMIT 10`);
+        const recentGames = recentRes.rows.length;
+        const recentWins = recentRes.rows.filter(r => Number(r.win) === 1).length;
+        const recentWR = recentGames >= 3 ? recentWins / recentGames : overallWR;
+        const recentRecord = `${recentWins}W${recentGames - recentWins}L`;
+
+        // Weighted probability: 30% overall + 40% champion + 30% recent form
+        const champWeight = champGames >= 5 ? 0.4 : champGames >= 3 ? 0.25 : 0.1;
+        const overallWeight = 0.3;
+        const recentWeight = 1 - overallWeight - champWeight;
+        const weighted = overallWR * overallWeight + champWR * champWeight + recentWR * recentWeight;
+
+        winProbability = {
+          overall: Math.round(overallWR * 100),
+          champion: Math.round(champWR * 100),
+          recent: Math.round(recentWR * 100),
+          weighted: Math.round(Math.min(Math.max(weighted * 100, 15), 85)), // clamp to 15-85% range
+          champGames,
+          recentRecord,
+        };
+      } catch { /* ignore — probability is optional */ }
+
       cache.set("player.liveGame.details", {
         inGame: true as const,
         gameMode: "Ranked Solo/Duo",
@@ -334,6 +398,7 @@ export async function pollNow(): Promise<PollResult> {
         championId: champId,
         championName: champName,
         isRanked: true,
+        winProbability,
       }, 45_000);
     } else {
       cache.invalidate("player.liveGame.details");

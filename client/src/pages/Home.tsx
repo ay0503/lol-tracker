@@ -405,9 +405,31 @@ function LiveGameBanner() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-xs font-bold text-red-400 uppercase tracking-wider">{t.common.live}</span>
+            <div className="flex items-center gap-3">
+              {/* Win Probability */}
+              {liveGame.winProbability && (
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: liveGame.winProbability.weighted >= 50 ? "var(--color-win)" : "var(--color-loss)" }}>
+                      {liveGame.winProbability.weighted}%
+                    </span>
+                    <p className="text-[10px] text-muted-foreground">{language === "ko" ? "승률" : "Win Prob"}</p>
+                  </div>
+                  <div className="w-16 h-2 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${liveGame.winProbability.weighted}%`,
+                        backgroundColor: liveGame.winProbability.weighted >= 55 ? "var(--color-win)" : liveGame.winProbability.weighted <= 45 ? "var(--color-loss)" : "var(--muted-foreground)",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs font-bold text-red-400 uppercase tracking-wider">{t.common.live}</span>
+              </div>
             </div>
           </div>
 
