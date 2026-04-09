@@ -379,7 +379,7 @@ function LiveGameBanner() {
                   {t.common.inGame}
                 </span>
                 <span className="text-sm font-semibold text-foreground">
-                  목도리 도마뱀 {t.common.liveGameAlert}
+                  안죽기장인 {t.common.liveGameAlert}
                 </span>
                 {liveGame.championName && (
                   <span className="text-xs text-muted-foreground">

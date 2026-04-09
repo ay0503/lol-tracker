@@ -145,7 +145,7 @@ export const appRouter = router({
     current: publicProcedure.query(async () => {
       return cache.getOrSet("player.current", async () => {
         try {
-          const data = await fetchFullPlayerData("목도리 도마뱀", "dori");
+          const data = await fetchFullPlayerData("안죽기장인", "NA0");
           return {
             gameName: data.account.gameName, tagLine: data.account.tagLine,
             puuid: data.account.puuid, summonerLevel: data.summoner.summonerLevel,
@@ -170,7 +170,7 @@ export const appRouter = router({
     }),
     refresh: adminProcedure.mutation(async () => {
       try {
-        const data = await fetchFullPlayerData("목도리 도마뱀", "dori");
+        const data = await fetchFullPlayerData("안죽기장인", "NA0");
         if (data.soloEntry) {
           const totalLP = tierToTotalLP(data.soloEntry.tier, data.soloEntry.rank, data.soloEntry.leaguePoints);
           await addPriceSnapshot({
@@ -193,7 +193,7 @@ export const appRouter = router({
         const count = input?.count ?? 10;
         return cache.getOrSet(`player.matches.${count}`, async () => {
           try {
-            const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
+            const account = await fetchFullPlayerData("안죽기장인", "NA0");
             const matches = await fetchRecentMatches(account.account.puuid, count);
             return matches.map((m) => {
               const player = m.info.participants.find((p) => p.puuid === account.account.puuid);
@@ -1198,7 +1198,7 @@ export const appRouter = router({
     /** Diagnostic: check live game status directly from Riot API (bypasses cache) */
     checkLiveGame: adminProcedure.query(async () => {
       try {
-        const account = await fetchFullPlayerData("목도리 도마뱀", "dori");
+        const account = await fetchFullPlayerData("안죽기장인", "NA0");
         const puuid = account.account.puuid;
         const game = await getActiveGame(puuid);
         const cachedStatus = cache.get<boolean>("player.liveGame.check");

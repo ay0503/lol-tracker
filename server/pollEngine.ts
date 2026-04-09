@@ -32,8 +32,8 @@ import {
 } from "./discord";
 
 // Player config
-const GAME_NAME = "목도리 도마뱀";
-const TAG_LINE = "dori";
+const GAME_NAME = "안죽기장인";
+const TAG_LINE = "NA0";
 
 // Champion ID → Name mapping (Riot Data Dragon)
 const CHAMPION_NAMES: Record<number, string> = {
@@ -1103,7 +1103,7 @@ ${teamContext.bestTeammate ? `- Best teammate: ${teamContext.bestTeammate.champi
 ${teamContext.wasCarried ? `- 팀운 고트: CEO had trash KDA but won. Use "팀운 고트" (team luck GOAT). "${teamContext.bestTeammate?.champion} went ${teamContext.bestTeammate?.kills}/${teamContext.bestTeammate?.deaths}/${teamContext.bestTeammate?.assists} and carried. 팀운 고트 carrying $DORI"` : ""}`;
   }
 
-  const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "목도리 도마뱀" (dori). This is a fake trading platform and you are the news desk.
+  const prompt = `You write headlines for $DORI — a meme stock that tracks a League of Legends player's ranked games. The CEO of $DORI is "안죽기장인" (dori). This is a fake trading platform and you are the news desk.
 
 YOUR VIBE: You write like a deranged r/wallstreetbets poster. Think loss porn captions, gain screenshots, maximum brainrot. Financial jargon meets League of Legends. Write headlines in ENGLISH only — do NOT mix Korean and English in the same headline. You may include a few Korean slang words naturally (ㅋㅋㅋ, ㄹㅇ) as seasoning but the sentence structure must be English.
 
@@ -1136,7 +1136,7 @@ EXAMPLES OF GOOD HEADLINES (notice: each is EITHER English OR has minimal Korean
 - "CEO goes 8/2 and LOSES. 팀운 zero today. Teammates sold harder than $DORI bears."
 
 EXAMPLES OF BAD HEADLINES (DO NOT write like this):
-- "CEO 목도리 도마뱀씹놈, 20+킬에 연루돼서 팀파이트 전투기 몬스터 인증!" ← unnatural forced Korean translation
+- "CEO 안죽기장인씹놈, 20+킬에 연루돼서 팀파이트 전투기 몬스터 인증!" ← unnatural forced Korean translation
 - "CEO 강제로 게임 섭렵 중. 적팀 게임 서버에 금 산사태 던짐!" ← gibberish Korean, nobody talks like this
 - "개손해 스트리 하트 시그널 ㅈㅈ" ← random Korean words mashed together with no meaning
 

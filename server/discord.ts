@@ -39,7 +39,7 @@ export async function notifyGameStart(
   gameMode?: string,
   winProb?: { weighted: number; champion: number; champGames: number; recentRecord: string } | null,
 ): Promise<void> {
-  const parts = ["🎮 **$DORI LIVE** — 목도리 도마뱀 just entered a game!"];
+  const parts = ["🎮 **$DORI LIVE** — 안죽기장인 just entered a game!"];
   if (gameMode) parts.push(`Mode: **${gameMode}**`);
   if (champion) parts.push(`Champion: **${champion}**`);
   if (winProb) {
@@ -116,10 +116,10 @@ export async function notifyStreak(
 ): Promise<void> {
   if (type === "win") {
     const emoji = count >= 5 ? "🔥🔥🔥" : count >= 3 ? "🔥" : "✨";
-    await sendMessage(`${emoji} **${count} WIN STREAK!** 목도리 도마뱀 is on fire`);
+    await sendMessage(`${emoji} **${count} WIN STREAK!** 안죽기장인 is on fire`);
   } else {
     const emoji = count >= 5 ? "💀💀💀" : count >= 3 ? "💀" : "😬";
-    await sendMessage(`${emoji} **${count} LOSS STREAK...** 목도리 도마뱀 is tilting`);
+    await sendMessage(`${emoji} **${count} LOSS STREAK...** 안죽기장인 is tilting`);
   }
 }
 
@@ -216,7 +216,7 @@ export async function sendBettingWindowMessage(): Promise<string | null> {
       },
       body: JSON.stringify({
         content: [
-          "🎲 **BETTING IS OPEN!** — 목도리 도마뱀 just started a game",
+          "🎲 **BETTING IS OPEN!** — 안죽기장인 just started a game",
           "",
           "Place your bets in the next **5 minutes**! Type:",
           '`bet $10 on win` or `bet $5 loss`',
