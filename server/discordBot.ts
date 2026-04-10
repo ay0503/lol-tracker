@@ -205,6 +205,9 @@ async function handleLiveGame(): Promise<EmbedBuilder> {
         { name: "Recent", value: prob.recentRecord, inline: true },
       );
     }
+    if (prob.factors && prob.factors.length > 0) {
+      embed.addFields({ name: "Factors", value: prob.factors.join("\n"), inline: false });
+    }
   }
 
   return embed;

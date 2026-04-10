@@ -193,6 +193,132 @@ export interface PollResult {
 const TICKERS = ETF_TICKERS;
 
 /**
+ * Win probability model — uses multiple factors:
+ * 1. Overall win rate (base)
+ * 2. Champion-specific win rate (weighted by games played)
+ * 3. Recent form (last 10 games)
+ * 4. Tilt detection (consecutive losses penalize harder)
+ * 5. Time-of-day factor (historical WR by hour bucket)
+ * 6. Champion comfort (games played → confidence modifier)
+ */
+async function computeWinProbability(champName: string | null) {
+  try {
+    const client = getRawClient();
+
+    // 1. Overall win rate
+    const overallRes = await client.execute(`SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0`);
+    const totalGames = Number(overallRes.rows[0]?.total ?? 0);
+    const totalWins = Number(overallRes.rows[0]?.wins ?? 0);
+    const overallWR = totalGames > 0 ? totalWins / totalGames : 0.5;
+
+    // 2. Champion-specific win rate
+    let champWR = overallWR;
+    let champGames = 0;
+    if (champName) {
+      const champRes = await client.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE champion=? AND isRemake=0`, args: [champName] });
+      champGames = Number(champRes.rows[0]?.total ?? 0);
+      const champWins = Number(champRes.rows[0]?.wins ?? 0);
+      champWR = champGames >= 3 ? champWins / champGames : overallWR;
+    }
+
+    // 3. Recent form (last 10 games)
+    const recentRes = await client.execute(`SELECT win FROM matches WHERE isRemake=0 ORDER BY gameCreation DESC LIMIT 10`);
+    const recentGames = recentRes.rows.length;
+    const recentWins = recentRes.rows.filter(r => Number(r.win) === 1).length;
+    const recentWR = recentGames >= 3 ? recentWins / recentGames : overallWR;
+    const recentRecord = `${recentWins}W${recentGames - recentWins}L`;
+
+    // 4. Tilt detection — count consecutive losses from most recent game
+    let tiltStreak = 0;
+    for (const row of recentRes.rows) {
+      if (Number(row.win) === 0) tiltStreak++;
+      else break;
+    }
+    // Tilt penalty: -3% per consecutive loss, up to -15%
+    const tiltPenalty = Math.min(tiltStreak * 0.03, 0.15);
+    // Hot streak bonus: +2% per consecutive win, up to +8%
+    let hotStreak = 0;
+    for (const row of recentRes.rows) {
+      if (Number(row.win) === 1) hotStreak++;
+      else break;
+    }
+    const hotBonus = Math.min(hotStreak * 0.02, 0.08);
+
+    // 5. Time-of-day factor — compare WR in current hour bucket (±2hr)
+    const currentHour = new Date().getHours();
+    const hourLow = (currentHour - 2 + 24) % 24;
+    const hourHigh = (currentHour + 2) % 24;
+    let todWR = overallWR;
+    let todLabel = "";
+    try {
+      // SQLite: extract hour from gameCreation (unix ms → hour)
+      const todRes = hourLow < hourHigh
+        ? await client.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0 AND CAST(strftime('%H', gameCreation/1000, 'unixepoch', 'localtime') AS INTEGER) BETWEEN ? AND ?`, args: [hourLow, hourHigh] })
+        : await client.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0 AND (CAST(strftime('%H', gameCreation/1000, 'unixepoch', 'localtime') AS INTEGER) >= ? OR CAST(strftime('%H', gameCreation/1000, 'unixepoch', 'localtime') AS INTEGER) <= ?)`, args: [hourLow, hourHigh] });
+      const todGames = Number(todRes.rows[0]?.total ?? 0);
+      const todWins = Number(todRes.rows[0]?.wins ?? 0);
+      if (todGames >= 5) {
+        todWR = todWins / todGames;
+        const period = currentHour >= 22 || currentHour < 6 ? "Late night" : currentHour >= 17 ? "Evening" : currentHour >= 12 ? "Afternoon" : "Morning";
+        todLabel = `${period}: ${Math.round(todWR * 100)}% (${todGames}G)`;
+      }
+    } catch { /* ignore */ }
+
+    // 6. Champion comfort — confidence modifier based on games played
+    // More games = more reliable champion WR, less reliance on overall
+    let comfortLabel = "";
+    if (champGames >= 20) comfortLabel = "Main";
+    else if (champGames >= 10) comfortLabel = "Comfortable";
+    else if (champGames >= 5) comfortLabel = "Familiar";
+    else if (champGames >= 1) comfortLabel = "Inexperienced";
+    else comfortLabel = "First time";
+
+    // Comfort bonus/penalty: main champ gets a small boost, first-time gets penalty
+    const comfortMod = champGames >= 20 ? 0.03 : champGames >= 10 ? 0.01 : champGames === 0 ? -0.05 : 0;
+
+    // ─── Weighted combination ───
+    // Base weights: 25% overall, dynamic champion weight, rest goes to recent form
+    const champWeight = champGames >= 10 ? 0.35 : champGames >= 5 ? 0.30 : champGames >= 3 ? 0.20 : 0.05;
+    const todWeight = todLabel ? 0.10 : 0; // Only factor in time-of-day if enough data
+    const overallWeight = 0.25;
+    const recentWeight = 1 - overallWeight - champWeight - todWeight;
+
+    let raw = overallWR * overallWeight
+      + champWR * champWeight
+      + recentWR * recentWeight
+      + todWR * todWeight
+      + comfortMod       // champion comfort
+      - tiltPenalty       // tilt penalty
+      + hotBonus;         // hot streak bonus
+
+    const weighted = Math.round(Math.min(Math.max(raw * 100, 15), 85));
+
+    // Build breakdown for display
+    const factors: string[] = [];
+    if (tiltStreak >= 2) factors.push(`🔴 ${tiltStreak}-loss tilt (−${Math.round(tiltPenalty * 100)}%)`);
+    if (hotStreak >= 3) factors.push(`🔥 ${hotStreak}-win streak (+${Math.round(hotBonus * 100)}%)`);
+    if (todLabel) factors.push(`🕐 ${todLabel}`);
+    if (comfortLabel) factors.push(`🎮 ${champName ?? "?"}: ${comfortLabel} (${champGames}G)`);
+
+    return {
+      overall: Math.round(overallWR * 100),
+      champion: Math.round(champWR * 100),
+      recent: Math.round(recentWR * 100),
+      weighted,
+      champGames,
+      recentRecord,
+      tiltStreak,
+      hotStreak,
+      todLabel,
+      comfortLabel,
+      factors,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Main polling function
  */
 export async function pollNow(): Promise<PollResult> {
@@ -296,27 +422,7 @@ export async function pollNow(): Promise<PollResult> {
           const queueNames: Record<number, string> = { 420: "Ranked Solo/Duo", 440: "Ranked Flex", 400: "Normal Draft", 450: "ARAM" };
           const gameMode = activeGameData ? queueNames[activeGameData.gameQueueConfigId] ?? "Unknown" : undefined;
           const champName = participant?.championId ? (CHAMPION_NAMES[participant.championId] ?? `Champion ${participant.championId}`) : undefined;
-          // Compute win probability for the notification (quick DB query)
-          let notifProb: { weighted: number; champion: number; champGames: number; recentRecord: string } | null = null;
-          try {
-            const probClient = getRawClient();
-            const overallR = await probClient.execute(`SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0`);
-            const allG = Number(overallR.rows[0]?.total ?? 0);
-            const allW = Number(overallR.rows[0]?.wins ?? 0);
-            const oWR = allG > 0 ? allW / allG : 0.5;
-            let cWR = oWR, cG = 0;
-            if (champName) {
-              const cR = await probClient.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE champion=? AND isRemake=0`, args: [champName] });
-              cG = Number(cR.rows[0]?.total ?? 0);
-              cWR = cG >= 3 ? Number(cR.rows[0]?.wins ?? 0) / cG : oWR;
-            }
-            const rR = await probClient.execute(`SELECT win FROM matches WHERE isRemake=0 ORDER BY gameCreation DESC LIMIT 10`);
-            const rW = rR.rows.filter(r => Number(r.win) === 1).length;
-            const rWR = rR.rows.length >= 3 ? rW / rR.rows.length : oWR;
-            const cWeight = cG >= 5 ? 0.4 : cG >= 3 ? 0.25 : 0.1;
-            const w = oWR * 0.3 + cWR * cWeight + rWR * (0.7 - cWeight);
-            notifProb = { weighted: Math.round(Math.min(Math.max(w * 100, 15), 85)), champion: Math.round(cWR * 100), champGames: cG, recentRecord: `${rW}W${rR.rows.length - rW}L` };
-          } catch { /* ignore */ }
+          const notifProb = await computeWinProbability(champName ?? null);
           notifyGameStart(champName, gameMode, notifProb).catch(() => {});
           // Open 5-minute betting window in Discord
           import("./discord").then(d => {
@@ -347,48 +453,7 @@ export async function pollNow(): Promise<PollResult> {
       const champId = participant?.championId ?? currentGameChampion?.id;
       const champName = champId ? (CHAMPION_NAMES[champId] ?? currentGameChampion?.name) : currentGameChampion?.name;
 
-      // Compute win probability from match history
-      let winProbability: { overall: number; champion: number; recent: number; weighted: number; champGames: number; recentRecord: string } | null = null;
-      try {
-        const client = getRawClient();
-        // Overall win rate
-        const overallRes = await client.execute(`SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE isRemake=0`);
-        const totalGames = Number(overallRes.rows[0]?.total ?? 0);
-        const totalWins = Number(overallRes.rows[0]?.wins ?? 0);
-        const overallWR = totalGames > 0 ? totalWins / totalGames : 0.5;
-
-        // Champion-specific win rate
-        let champWR = 0.5;
-        let champGames = 0;
-        if (champName) {
-          const champRes = await client.execute({ sql: `SELECT COUNT(*) as total, SUM(CASE WHEN win=1 THEN 1 ELSE 0 END) as wins FROM matches WHERE champion=? AND isRemake=0`, args: [champName] });
-          champGames = Number(champRes.rows[0]?.total ?? 0);
-          const champWins = Number(champRes.rows[0]?.wins ?? 0);
-          champWR = champGames >= 3 ? champWins / champGames : overallWR; // Need 3+ games for meaningful data
-        }
-
-        // Recent form (last 10 games)
-        const recentRes = await client.execute(`SELECT win FROM matches WHERE isRemake=0 ORDER BY gameCreation DESC LIMIT 10`);
-        const recentGames = recentRes.rows.length;
-        const recentWins = recentRes.rows.filter(r => Number(r.win) === 1).length;
-        const recentWR = recentGames >= 3 ? recentWins / recentGames : overallWR;
-        const recentRecord = `${recentWins}W${recentGames - recentWins}L`;
-
-        // Weighted probability: 30% overall + 40% champion + 30% recent form
-        const champWeight = champGames >= 5 ? 0.4 : champGames >= 3 ? 0.25 : 0.1;
-        const overallWeight = 0.3;
-        const recentWeight = 1 - overallWeight - champWeight;
-        const weighted = overallWR * overallWeight + champWR * champWeight + recentWR * recentWeight;
-
-        winProbability = {
-          overall: Math.round(overallWR * 100),
-          champion: Math.round(champWR * 100),
-          recent: Math.round(recentWR * 100),
-          weighted: Math.round(Math.min(Math.max(weighted * 100, 15), 85)), // clamp to 15-85% range
-          champGames,
-          recentRecord,
-        };
-      } catch { /* ignore — probability is optional */ }
+      const winProbability = await computeWinProbability(champName ?? null);
 
       cache.set("player.liveGame.details", {
         inGame: true as const,

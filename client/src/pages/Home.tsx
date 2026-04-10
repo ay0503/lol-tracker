@@ -408,7 +408,7 @@ function LiveGameBanner() {
             <div className="flex items-center gap-3">
               {/* Win Probability */}
               {liveGame.winProbability && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" title={liveGame.winProbability.factors?.join("\n") ?? ""}>
                   <div className="text-right">
                     <span className="text-xs font-bold font-[var(--font-mono)]" style={{ color: liveGame.winProbability.weighted >= 50 ? "var(--color-win)" : "var(--color-loss)" }}>
                       {liveGame.winProbability.weighted}%
@@ -424,6 +424,12 @@ function LiveGameBanner() {
                       }}
                     />
                   </div>
+                  {liveGame.winProbability.tiltStreak >= 2 && (
+                    <span className="text-[10px] text-red-400">🔴 tilt</span>
+                  )}
+                  {liveGame.winProbability.hotStreak >= 3 && (
+                    <span className="text-[10px] text-yellow-400">🔥 hot</span>
+                  )}
                 </div>
               )}
               <div className="flex items-center gap-1.5">

@@ -37,7 +37,7 @@ async function sendMessage(content: string): Promise<boolean> {
 export async function notifyGameStart(
   champion?: string,
   gameMode?: string,
-  winProb?: { weighted: number; champion: number; champGames: number; recentRecord: string } | null,
+  winProb?: { weighted: number; champion: number; champGames: number; recentRecord: string; factors?: string[]; tiltStreak?: number; hotStreak?: number; comfortLabel?: string } | null,
 ): Promise<void> {
   const parts = ["🎮 **$DORI LIVE** — 안죽기장인 just entered a game!"];
   if (gameMode) parts.push(`Mode: **${gameMode}**`);
@@ -46,6 +46,9 @@ export async function notifyGameStart(
     const bar = "█".repeat(Math.round(winProb.weighted / 10)) + "░".repeat(10 - Math.round(winProb.weighted / 10));
     parts.push(`\n🎯 **Win Probability: ${winProb.weighted}%** ${bar}`);
     if (winProb.champGames > 0) parts.push(`${champion}: ${winProb.champion}% WR (${winProb.champGames} games) · Recent: ${winProb.recentRecord}`);
+    if (winProb.factors && winProb.factors.length > 0) {
+      parts.push(winProb.factors.join(" · "));
+    }
   }
   parts.push("\n⚠️ Trading is now **halted** until the match ends.");
   await sendMessage(parts.join("\n"));
