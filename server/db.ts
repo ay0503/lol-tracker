@@ -852,6 +852,63 @@ export async function placeBet(userId: number, prediction: "win" | "loss", amoun
   });
 }
 
+export async function updateBet(userId: number, prediction?: "win" | "loss", newAmount?: number) {
+  const db = await getDb();
+  const [existing] = await db.select().from(bets).where(and(eq(bets.userId, userId), eq(bets.status, "pending"))).limit(1);
+  if (!existing) throw new Error("You don't have a pending bet to change.");
+
+  return withUserLock(userId, async () => {
+    const portfolio = await getOrCreatePortfolio(userId);
+    const cash = parseFloat(portfolio.cashBalance);
+    const oldAmount = parseFloat(existing.amount);
+
+    // Handle amount change — refund old, deduct new
+    if (newAmount !== undefined && newAmount !== oldAmount) {
+      const diff = newAmount - oldAmount;
+      if (diff > 0 && diff > cash) {
+        throw new Error(`Insufficient cash. You need $${diff.toFixed(2)} more but have $${cash.toFixed(2)}.`);
+      }
+      await db.update(portfolios).set({
+        cashBalance: (cash - diff).toFixed(2),
+        updatedAt: new Date().toISOString(),
+      }).where(eq(portfolios.userId, userId));
+    }
+
+    // Update the bet
+    const updates: any = {};
+    if (prediction) updates.prediction = prediction;
+    if (newAmount !== undefined) updates.amount = newAmount.toFixed(2);
+
+    await db.update(bets).set(updates).where(eq(bets.id, existing.id));
+
+    const [updated] = await db.select().from(bets).where(eq(bets.id, existing.id)).limit(1);
+    return { previous: existing, updated };
+  });
+}
+
+export async function cancelBet(userId: number) {
+  const db = await getDb();
+  const [existing] = await db.select().from(bets).where(and(eq(bets.userId, userId), eq(bets.status, "pending"))).limit(1);
+  if (!existing) throw new Error("You don't have a pending bet to cancel.");
+
+  return withUserLock(userId, async () => {
+    const portfolio = await getOrCreatePortfolio(userId);
+    const cash = parseFloat(portfolio.cashBalance);
+    const refund = parseFloat(existing.amount);
+
+    // Refund cash
+    await db.update(portfolios).set({
+      cashBalance: (cash + refund).toFixed(2),
+      updatedAt: new Date().toISOString(),
+    }).where(eq(portfolios.userId, userId));
+
+    // Delete the bet
+    await db.delete(bets).where(eq(bets.id, existing.id));
+
+    return { refunded: refund, prediction: existing.prediction };
+  });
+}
+
 export async function getPendingBets() {
   const db = await getDb();
   return db.select().from(bets).where(eq(bets.status, "pending"));

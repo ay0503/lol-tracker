@@ -18,7 +18,7 @@ import {
   markNotificationRead, markAllNotificationsRead,
   getUserByEmail, createLocalUser, setUserPassword,
   getRawClient, getDb, toggleAdminHalt,
-  placeBet, getUserBets, getPendingBets, getAllDividends, getAllBets,
+  placeBet, updateBet, cancelBet, getUserBets, getPendingBets, getAllDividends, getAllBets,
   withUserLock,
 } from "./db";
 import { users, portfolios, news } from "../drizzle/schema";
@@ -869,6 +869,32 @@ export const appRouter = router({
 
         return bet;
       }),
+    update: protectedProcedure
+      .input(z.object({
+        prediction: z.enum(["win", "loss"]).optional(),
+        amount: z.number().min(1).max(50).finite().optional(),
+      }).refine(d => d.prediction || d.amount, { message: "Specify prediction or amount to change" }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const { previous, updated } = await updateBet(ctx.user.id, input.prediction, input.amount);
+          cache.invalidate("leaderboard.rankings");
+          return {
+            previous: { prediction: previous.prediction, amount: parseFloat(previous.amount) },
+            updated: { prediction: updated.prediction, amount: parseFloat(updated.amount) },
+          };
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+      }),
+    cancel: protectedProcedure.mutation(async ({ ctx }) => {
+      try {
+        const { refunded, prediction } = await cancelBet(ctx.user.id);
+        cache.invalidate("leaderboard.rankings");
+        return { refunded, prediction };
+      } catch (err: any) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+      }
+    }),
     myBets: protectedProcedure.query(async ({ ctx }) => {
       const raw = await getUserBets(ctx.user.id);
       return raw.map(b => ({

@@ -14,12 +14,12 @@ import {
   getUserByDiscordId, linkDiscordUser, unlinkDiscordUser,
   getUserByEmail, getOrCreatePortfolio, getUserHoldings,
   executeTrade, executeShort, executeCover, getUserTrades,
-  getRecentMatchesFromDB, getLeaderboard, placeBet, getUserBets,
+  getRecentMatchesFromDB, getLeaderboard, placeBet, updateBet, cancelBet, getUserBets,
   getUserDividends, getAllTrades, getRawClient,
 } from "./db";
 import { computeAllETFPricesSync, TICKERS, type Ticker } from "./etfPricing";
 import { getPriceHistory } from "./db";
-import { parseIntent, type BotIntent } from "./discordIntent";
+import { parseIntent, type BotIntent, type ChannelMessage } from "./discordIntent";
 
 // ─── Pending Trade Confirmations ───
 
@@ -1050,7 +1050,7 @@ function handleHelp(): EmbedBuilder {
       { name: "📊 Info", value: "`portfolio` · `prices` · `leaderboard` · `holdings`\n`is dori in game?` · `last 5 matches` · `recent trades`\n`my trades` · `my bets` · `my dividends` · `my orders`\n`streaks` · `champion pool` · `player stats`\n`news` · `notifications` · `top casino`" },
       { name: "💰 Trading", value: "`buy $20 DORI` · `sell 5 shares TDRI` · `sell all DORI`\n`short $10 SDRI` · `cover all XDRI` · `all in on DORI`\n`limit buy 5 DORI at $10` · `stop loss 3 DORI at $8`\n`cancel order #42`" },
       { name: "⚔️ Social", value: "`compare me to Kyle` · `audit Andrew`" },
-      { name: "🎲 Betting & Casino", value: "`bet $10 on win` · `is betting open?`\n`deposit $5 to casino` · `daily bonus`\n`$10 on red` · `roll dice $5 over 50` · `crash $5`\n`plinko $2 high risk`" },
+      { name: "🎲 Betting & Casino", value: "`bet $10 on win` · `change bet to loss` · `change bet to $20`\n`cancel my bet` · `is betting open?`\n`blackjack $5` · `hit` · `stand` · `double` · `split`\n`deposit $5 to casino` · `daily bonus`\n`$10 on red` · `roll dice $5 over 50` · `crash $5`\n`plinko $2 high risk`" },
       { name: "🛒 Cosmetics", value: "`show shop` · `my cosmetics`\n`buy Rainbow` · `equip High Roller`" },
       { name: "🔗 Account", value: "`/link your@email.com` — link Discord to your account\n`/whoami` — check your linked account" },
     );
@@ -1218,6 +1218,214 @@ async function handleTradeConfirm(interaction: ButtonInteraction, confirmed: boo
   }
 }
 
+// ─── Blackjack Handler ───
+
+function formatCard(card: { suit: string; rank: string; hidden?: boolean }): string {
+  if (card.hidden) return "🂠";
+  return `\`${card.rank}${card.suit}\``;
+}
+
+function formatHand(cards: { suit: string; rank: string; hidden?: boolean }[]): string {
+  return cards.map(formatCard).join(" ");
+}
+
+function bjStatusEmoji(status: string): string {
+  switch (status) {
+    case "blackjack": return "🃏";
+    case "player_win": case "dealer_bust": return "🎉";
+    case "push": return "🤝";
+    case "player_bust": case "dealer_win": return "💀";
+    default: return "🃏";
+  }
+}
+
+function bjStatusText(status: string): string {
+  switch (status) {
+    case "playing": return "Your turn";
+    case "blackjack": return "BLACKJACK!";
+    case "player_win": return "You win!";
+    case "dealer_bust": return "Dealer busts — you win!";
+    case "player_bust": return "Bust! You lose.";
+    case "dealer_win": return "Dealer wins.";
+    case "push": return "Push — bet returned.";
+    default: return status;
+  }
+}
+
+function buildBlackjackEmbed(game: any, action?: string): EmbedBuilder {
+  // Inline hand value calc (avoids sync require in ESM)
+  function hv(hand: { rank: string; hidden?: boolean }[]): number {
+    let total = 0, aces = 0;
+    for (const card of hand) {
+      if (card.hidden) continue;
+      if (card.rank === "A") { total += 11; aces++; }
+      else if (["K", "Q", "J"].includes(card.rank)) total += 10;
+      else total += parseInt(card.rank);
+    }
+    while (total > 21 && aces > 0) { total -= 10; aces--; }
+    return total;
+  }
+  const playerVal = hv(game.playerHand);
+  const dealerVal = hv(game.dealerHand);
+  const isPlaying = game.status === "playing";
+  const won = ["blackjack", "player_win", "dealer_bust"].includes(game.status);
+  const push = game.status === "push";
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${bjStatusEmoji(game.status)} Blackjack${action ? ` — ${action}` : ""}`)
+    .setColor(isPlaying ? embedColor("info") : won ? embedColor("success") : push ? embedColor("warn") : embedColor("error"));
+
+  // Dealer hand
+  const dealerDisplay = `${formatHand(game.dealerHand)} ${isPlaying ? "" : `(**${dealerVal}**)`}`;
+  embed.addFields({ name: "Dealer", value: dealerDisplay, inline: false });
+
+  // Player hand
+  embed.addFields({ name: "Your Hand", value: `${formatHand(game.playerHand)} (**${playerVal}**)`, inline: false });
+
+  // Split hand
+  if (game.splitHand) {
+    const splitVal = hv(game.splitHand);
+    const activeLabel = game.activeHand === "split" ? " 👈" : "";
+    embed.addFields({ name: `Split Hand${activeLabel}`, value: `${formatHand(game.splitHand)} (**${splitVal}**)`, inline: false });
+    if (game.activeHand === "main") {
+      embed.setDescription("Playing **main hand** first");
+    }
+  }
+
+  if (isPlaying) {
+    embed.addFields({ name: "Bet", value: formatDollars(game.bet), inline: true });
+    const hints = ["**hit** · **stand** · **double**"];
+    embed.setFooter({ text: hints[0] });
+  } else {
+    embed.addFields(
+      { name: "Bet", value: formatDollars(game.bet + (game.splitBet ?? 0)), inline: true },
+      { name: won ? "Payout" : push ? "Returned" : "Lost", value: formatDollars(game.payout || game.bet + (game.splitBet ?? 0)), inline: true },
+    );
+    embed.setDescription(bjStatusText(game.status));
+  }
+
+  return embed;
+}
+
+async function handleBlackjackDeal(message: Message, userId: number, amount: number): Promise<void> {
+  try {
+    const { checkCasinoCooldown, recordCasinoGame, recordCasinoGameResult } = await import("./casinoUtils");
+    await checkCasinoCooldown(userId);
+
+    const portfolio = await getOrCreatePortfolio(userId);
+    const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+    if (amount > casinoCash) {
+      await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash. You have ${formatDollars(casinoCash)}.`)] });
+      return;
+    }
+
+    // Deduct bet
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+    await db.update(portfolios).set({ casinoBalance: (casinoCash - amount).toFixed(2) }).where(eq(portfolios.userId, userId));
+
+    // Deal
+    const { dealGame } = await import("./blackjack");
+    const game = dealGame(userId, amount);
+    recordCasinoGame(userId);
+
+    // If game resolved immediately (natural blackjack/push)
+    if (game.status !== "playing" && game.payout > 0) {
+      const fresh = await getOrCreatePortfolio(userId);
+      const newCasino = parseFloat(String(fresh.casinoBalance ?? "0")) + game.payout;
+      await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, userId));
+    }
+    if (game.status !== "playing") {
+      const mult = game.payout > 0 ? game.payout / game.bet : 0;
+      recordCasinoGameResult(userId, "blackjack", game.bet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+    }
+    cache.invalidate("casino.leaderboard");
+
+    await message.reply({ embeds: [buildBlackjackEmbed(game, "Deal")] });
+  } catch (err: any) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
+  }
+}
+
+async function handleBlackjackAction(message: Message, userId: number, action: "hit" | "stand" | "double" | "split"): Promise<void> {
+  try {
+    const { hitGame, standGame, doubleDown, splitGame, getActiveGame, canSplit: checkSplit } = await import("./blackjack");
+    const { recordCasinoGameResult } = await import("./casinoUtils");
+
+    const current = getActiveGame(userId);
+    if (!current) {
+      await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("warn")).setDescription("No active blackjack game. Start one with `blackjack $5`.")] });
+      return;
+    }
+
+    let game: any;
+    const { getDb: getDatabase } = await import("./db");
+    const { portfolios } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const db = await getDatabase();
+
+    if (action === "hit") {
+      game = hitGame(userId);
+    } else if (action === "stand") {
+      game = standGame(userId);
+    } else if (action === "double") {
+      // Check balance for double down
+      const activeBet = current.splitHand && current.activeHand === "split"
+        ? (current.splitBet ?? current.bet) : current.bet;
+      const portfolio = await getOrCreatePortfolio(userId);
+      const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+      if (activeBet > casinoCash) {
+        await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash to double down. Need ${formatDollars(activeBet)}.`)] });
+        return;
+      }
+      // Deduct additional bet
+      await db.update(portfolios).set({ casinoBalance: (casinoCash - activeBet).toFixed(2) }).where(eq(portfolios.userId, userId));
+      game = doubleDown(userId);
+    } else if (action === "split") {
+      if (!checkSplit(current as any)) {
+        await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription("Can't split this hand.")] });
+        return;
+      }
+      // Check balance for split
+      const portfolio = await getOrCreatePortfolio(userId);
+      const casinoCash = parseFloat(String(portfolio.casinoBalance ?? "20"));
+      if (current.bet > casinoCash) {
+        await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`Insufficient casino cash to split. Need ${formatDollars(current.bet)}.`)] });
+        return;
+      }
+      await db.update(portfolios).set({ casinoBalance: (casinoCash - current.bet).toFixed(2) }).where(eq(portfolios.userId, userId));
+      game = splitGame(userId);
+    }
+
+    // Credit payout if game ended
+    if (game.status !== "playing") {
+      if (game.payout > 0) {
+        const portfolio = await getOrCreatePortfolio(userId);
+        const newCasino = parseFloat(String(portfolio.casinoBalance ?? "0")) + game.payout;
+        await db.update(portfolios).set({ casinoBalance: newCasino.toFixed(2) }).where(eq(portfolios.userId, userId));
+      }
+      cache.invalidate("casino.leaderboard");
+      const totalBet = game.bet + (game.splitBet ?? 0);
+      const mult = game.payout > 0 ? game.payout / totalBet : 0;
+      recordCasinoGameResult(userId, "blackjack", totalBet, game.payout, game.payout > 0 ? "win" : "loss", mult);
+
+      // Big win notification
+      if (game.payout >= 20) {
+        const userName = String((await getUserByDiscordId(message.author.id))?.displayName ?? "User");
+        const winMult = game.payout / totalBet;
+        import("./discord").then(d => d.notifyCasinoBigWin(userName, "Blackjack", winMult, game.payout)).catch(() => {});
+      }
+    }
+
+    const actionLabel = action.charAt(0).toUpperCase() + action.slice(1);
+    await message.reply({ embeds: [buildBlackjackEmbed(game, actionLabel)] });
+  } catch (err: any) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
+  }
+}
+
 // ─── Bet Handler ───
 
 async function handleBet(message: Message, userId: number, prediction: "win" | "loss", amount: number): Promise<void> {
@@ -1231,6 +1439,48 @@ async function handleBet(message: Message, userId: number, prediction: "win" | "
         { name: "Amount", value: formatDollars(amount), inline: true },
       )
       .setDescription("2x payout if correct! Resolves when the next game ends.");
+    await message.reply({ embeds: [embed] });
+  } catch (err: any) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
+  }
+}
+
+async function handleChangeBet(message: Message, userId: number, prediction?: "win" | "loss", amount?: number): Promise<void> {
+  try {
+    const { previous, updated } = await updateBet(userId, prediction, amount);
+    const changes: string[] = [];
+    if (prediction && prediction !== previous.prediction) {
+      changes.push(`Prediction: ${previous.prediction.toUpperCase()} → **${prediction.toUpperCase()}**`);
+    }
+    if (amount !== undefined && amount.toFixed(2) !== previous.amount) {
+      changes.push(`Amount: $${parseFloat(previous.amount).toFixed(2)} → **$${amount.toFixed(2)}**`);
+    }
+    if (changes.length === 0) changes.push("No changes needed — bet already matches.");
+
+    const embed = new EmbedBuilder()
+      .setTitle("✏️ Bet Updated!")
+      .setColor(embedColor("success"))
+      .setDescription(changes.join("\n"))
+      .addFields(
+        { name: "Prediction", value: updated.prediction.toUpperCase(), inline: true },
+        { name: "Amount", value: formatDollars(parseFloat(updated.amount)), inline: true },
+      );
+    await message.reply({ embeds: [embed] });
+  } catch (err: any) {
+    await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
+  }
+}
+
+async function handleCancelBet(message: Message, userId: number): Promise<void> {
+  try {
+    const { refunded, prediction } = await cancelBet(userId);
+    const embed = new EmbedBuilder()
+      .setTitle("🚫 Bet Cancelled")
+      .setColor(embedColor("warn"))
+      .setDescription(`Your ${prediction.toUpperCase()} bet has been cancelled.`)
+      .addFields(
+        { name: "Refunded", value: formatDollars(refunded), inline: true },
+      );
     await message.reply({ embeds: [embed] });
   } catch (err: any) {
     await message.reply({ embeds: [new EmbedBuilder().setColor(embedColor("error")).setDescription(`❌ ${err.message}`)] });
@@ -1358,8 +1608,30 @@ async function handleMessage(message: Message): Promise<void> {
     return;
   }
 
+  // Fetch recent channel messages for context
+  let channelContext: ChannelMessage[] = [];
+  try {
+    const recent = await message.channel.messages.fetch({ limit: 10, before: message.id });
+    channelContext = Array.from(recent.values()).reverse().map(msg => {
+      // For bot messages, extract embed fields for readable context
+      let content = msg.content;
+      if (msg.author.bot && msg.embeds.length > 0) {
+        const embed = msg.embeds[0];
+        const fields = embed.fields.map(f => `${f.name}: ${f.value}`).join(", ");
+        content = [embed.title, embed.description, fields].filter(Boolean).join(" — ");
+      }
+      return {
+        author: msg.member?.displayName || msg.author.displayName || msg.author.username,
+        content: content.replace(/<@!?\d+>/g, "").trim(),
+        isBot: msg.author.bot,
+      };
+    }).filter(msg => msg.content.length > 0);
+  } catch {
+    // Non-critical — proceed without context
+  }
+
   // Parse intents (can be multiple for compound instructions)
-  const intents = await parseIntent(cleanContent);
+  const intents = await parseIntent(cleanContent, channelContext);
 
   // Separate into reads, trades, and bets
   const readIntents: BotIntent[] = [];
@@ -1377,7 +1649,7 @@ async function handleMessage(message: Message): Promise<void> {
     ];
     if (READ_TYPES.includes(intent.type)) {
       readIntents.push(intent);
-    } else if (["bet", "casino_deposit", "roulette", "dice", "crash", "plinko", "daily_bonus", "create_order", "cancel_order", "buy_cosmetic", "equip_cosmetic"].includes(intent.type)) {
+    } else if (["bet", "change_bet", "cancel_bet", "blackjack_deal", "blackjack_hit", "blackjack_stand", "blackjack_double", "blackjack_split", "casino_deposit", "roulette", "dice", "crash", "plinko", "daily_bonus", "create_order", "cancel_order", "buy_cosmetic", "equip_cosmetic"].includes(intent.type)) {
       betIntents.push(intent);
     } else if (intent.type === "unknown") {
       unknownIntents.push(intent);
@@ -1430,6 +1702,13 @@ async function handleMessage(message: Message): Promise<void> {
     // Execute instant actions directly
     for (const intent of betIntents) {
       if (intent.type === "bet") await handleBet(message, userId, intent.prediction, intent.amount);
+      if (intent.type === "change_bet") await handleChangeBet(message, userId, intent.prediction, intent.amount);
+      if (intent.type === "cancel_bet") await handleCancelBet(message, userId);
+      if (intent.type === "blackjack_deal") await handleBlackjackDeal(message, userId, intent.amount);
+      if (intent.type === "blackjack_hit") await handleBlackjackAction(message, userId, "hit");
+      if (intent.type === "blackjack_stand") await handleBlackjackAction(message, userId, "stand");
+      if (intent.type === "blackjack_double") await handleBlackjackAction(message, userId, "double");
+      if (intent.type === "blackjack_split") await handleBlackjackAction(message, userId, "split");
       if (intent.type === "casino_deposit") await handleCasinoDeposit(message, userId, intent.amount);
       if (intent.type === "roulette") await handleRoulette(message, userId, intent.color, intent.amount);
       if (intent.type === "dice") await handleDice(message, userId, intent.amount, intent.target, intent.direction);

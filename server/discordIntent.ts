@@ -41,7 +41,14 @@ export type BotIntent =
   | { type: "short"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "cover"; ticker: string; amount: number; unit: "dollars" | "shares" }
   | { type: "cover_all"; ticker: string }
+  | { type: "blackjack_deal"; amount: number }
+  | { type: "blackjack_hit" }
+  | { type: "blackjack_stand" }
+  | { type: "blackjack_double" }
+  | { type: "blackjack_split" }
   | { type: "bet"; prediction: "win" | "loss"; amount: number }
+  | { type: "change_bet"; prediction?: "win" | "loss"; amount?: number }
+  | { type: "cancel_bet" }
   | { type: "casino_deposit"; amount: number }
   | { type: "roulette"; color: "red" | "black" | "green"; amount: number }
   | { type: "dice"; amount: number; target: number; direction: "over" | "under" }
@@ -104,11 +111,20 @@ TRADE actions:
 
 BETTING & CASINO:
 - {"type":"bet","prediction":"win","amount":10} — bet on next game outcome
+- {"type":"change_bet","prediction":"loss"} — change pending bet prediction to loss (or win)
+- {"type":"change_bet","amount":20} — change pending bet amount to $20
+- {"type":"change_bet","prediction":"win","amount":25} — change both prediction and amount
+- {"type":"cancel_bet"} — cancel pending bet and get a refund
 - {"type":"casino_deposit","amount":5} — deposit trading cash to casino (10x multiplier)
 - {"type":"roulette","color":"red","amount":5} — roulette (red/black/green)
 - {"type":"dice","amount":5,"target":50,"direction":"over"} — dice roll over/under a target (1-99)
 - {"type":"crash","amount":5,"autoCashout":2.5} — crash game with optional auto-cashout multiplier
 - {"type":"plinko","amount":5,"risk":"medium"} — plinko drop (risk: low/medium/high)
+- {"type":"blackjack_deal","amount":5} — start a blackjack game with $5 bet
+- {"type":"blackjack_hit"} — hit (draw a card) in active blackjack game
+- {"type":"blackjack_stand"} — stand in active blackjack game
+- {"type":"blackjack_double"} — double down in active blackjack game
+- {"type":"blackjack_split"} — split pair in active blackjack game
 - {"type":"daily_bonus"} — claim daily $1 casino bonus
 
 ORDERS:
@@ -128,23 +144,55 @@ COMPOUND EXAMPLES:
 - "yolo everything on XDRI" → {"actions":[{"type":"sell_all_holdings"},{"type":"buy_max","ticker":"XDRI"}]}
 - "put $50 on red and $10 on green" → {"actions":[{"type":"roulette","color":"red","amount":50},{"type":"roulette","color":"green","amount":10}]}
 - "deposit $5 to casino and put it all on black" → {"actions":[{"type":"casino_deposit","amount":5},{"type":"roulette","color":"black","amount":50}]}
+- "change my bet to loss" → {"actions":[{"type":"change_bet","prediction":"loss"}]}
+- "change bet to $20" → {"actions":[{"type":"change_bet","amount":20}]}
+- "switch my bet to win and make it $15" → {"actions":[{"type":"change_bet","prediction":"win","amount":15}]}
+- "cancel my bet" or "refund bet" → {"actions":[{"type":"cancel_bet"}]}
+- "blackjack $5" or "deal me $5" or "bj 5" → {"actions":[{"type":"blackjack_deal","amount":5}]}
+- "hit" or "hit me" or "card" or "draw" → {"actions":[{"type":"blackjack_hit"}]}
+- "stand" or "stay" or "hold" → {"actions":[{"type":"blackjack_stand"}]}
+- "double" or "double down" → {"actions":[{"type":"blackjack_double"}]}
+- "split" → {"actions":[{"type":"blackjack_split"}]}
 
 For a single action, still wrap it: {"actions":[{"type":"portfolio"}]}
 If the ticker is ambiguous or not specified for a trade, default to DORI.
 If unclear, return {"actions":[{"type":"unknown","message":"brief reason"}]}.
 Order actions logically — sells before buys, deposits before casino games.
 
+CONTEXT: You may receive recent channel messages as context. Use them to resolve references like:
+- "same" / "me too" / "do what he did" → repeat the last user's action
+- "do the same as [name]" → copy that user's most recent action from context
+- "double that" → reference the last bet/trade amount
+- Bot responses show action results (e.g., "Prediction: WIN, Amount: $30.00") — use these to understand what actions were taken.
+Only the LAST message (after "---") is the actual command to parse. Prior messages are context only.
+
 Respond with ONLY the JSON object.`;
+
+export interface ChannelMessage {
+  author: string;
+  content: string;
+  isBot: boolean;
+}
 
 /**
  * Parse a user message into one or more structured intents.
+ * Optional channelContext provides recent messages for resolving references.
  */
-export async function parseIntent(message: string): Promise<BotIntent[]> {
+export async function parseIntent(message: string, channelContext?: ChannelMessage[]): Promise<BotIntent[]> {
   try {
+    // Build user prompt with context if available
+    let userPrompt = message;
+    if (channelContext && channelContext.length > 0) {
+      const contextLines = channelContext.map(msg =>
+        msg.isBot ? `[BOT]: ${msg.content}` : `${msg.author}: ${msg.content}`
+      ).join("\n");
+      userPrompt = `Recent channel messages:\n${contextLines}\n---\n${message}`;
+    }
+
     const result = await invokeLLM({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: message },
+        { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
       max_tokens: 512,
@@ -221,13 +269,40 @@ function validateIntent(raw: any): BotIntent {
     return { type, ticker } as BotIntent;
   }
 
+  // Blackjack
+  if (type === "blackjack_deal") {
+    const amount = Number(raw.amount);
+    if (!amount || amount < 0.10 || amount > 50) return { type: "unknown", message: "Blackjack bet: $0.10-$50" };
+    return { type: "blackjack_deal", amount };
+  }
+  const bjActions = ["blackjack_hit", "blackjack_stand", "blackjack_double", "blackjack_split"];
+  if (bjActions.includes(type)) return { type } as BotIntent;
+
   // Bet
   if (type === "bet") {
-    const prediction = raw.prediction === "loss" ? "loss" : "win";
+    const prediction = String(raw.prediction ?? "").toLowerCase() === "loss" ? "loss" : "win";
     const amount = Number(raw.amount);
     if (!amount || amount < 1 || amount > 50) return { type: "unknown", message: "Bet must be $1-$50" };
     return { type: "bet", prediction, amount };
   }
+
+  // Change bet
+  if (type === "change_bet") {
+    const result: any = { type: "change_bet" };
+    if (raw.prediction) {
+      result.prediction = String(raw.prediction).toLowerCase() === "loss" ? "loss" : "win";
+    }
+    if (raw.amount) {
+      const amount = Number(raw.amount);
+      if (!amount || amount < 1 || amount > 50) return { type: "unknown", message: "Bet must be $1-$50" };
+      result.amount = amount;
+    }
+    if (!result.prediction && !result.amount) return { type: "unknown", message: "Specify what to change: prediction (win/loss) or amount" };
+    return result;
+  }
+
+  // Cancel bet
+  if (type === "cancel_bet") return { type: "cancel_bet" };
 
   // Casino deposit
   if (type === "casino_deposit") {
